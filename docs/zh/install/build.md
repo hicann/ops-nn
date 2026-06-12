@@ -56,7 +56,7 @@ bash build.sh --help
 | --make_clean_all | 可选     | 执行完全清理操作（删除所有编译相关文件），执行后脚本退出。                                   |
 | --ophost         | 可选     | 编译libophost_nn.so库，不可与--pkg、--ops同时使用。                                       |
 | --opapi          | 可选     | 编译libopapi_nn.so库，不可与--pkg、--ops同时使用。                                        |
-| --run_example    | 可选     | 编译指定算子及模式的样例并执行编译后的可执行文件，使用--run_example --help 查看使用方法。     |
+| --run_example    | 可选     | 编译指定算子及模式的样例并执行编译后的可执行文件，使用--run_example --help查看使用方法。     |
 | --genop          | 可选     | 创建AI Core自定义算子初始目录。                                                           |
 | --genop_aicpu    | 可选     | 创建AI CPU自定义算子初始目录。                                                            |
 | --experimental   | 可选     | 编译experimental目录下的用户算子。                                                           |

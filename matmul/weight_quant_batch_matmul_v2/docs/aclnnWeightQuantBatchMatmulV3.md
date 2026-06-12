@@ -28,7 +28,7 @@
   ANTIQUANT(weight) = (weight + antiquantOffset) * antiquantScale
   $$
 
-  当用户配置quantScaleOptional输入时，会对输出进行量化处理, 其量化公式为
+  当用户配置quantScaleOptional输入时，会对输出进行量化处理,其量化公式为
 
   $$
   \begin{aligned}
@@ -37,7 +37,7 @@
   \end{aligned}
   $$
 
-  当用户配置quantScaleOptional输入为nullptr, 则直接输出:
+  当用户配置quantScaleOptional输入为nullptr,则直接输出:
 
   $$
   y = x @ ANTIQUANT(weight) + bias
@@ -172,7 +172,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
         <td>biasOptional</td>
         <td>输入</td>
         <td>偏置输入，公式中的输入`bias`。当输入`x`的数据类型为BFLOAT16时，数据类型要求为BFLOAT16或FLOAT；当输入`x`的数据类型为FLOAT16时，数据类型要求为FLOAT16。</td>
-        <td>可选输入, 当不需要时为空指针。</td>
+        <td>可选输入,当不需要时为空指针。</td>
         <td>FLOAT、FLOAT16、BFLOAT16<sup>2</sup></td>
         <td>ND</td>
         <td>1-2</td>
@@ -404,8 +404,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
     | x        | weight            | weight Format | antiquantScale | antiquantOffsetOptional | quantScaleOptional | quantOffsetOptional | biasOptional | antiquantGroupSize | y    | 场景说明 |
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
-    | FLOAT16/BFLOAT16 | INT8 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | T & C & G 量化 |
-    | FLOAT16/BFLOAT16 | HIFLOAT8/FLOAT8_E4M3FN | ND | 与x一致 | null | null | null | 与x一致/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C 量化 |
+    | FLOAT16/BFLOAT16 | INT8 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | T & C & G量化 |
+    | FLOAT16/BFLOAT16 | HIFLOAT8/FLOAT8_E4M3FN | ND | 与x一致 | null | null | null | 与x一致/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C量化 |
 
     </details>
 
@@ -418,10 +418,10 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
     | x        | weight            | weight Format | antiquantScale | antiquantOffsetOptional | quantScaleOptional | quantOffsetOptional | biasOptional | antiquantGroupSize | y    | 场景说明 |
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
-    | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T 量化 |
-    | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX 量化 |
+    | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T量化 |
+    | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G量化 |
+    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
+    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
 
     - **约束说明**
 
@@ -510,7 +510,7 @@ A16W8调用示例。
   }
 
   int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1.（固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -614,7 +614,7 @@ A16W8调用示例。
     ret = aclnnWeightQuantBatchMatmulV3(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulV3 failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -952,7 +952,7 @@ A16MxFp4调用示例。
       ret = aclnnWeightQuantBatchMatmulV3(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulV3 failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -988,7 +988,7 @@ A16MxFp4调用示例。
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;

@@ -36,14 +36,14 @@
     其中：GroupMax表示每32个为一组，计算组内最大值。
   
   3. 执行量化
-    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken 逐行量化）
+    - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：对称动态量化（pertoken逐行量化）
       - 缩放因子计算（逐行计算）
 
         $$
         s_i = \frac{\max_{j \in [0,\ n-1]} |Y_{i,j}|}{C_{\text{MAX}}}
         $$
 
-        其中：$s_i$ 是第 $i$ 行的缩放因子；$C_{\text{MAX}}$ 是量化范围最大值，int8 取 127，quint4x2 取 7。
+        其中：$s_i$ 是第 $i$ 行的缩放因子；$C_{\text{MAX}}$ 是量化范围最大值，int8取127，quint4x2取7。
       - 量化计算
 
         $$
@@ -584,7 +584,7 @@ std::vector<uint16_t> GenerateIdentityMatrix(int64_t K)
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1.（固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -613,7 +613,7 @@ int main()
     std::unique_ptr<void, aclError (*)(void*)> xAddrPtr(xDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Create x tensor failed.\n"); return ret);
 
-    // 创建rot aclTensor (BF16, 必须为方阵)
+    // 创建rot aclTensor (BF16,必须为方阵)
     auto rotHostData = GenerateIdentityMatrix(K);
     void* rotDeviceAddr = nullptr;
     aclTensor* rotTensor = nullptr;
@@ -667,7 +667,7 @@ int main()
     ret = aclnnRotateQuant(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRotateQuant failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

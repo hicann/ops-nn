@@ -105,7 +105,7 @@ aclnnStatus aclnnGemm(
       <td>输入</td>
       <td>公式中的输入C，Device侧的aclTensor。</td>
       <td><ul><li>数据类型需要与AB计算后的结果构成互相推导关系。</li>
-      <li>shape需要与A@B计算后的结果 一致或满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li></ul></td>
+      <li>shape需要与A@B计算后的结果一致或满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2</td>
@@ -199,18 +199,18 @@ aclnnStatus aclnnGemm(
   </tbody></table>  
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-    - A 数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-    - B 数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-    - C 数据类型支持BFLOAT16、FLOAT16、FLOAT32。
-    - out 数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - A数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - B数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - C数据类型支持BFLOAT16、FLOAT16、FLOAT32。
+    - out数据类型支持BFLOAT16、FLOAT16、FLOAT32。
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
   - <term>Atlas 训练系列产品</term>、<term>Atlas 推理系列产品</term>：
-    - A 数据类型支持FLOAT16、FLOAT32。
-    - B 数据类型支持FLOAT16、FLOAT32。
-    - C 数据类型支持FLOAT16、FLOAT32。
-    - out 数据类型支持FLOAT16、FLOAT32。
+    - A数据类型支持FLOAT16、FLOAT32。
+    - B数据类型支持FLOAT16、FLOAT32。
+    - C数据类型支持FLOAT16、FLOAT32。
+    - out数据类型支持FLOAT16、FLOAT32。
     - 不支持BFLOAT16数据类型；
     - 当输入数据类型为FLOAT32时不支持cubeMathType=0；
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为FLOAT16计算，当输入为其他数据类型时不做处理；
@@ -375,7 +375,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl对外接口列表
+  // 1.（固定写法）device/stream初始化,参考acl对外接口列表
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -433,7 +433,7 @@ int main() {
   // 调用aclnnGemm第二段接口
   ret = aclnnGemm(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGemm failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

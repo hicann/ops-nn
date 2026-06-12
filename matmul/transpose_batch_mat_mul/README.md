@@ -7,7 +7,7 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2推理产品|×|
+|Atlas 200I/500 A2 推理产品|×|
 |Atlas 推理系列产品|×|
 |Atlas 训练系列产品|×|
 |Kirin X90 处理器系列产品|√|
@@ -112,7 +112,7 @@
   </tr>
 </tbody></table>
 
-- Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- Kirin X90/Kirin 9030 处理器系列产品：不支持BFLOAT16。
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品：只有输入x2支持FRACTAL_NZ格式。
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品：只有输入x2支持FRACTAL_NZ格式。
 - Ascend 950PR/Ascend 950DT：只有输入x2支持FRACTAL_NZ格式。
@@ -124,7 +124,7 @@
     - 支持非连续tensor。
     - B的取值范围为[1, 65536)，N的取值范围为[1, 65536)。
     - 当x1的输入shape为(B, M, K)时，K <= 65535；当x1的输入shape为(M, B, K)时，B * K <= 65535。
-    - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    - 当scale不为空时，batchSplitFactor只能等于1，B与N的乘积小于65536,且仅支持输入为FLOAT16和输出为INT8的类型推导。
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - 当scale不为空时，batchSplitFactor只能等于1，且仅支持输入为FLOAT16和输出为INT8的类型推导。
     - bias为预留参数，当前暂不支持。

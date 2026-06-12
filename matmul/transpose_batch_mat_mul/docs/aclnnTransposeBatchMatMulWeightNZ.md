@@ -359,7 +359,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
     - x2的StorageFormat必须为NZ格式。
     - x1和x2的dtype必须相同。
     - permX2仅支持输入[0, 1, 2]。
-    - 当scale不为空时，B与N的乘积小于65536, 且仅支持输入为FLOAT16和输出为INT8的类型推导。
+    - 当scale不为空时，B与N的乘积小于65536,且仅支持输入为FLOAT16和输出为INT8的类型推导。
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - permX2支持输入[0, 1, 2]、[0, 2, 1]。
@@ -503,7 +503,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
@@ -585,7 +585,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       ret = aclnnTransposeBatchMatMulWeightNz(tbmmWorkspaceAddr, tbmmWorkspaceSize, tbmmExecutor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeBatchMatMulWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 5. （固定写法）同步等待任务执行结束
+      // 5.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -752,7 +752,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
@@ -862,7 +862,7 @@ aclnnStatus aclnnTransposeBatchMatMulWeightNz(
       ret = aclnnTransposeBatchMatMulWeightNz(tbmmWorkspaceAddr, tbmmWorkspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeBatchMatMulWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 6. （固定写法）同步等待任务执行结束
+      // 6.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

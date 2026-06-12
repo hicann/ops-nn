@@ -215,7 +215,7 @@ aclnnStatus aclnnConvolutionBackward(
     <tr>
       <td>transposed</td>
       <td>输入</td>
-      <td>转置卷积开启标志位, 当其值为True时开启转置卷积。</td>
+      <td>转置卷积开启标志位,当其值为True时开启转置卷积。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -251,7 +251,7 @@ aclnnStatus aclnnConvolutionBackward(
       <td>outputMask</td>
       <td>输入</td>
       <td>
-       <ul><li>输出掩码参数, 指定输出中是否包含输入、权重、偏差的梯度。</li>
+       <ul><li>输出掩码参数,指定输出中是否包含输入、权重、偏差的梯度。</li>
        <li>反向传播过程输出掩码参数为True对应位置的梯度。</li></ul>
       </td>
       <td>-</td>
@@ -475,7 +475,7 @@ aclnnStatus aclnnConvolutionBackward(
      <th scope="row">gradOutput约束</th>
      <td>-</td>
      <td>
-        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1, 当input为空Tensor时，支持N、C、D、H、W维度为0。
+        1d、2d和3d transposed=false场景，各个维度的大小应该大于等于1,当input为空Tensor时，支持N、C、D、H、W维度为0。
      </td>
      <td>
         不支持空Tensor。
@@ -805,7 +805,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
     // 调用aclnnConvolutionBackward第二段接口
     ret = aclnnConvolutionBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvolutionBackward failed. ERROR: %d\n", ret); return ret);
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
@@ -843,7 +843,7 @@ int aclnnConvolutionBackwardTest(int32_t deviceId, aclrtStream &stream)
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化
+    // 1.（固定写法）device/stream初始化
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

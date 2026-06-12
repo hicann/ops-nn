@@ -21,7 +21,7 @@
   l_n = -weight_{y_n}*log\frac{exp(x_{n,y_n})}{\sum_{c=1}^Cexp(x_{n,c})}*1\{y_n\ !=\ ignoreIndex \}
   $$
   $$
-  loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reductionOptional = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reductionOptional = ‘sum’ }\\\{l_0,l_1,...,l_n\},&\text{if reductionOptional = ‘None’ }\end{cases}
+  loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reductionOptional = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reductionOptional = ‘sum’}\\\{l_0,l_1,...,l_n\},&\text{if reductionOptional = ‘None’}\end{cases}
   $$
   log\_prob计算公式为：
   $$
@@ -32,7 +32,7 @@
   $$
   zloss计算公式为：
   $$
-  zloss_n = lseSquareScaleForZloss * （lse_n）^2 
+  zloss_n = lseSquareScaleForZloss *（lse_n）^2 
   $$
   其中，N为batch数，C为标签数。
 

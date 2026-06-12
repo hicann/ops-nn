@@ -17,7 +17,7 @@
 
 - 接口功能：计算负对数似然损失值。
 - 计算公式：
-self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。target表示真实标签，shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，为确保与输入相同的形状，用-1填充，即首个-1之前的标签代表样本所属真实标签yTrue。如y=[0,3,-1,1],真实标签yTrue为[0,3]。对于每个样本计算的公式如下:
+self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。target表示真实标签，shape为(N，C)或者(C)，其中每个元素的取值范围是[-1, C - 1]，为确保与输入相同的形状，用-1填充，即首个-1之前的标签代表样本所属真实标签yTrue。如y=[0,3,-1,1],真实标签yTrue为[0,3]。对于每个样本计算的公式如下:
 
   $$
     istarget[k]=\begin{cases}
@@ -38,7 +38,7 @@ self为输入，shape为(N,C)或者(C)，其中N表示batch size，C表示类别
   \ell(x, y) = L = \{l_1,\dots,l_N\}^\top
   $$
 
-  如果`reduction`不是`none`, 那么
+  如果`reduction`不是`none`,那么
 
   $$
   \ell(x, y) = \begin{cases}
@@ -102,7 +102,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入x。</td>
-      <td class="tg-0pky">shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。<br>当 `self`中元素个数大于15000*20000时可能出现507034 Vector Core运行超时。</td>
+      <td class="tg-0pky">shape为(N,C)或者(C)，其中N表示batch size，C表示类别数。<br>当`self`中元素个数大于15000*20000时可能出现507034 Vector Core运行超时。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1、2</td>
@@ -112,7 +112,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实标签，公式中的输入y。</td>
-      <td class="tg-0pky">shape为(N，C) 或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。</td>
+      <td class="tg-0pky">shape为(N，C)或者(C)，其中每个元素的取值范围是[-1, C - 1]，用-1填充，即首个-1之前的标签代表样本所属真实标签。</td>
       <td class="tg-0pky">INT32、INT64</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1、2</td>
@@ -142,7 +142,7 @@ aclnnStatus aclnnMultilabelMarginLoss(
       <td class="tg-0pky">isTarget（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">公式中的输出`istarget`</td>
-      <td class="tg-0pky">shape为(N，C) 或者(C)</td>
+      <td class="tg-0pky">shape为(N，C)或者(C)</td>
       <td class="tg-0pky">与self、out保持一致</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1、2</td>
@@ -326,7 +326,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -381,7 +381,7 @@ int main() {
   ret = aclnnMultilabelMarginLoss(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMultilabelMarginLoss failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

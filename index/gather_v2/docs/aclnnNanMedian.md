@@ -200,9 +200,9 @@ aclnnStatus aclnnNanMedian(
 - 确定性计算：
   - aclnnNanMedian默认确定性实现。
 
-- self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错 reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关) 限制如下：
-   - INT64 类型：150000000
-   - UINT8、INT8、INT16、INT32 类型：725000000
+- self的数据类型不为FLOAT、FLOAT16、BFLOAT16时，tensor size过大可能会导致算子执行超时（aicpu error类型报错，报错reason=[aicpu timeout]）具体类型最大size(与机器具体剩余内存强相关)限制如下：
+   - INT64类型：150000000
+   - UINT8、INT8、INT16、INT32类型：725000000
 - 当self为BFLOAT16数据类型时，不支持尾轴为1。
 
 ## 调用示例
@@ -272,7 +272,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
+  // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -310,7 +310,7 @@ int main() {
   // 调用aclnnNanMedian第二段接口
   ret = aclnnNanMedian(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNanMedian failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

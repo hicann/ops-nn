@@ -24,7 +24,7 @@
 
 ## 函数原型
 
-- [两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnWeightQuantBatchMatmulGetWorkspaceSize 接口获取入参并根据计算流程计算所需workspace大小，再调用 aclnnWeightQuantBatchMatmul 接口执行计算。
+- [两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用aclnnWeightQuantBatchMatmulGetWorkspaceSize接口获取入参并根据计算流程计算所需workspace大小，再调用aclnnWeightQuantBatchMatmul接口执行计算。
 
 ```cpp
 aclnnStatus aclnnWeightQuantBatchMatmulGetWorkspaceSize(
@@ -123,30 +123,30 @@ aclnnStatus aclnnWeightQuantBatchMatmul(
       <td>deqScale</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2，由接口aclnnTransQuantParam计算得到，计算方式见示例代码。</td>
-      <td>shape支持 1 或者 n 或者（1, 1） 或者（1, n） 或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m > 64时不参与计算且可以为空。</td>
       <td>UINT64</td>
       <td>ND</td>
-      <td>1 或者 n 或者（1, 1） 或者（1, n） 或者（n, 1）</td>
+      <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
       <td>-</td>
     </tr>
     <tr>
       <td>addOffset</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2。</td>
-      <td>shape支持 1 或者 n 或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算, 任意情况都可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
-      <td>1 或者 n 或者（1, 1）或者（1, n）或者（n, 1）</td>
+      <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
       <td>-</td>
     </tr>
     <tr>
       <td>mulScale</td>
       <td>输入</td>
       <td>对x2反量化得到公式中的输入mat2。</td>
-      <td>shape支持 1 或者 n 或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算, 任意情况都可以为空。</td>
+      <td>shape支持1或者n或者（1, 1）或者（1, n）或者（n, 1），需和x2满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系</a>。m < 64时不参与计算,任意情况都可以为空。</td>
       <td>FLOAT16</td>
       <td>ND</td>
-      <td>1 或者 n 或者（1, 1）或者（1, n）或者（n, 1）</td>
+      <td>1或者n或者（1, 1）或者（1, n）或者（n, 1）</td>
       <td>-</td>
     </tr>
     <tr>
@@ -378,7 +378,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -566,7 +566,7 @@ int main() {
   ret = aclnnWeightQuantBatchMatmul(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmul failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

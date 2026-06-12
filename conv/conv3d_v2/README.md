@@ -23,13 +23,13 @@
 
 ## 功能说明
 
-- 算子功能：实现 3D 卷积功能。
+- 算子功能：实现3D卷积功能。
 
 - 计算公式：
 
-  - 假定输入（`x`）的 shape 是 $(N, C_{\text{in}}, D, H, W)$ ，（`filter`）的 shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（`y`）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$
+  - 假定输入（`x`）的shape是 $(N, C_{\text{in}}, D, H, W)$ ，（`filter`）的shape是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，输出（`y`）的shape是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$
 
-  - 对于 INT8 类型的输入，输出将被表示为：
+  - 对于INT8类型的输入，输出将被表示为：
 
   $$
     \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \text{scale} \times \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
@@ -41,7 +41,7 @@
     \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) + \sum_{k = 0}^{C_{\text{in}} - 1} \text{filter}(C_{\text{out}_j}, k) \star \text{x}(N_i, k)
   $$
 
-  其中，$\star$ 表示卷积计算，支持空洞卷积、分组卷积。$N$ 代表 `batch size`，$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高和宽，相应输出维度的计算公式如下：
+  其中，$\star$ 表示卷积计算，支持空洞卷积、分组卷积。$N$ 代表`batch size`，$C$ 代表通道数，$D$、$H$ 和 $W$ 分别代表深度、高和宽，相应输出维度的计算公式如下：
 
   $$
     D_{\text{out}} = (D + \text{pad\_head} + \text{pad\_tail} - (\text{dilation\_d} \times (K_d - 1) + 1)) / \text{stride\_d} + 1 \\
@@ -62,49 +62,49 @@
 <tr>
 <td>x</td>
 <td>输入</td>
-<td>公式中的输入张量 x。</td>
+<td>公式中的输入张量x。</td>
 <td>FLOAT16、FLOAT、BFLOAT16、INT8、HIFLOAT8</td>
 <td>NCDHW、NDHWC、NDC1HWC0</td>
 </tr>
 <tr>
 <td>filter</td>
 <td>输入</td>
-<td>公式中的卷积权重张量 filter。</td>
+<td>公式中的卷积权重张量filter。</td>
 <td>FLOAT16、FLOAT、BFLOAT16、INT8、HIFLOAT8</td>
 <td>NCDHW、DHWCN、FRACTAL_Z_3D</td>
 </tr>
 <tr>
 <td>bias</td>
 <td>可选输入</td>
-<td>卷积偏置张量 bias。</td>
+<td>卷积偏置张量bias。</td>
 <td>FLOAT16、FLOAT、BFLOAT16</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>scale</td>
 <td>可选输入</td>
-<td>缩放因子张量 scale。</td>
+<td>缩放因子张量scale。</td>
 <td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>offset</td>
 <td>可选输入</td>
-<td>偏移张量 offset（未使用）。</td>
+<td>偏移张量offset（未使用）。</td>
 <td>FLOAT</td>
 <td>ND</td>
 </tr>
 <tr>
 <td>offset_w</td>
 <td>可选输入</td>
-<td>量化偏移张量 offset_w（未使用）。</td>
+<td>量化偏移张量offset_w（未使用）。</td>
 <td>INT8</td>
 <td>-</td>
 </tr>
 <tr>
 <td>y</td>
 <td>输出</td>
-<td>公式中的输出张量 y。</td>
+<td>公式中的输出张量y。</td>
 <td>FLOAT16、FLOAT、BFLOAT16、HIFLOAT8</td>
 <td>NCDHW、NDHWC、NDC1HWC0</td>
 </tr>
@@ -132,54 +132,54 @@
 <tr>
 <td>groups</td>
 <td>可选属性</td>
-<td>从输入通道到输出通道的块链接个数，必须满足 groups × filter 的 in_channels 维度 = x 的 in_channels 维度。支持范围 [1, 65535]。</td>
+<td>从输入通道到输出通道的块链接个数，必须满足groups × filter的in_channels维度 = x的in_channels维度。支持范围 [1, 65535]。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>data_format</td>
 <td>可选属性</td>
-<td>输入数据格式，支持 "NCDHW"、"NDHWC"、"NDC1HWC0"。</td>
+<td>输入数据格式，支持"NCDHW"、"NDHWC"、"NDC1HWC0"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>offset_x</td>
 <td>可选属性</td>
-<td>量化算法中的偏移 offset_x（未使用）。</td>
+<td>量化算法中的偏移offset_x（未使用）。</td>
 <td>INT32</td>
 <td>-</td>
 </tr>
 <tr>
 <td>pad_mode</td>
 <td>可选属性</td>
-<td>填充模式，支持 "SPECIFIC"、"SAME"、"VALID"。</td>
+<td>填充模式，支持"SPECIFIC"、"SAME"、"VALID"。</td>
 <td>STRING</td>
 <td>-</td>
 </tr>
 <tr>
 <td>enable_hf32</td>
 <td>可选属性</td>
-<td>是否启用 HF32 计算，支持 true、false。</td>
+<td>是否启用HF32计算，支持true、false。</td>
 <td>BOOL</td>
 <td>-</td>
 </tr>
 </table>
 
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-  - 不支持 `HIFLOAT8` 数据类型。
-  - `scale` 和 `offset` 参数仅支持 `FLOAT` 类型。
-  - 输入为 `INT8` 数据类型时，`bias` 为必选输入，`groups` 仅支持 1。
-  - `filter`、`y` 不支持 `DHWCN` 数据格式。
-  - 不支持 `pad_mode` 属性。
-  - 当不满足 `Pointwise` 分支情况时，`x` 支持 `NDC1HWC0`，`filter` 支持 `FRACTAL_Z_3D`。
+  - 不支持`HIFLOAT8`数据类型。
+  - `scale`和`offset`参数仅支持`FLOAT`类型。
+  - 输入为`INT8`数据类型时，`bias`为必选输入，`groups`仅支持1。
+  - `filter`、`y`不支持`DHWCN`数据格式。
+  - 不支持`pad_mode`属性。
+  - 当不满足`Pointwise`分支情况时，`x`支持`NDC1HWC0`，`filter`支持`FRACTAL_Z_3D`。
 
 ## 约束说明
 
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：
-  - `filter` 的 `H`、`W` 维度范围：[1,511]。
-  - 不支持空 `tensor`。
-  - 当`groups`为 1, `dilation`全为 1，`padding`全为 0，`filter`没有为 1 的维度，`x`的`D`*`H`*`W`小于 65536，`bias`为`FLOAT`时，会进入 `Pointwise` 分支，可以使用 `NCDHW` 格式。
+  - `filter`的`H`、`W`维度范围：[1,511]。
+  - 不支持空`tensor`。
+  - 当`groups`为1, `dilation`全为1，`padding`全为0，`filter`没有为1的维度，`x`的`D`*`H`*`W`小于65536，`bias`为`FLOAT`时，会进入`Pointwise`分支，可以使用`NCDHW`格式。
 
   <table>
   <tr>
@@ -236,8 +236,8 @@
   </table>
 
 - Ascend 950PR/Ascend 950DT：
-  - 对于 `x` 输入，`N` 维度大小应该大于等于 0。`D`、`H`、`W` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的 `D`、`H`、`W` 维度也等于 0 时支持）。`C` 维度大小应该大于等于 0（等于 0 的场景仅在输出 `y` 的任意维度也等于 0 时支持）。
-  - 对于 `filter` 输入，`H`、`W` 的大小应该在 [1, 511] 的范围内。`N` 维度大小应该大于等于 0（等于 0 的场景仅在输入 `bias`、输出 `y` 的 `N` 维度也等于 0 时支持），`C` 维度大小的支持情况与输入 `x` 的 `C` 维度一致。
+  - 对于`x`输入，`N`维度大小应该大于等于0。`D`、`H`、`W`维度大小应该大于等于0（等于0的场景仅在输出`y`的`D`、`H`、`W`维度也等于0时支持）。`C`维度大小应该大于等于0（等于0的场景仅在输出`y`的任意维度也等于0时支持）。
+  - 对于`filter`输入，`H`、`W`的大小应该在 [1, 511] 的范围内。`N`维度大小应该大于等于0（等于0的场景仅在输入`bias`、输出`y`的`N`维度也等于0时支持），`C`维度大小的支持情况与输入`x`的`C`维度一致。
 
   <table>
   <tr>
@@ -322,17 +322,17 @@
   </tr>
   </table>
 
-- `x`、`filter`、`bias`、`scale`、`y` 中每一组 `tensor` 的每一维大小都应不大于 1000000。
-- 当 `x` 数据类型为 `INT8` 时，`x`、`filter` 的数据格式仅支持 `NCDHW`，`output` 的数据格式仅支持 `NDHWC`。
+- `x`、`filter`、`bias`、`scale`、`y`中每一组`tensor`的每一维大小都应不大于1000000。
+- 当`x`数据类型为`INT8`时，`x`、`filter`的数据格式仅支持`NCDHW`，`output`的数据格式仅支持`NDHWC`。
 - `groups` ∈ [1, 65535]。
 
 - 如果任何参数超出上述范围，算子的正确性无法保证。
 
-- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support) 获取技术支持。
+- 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明
 
 | 调用方式 | 调用样例                                                                   | 说明                                                             |
 |--------------|------------------------------------------------------------------------|----------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md) 接口方式调用 Conv3DV2 算子的非`INT8`数据类型计算。    |
-| aclnn调用 | [test_aclnn_quant_conv3d](../quant_conv3d/examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md) 接口方式调用 Conv3DV2 算子的`INT8`数据类型计算。    |
+| aclnn调用 | [test_aclnn_conv3d_v2](./examples/test_aclnn_conv3d_v2.cpp) | 通过 [aclnnConvolution](../convolution_forward/docs/aclnnConvolution.md)接口方式调用Conv3DV2算子的非`INT8`数据类型计算。    |
+| aclnn调用 | [test_aclnn_quant_conv3d](../quant_conv3d/examples/arch35/test_aclnn_quant_conv3d.cpp) | 通过 [aclnnQuantConvolution](../convolution_forward/docs/aclnnQuantConvolution.md)接口方式调用Conv3DV2算子的`INT8`数据类型计算。    |

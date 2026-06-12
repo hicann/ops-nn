@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 接口功能：
-对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。
+对于dim=3或4维的输入张量，进行最大池化（max pooling）操作。
 - 计算公式：
   - 当ceilMode=False时，out tensor的shape中H和W维度推导公式：
 

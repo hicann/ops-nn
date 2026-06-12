@@ -113,7 +113,7 @@
         ./test_aclnn_transpose_batch_mat_mul
         ```
 
-        \$\{static_lib_path\}表示静态库统一放置路径； \$\{ASCEND_INSTALL_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径； 最终可执行文件名请替换为**实际算子可执行文件名**。  
+        \$\{static_lib_path\}表示静态库统一放置路径；\$\{ASCEND_INSTALL_PATH\}已通过环境变量配置，表示CANN toolkit包安装路径；最终可执行文件名请替换为**实际算子可执行文件名**。  
 
         其中lcann_nn_static、lcann_math_static、lcann_legacy_static表示算子依赖的静态库文件，从静态库统一放置路径\$\{static_lib_path\}中获取；
         lgraph、lmetadef等表示算子依赖的底层库文件，可在CANN toolkit包获取。
@@ -228,7 +228,7 @@
        ret = aclnnAddExample(workspaceAddr, workspaceSize, executor, stream);
        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddExample failed. ERROR: %d\n", ret); return ret);
 
-       // 6. （固定写法）同步等待任务执行结束
+       // 6.（固定写法）同步等待任务执行结束
        ret = aclrtSynchronizeStream(stream);
        CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -400,7 +400,7 @@
    bash run.sh
    ```
 
-    默认在当前执行路径 `/build/bin`下生成可执行文件${test_aclnn_op_name}。运行结果以test_aclnn_add_example为例：
+    默认在当前执行路径`/build/bin`下生成可执行文件${test_aclnn_op_name}。运行结果以test_aclnn_add_example为例：
 
    ```text
    mean result[2046] is 2.000000
@@ -550,7 +550,7 @@
     bash run.sh
     ```
 
-    默认在当前执行路径 `/build/bin`下生成可执行文件${test_geir_op_name}，运行结果如下：
+    默认在当前执行路径`/build/bin`下生成可执行文件${test_geir_op_name}，运行结果如下：
 
     ```text
     INFO - [XIR]: Finalize ir graph session success

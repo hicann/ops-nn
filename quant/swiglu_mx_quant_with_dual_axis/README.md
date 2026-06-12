@@ -180,5 +180,5 @@
 
 | 调用方式 | 调用样例 | 说明 |
 | :------- | :------- | :--- |
-| aclnn调用 | [test_aclnn_swiglu_mx_quant_with_dual_axis](./examples/test_aclnn_swiglu_mx_quant_with_dual_axis.cpp) | 通过[aclnnSwigluMxQuantWithDualAxis](./docs/aclnnSwigluMxQuantWithDualAxis.md)接口方式调用SwigluMxQuantWithDualAxis算子。 |
+| aclnn调用 | [test_aclnn_swiglu_mx_quant_with_dual_axis](./examples/test_swiglu_mx_quant_with_dual_axis.cpp) | 通过[aclnnSwigluMxQuantWithDualAxis](./docs/aclnnSwigluMxQuantWithDualAxis.md)接口方式调用SwigluMxQuantWithDualAxis算子。 |
 | 图模式 | - | 通过算子IR构图方式调用SwigluMxQuantWithDualAxis算子。 |

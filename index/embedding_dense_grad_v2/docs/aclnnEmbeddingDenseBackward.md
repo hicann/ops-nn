@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应`grad`的一行累加到`out`上。
+实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算,将相同索引`indices`对应`grad`的一行累加到`out`上。
 
 ## 函数原型
 
@@ -256,7 +256,7 @@ aclnnStatus aclnnEmbeddingDenseBackward(
     countsSize = numWeights / coreNum + numWeights \% coreNum
     $$
 
-- <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+- <term>Atlas A2训练系列产品/Atlas 800I A2推理产品/A200I A2 Box异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 在参数shape超过以下限制时，输出无法保证高精度，若开启了确定性计算，也无法保证高性能
     - grad合轴成二维shape后，第一个维度超过INT32_MAX(2147483647)
     - numWeights超过INT32_MAX(2147483647)
@@ -327,7 +327,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -380,7 +380,7 @@ int main() {
   ret = aclnnEmbeddingDenseBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnEmbeddingDenseBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

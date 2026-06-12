@@ -294,7 +294,7 @@ aclnnStatus aclnnApplyAdamWQuant(
 
 - **返回值：**
 
-  aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 
@@ -364,7 +364,7 @@ aclnnStatus aclnnApplyAdamWQuant(
 
 - **返回值：**
 
-  aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -452,7 +452,7 @@ return 0;
 }
 
 int main() {
-// 1. 固定写法，device/stream初始化, 参考acl API手册
+// 1. 固定写法，device/stream初始化,参考acl API手册
 // 根据自己的实际device填写deviceId
 int32_t deviceId = 0;
 aclrtStream stream;

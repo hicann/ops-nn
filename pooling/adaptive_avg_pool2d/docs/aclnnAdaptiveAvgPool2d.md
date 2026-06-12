@@ -148,7 +148,7 @@ aclnnStatus aclnnAdaptiveAvgPool2d(
       <td>self和out数据类型或者数据格式不一致。</td>
     </tr>
     <tr>
-      <td>outputSize非法, 出现除零，负数，越界等不满足算子正常逻辑的现象。</td>
+      <td>outputSize非法,出现除零，负数，越界等不满足算子正常逻辑的现象。</td>
     </tr>
     <tr>
       <td>self的维度不等于3或4。</td>
@@ -216,9 +216,9 @@ aclnnStatus aclnnAdaptiveAvgPool2d(
   - aclnnAdaptiveAvgPool2d默认确定性实现。
 
 - Shape描述：
-  - self.shape = (N, C, Hin, Win) 或者 (C, Hin, Win)
+  - self.shape = (N, C, Hin, Win)或者(C, Hin, Win)
   - outputSize = [Hout, Wout]
-  - out.shape = (N, C, Hout, Wout) 或者 (C, Hout, Wout)
+  - out.shape = (N, C, Hout, Wout)或者(C, Hout, Wout)
 
 ## 调用示例
 
@@ -286,7 +286,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -327,7 +327,7 @@ int main() {
   ret = aclnnAdaptiveAvgPool2d(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAdaptiveAvgPool2d failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

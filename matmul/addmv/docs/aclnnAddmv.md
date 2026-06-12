@@ -75,9 +75,9 @@ aclnnStatus aclnnAddmv(
       <td>self</td>
       <td>输入</td>
       <td>需要和后续乘法结果相加的1维向量。</td>
-      <td><ul><li>数据类型需要与 mat@vec 构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape在alpha不为0时需要与 mat@vec 满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系。</a></li>
-      <li>alpha为0时需要与 mat@vec 相同。</li></ul></td>
+      <td><ul><li>数据类型需要与mat@vec构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
+      <li>shape在alpha不为0时需要与mat@vec满足<a href="../../../docs/zh/context/broadcast关系.md">broadcast关系。</a></li>
+      <li>alpha为0时需要与mat@vec相同。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>1</td>
@@ -88,7 +88,7 @@ aclnnStatus aclnnAddmv(
       <td>输入</td>
       <td>和vec进行乘法运算的2维矩阵。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape需要与 vec 满足乘法关系。</li></ul></td>
+      <li>shape需要与vec满足乘法关系。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>2</td>
@@ -99,7 +99,7 @@ aclnnStatus aclnnAddmv(
       <td>输入</td>
       <td>和mat进行乘法运算的1维向量。</td>
       <td><ul><li>数据类型需要与self构成<a href="../../../docs/zh/context/互推导关系.md">互推导关系。</a></li>
-      <li>shape需要与 mat 满足乘法关系。</li></ul></td>
+      <li>shape需要与mat满足乘法关系。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT32、INT64、INT16、INT8、UINT8、DOUBLE、BOOL</td>
       <td>ND</td>
       <td>1</td>
@@ -173,7 +173,7 @@ aclnnStatus aclnnAddmv(
     </tr>
   </tbody></table>
 
-  - <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
+  - <term>Atlas A2训练系列产品/Atlas 800I A2推理产品/A200I A2 Box异构组件</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：
     - cubeMathType=1，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不做处理；
     - cubeMathType=2，当输入数据类型为BFLOAT16时不支持该选项；
     - cubeMathType=3，当输入数据类型为FLOAT32时，会转换为HFLOAT32计算，当输入为其他数据类型时不支持该选项。
@@ -338,7 +338,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -403,7 +403,7 @@ int main() {
   ret = aclnnAddmv(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddmv failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

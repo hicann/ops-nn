@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。reduction指定要应用到输出的缩减，支持 'none'、'mean'、'sum'。'none' 表示不应用缩减，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
+- 接口功能：计算输入self和目标target中每个元素之间的平均绝对误差（Mean Absolute Error，简称MAE）。reduction指定要应用到输出的缩减，支持'none'、'mean'、'sum'。'none'表示不应用缩减，'mean'表示输出的总和将除以输出中的元素数，'sum'表示输出将被求和。
 
 - 计算公式：
 
@@ -26,7 +26,7 @@
   l_n = \left| x_n - y_n \right|,
   $$
   
-  其中$x$是self，$y$是target，$N$是batch的大小。如果`reduction`不是`'none'`, 那么
+  其中$x$是self，$y$是target，$N$是batch的大小。如果`reduction`不是`'none'`,那么
   
   $$
   \ell(x, y) =
@@ -314,7 +314,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -362,7 +362,7 @@ int main() {
   ret = aclnnL1Loss(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnL1Loss failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

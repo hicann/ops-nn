@@ -306,7 +306,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
       <tr>
         <td>logits</td>
         <td>输入</td>
-        <td>表示待采样的输入词频，词频索引固定为最后一维, 对应公式`logits`。</td>
+        <td>表示待采样的输入词频，词频索引固定为最后一维,对应公式`logits`。</td>
         <td><ul><li>不支持空tensor。</li></ul></td>
         <td>FLOAT16、BFLOAT16、FLOAT32</td>
         <td>ND</td>
@@ -639,7 +639,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API
+    // 1.（固定写法）device/stream初始化，参考acl API
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -734,7 +734,7 @@ int main() {
     ret = aclnnTopKTopPSampleV2(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTopKTopPSampleV2 failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

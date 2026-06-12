@@ -31,12 +31,12 @@
   v_t = \beta_2 \times v_{t-1} + (1 - \beta_2) \times g_t^2
   $$
 
-  若 use_nesterov = true:
+  若use_nesterov = true:
   $$
   var_t = var_{t-1} - lr_t \times \frac{\beta_1 \times m_t + (1 - \beta_1) \times g_t}{\sqrt{v_t} + \epsilon}
   $$
 
-  若 use_nesterov = false:
+  若use_nesterov = false:
   $$
   var_t = var_{t-1} - lr_t \times \frac{m_t}{\sqrt{v_t} + \epsilon}
   $$
@@ -241,7 +241,7 @@ aclnnStatus aclnnApplyAdam(
 
 - **返回值：**
 
-  aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
 

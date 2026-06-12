@@ -17,7 +17,7 @@
 执行最大池化操作，同时输出池化后的最大值和对应位置的索引。
 
 - 计算公式：
-  - output tensor中每个元素的计算公式，以 NCHW 为例：
+  - output tensor中每个元素的计算公式，以NCHW为例：
     
     $$
     y(N_i, C_j, h, w) = \max\limits_{{k\in[0,k_{H}-1],m\in[0,k_{W}-1]}}x(N_i,C_j,stride[2]\times h + k, stride[3]\times w + m)
@@ -133,4 +133,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn模式接口 | [test_aclnn_max_pool_with_argmax](examples/test_aclnn_max_pool_with_argmax.cpp) | 通过aclnn[aclnnMaxPool2dWithIndices](../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)方式调用MaxPoolWithArgmax算子。 |
+| aclnn模式接口 | [test_aclnn_max_pool_with_argmax](./examples/arch35/test_geir_max_pool_with_argmax.cpp) | 通过aclnn[aclnnMaxPool2dWithIndices](../max_pool3d_with_argmax_v2/docs/aclnnMaxPool2dWithIndices.md)方式调用MaxPoolWithArgmax算子。 |

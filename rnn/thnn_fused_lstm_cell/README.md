@@ -48,9 +48,9 @@
   相关符号说明：
   
   * 偏置 $b_{ih} = \text{inputBias}$, $b_{hh} = \text{hiddenBias}$
-  * 将 $gates$ 沿最后一维平均切分为 4 个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
+  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
   * 将得到的4个门控激活值沿最后一维拼接成$\text{storage}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storage}$
-  * $\sigma$ 为 Sigmoid 激活函数，$\odot$ 为逐元素乘积
+  * $\sigma$ 为Sigmoid激活函数，$\odot$ 为逐元素乘积
 
 ## 参数说明
 

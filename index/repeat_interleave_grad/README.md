@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：算子RepeatInterleave的反向, 将y_grad tensor的axis维度按repeats进行ReduceSum。
+- 算子功能：算子RepeatInterleave的反向,将y_grad tensor的axis维度按repeats进行ReduceSum。
 
 ## 参数说明
 

@@ -21,7 +21,7 @@
 
 * **输入梯度**：$\delta h_t$ (`gradHy`)， $\delta c_t$ (`gradC`)
 * **前向缓存**：$i，f，g，o$ (各门激活值`storage`)，$c_{t-1}$ (`cx`)，$c_t$ (`cy`)
-* **输出梯度**：$\delta a_i，\delta a_f，\delta a_g，\delta a_o$ (存入 `gradInGatesOut`)，$\delta c_{t-1}$ (`gradCPrevOut`)
+* **输出梯度**：$\delta a_i，\delta a_f，\delta a_g，\delta a_o$ (存入`gradInGatesOut`)，$\delta c_{t-1}$ (`gradCPrevOut`)
 
 **第一阶段：中间梯度与状态回传**
 
@@ -35,7 +35,7 @@ gcx &= \tanh(c_t) \\
 \end{aligned}
 $$
 
-**第二阶段：门控分量梯度 (Pre-activation)**
+**第二阶段：门控分量梯度(Pre-activation)**
 
 根据代码逻辑，各门控在进入激活函数前的梯度 $\delta a$ 计算如下：
 
@@ -48,9 +48,9 @@ $$
 \end{aligned}
 $$
 
-**第三阶段：参数梯度 (db)**
+**第三阶段：参数梯度(db)**
 
-**1. 偏置梯度 (db)：**对 Batch 维度（$N$）进行求和：
+**1. 偏置梯度(db)：**对Batch维度（$N$）进行求和：
 
 $$
 \delta b = \sum_{n=1}^{N} \begin{bmatrix} \delta a_i \\ \delta a_f \\ \delta a_g \\ \delta a_o \end{bmatrix}_n

@@ -255,7 +255,7 @@ aclnnStatus aclnnFusedMatmul(
         <td>x1和x2无法做数据类型推导。</td>
       </tr>
       <tr>
-        <td>当传入的fusedOpType属于""、"add"、"mul"、"relu"中的一种, 且输入的数据类型为float32时, cubeMathType只支持3。</td>
+        <td>当传入的fusedOpType属于""、"add"、"mul"、"relu"中的一种,且输入的数据类型为float32时, cubeMathType只支持3。</td>
       </tr>
   </tbody></table>
 
@@ -374,7 +374,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -430,7 +430,7 @@ int main() {
   ret = aclnnFusedMatmul(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFusedMatmul failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

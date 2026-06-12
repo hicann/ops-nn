@@ -148,21 +148,21 @@ aclnnStatus aclnnEinsum(
       <td>tensors和output的数据类型不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>equation(可扩充) 不在注册表内。</td>
+      <td>equation(可扩充)不在注册表内。</td>
     </tr>
     <tr>
       <td>当equation=='abcd,abced-&gt;abce':
-      <ul><li>tensors 中包含2个Tensor (i.e. tensors[0] & tensors[1]);</li>
+      <ul><li>tensors中包含2个Tensor (i.e. tensors[0] & tensors[1]);</li>
       <li>tensors[0] 、tensors[1]、output三者数据类型需保持一致;</li>
       <li>tensors[0] 必须为4维;</li>
       <li>tensors[1] 必须为5维;</li>
-      <li>tensors[0] 前3维 必须等于 tensors[1] 前3维度;</li>
-      <li>tensors[0] 第4维 必须等于 tensors[1] 第5维度。</li></ul>
+      <li>tensors[0] 前3维必须等于tensors[1] 前3维度;</li>
+      <li>tensors[0] 第4维必须等于tensors[1] 第5维度。</li></ul>
       </td>
     </tr>
     <tr>
       <td>当equation=='a,b-&gt;ab':
-      <ul><li>tensorList 中包含2个Tensor (i.e. tensors[0] & tensors[1]);</li>
+      <ul><li>tensorList中包含2个Tensor (i.e. tensors[0] & tensors[1]);</li>
       <li>tensors[0] 、tensors[1]、output三者数据类型需保持一致;</li>
       <li>tensors[0] 必须为1维;</li>
       <li>tensors[1] 必须为1维。</li></ul>
@@ -250,7 +250,7 @@ int64_t GetShapeSize(const std::vector<T>& shape) {
   return shape_size;
 }
 int Init(int32_t deviceId, aclrtStream* stream) {
-  // 固定写法, 资源初始化
+  // 固定写法,资源初始化
   auto ret = aclInit(nullptr);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclInit failed. ERROR: %d\n", ret); return ret);
   ret = aclrtSetDevice(deviceId);
@@ -285,14 +285,14 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. (固定写法)device/stream初始化, 参考acl API手册
+  // 1. (固定写法)device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
   auto ret = Init(deviceId, &stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出, 需要根据API的接口自定义构造
+  // 2. 构造输入与输出,需要根据API的接口自定义构造
   std::vector<int64_t> selfShape1 = {1, 2, 3, 4};
   std::vector<int64_t> selfShape2 = {1, 2, 3, 5, 4};
   std::vector<int64_t> outShape = {1, 2, 3, 5};
@@ -347,7 +347,7 @@ int main() {
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值, 将device侧内存上的结果拷贝至host侧, 需要根据具体API的接口定义修改
+  // 5. 获取输出的值,将device侧内存上的结果拷贝至host侧,需要根据具体API的接口定义修改
   auto size = GetShapeSize(outShape);
   ret = aclrtMemcpy(outHostData.data(), outHostData.size() * sizeof(outHostData[0]),
                     outDeviceAddr, size * sizeof(outHostData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
@@ -356,12 +356,12 @@ int main() {
     LOG_PRINT("result[%ld] is: %i\n", i, outHostData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar, 需要根据具体API的接口定义修改
+  // 6. 释放aclTensor和aclScalar,需要根据具体API的接口定义修改
   aclDestroyTensorList(tensorList);
   aclDestroyTensor(out);
 
 
-  // 7. 释放Device资源, 需要根据具体API的接口定义修改
+  // 7. 释放Device资源,需要根据具体API的接口定义修改
   aclrtFree(input1DeviceAddr);
   aclrtFree(input2DeviceAddr);
   aclrtFree(outDeviceAddr);

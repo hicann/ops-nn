@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：根据索引 indices 将输入 self 对应坐标的数据与输入 values 进行替换或累加。
+- 接口功能：根据索引indices将输入self对应坐标的数据与输入values进行替换或累加。
 - 计算公式：
 
   - accumulate = False:
@@ -82,7 +82,7 @@ aclnnStatus aclnnIndexPutImpl(
       <tr>
         <td>selfRef</td>
         <td>输入</td>
-        <td>公式中的 self。</td>
+        <td>公式中的self。</td>
         <td>数据类型和values一致。</td>
         <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、BFLOAT16</td>
         <td>ND</td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnIndexPutImpl(
       <tr>
         <td>indices</td>
         <td>输入</td>
-        <td>公式中的 indices。</td>
+        <td>公式中的indices。</td>
         <td>indices中Tensor个数不能超过selfRef的维度数（最大8维）</td>
         <td>INT32、INT64、BOOL</td>
         <td>ND</td>
@@ -102,7 +102,7 @@ aclnnStatus aclnnIndexPutImpl(
       <tr>
         <td>values</td>
         <td>输入</td>
-        <td>公式中的 values。</td>
+        <td>公式中的values。</td>
         <td></td>
         <td>和selfRef一致</td>
         <td>ND</td>
@@ -323,7 +323,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
+  // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -379,7 +379,7 @@ int main() {
   ret = aclnnIndexPutImpl(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexPutImplfailed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

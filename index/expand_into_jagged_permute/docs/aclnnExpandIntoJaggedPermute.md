@@ -370,7 +370,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API
+  // 1.（固定写法）device/stream初始化,参考acl API
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -378,7 +378,7 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret);
             return ret);
 
-  // 2. 构造输入与输出, 需要根据API的接口自定义构造
+  // 2. 构造输入与输出,需要根据API的接口自定义构造
   std::vector<int64_t> permuteShape = {3};
   std::vector<int64_t>inputOffsetsShape = {4};
   std::vector<int64_t> outputOffsetsShape = {4};
@@ -414,7 +414,7 @@ int main() {
                       aclDataType::ACL_INT32, &outputPermute);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 3. 调用CANN算子库API, 需要修改为具体的Api名称
+  // 3. 调用CANN算子库API,需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
 
@@ -441,7 +441,7 @@ int main() {
             LOG_PRINT("aclnnExpandIntoJaggedPermute failed. ERROR: %d\n", ret);
             return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS,
             LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);

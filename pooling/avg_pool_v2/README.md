@@ -7,7 +7,7 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2推理产品|×|
+|Atlas 200I/500 A2 推理产品|×|
 |Atlas 推理系列产品|√|
 |Atlas 训练系列产品|√|
 
@@ -85,7 +85,7 @@
     <tr>
       <td>pads</td>
       <td>可选属性</td>
-      <td>表示在输入的D、H 方向上pads补0的层数，公式中的`padding`。</td>
+      <td>表示在输入的D、H方向上pads补0的层数，公式中的`padding`。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>

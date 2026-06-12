@@ -31,7 +31,7 @@
 - aclnnAddmm和aclnnInplaceAddmm实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnAddmm：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceAddmm：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmGetWorkspaceSize” 或者 “aclnnInplaceAddmmGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmm” 或者 “aclnnInplaceAddmm” 接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddmmGetWorkspaceSize”或者“aclnnInplaceAddmmGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmm”或者“aclnnInplaceAddmm”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAddmmGetWorkspaceSize(
@@ -252,7 +252,7 @@ aclnnStatus aclnnInplaceAddmm(
         <td>mat1和mat2不满足相乘条件。</td>
       </tr>
       <tr>
-        <td>out和 mat1@mat2 shape不一致。</td>
+        <td>out和mat1@mat2 shape不一致。</td>
       </tr>
     </tbody>
     </table>
@@ -461,7 +461,7 @@ aclnnStatus aclnnInplaceAddmm(
           <td>mat1和mat2不满足相乘条件。</td>
         </tr>
         <tr>
-          <td>selfRef和 mat1@mat2 shape不一致。</td>
+          <td>selfRef和mat1@mat2 shape不一致。</td>
         </tr>
       </tbody>
       </table>
@@ -588,7 +588,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -653,7 +653,7 @@ int main() {
   ret = aclnnAddmm(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddmm failed. ERROR: %d.\n[ERROR msg]%s", ret, aclGetRecentErrMsg()); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d.\n[ERROR msg]%s", ret, aclGetRecentErrMsg()); return ret);
 
@@ -668,7 +668,7 @@ int main() {
   }
 
   // aclnnInplaceAddmm
-  // step3 调用CANN算子库API
+  // step3调用CANN算子库API
   LOG_PRINT("\ntest aclnnInplaceAddmm\n");
   // 调用aclnnInplaceAddmm第一段接口
   ret = aclnnInplaceAddmmGetWorkspaceSize(self, mat1, mat2, beta, alpha, cubeMathType, &workspaceSize, &executor);
@@ -686,7 +686,7 @@ int main() {
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d.\n[ERROR msg]%s", ret, aclGetRecentErrMsg()); return ret);
 
-  // step5 获取输出的值，将device侧内存上的结果拷贝至host侧
+  // step5获取输出的值，将device侧内存上的结果拷贝至host侧
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), selfDeviceAddr,
                     size * sizeof(resultData[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d.\n[ERROR msg]%s", ret, aclGetRecentErrMsg()); return ret);

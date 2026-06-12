@@ -22,7 +22,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize” 获取 workspace 大小，再调用 “aclnnTransposeQuantBatchMatMulWeightNz” 执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize”获取workspace大小，再调用“aclnnTransposeQuantBatchMatMulWeightNz”执行计算。
 
 ```cpp
 aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
@@ -144,8 +144,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
         <td>用于指定输出矩阵的数据类型，支持的值为：1、27。</td>
         <td>
         <ul>
-          <li>取值为1, 表示输出矩阵类型为FLOAT16。</li>
-          <li>取值为27, 表示输出矩阵类型为BFLOAT16。</li>
+          <li>取值为1,表示输出矩阵类型为FLOAT16。</li>
+          <li>取值为27,表示输出矩阵类型为BFLOAT16。</li>
         </ul>
         </td>
         <td>INT32</td>
@@ -156,9 +156,9 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
       <tr>
         <td>groupSize（int64_t）</td>
         <td>输入</td>
-        <td>用于输入  M、N、K方向上的量化分组大小。</td>
+        <td>用于输入M、N、K方向上的量化分组大小。</td>
         <td>
-        由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
+        由3个方向的groupSizeM，groupSizeN，groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
         </td>
         <td>INT64</td>
         <td>-</td>
@@ -404,11 +404,11 @@ int Init(int32_t deviceId, aclrtStream* stream)
     return 0;
 }
 
-// BF16 到 float 的转换函数
+// BF16到float的转换函数
 float bf16_to_float(uint16_t bf16)
 {
     uint16_t sign = (bf16 >> 15) & 0x1;
-    uint16_t exp = (bf16 >> 7) & 0xFF; // 8 位指数
+    uint16_t exp = (bf16 >> 7) & 0xFF; // 8位指数
     uint16_t mant = bf16 & 0x7F;
 
     // 特殊值处理
@@ -416,11 +416,11 @@ float bf16_to_float(uint16_t bf16)
         if (mant == 0) {
             return sign ? -0.0f : 0.0f;
         } else {
-            // 非规格化 BF16 -> float
+            // 非规格化BF16 -> float
             return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
     } else if (exp == 255) {
-        // 无穷大或 NaN
+        // 无穷大或NaN
         if (mant == 0) {
             return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
         } else {
@@ -428,8 +428,8 @@ float bf16_to_float(uint16_t bf16)
         }
     } else {
         // 规格化数
-        float f_exp = (float)(exp - 127);      // 偏移 127
-        float f_mant = (float)mant / (1 << 7); // 7 位小数
+        float f_exp = (float)(exp - 127);      // 偏移127
+        float f_mant = (float)mant / (1 << 7); // 7位小数
         float f = (sign ? -1.0f : 1.0f) * (1.0f + f_mant) * (1 << (int)f_exp);
         return f;
     }
@@ -629,7 +629,7 @@ int AclnnTransposeQuantBatchMatMulWeightNzTest(int32_t deviceId, aclrtStream& st
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMulWeightNz failed. ERROR: %d\n", ret);
               return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -651,7 +651,7 @@ int AclnnTransposeQuantBatchMatMulWeightNzTest(int32_t deviceId, aclrtStream& st
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1.（固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

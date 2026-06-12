@@ -54,14 +54,14 @@
     <tr>
       <td>grad_x</td>
       <td>输出</td>
-      <td>x 的梯度。</td>
+      <td>x的梯度。</td>
       <td>DT_FLOAT16, DT_FLOAT</td>
       <td>NHWC</td>
     </tr>
     <tr>
       <td>grad_offsets</td>
       <td>输出</td>
-      <td>相对于 input_offsets 的梯度。</td>
+      <td>相对于input_offsets的梯度。</td>
       <td>DT_FLOAT16, DT_FLOAT</td>
       <td>NHWC</td>
     </tr>
@@ -96,21 +96,21 @@
     <tr>
       <td>data_format</td>
       <td>属性</td>
-      <td>输入 x 的数据格式。</td>
+      <td>输入x的数据格式。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>deformable_groups</td>
       <td>属性</td>
-      <td> C 轴上的分组。</td>
+      <td> C轴上的分组。</td>
       <td>INT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>modulated</td>
       <td>属性</td>
-      <td>可选 bool 指定 DeformableConv2D 的版本，true 表示 v2 ，false 表示 v1，只支持 " true "。</td>
+      <td>可选bool指定DeformableConv2D的版本，true表示v2 ，false表示v1，只支持" true "。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>

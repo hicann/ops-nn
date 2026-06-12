@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- **算子功能**：执行 AdaMax 优化器的单步参数更新。AdaMax 是 Adam 优化器的变体，使用无穷范数 $L_{\infty}$ 代替二阶矩估计，对权重 `var`、一阶矩 `m`、无穷范数 `v` 进行**原地**更新（inplace 语义）。对标 TensorFlow `tf.raw_ops.ApplyAdaMax` 接口和 PyTorch `torch.optim.Adamax` 的计算语义。
+- **算子功能**：执行AdaMax优化器的单步参数更新。AdaMax是Adam优化器的变体，使用无穷范数 $L_{\infty}$ 代替二阶矩估计，对权重`var`、一阶矩`m`、无穷范数`v`进行**原地**更新（inplace语义）。对标TensorFlow `tf.raw_ops.ApplyAdaMax`接口和PyTorch `torch.optim.Adamax`的计算语义。
 
 - **计算公式**：
 
@@ -27,7 +27,7 @@
   \end{aligned}
   $$
 
-  算子原型对齐 canndev `REG_OP(ApplyAdaMax)`：9 输入 + 1 输出 + 1 属性。`m` / `v` 不显式作为图输出端口，通过输入 GM 地址 inplace 写回完成更新（GE Variable inplace 语义）。
+  算子原型对齐canndev `REG_OP(ApplyAdaMax)`：9输入 + 1输出 + 1属性。`m` / `v`不显式作为图输出端口，通过输入GM地址inplace写回完成更新（GE Variable inplace语义）。
 
 ## 参数说明
 
@@ -50,77 +50,77 @@
   <tr>
     <td>var</td>
     <td>输入</td>
-    <td>待更新的权重参数张量，对应公式中的 var。与图输出端口 var 共享 GM 地址（inplace 更新）。1-8 维 ND 格式。</td>
+    <td>待更新的权重参数张量，对应公式中的var。与图输出端口var共享GM地址（inplace更新）。1-8维ND格式。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>m</td>
     <td>输入</td>
-    <td>一阶矩张量，对应公式中的 m。shape/dtype 必须与 var 一致；由 Kernel 写回输入 GM 地址完成 inplace 更新，无显式输出端口。</td>
+    <td>一阶矩张量，对应公式中的m。shape/dtype必须与var一致；由Kernel写回输入GM地址完成inplace更新，无显式输出端口。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>v</td>
     <td>输入</td>
-    <td>无穷范数估计张量（$L_{\infty}$），对应公式中的 v。shape/dtype 必须与 var 一致；由 Kernel 写回输入 GM 地址完成 inplace 更新，无显式输出端口。</td>
+    <td>无穷范数估计张量（$L_{\infty}$），对应公式中的v。shape/dtype必须与var一致；由Kernel写回输入GM地址完成inplace更新，无显式输出端口。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>beta1_power</td>
     <td>输入</td>
-    <td>偏差校正因子 $\beta_1^t$，由外部传入。shape 必须为 [1] 的 scalar Tensor。须保证 $1 - \beta_1^t \neq 0$。</td>
+    <td>偏差校正因子 $\beta_1^t$，由外部传入。shape必须为 [1] 的scalar Tensor。须保证 $1 - \beta_1^t \neq 0$。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>lr</td>
     <td>输入</td>
-    <td>学习率，对应公式中的 lr。shape 必须为 [1] 的 scalar Tensor。</td>
+    <td>学习率，对应公式中的lr。shape必须为 [1] 的scalar Tensor。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>beta1</td>
     <td>输入</td>
-    <td>一阶矩衰减系数 $\beta_1$，取值范围 [0, 1)。shape 必须为 [1] 的 scalar Tensor。</td>
+    <td>一阶矩衰减系数 $\beta_1$，取值范围 [0, 1)。shape必须为 [1] 的scalar Tensor。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>beta2</td>
     <td>输入</td>
-    <td>无穷范数衰减系数 $\beta_2$，取值范围 [0, 1)。shape 必须为 [1] 的 scalar Tensor。</td>
+    <td>无穷范数衰减系数 $\beta_2$，取值范围 [0, 1)。shape必须为 [1] 的scalar Tensor。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>输入</td>
-    <td>数值稳定常数 $\epsilon$，必须大于 0。shape 必须为 [1] 的 scalar Tensor。</td>
+    <td>数值稳定常数 $\epsilon$，必须大于0。shape必须为 [1] 的scalar Tensor。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>grad</td>
     <td>输入</td>
-    <td>当前梯度 $g_t$，对应公式中的 grad。shape/dtype 必须与 var 一致。</td>
+    <td>当前梯度 $g_t$，对应公式中的grad。shape/dtype必须与var一致。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>use_locking</td>
     <td>属性</td>
-    <td>语义占位的 bool 属性，默认 false。当前实现不强制互斥锁。</td>
+    <td>语义占位的bool属性，默认false。当前实现不强制互斥锁。</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>
   <tr>
     <td>var</td>
     <td>输出</td>
-    <td>更新后的权重张量，与输入 var 共享 Device 内存（inplace）。shape/dtype 与输入 var 完全相同。</td>
+    <td>更新后的权重张量，与输入var共享Device内存（inplace）。shape/dtype与输入var完全相同。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
@@ -133,4 +133,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式 | [test_geir_apply_adamax](./examples/test_geir_apply_adamax.cpp) | 通过[算子IR](./op_graph/apply_adamax_proto.h)构图方式调用 ApplyAdaMax 算子。 |
+| 图模式 | [test_geir_apply_adamax](./examples/test_geir_apply_adamax.cpp) | 通过[算子IR](./op_graph/apply_adamax_proto.h)构图方式调用ApplyAdaMax算子。 |

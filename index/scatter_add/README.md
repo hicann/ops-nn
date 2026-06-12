@@ -17,15 +17,15 @@
   对于一个3D tensor， self会按照如下的规则进行更新：
 
   ```bash
-  self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0
-  self[i][index[i][j][k]][k] += src[i][j][k] # 如果 dim == 1
-  self[i][j][index[i][j][k]] += src[i][j][k] # 如果 dim == 2
+  self[index[i][j][k]][j][k] += src[i][j][k] # 如果dim == 0
+  self[i][index[i][j][k]][k] += src[i][j][k] # 如果dim == 1
+  self[i][j][index[i][j][k]] += src[i][j][k] # 如果dim == 2
   ```
 
   在计算时需要满足以下要求：
   - self, index和src的维度数量必须相同
-  - 对于每一个维度d, 有index.size(d) <= src.size(d)
-  - 对于每一个维度d, 如果有d != dim, 有index.size(d) <= self.size(d)
+  - 对于每一个维度d,有index.size(d) <= src.size(d)
+  - 对于每一个维度d,如果有d != dim,有index.size(d) <= self.size(d)
   - dim取值范围为[-self.dim(), self.dim() - 1]
 - 用例：
   
@@ -34,7 +34,7 @@
   源tensor $src = \begin{bmatrix} [10&11&12] \\ [13&14&15] \end{bmatrix}$，
   输出tensor $output = \begin{bmatrix} [11&14&14] \\ [31&20&6] \\ [7&8&9] \end{bmatrix}$
   
-  dim = 1 表示scatter_add根据$index$在tensor的列上进行累加。
+  dim = 1表示scatter_add根据$index$在tensor的列上进行累加。
   
   $output[0][0] = self[0][0] + src[0][0]$ = 1 + 10,
   
@@ -60,7 +60,7 @@
 
     - self（aclTensor*，计算输入）：公式中的输入`self`，Device侧的aclTensor。scatter的目标张量，shape支持0-8维，且维度数量需要与index和src相同。数据类型与src的数据类型一致。支持[非连续的Tensor](../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../docs/zh/context/数据格式.md)支持ND。
       - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT32、DOUBLE、INT64、INT32、INT16、INT8、UINT8、BOOL、COMPLEX64、COMPLEX128。
-    - dim（int64_t, 计算输入）：计算公式中的输入`dim`，数据类型为INT64。
+    - dim（int64_t,计算输入）：计算公式中的输入`dim`，数据类型为INT64。
   
     - index（aclTensor*，计算输入）：公式中的输入`index`，Device侧的aclTensor。数据类型支持INT32、INT64。index维度数量需要与src相同。支持[非连续的Tensor](../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../docs/zh/context/数据格式.md)支持ND。
       - <term>Ascend 950PR/Ascend 950DT</term>：当dim轴上index值存在重复时，结果将是不确定的。若开启了确定性计算，可保证结果的确定性。

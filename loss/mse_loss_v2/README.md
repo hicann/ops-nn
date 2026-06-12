@@ -26,7 +26,7 @@ $$
   l_n = \left( x_n - y_n \right)^2,
 $$
 
-  其中$x$是`self`，$y$是`target`，$N$是`batch`的大小。如果`reduction`不是`none`, 那么：
+  其中$x$是`self`，$y$是`target`，$N$是`batch`的大小。如果`reduction`不是`none`,那么：
 
 $$
   \ell(x, y) =
@@ -71,7 +71,7 @@ $$
     <tr>
       <td>reduction</td>
       <td>输入</td>
-      <td>公式中的输入reduction，指定要应用到输出的缩减，支持 0('none') | 1('mean') | 2('sum')。'none' 表示不应用缩减，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。</td>
+      <td>公式中的输入reduction，指定要应用到输出的缩减，支持0('none') | 1('mean') | 2('sum')。'none'表示不应用缩减，'mean'表示输出的总和将除以输出中的元素数，'sum'表示输出将被求和。</td>
       <td>int64_t</td>
       <td>ND</td>
     </tr>

@@ -33,7 +33,7 @@
     [N, C, H_{out}, W_{out}]=[N,C,\lfloor{\frac{H_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{W_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1]
     $$
 
-    当 $ceilMode$ 为True 且 $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$，则 $H_{out} = H_{out} - 1$；W维度同理。
+    当 $ceilMode$ 为True且 $(H_{out}-1) \times stride[0] \ge H_{in} + padding[0]$，则 $H_{out} = H_{out} - 1$；W维度同理。
 
 ## 函数原型
 
@@ -383,7 +383,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -444,7 +444,7 @@ int main() {
   ret = aclnnMaxPool2dWithIndices(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPool2dWithIndices failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

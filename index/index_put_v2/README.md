@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：根据索引 indices 将输入 self 对应坐标的数据与输入 values 进行替换或累加。
+- 接口功能：根据索引indices将输入self对应坐标的数据与输入values进行替换或累加。
 - 计算公式：
 
   - accumulate = False:
@@ -49,21 +49,21 @@
       <tr>
         <td>selfRef</td>
         <td>输入</td>
-        <td>公式中的 self。数据类型和values一致。</td>
+        <td>公式中的self。数据类型和values一致。</td>
         <td>FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL、BFLOAT16</td>
         <td>ND</td>
       </tr>
       <tr>
         <td>indices</td>
         <td>输入</td>
-        <td>公式中的 indices。</td>
+        <td>公式中的indices。</td>
         <td>INT32、INT64、BOOL</td>
         <td>ND</td>
       </tr>
       <tr>
         <td>values</td>
         <td>输入</td>
-        <td>公式中的 values。</td>
+        <td>公式中的values。</td>
         <td>和selfRef一致</td>
         <td>ND</td>
       </tr>

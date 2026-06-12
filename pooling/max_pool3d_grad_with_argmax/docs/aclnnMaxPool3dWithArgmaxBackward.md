@@ -103,7 +103,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
     <td>kernelSize</td>
     <td>输入</td>
     <td>池化操作中使用的滑动窗口大小。</td>
-    <td>长度为1 (kD = kH = kW) 或3 (kD, kH, kW)。</td>
+    <td>长度为1 (kD = kH = kW)或3 (kD, kH, kW)。</td>
     <td>INT64</td>
     <td>-</td>
     <td>-</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnMaxPool3dWithArgmaxBackward(
   </tr>
   </tbody></table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`indices` 数据类型不支持INT64。depth *height* width 不支持大于 max int32。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`indices`数据类型不支持INT64。depth *height* width不支持大于max int32。
   
 - **返回值：**
 
@@ -365,7 +365,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -433,7 +433,7 @@ int main() {
   ret = aclnnMaxPool3dWithArgmaxBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPool3dWithArgmaxBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

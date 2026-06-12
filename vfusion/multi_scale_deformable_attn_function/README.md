@@ -83,28 +83,28 @@
   <tbody>
     <tr><td><b>u, v</b></td><td>输入</td><td>采样点的归一化坐标，范围 [0,1]</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>W<sub>ℓ</sub>, H<sub>ℓ</sub></b></td><td>输入</td><td>第 ℓ 层特征图的宽、高</td><td>INT32、INT64</td></tr>
-    <tr><td><b>V(b,ℓ,y,x,h,:)</b></td><td>输入</td><td>Value 特征向量：第 b 个 batch、第 ℓ 层、坐标 (y,x)、head h</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>A(b,q,h,ℓ,p)</b></td><td>输入</td><td>注意力权重：query q 在第 ℓ 层第 p 个采样点上的权重</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>V(b,ℓ,y,x,h,:)</b></td><td>输入</td><td>Value特征向量：第b个batch、第 ℓ 层、坐标(y,x)、head h</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>A(b,q,h,ℓ,p)</b></td><td>输入</td><td>注意力权重：query q在第 ℓ 层第p个采样点上的权重</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>x, y</b></td><td>中间量</td><td>映射到像素坐标系下的采样点位置</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>x₀, x₁, y₀, y₁</b></td><td>中间量</td><td>四邻点整数坐标</td><td>INT32、INT64</td></tr>
     <tr><td><b>αx, αy</b></td><td>中间量</td><td>采样点相对于左上角网格点的偏移量</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>w₀₀, w₁₀, w₀₁, w₁₁</b></td><td>中间量</td><td>双线性插值权重，和为 1</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>w₀₀, w₁₀, w₀₁, w₁₁</b></td><td>中间量</td><td>双线性插值权重，和为1</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>bilinear(V;·)</b></td><td>中间量</td><td>插值得到的采样向量</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>O(b,q,h,:)</b></td><td>输出</td><td>最终输出向量：query q 在 head h 的结果</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>b</b></td><td>属性</td><td>batch 索引</td><td>INT32、INT64</td></tr>
-    <tr><td><b>q</b></td><td>属性</td><td>query 索引</td><td>INT32、INT64</td></tr>
-    <tr><td><b>h</b></td><td>属性</td><td>head 索引</td><td>INT32、INT64</td></tr>
+    <tr><td><b>O(b,q,h,:)</b></td><td>输出</td><td>最终输出向量：query q在head h的结果</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>b</b></td><td>属性</td><td>batch索引</td><td>INT32、INT64</td></tr>
+    <tr><td><b>q</b></td><td>属性</td><td>query索引</td><td>INT32、INT64</td></tr>
+    <tr><td><b>h</b></td><td>属性</td><td>head索引</td><td>INT32、INT64</td></tr>
     <tr><td><b>ℓ</b></td><td>属性</td><td>特征层索引</td><td>INT32、INT64</td></tr>
     <tr><td><b>p</b></td><td>属性</td><td>采样点索引</td><td>INT32、INT64</td></tr>
-    <tr><td><b>D</b></td><td>属性</td><td>每个 head 的嵌入维度</td><td>INT32、INT64</td></tr>
-    <tr><td><b>Nq(num_queries)</b></td><td>属性</td><td>每个 batch 的 query 数</td><td>INT32、INT64</td></tr>
-    <tr><td><b>Nh(num_heads)</b></td><td>属性</td><td>注意力 head 数</td><td>INT32、INT64</td></tr>
+    <tr><td><b>D</b></td><td>属性</td><td>每个head的嵌入维度</td><td>INT32、INT64</td></tr>
+    <tr><td><b>Nq(num_queries)</b></td><td>属性</td><td>每个batch的query数</td><td>INT32、INT64</td></tr>
+    <tr><td><b>Nh(num_heads)</b></td><td>属性</td><td>注意力head数</td><td>INT32、INT64</td></tr>
     <tr><td><b>L(num_levels)</b></td><td>属性</td><td>特征层数</td><td>INT32、INT64</td></tr>
-    <tr><td><b>Np(num_points)</b></td><td>属性</td><td>每层每个 query 的采样点数</td><td>INT32、INT64</td></tr>
+    <tr><td><b>Np(num_points)</b></td><td>属性</td><td>每层每个query的采样点数</td><td>INT32、INT64</td></tr>
   </tbody>
 </table>
 
-- Atlas推理系列产品：不支持BFLOAT16
+- Atlas 推理系列产品：不支持BFLOAT16
 
 ## 约束说明
 

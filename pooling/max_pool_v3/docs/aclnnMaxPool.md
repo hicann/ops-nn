@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 接口功能：
-对于dim=3 或4维的输入张量，进行最大池化（max pooling）操作。
+对于dim=3或4维的输入张量，进行最大池化（max pooling）操作。
 - 计算公式：
   - 当ceilMode=False时，out tensor的shape中H和W维度推导公式：
 
@@ -134,7 +134,7 @@ aclnnStatus aclnnMaxPool(
       <td>pads</td>
       <td>输入</td>
       <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。</td>
-      <td>长度为0、1、2或4。当长度为2时， padding = {上(下), 左(右)} ，长度为4时，padding = {上, 左, 下，右}</td>
+      <td>长度为0、1、2或4。当长度为2时， padding = {上(下),左(右)}，长度为4时，padding = {上,左,下，右}</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -367,7 +367,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -422,7 +422,7 @@ int main() {
   ret = aclnnMaxPool(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxPool failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -440,7 +440,7 @@ int main() {
   aclDestroyTensor(self);
   aclDestroyTensor(out);
 
-  // 7. 释放device 资源
+  // 7. 释放device资源
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
   if (workspaceSize > 0) {

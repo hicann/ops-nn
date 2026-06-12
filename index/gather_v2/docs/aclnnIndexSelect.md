@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。
-    例如，对于输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量 index=[1, 0]，
+    例如，对于输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量index=[1, 0]，
     self.index_select(0, index)的结果： $y=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$;
 
     x.index_select(1, index)的结果： $y=\begin{bmatrix}2 & 1\\ 5 & 4\\8 & 7\end{bmatrix}$;
@@ -171,7 +171,7 @@ aclnnStatus aclnnIndexSelect(
       <td>参数self、index的数据类型不在支持的范围内。</td>
       </tr>
       <tr>
-      <td>dim >= self.dim() 或者 dim < -self.dim()。</td>
+      <td>dim >= self.dim()或者dim < -self.dim()。</td>
       </tr>
       <tr>
       <td>index维度大于1。</td>
@@ -296,7 +296,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -344,7 +344,7 @@ int main() {
   ret = aclnnIndexSelect(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnIndexSelect failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

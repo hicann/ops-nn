@@ -6,7 +6,7 @@
 |:-------------------------|:----------:|
 | <term>Ascend 950PR/Ascend 950DT</term>    |     ×    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
-|  <term>Atlas A2 训练系列产品/Atlas 800I A2 推理产品/A200I A2 Box 异构组件</term>     |     ×    |
+|  <term>Atlas A2训练系列产品/Atlas 800I A2推理产品/A200I A2 Box异构组件</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
@@ -35,13 +35,13 @@
 
   4.矩阵乘+反量化
   
-  - 4.1 若输入的$scale_{weight}$数据类型为FLOAT32, 则：
+  - 4.1若输入的$scale_{weight}$数据类型为FLOAT32,则：
 
     $$
       out = (x_{quantized}@weight_{quantized} + bias) * scale_{weight} * scale_{x}
     $$
 
-  - 4.2 若输入的$scale_{weight}$数据类型为INT64, 则：
+  - 4.2若输入的$scale_{weight}$数据类型为INT64,则：
 
     $$
       scale_{weight} = torch.tensor(np.frombuffer(scale_{weight}.numpy().astype(np.int32).tobytes(), dtype=np.float32)) \\
@@ -403,7 +403,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -483,7 +483,7 @@ int main() {
   ret = aclnnQuantMatmulDequant(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulDequant failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

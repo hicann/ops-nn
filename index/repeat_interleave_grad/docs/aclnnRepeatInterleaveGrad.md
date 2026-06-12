@@ -15,15 +15,15 @@
 
 ## 功能说明
 
-  - 接口功能：算子repeatInterleave的反向, 将yGrad tensor的axis维度按repeats进行ReduceSum。
+  - 接口功能：算子repeatInterleave的反向,将yGrad tensor的axis维度按repeats进行ReduceSum。
 
   - 示例：
-    假设tensor yGrad是 ([[a<sub>1</sub>, b<sub>1</sub>, c<sub>1</sub>, d<sub>1</sub>, e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub>, c<sub>2</sub>, d<sub>2</sub>, e<sub>2</sub>, f<sub>2</sub>]]), repeats为([1, 2, 2, 1])，axis为1。
-    那么最后生成的tensor为 tensor([[a<sub>1</sub>, b<sub>1</sub> + c<sub>1</sub>, d<sub>1</sub> + e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub> + c<sub>2</sub>, d<sub>2</sub> + e<sub>2</sub>, f<sub>2</sub>]])。将tensor yGrad的axis轴按照repeats做ReduceSum。
+    假设tensor yGrad是([[a<sub>1</sub>, b<sub>1</sub>, c<sub>1</sub>, d<sub>1</sub>, e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub>, c<sub>2</sub>, d<sub>2</sub>, e<sub>2</sub>, f<sub>2</sub>]]), repeats为([1, 2, 2, 1])，axis为1。
+    那么最后生成的tensor为tensor([[a<sub>1</sub>, b<sub>1</sub> + c<sub>1</sub>, d<sub>1</sub> + e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub> + c<sub>2</sub>, d<sub>2</sub> + e<sub>2</sub>, f<sub>2</sub>]])。将tensor yGrad的axis轴按照repeats做ReduceSum。
 
-    假设tensor yGrad是 ([[a<sub>1</sub>, b<sub>1</sub>, c<sub>1</sub>, d<sub>1</sub>, e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub>, c<sub>2</sub>, d<sub>2</sub>, e<sub>2</sub>, f<sub>2</sub>]]), repeats为([2])，axis为1。
-    那么最后生成的tensor为 tensor([[a<sub>1</sub> + b<sub>1</sub>， c<sub>1</sub> + d<sub>1</sub>， e<sub>1</sub> + f<sub>1</sub>], [a<sub>2</sub> + b<sub>2</sub>, c<sub>2</sub> + d<sub>2</sub>, e<sub>2</sub> + f<sub>2</sub>]])。将tensor yGrad的axis轴按照repeats的值，每2根轴做ReduceSum。
-    注意：该场景等效于 repeats为(2)。
+    假设tensor yGrad是([[a<sub>1</sub>, b<sub>1</sub>, c<sub>1</sub>, d<sub>1</sub>, e<sub>1</sub>, f<sub>1</sub>], [a<sub>2</sub>, b<sub>2</sub>, c<sub>2</sub>, d<sub>2</sub>, e<sub>2</sub>, f<sub>2</sub>]]), repeats为([2])，axis为1。
+    那么最后生成的tensor为tensor([[a<sub>1</sub> + b<sub>1</sub>， c<sub>1</sub> + d<sub>1</sub>， e<sub>1</sub> + f<sub>1</sub>], [a<sub>2</sub> + b<sub>2</sub>, c<sub>2</sub> + d<sub>2</sub>, e<sub>2</sub> + f<sub>2</sub>]])。将tensor yGrad的axis轴按照repeats的值，每2根轴做ReduceSum。
+    注意：该场景等效于repeats为(2)。
 
 ## 函数原型
 
@@ -97,7 +97,7 @@
       <td>axis</td>
       <td>输入</td>
       <td>ReduceSum作用的维度。</td>
-      <td>axis的取值范围为[-n, n), 其中n为yGrad的维度。</td>
+      <td>axis的取值范围为[-n, n),其中n为yGrad的维度。</td>
       <td></td>
       <td></td>
       <td></td>
@@ -296,7 +296,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -344,7 +344,7 @@ int main() {
   ret = aclnnRepeatInterleaveGrad(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRepeatInterleaveGrad failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

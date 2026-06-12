@@ -43,7 +43,7 @@
     python3 -m pip install dist/*.whl --force-reinstall --no-deps
     ```
 
-5. （可选）再次构建前建议先执行以下命令清理编译缓存
+5.（可选）再次构建前建议先执行以下命令清理编译缓存
 
    ```sh
     python setup.py clean
@@ -91,7 +91,7 @@ print("Verification successful!")
 3. 在soc目录下新建一个`add.cpp`(建议使用算子名为文件名)。这个文件包含了开发一个AI Core算子所需要的全部模块。
     - 算子Schema注册
     - 算子Meta Function实现 & 注册
-    - 算子Kernel实现 (Ascend C)
+    - 算子Kernel实现(Ascend C)
     - 算子NPU调用实现 & 注册
 
     ```cpp
@@ -151,7 +151,7 @@ print("Verification successful!")
 
     /**
      * 实现算子调用接口
-     * 在这个接口中, 需要完成NPU Kernel的调用
+     * 在这个接口中,需要完成NPU Kernel的调用
      * 1. 计算出输出的Tensor的个数/Shape/Dtype(可以调用Meta函数实现，也可以直接实现)
      * 2. 计算Tiling：根据Shape得到如何分块计算
      * 3. 调用NPU Kernel
@@ -159,7 +159,7 @@ print("Verification successful!")
      */
     torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
     {
-        // OptionalDeviceGuard 确保后续操作在正确的设备上下文执行
+        // OptionalDeviceGuard确保后续操作在正确的设备上下文执行
         // 它会记录当前设备状态，执行完作用域代码后自动恢复
         const c10::OptionalDeviceGuard guard(x.device());
         auto z = add_meta(x, y);

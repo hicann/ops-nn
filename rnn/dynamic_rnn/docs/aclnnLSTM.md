@@ -139,7 +139,7 @@ aclnnStatus aclnnLSTM(
     <li>B：has_biases=True时B=2，否则B=1。</li>
     </ul>
     
-    <p><strong>特殊场景（bidirection=True 且 has_biases=True）：</strong></p>
+    <p><strong>特殊场景（bidirection=True且has_biases=True）：</strong></p>
     <p style="padding-left: 20px;">
       参数排布：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]
     </p>
@@ -294,7 +294,7 @@ aclnnStatus aclnnLSTM(
       <td>iOut</td>
       <td>输出</td>
       <td>表示LSTM运算中每层输入门的激活值（sigmoid输出，公式（2）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -304,7 +304,7 @@ aclnnStatus aclnnLSTM(
       <td>jOut</td>
       <td>输出</td>
       <td>表示LSTM运算中每层的候选cell状态（tanh输出，公式（4）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -314,7 +314,7 @@ aclnnStatus aclnnLSTM(
       <td>fOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层遗忘门的激活值（sigmoid输出，公式（1）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -324,7 +324,7 @@ aclnnStatus aclnnLSTM(
       <td>oOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层输出门的激活值（sigmoid输出，公式（3）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
@@ -334,7 +334,7 @@ aclnnStatus aclnnLSTM(
       <td>hOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层的隐藏层（公式（7）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -344,7 +344,7 @@ aclnnStatus aclnnLSTM(
       <td>cOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层的最终Cell状态（公式（5）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -354,7 +354,7 @@ aclnnStatus aclnnLSTM(
       <td>tanhCOut</td>
       <td>输出</td>
       <td>表示进行LSTM运算中每层最终cell状态经过tanh激活函数后的输出（公式（6）的输出）。</td>
-      <td>列表长度为 D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
+      <td>列表长度为D * num_layers，列表中每个shape支持三维（time_step, batch_size, hidden_size），当train=False时，无输出值。</td>
       <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>/</td>
@@ -577,7 +577,7 @@ int CreateAclTensorList(
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+    // 1.（固定写法）device/stream初始化，参考AscendCL对外接口列表
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -720,7 +720,7 @@ int main()
     ret = aclnnLSTM(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLSTM failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

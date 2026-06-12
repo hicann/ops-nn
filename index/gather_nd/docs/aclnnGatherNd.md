@@ -17,7 +17,7 @@
 - 计算逻辑：
   - 如果indices_shape[-1] > r，不合法场景。
   - 如果indices_shape[-1] = r，则输出张量out的维度为q-1，即out的shape为 [indices_shape[0:q-1]]，out中元素为self的索引对位置的元素。（见例1）
-  - 如果indices_shape[-1] < r，则输出张量out的维度为 (q-1) + (r - indices_shape[-1])，设c=indices_shape[-1]，即out的shape为 [indices_shape[0:q-1],self_shape[c:r]] ，`out`由`self`的索引对位置的切片组成。（见例2、例3、例4）
+  - 如果indices_shape[-1] < r，则输出张量out的维度为(q-1) + (r - indices_shape[-1])，设c=indices_shape[-1]，即out的shape为 [indices_shape[0:q-1],self_shape[c:r]]，`out`由`self`的索引对位置的切片组成。（见例2、例3、例4）
 
   关于**r**、**q**、**indices_shape[-1]** 的一些限制条件如下：
   - 必须满足r≥1，q≥1。
@@ -306,7 +306,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -353,7 +353,7 @@ int main() {
   ret = aclnnGatherNd(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGatherNd failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

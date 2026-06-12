@@ -15,29 +15,29 @@
 
 ## 功能说明
 
-- 接口功能：在 micro-batch 训练场景，需要做 micro-batch 的梯度累计，会存在大量 QuantBatchMatmul 后接 InplaceAdd 的融合场景。QuantBatchMatmulInplaceAdd 算子将上述算子融合起来，提高网络性能。实现量化矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合。
+- 接口功能：在micro-batch训练场景，需要做micro-batch的梯度累计，会存在大量QuantBatchMatmul后接InplaceAdd的融合场景。QuantBatchMatmulInplaceAdd算子将上述算子融合起来，提高网络性能。实现量化矩阵乘计算和加法计算，基本功能为矩阵乘和加法的组合。
 
 - 计算公式：
 
-  - **mx 量化：**
+  - **mx量化：**
 
     $$
     y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
     $$
 
-    其中，$gsK$ 代表 K 轴的量化的 block size 即 32，$x1Slice$代表$x1$第 m 行长度为 $gsK$ 的向量，$x2Slice$代表$x2$第 n 列长度为 $gsK$ 的向量，K 轴均从$j*gsK$起始切片，j 的取值范围[0, kLoops), kLoops=ceil($K_i$ / $gsK$)，支持最后的切片长度不足 $gsK$。
+    其中，$gsK$ 代表K轴的量化的block size即32，$x1Slice$代表$x1$第m行长度为 $gsK$ 的向量，$x2Slice$代表$x2$第n列长度为 $gsK$ 的向量，K轴均从$j*gsK$起始切片，j的取值范围[0, kLoops), kLoops=ceil($K_i$ / $gsK$)，支持最后的切片长度不足 $gsK$。
 
-  - **HIFLOAT8 T-T 量化：**
+  - **HIFLOAT8 T-T量化：**
 
     $$
     y[m,n] = (\sum_{k=0}^{K_i-1} (x1[m,k] * x2[k,n])) * (scale1 * scale2) + y[m,n]
     $$
 
-    其中，$scale1$和$scale2$分别对应$x1Scale$和$x2Scale$，均为标量（shape 为 $(1)$）；当设置transposeX1/transposeX2时，公式中的$x1$和$x2$按转置后的视图参与计算。
+    其中，$scale1$和$scale2$分别对应$x1Scale$和$x2Scale$，均为标量（shape为 $(1)$）；当设置transposeX1/transposeX2时，公式中的$x1$和$x2$按转置后的视图参与计算。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize”接口获取入参并根据计算流程计算所需 workspace 大小，再调用“aclnnQuantBatchMatmulInplaceAdd”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnQuantBatchMatmulInplaceAdd”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize(
@@ -205,7 +205,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn 返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口完成入参校验，出现以下场景时报错：
   <table style="undefined;table-layout: fixed;width: 1030px"><colgroup>
@@ -259,18 +259,18 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
 - **返回值：**
 
-  返回 aclnnStatus 状态码，具体参见[aclnn 返回码](../../../docs/zh/context/aclnn返回码.md)。
+  返回aclnnStatus状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-- 确定性说明：aclnnQuantBatchMatmulInplaceAdd 默认确定性实现。
-- 当前仅支持 transposeX1=true 且 transposeX2=false。
+- 确定性说明：aclnnQuantBatchMatmulInplaceAdd默认确定性实现。
+- 当前仅支持transposeX1=true且transposeX2=false。
 - groupSize相关约束：
   - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
-- 动态量化（mx 量化）场景约束：
+- 动态量化（mx量化）场景约束：
   - 输入和输出支持以下数据类型组合：
 
     | x1 | x2 | x1Scale | x2Scale | yRef |
@@ -283,7 +283,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       |:-------:|:-------:| :------- | :------ | :------ | :------ | :------ | :------ | :------ |
       |FLOAT8_E5M2/FLOAT8_E4M3FN |FLOAT8_E5M2/FLOAT8_E4M3FN| (k, m) | (k, n) | (ceil(k / 64), m, 2) | (ceil(k / 64), n, 2) | (m, n) | [1, 1, 32] | 32 |
 
-- HIFLOAT8 T-T 场景约束：
+- HIFLOAT8 T-T场景约束：
   - 输入和输出支持以下数据类型组合：
 
     | x1 | x2 | x1Scale | x2Scale | yRef |
@@ -298,7 +298,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
 ## 调用示例
 
-- <term>Ascend 950PR/Ascend 950DT</term>：mxFP8 量化场景示例代码如下，其中 `x1/x2` 为 mxFP8、`x1Scale/x2Scale` 为 FLOAT8_E8M0，`groupSize=32`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Ascend 950PR/Ascend 950DT</term>：mxFP8量化场景示例代码如下，其中`x1/x2`为mxFP8、`x1Scale/x2Scale`为FLOAT8_E8M0，`groupSize=32`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```Cpp
   #include <iostream>
@@ -480,7 +480,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       ret = aclnnQuantBatchMatmulInplaceAdd(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantBatchMatmulInplaceAdd failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -498,7 +498,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
@@ -510,7 +510,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
   }
     ```
 
-- <term>Ascend 950PR/Ascend 950DT</term>：HIFLOAT8 TT 场景示例代码如下，当前支持组合 `transposeX1=true`、`transposeX2=false`，且 `x1/x2` 为 HIFLOAT8、`x1Scale/x2Scale` 为 FLOAT32、`groupSize=0`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
+- <term>Ascend 950PR/Ascend 950DT</term>：HIFLOAT8 TT场景示例代码如下，当前支持组合`transposeX1=true`、`transposeX2=false`，且`x1/x2`为HIFLOAT8、`x1Scale/x2Scale`为FLOAT32、`groupSize=0`。具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
   ```Cpp
   /**
@@ -613,8 +613,8 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       int64_t k = 16;
       int64_t n = 8;
 
-      // 当前支持的调用组合为 transposeX1=true, transposeX2=false，
-      // 因此 x1/x2 的 shape 需要分别构造成 (k, m) 和 (k, n)。
+      // 当前支持的调用组合为transposeX1=true, transposeX2=false，
+      // 因此x1/x2的shape需要分别构造成(k, m)和(k, n)。
       std::vector<int64_t> x1Shape = {k, m};
       std::vector<int64_t> x2Shape = {k, n};
       std::vector<int64_t> x1ScaleShape = {1};
@@ -633,7 +633,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       aclTensor* x2Scale = nullptr;
       aclTensor* yRef = nullptr;
 
-      std::vector<uint8_t> x1HostData(GetShapeSize(x1Shape), 0b1000); // 0b1000 为 hifloat8 的 1.0
+      std::vector<uint8_t> x1HostData(GetShapeSize(x1Shape), 0b1000); // 0b1000为hifloat8的1.0
       std::vector<uint8_t> x2HostData(GetShapeSize(x2Shape), 0b1000);
       std::vector<float> x1ScaleHostData(GetShapeSize(x1ScaleShape), 1.0f);
       std::vector<float> x2ScaleHostData(GetShapeSize(x2ScaleShape), 1.0f);

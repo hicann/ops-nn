@@ -25,7 +25,7 @@
 
 ## 功能说明
 
-- **算子功能**：执行 RMSProp 优化器（非 centered 版本）的单步参数更新。根据当前梯度、梯度平方移动平均和动量累积，更新参数张量 `var`、`ms`、`mom`，全部采用 **inplace** 语义。对标 TensorFlow `tf.raw_ops.ApplyRMSProp` 接口的计算语义。
+- **算子功能**：执行RMSProp优化器（非centered版本）的单步参数更新。根据当前梯度、梯度平方移动平均和动量累积，更新参数张量`var`、`ms`、`mom`，全部采用 **inplace** 语义。对标TensorFlow `tf.raw_ops.ApplyRMSProp`接口的计算语义。
 
 - **计算公式**：
 
@@ -37,7 +37,7 @@
   \end{aligned}
   $$
 
-  其中 `lr` 为学习率，`rho` 为衰减系数（取值范围 [0, 1)），`momentum` 为动量系数，`epsilon` 为数值稳定常数（必须 > 0）。
+  其中`lr`为学习率，`rho`为衰减系数（取值范围 [0, 1)），`momentum`为动量系数，`epsilon`为数值稳定常数（必须 > 0）。
 
 ## 参数说明
 
@@ -59,71 +59,71 @@
 <tbody>
   <tr>
     <td>var</td>
-    <td>输入 / 输出 (inplace)</td>
-    <td>待更新的权重参数，对应公式中的 var。Kernel 内 inplace 更新，GE IR 单输出视图与输入 var 共享 Device 内存。</td>
+    <td>输入 / 输出(inplace)</td>
+    <td>待更新的权重参数，对应公式中的var。Kernel内inplace更新，GE IR单输出视图与输入var共享Device内存。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>ms</td>
-    <td>输入 (inplace 更新)</td>
-    <td>梯度平方移动平均，对应公式中的 ms。shape/dtype 必须与 var 一致；Kernel 内显式写回输入 GM 地址。</td>
+    <td>输入(inplace更新)</td>
+    <td>梯度平方移动平均，对应公式中的ms。shape/dtype必须与var一致；Kernel内显式写回输入GM地址。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>mom</td>
-    <td>输入 (inplace 更新)</td>
-    <td>动量累积，对应公式中的 mom。shape/dtype 必须与 var 一致；Kernel 内显式写回输入 GM 地址。</td>
+    <td>输入(inplace更新)</td>
+    <td>动量累积，对应公式中的mom。shape/dtype必须与var一致；Kernel内显式写回输入GM地址。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>lr</td>
     <td>输入</td>
-    <td>学习率，对应公式中的 lr。shape={1} 的 1 元素 scalar Tensor，dtype 必须与 var 一致。</td>
+    <td>学习率，对应公式中的lr。shape={1} 的1元素scalar Tensor，dtype必须与var一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>rho</td>
     <td>输入</td>
-    <td>衰减系数，对应公式中的 rho。shape={1} 的 1 元素 scalar Tensor，取值范围 [0, 1)。</td>
+    <td>衰减系数，对应公式中的rho。shape={1} 的1元素scalar Tensor，取值范围 [0, 1)。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>momentum</td>
     <td>输入</td>
-    <td>动量系数，对应公式中的 momentum。shape={1} 的 1 元素 scalar Tensor。</td>
+    <td>动量系数，对应公式中的momentum。shape={1} 的1元素scalar Tensor。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>epsilon</td>
     <td>输入</td>
-    <td>数值稳定常数，对应公式中的 epsilon。shape={1} 的 1 元素 scalar Tensor，必须 > 0。</td>
+    <td>数值稳定常数，对应公式中的epsilon。shape={1} 的1元素scalar Tensor，必须 > 0。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>grad</td>
     <td>输入</td>
-    <td>当前梯度 Tensor，对应公式中的 grad。shape/dtype 必须与 var 一致。</td>
+    <td>当前梯度Tensor，对应公式中的grad。shape/dtype必须与var一致。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>use_locking</td>
     <td>属性</td>
-    <td>是否在更新时加锁。默认 false。当前实现不强制互斥锁，仅作语义占位。</td>
+    <td>是否在更新时加锁。默认false。当前实现不强制互斥锁，仅作语义占位。</td>
     <td>BOOL</td>
     <td>-</td>
   </tr>
   <tr>
     <td>var (output)</td>
     <td>输出</td>
-    <td>更新后的 var Tensor，与输入 var 共享 Device 内存（inplace）。</td>
+    <td>更新后的var Tensor，与输入var共享Device内存（inplace）。</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
   </tr>
@@ -137,4 +137,4 @@
 
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| 图模式 | [test_geir_apply_rms_prop](./examples/test_geir_apply_rms_prop.cpp) | 通过 [算子IR](./op_graph/apply_rms_prop_proto.h) 构图方式调用 ApplyRMSProp 算子。 |
+| 图模式 | [test_geir_apply_rms_prop](./examples/test_geir_apply_rms_prop.cpp) | 通过 [算子IR](./op_graph/apply_rms_prop_proto.h)构图方式调用ApplyRMSProp算子。 |

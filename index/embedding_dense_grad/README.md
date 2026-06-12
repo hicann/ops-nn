@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-  实现[Embedding]的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
+  实现[Embedding]的反向计算,将相同索引`indices`对应grad的一行累加到out上。
 
 ## 参数说明
 

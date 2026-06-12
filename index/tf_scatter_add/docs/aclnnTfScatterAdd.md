@@ -213,7 +213,7 @@ aclnnStatus aclnnTfScatterAdd(
   - aclnnTfScatterAdd默认为非确定性实现，可通过确定性计算配置为确定性实现。
 - 需满足以下约束之一：
   - updates.shape = indices.shape + varRef.shape[1:]
-  - indices.shape[-1] <= varRef.shape.rank 且 updates.shape = indices.shape[:-1] + varRef.shape[indices.shape[-1]:]
+  - indices.shape[-1] <= varRef.shape.rank且updates.shape = indices.shape[:-1] + varRef.shape[indices.shape[-1]:]
 
 ## 调用示例
 
@@ -280,7 +280,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -326,7 +326,7 @@ int main() {
   ret = aclnnTfScatterAdd(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTfScatterAdd failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

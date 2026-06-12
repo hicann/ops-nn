@@ -134,7 +134,7 @@ Tiling主要切分逻辑。
 
 ```CPP
 // ${op_name}_tiling.cpp
-// 1.Tiling需要获取运行环境信息，包括可用核数、UB(Unified Buffer)大小，并将获取到的信息传递给CompileInfo, 自动生成aclnn不调用该函数，直接返回ge::GRAPH_SUCCESS即可。
+// 1.Tiling需要获取运行环境信息，包括可用核数、UB(Unified Buffer)大小，并将获取到的信息传递给CompileInfo,自动生成aclnn不调用该函数，直接返回ge::GRAPH_SUCCESS即可。
 static ge::graphStatus TilingParse(gert::TilingParseContext* context)
 {
     return ge::GRAPH_SUCCESS;
@@ -245,7 +245,7 @@ graph LR
 	H([核函数定义]) -->A([定义Kernel类])
 	A -->B([初始化函数<br>Init])
     B -->C([主处理函数<br>Process])
-    subgraph C [主处理函数 Process]
+    subgraph C [主处理函数Process]
         D([数据搬入<br>CopyIn]) -->E([计算<br>Compute]) -->F([数据搬出<br>CopyOut])
     end
     F -->G([Kernel执行完成])
@@ -322,7 +322,7 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueX_;
     // 输入队列Y，从GM拷贝到LM，BUFFER_NUM表示buffer数量，开启double buff达到流水并行，为2
     TQue<QuePosition::VECIN, BUFFER_NUM> inputQueueY_;
-    // 输出队列Z，从LM拷贝到GM，BUFFER_NUM表示 buffer数量，这里开启double buff达到流水并行，为2
+    // 输出队列Z，从LM拷贝到GM，BUFFER_NUM表示buffer数量，这里开启double buff达到流水并行，为2
     TQue<QuePosition::VECOUT, BUFFER_NUM> outputQueueZ_;
 
     // 输入X的GM地址
@@ -345,13 +345,13 @@ private:
 template <typename T>
 __aicore__ inline void AddExample<T>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR z, const AddExampleTilingData* tilingData)
 {
-    // 3.1 初始化成员变量
+    // 3.1初始化成员变量
     blockLength_ = tilingData->totalLength / AscendC::GetBlockNum();
     ...
-    // 3.2 初始化GM地址
+    // 3.2初始化GM地址
     inputGMX.SetGlobalBuffer((__gm__ T*)x + blockLength_ * AscendC::GetBlockIdx(), blockLength_);
     ...
-    // 3.3 初始化队列长度
+    // 3.3初始化队列长度
     pipe.InitBuffer(inputQueueX_, BUFFER_NUM, tileLength_ * sizeof(T));
     ...
 }
@@ -373,7 +373,7 @@ __aicore__ inline void AddExample<T>::Process()
 
 ## aclnn适配
 
-通常算子开发和编译完成后，会自动生成aclnn接口（一套基于C 的API），可直接在应用程序中调用aclnn接口实现调用算子。
+通常算子开发和编译完成后，会自动生成aclnn接口（一套基于C的API），可直接在应用程序中调用aclnn接口实现调用算子。
 
 为实现该调用方式，需提前生成算子对应的二进制包，增加二进制编译json文件，以`AddExample`算子为例：
 
@@ -406,7 +406,7 @@ __aicore__ inline void AddExample<T>::Process()
 
    以`AddExample`算子为例，假设开发交付件在`examples`目录，完整代码参见[add_example](../../../examples/add_example)目录。若编译`experimental`目录下用户自定义算子，编译命令需增加编译参数`--experimental`。
 
-   > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](../invocation/quick_op_invocation.md#未联网编译)。
+   > 说明：编译过程依赖第三方开源软件，联网场景会自动下载，离线编译场景需要自行安装，具体参考[未联网编译](../invocation/quick_op_invocation.md#编译运行)。
 
    进入项目根目录，执行如下编译命令。
 
@@ -507,11 +507,11 @@ protected:
 
 **2. 用例基本流程**
 
-1) 调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype。
+1)调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype。
     - shape/format/dtype可参考`${op_name}_def.cpp`算子信息库
     - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
-2) 设定预期结果。
-3) 调用接口执行用例。
+2)设定预期结果。
+3)调用接口执行用例。
 
 简化示例：
 
@@ -573,12 +573,12 @@ protected:
 
 **2. 用例基本流程**
 
-1) 调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype、属性以及compileInfo，可参考`${op_name}_def.cpp`算子信息库。
+1)调用接口构造用例上下文。需要的参数主要为输入和输出的shape/format/dtype、属性以及compileInfo，可参考`${op_name}_def.cpp`算子信息库。
     - shape/format/dtype和属性可参考`${op_name}_def.cpp`算子信息库。
     - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
     - compileInfo优先使用tiling头文件中声明的结构体，若tiling头文件没有声明，则在用例中声明。
-2) 设定预期结果。
-3) 调用接口执行用例。
+2)设定预期结果。
+3)调用接口执行用例。
 
 简化示例：
 
@@ -631,7 +631,7 @@ UT编写指导如下，如需查看详细实现，请参考样例UT实现[test_a
     - 直接引用`op_host/${op_name}_tiling.h`
     - 或在UT目录提供轻量适配头（如`examples/add_example/tests/ut/op_kernel/add_example_tiling.h`）
     - 若Kernel为模板函数，可在UT中直接`#include "../../../op_kernel/${op_name}.cpp"`触发实例化（参考`AddExample`）
-- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理（如拷贝数据目录、chmod、生成bin）。推荐使用公共测试数据框架 `kernel_ut_data_helper.h` 进行数据准备与清理，避免直接调用 `system()` 执行 shell 命令。
+- **测试类**：继承`testing::Test`，实现`SetUpTestCase/TearDownTestCase`统一做数据准备与清理（如拷贝数据目录、chmod、生成bin）。推荐使用公共测试数据框架`kernel_ut_data_helper.h`进行数据准备与清理，避免直接调用`system()`执行shell命令。
 - **命名**：测试类建议`${OpName}KernelTest`，用例名建议`test_case_xxx`，可读性更高。
 
 测试类示例：
@@ -653,13 +653,13 @@ protected:
 
 **2. 用例基本流程**
 
-1) 设定输入shape/format/dtype，初次上手可参考`${op_name}_def.cpp`算子信息库。
+1)设定输入shape/format/dtype，初次上手可参考`${op_name}_def.cpp`算子信息库。
     - 若某输入在信息库中标记为`ValueDepend`，UT中需同时准备该输入的**真实数据值**。
-2) 准备输入/输出/Workspace/Tiling缓冲区（`AscendC::GmAlloc`）。
-3) 准备Tiling数据（手动构造或由Tiling函数生成）。
-4) 设置`ICPU_SET_TILING_KEY`与`AscendC::SetKernelMode`。
-5) 使用`ICPU_RUN_KF`执行Kernel。
-6) 结果校验并释放资源（`AscendC::GmFree`）。
+2)准备输入/输出/Workspace/Tiling缓冲区（`AscendC::GmAlloc`）。
+3)准备Tiling数据（手动构造或由Tiling函数生成）。
+4)设置`ICPU_SET_TILING_KEY`与`AscendC::SetKernelMode`。
+5)使用`ICPU_RUN_KF`执行Kernel。
+6)结果校验并释放资源（`AscendC::GmFree`）。
 
 简化示例：
 
@@ -731,14 +731,14 @@ clipped_swiglu_data/gen_data.py)、
 
 **5. 使用公共测试数据框架**
 
-ops-nn 提供了统一的 Kernel UT 测试数据框架，简化数据准备流程。公共框架位于 `tests/ut/op_kernel/` 目录。
+ops-nn提供了统一的Kernel UT测试数据框架，简化数据准备流程。公共框架位于`tests/ut/op_kernel/`目录。
 
 **核心组件：**
 
 | 文件 | 功能 |
 |------|------|
 | `kernel_ut_data_helper.h/cpp` | 路径定位、目录拷贝、bin清理 |
-| `kernel_ut_data_executor.h/cpp` | 统一调用 gen_data.py/compare_data.py |
+| `kernel_ut_data_executor.h/cpp` | 统一调用gen_data.py/compare_data.py |
 
 **基本使用示例：**
 
@@ -778,12 +778,12 @@ TEST_F(MyOpKernelTest, test_case_basic) {
 |------|------|----------|
 | `SetupTestEnvironment()` | 环境准备 | `system("cp -r") + system("chmod") + system("rm -rf")` |
 | `GetTestWorkDir()` | 获取工作目录 | `get_current_dir_name()` (GNU扩展) |
-| `RunGenData()` | 调用 gen_data.py | `system("python3 gen_data.py")` |
-| `RunCompareData()` | 调用 compare_data.py | `system("python3 compare_data.py")` |
+| `RunGenData()` | 调用gen_data.py | `system("python3 gen_data.py")` |
+| `RunCompareData()` | 调用compare_data.py | `system("python3 compare_data.py")` |
 
 **数据目录组织建议：**
 
-建议命名为 `${op_name}_data`，放置在 `tests/ut/op_kernel/` 下：
+建议命名为`${op_name}_data`，放置在`tests/ut/op_kernel/`下：
 
 ```
 tests/ut/op_kernel/

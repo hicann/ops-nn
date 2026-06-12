@@ -25,7 +25,7 @@
   $$
 
   $$
-  loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reductionOptional = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reductionOptional = ‘sum’ }\\\{l_0,l_1,...,l_n\},&\text{if reductionOptional = ‘None’ }\end{cases}
+  loss=\begin{cases}\sum_{n=1}^N\frac{1}{\sum_{n=1}^Nweight_{y_n}*1\{y_n\ !=\ ignoreIndex \}}l_n,&\text{if reductionOptional = ‘mean’} \\\sum_{n=1}^Nl_n,&\text {if reductionOptional = ‘sum’}\\\{l_0,l_1,...,l_n\},&\text{if reductionOptional = ‘None’}\end{cases}
   $$
 
   log\_prob计算公式为：
@@ -398,7 +398,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1. （固定写法）device/stream初始化, 参考acl API对外接口列表
+    // 1.（固定写法）device/stream初始化,参考acl API对外接口列表
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -496,7 +496,7 @@ int main() {
                 LOG_PRINT("aclnnCrossEntropyLoss failed. ERROR: %d\n", ret);
                 return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS,
                 LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret);

@@ -134,12 +134,12 @@
 - **值域限制说明：**
   - orig_input_shape：必须是一维张量，长度为4，描述[N,C,H,W]或[N,H,W,C]。
   - input_grad：4D张量，支持FLOAT16、FLOAT、BFLOAT16类型。
-  - ksize：长度为 4，必须大于0，指定池化窗口大小。
-  - strides：长度为 4，必须大于0，指定滑动步长。
+  - ksize：长度为4，必须大于0，指定池化窗口大小。
+  - strides：长度为4，必须大于0，指定滑动步长。
   - padding_mode：只支持"VALID"、"SAME"、"CALCULATED"三种模式。
-  - pads：长度为 4，必须大于0，仅在padding_mode为"CALCULATED"时生效。不超过ksize对应位置的1/2。
+  - pads：长度为4，必须大于0，仅在padding_mode为"CALCULATED"时生效。不超过ksize对应位置的1/2。
   - data_format：支持"NCHW"或"NHWC"。
-  - global_pooling：若为true，ksize 和 pads 将被忽略。
+  - global_pooling：若为true，ksize和pads将被忽略。
   - ceil_mode：若为true，使用ceil计算输出形状；否则使用floor。
   - exclusive：若为true，计算均值时排除padding区域。
   - divisor_override：若非0，将作为除数使用；否则使用池化区域大小。
@@ -148,4 +148,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_avg_pool_v2_grad](examples/test_aclnn_avg_pool_v2_grad.cpp) | 通过[aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md)接口方式调用AvgPoolV2Grad算子。 |
+| aclnn接口  | [test_aclnn_avg_pool_v2_grad](examples/arch35/test_aclnn_avg_pool_v2_grad.cpp) | 通过[aclnnAvgPool2dBackward](../../pooling/avg_pool3_d_grad/docs/aclnnAvgPool2dBackward.md)接口方式调用AvgPoolV2Grad算子。 |

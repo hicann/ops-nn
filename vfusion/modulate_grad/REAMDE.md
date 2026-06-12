@@ -27,7 +27,7 @@
     - $\odot$: 表示逐元素乘法；
     - $\sum_{l=1}^{L}$: 求和操作，沿序列维度$L$(即dim=1)进行
     - $b,l,d$：下标，表示张量的维度索引（通常为Batch，Length，Dimension）
-    - $\text{scale}^{\uparrow L}$： 表示将scale张量在序列维度 $L$ 上进行广播（扩展）
+    - $\text{scale}^{\uparrow L}$：表示将scale张量在序列维度 $L$ 上进行广播（扩展）
 
 ## 参数说明
 

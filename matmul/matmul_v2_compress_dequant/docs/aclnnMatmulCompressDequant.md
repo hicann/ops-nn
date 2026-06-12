@@ -124,7 +124,7 @@ aclnnStatus aclnnMatmulCompressDequant(
       <td>tensor中的值为float通过下述示例中转换后的UINT64的数据。</td>
       <td>UINT64</td>
       <td>ND</td>
-      <td>2维，shape支持(1, n)或者(1, 1), 其中n为输出shape(m, n)中的n。</td>
+      <td>2维，shape支持(1, n)或者(1, 1),其中n为输出shape(m, n)中的n。</td>
       <td>-</td>
     </tr>
     <tr>
@@ -356,7 +356,7 @@ aclnnStatus aclnnMatmulCompressDequant(
     compressor.export(compress_info, './data/compress_info')
     ```
 
-  - **将原始float类型的反量化参数deqscale进行转换， 得到aclnn接口需要的uint64数据**
+  - **将原始float类型的反量化参数deqscale进行转换，得到aclnn接口需要的uint64数据**
 
     deqScale原始为float类型，以int32读取并转换为int64
 
@@ -469,7 +469,7 @@ int CreateAclTensor(std::string filePath, const std::vector<int64_t>& shape, int
 }
 
 int main(int argc, char* argv[]) {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -568,7 +568,7 @@ int main(int argc, char* argv[]) {
   ret = aclnnMatmulCompressDequant(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompressDequant failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

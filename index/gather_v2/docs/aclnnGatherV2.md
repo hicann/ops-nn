@@ -17,13 +17,13 @@
 
 - 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，保存到out Tensor中。
 - 示例：
-  例如输入张量 $x=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量 idx=[1, 0]。
+  例如输入张量 $x=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量idx=[1, 0]。
   - dim=0的结果：$y=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$
 
   - dim=1的结果： $y=\begin{bmatrix}2 & 1\\ 5 & 4\\ 8 & 7\end{bmatrix}$
 
   具体计算过程如下：
-  以三维张量为例，shape为(3,2,2)的张量 x =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   idx=[1, 0],   x张量dim=0,1,2对应的下标分别是$l, m, n$,  idx是一维（零维的情况：当成是size为1的一维）
+  以三维张量为例，shape为(3,2,2)的张量x =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   idx=[1, 0],   x张量dim=0,1,2对应的下标分别是$l, m, n$,  idx是一维（零维的情况：当成是size为1的一维）
   - dim为0：I=index[i];  &nbsp;&nbsp;   y$[i][m][n]$ = x$[I][m][n]$
 
   - dim为1：J=index[j];  &nbsp;&nbsp;&nbsp;    y$[l][j][n]$ = x$[l][J][n]$
@@ -298,7 +298,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -345,7 +345,7 @@ int main() {
   ret = aclnnGatherV2(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGatherV2 failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

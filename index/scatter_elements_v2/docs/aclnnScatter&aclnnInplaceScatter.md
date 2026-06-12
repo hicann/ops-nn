@@ -21,9 +21,9 @@
   对于一个3D tensor，self会按照如下的规则进行更新：
 
   ```text
-  self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0 && reduction == 1
-  self[i][index[i][j][k]][k] *= src[i][j][k] # 如果 dim == 1 && reduction == 2
-  self[i][j][index[i][j][k]] = src[i][j][k]  # 如果 dim == 2 && reduction == 0
+  self[index[i][j][k]][j][k] += src[i][j][k] # 如果dim == 0 && reduction == 1
+  self[i][index[i][j][k]][k] *= src[i][j][k] # 如果dim == 1 && reduction == 2
+  self[i][j][index[i][j][k]] = src[i][j][k]  # 如果dim == 2 && reduction == 0
   ```
 
 - 在计算时需要满足以下要求：
@@ -152,7 +152,7 @@ aclnnStatus aclnnInplaceScatter(
         <td>reduce（int64_t）</td>
         <td>输入</td>
         <td>选择应用的reduction操作。</td>
-        <td>可选的操作选项以及对应的int值为 (add, 1)，(mul, 2)，(none, 0)。<br>具体操作含义如下：0表示替换，1表示累加，2表示累乘。</td>
+        <td>可选的操作选项以及对应的int值为(add, 1)，(mul, 2)，(none, 0)。<br>具体操作含义如下：0表示替换，1表示累加，2表示累乘。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -468,7 +468,7 @@ aclnnStatus aclnnInplaceScatter(
 ## 约束说明
 
 确定性说明:
-- <term>Ascend 950PR/Ascend 950DT</term>： 默认非确定性, 支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
+- <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性,支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。 
 
 ## 调用示例
@@ -538,7 +538,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -594,7 +594,7 @@ int main() {
   ret = aclnnScatter(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnScatter failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -692,7 +692,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -741,7 +741,7 @@ int main() {
   ret = aclnnInplaceScatter(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceScatter failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

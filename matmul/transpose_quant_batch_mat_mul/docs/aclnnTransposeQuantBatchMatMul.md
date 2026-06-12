@@ -154,8 +154,8 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>用于指定输出矩阵的数据类型，支持的值为：1、27。</td>
         <td>
         <ul>
-          <li>取值为1, 表示输出矩阵类型为FLOAT16。</li>
-          <li>取值为27, 表示输出矩阵类型为BFLOAT16。</li>
+          <li>取值为1,表示输出矩阵类型为FLOAT16。</li>
+          <li>取值为27,表示输出矩阵类型为BFLOAT16。</li>
         </ul>
         </td>
         <td>INT32</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>输入</td>
         <td>用于输入m、n、k方向上的量化分组大小。</td>
         <td>
-        由3个方向的groupSizeM，groupSizeN，groupSizeK 三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
+        由3个方向的groupSizeM，groupSizeN，groupSizeK三个值拼接组成，每个值占16位，共占用int64_t类型groupSize的低48位（groupSize中的高16位的数值无效）
         </td>
         <td>INT64</td>
         <td>-</td>
@@ -350,7 +350,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。
-    - MX量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2), 当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
+    - MX量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
     - groupSize相关约束：
       - 仅在MX量化场景中生效。
       - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
@@ -413,11 +413,11 @@ int Init(int32_t deviceId, aclrtStream* stream)
     return 0;
 }
 
-// BF16 到 float 的转换函数
+// BF16到float的转换函数
 float bf16_to_float(uint16_t bf16)
 {
     uint16_t sign = (bf16 >> 15) & 0x1;
-    uint16_t exp = (bf16 >> 7) & 0xFF; // 8 位指数
+    uint16_t exp = (bf16 >> 7) & 0xFF; // 8位指数
     uint16_t mant = bf16 & 0x7F;
 
     // 特殊值处理
@@ -425,11 +425,11 @@ float bf16_to_float(uint16_t bf16)
         if (mant == 0) {
             return sign ? -0.0f : 0.0f;
         } else {
-            // 非规格化 BF16 -> float
+            // 非规格化BF16 -> float
             return (sign ? -1.0f : 1.0f) * (float)mant * (1.0f / (1 << 7) / std::ldexp(1.0, 126));
         }
     } else if (exp == 255) {
-        // 无穷大或 NaN
+        // 无穷大或NaN
         if (mant == 0) {
             return sign ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
         } else {
@@ -437,8 +437,8 @@ float bf16_to_float(uint16_t bf16)
         }
     } else {
         // 规格化数
-        float f_exp = (float)(exp - 127);      // 偏移 127
-        float f_mant = (float)mant / (1 << 7); // 7 位小数
+        float f_exp = (float)(exp - 127);      // 偏移127
+        float f_mant = (float)mant / (1 << 7); // 7位小数
         float f = (sign ? -1.0f : 1.0f) * (1.0f + f_mant) * (1 << (int)f_exp);
         return f;
     }
@@ -572,7 +572,7 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
     ret = aclnnTransposeQuantBatchMatMul(workspaceAddr, workspaceSize, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnTransposeQuantBatchMatMul failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -594,7 +594,7 @@ int AclnnTransposeQuantBatchMatmulTest(int32_t deviceId, aclrtStream& stream)
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1.（固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

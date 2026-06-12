@@ -19,15 +19,15 @@
   对于一个3D tensor，self会按照如下的规则进行更新：
 
   ```bash
-  self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0 && reduction == 1
-  self[i][index[i][j][k]][k] *= src[i][j][k] # 如果 dim == 1 && reduction == 2
-  self[i][j][index[i][j][k]] = src[i][j][k]  # 如果 dim == 2 && reduction == 0
+  self[index[i][j][k]][j][k] += src[i][j][k] # 如果dim == 0 && reduction == 1
+  self[i][index[i][j][k]][k] *= src[i][j][k] # 如果dim == 1 && reduction == 2
+  self[i][j][index[i][j][k]] = src[i][j][k]  # 如果dim == 2 && reduction == 0
   ```
 
   在计算时需要满足以下要求：
   - self、index和src的维度数量必须相同。
   - 对于每一个维度d，有index.size(d) <= src.size(d)的限制。
-  - 对于每一个维度d，如果d != dim, 有index.size(d) <= self.size(d)的限制。
+  - 对于每一个维度d，如果d != dim,有index.size(d) <= self.size(d)的限制。
   - dim的值的大小必须在 [-self的维度数量, self的维度数量-1] 之间。
   - self的维度数应该小于等于8。
   - index中对应维度dim的值的大小必须在[0, self.size(dim)-1]之间。

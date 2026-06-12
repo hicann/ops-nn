@@ -7,13 +7,13 @@
 |Ascend 950PR/Ascend 950DT|×|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2推理产品|×|
+|Atlas 200I/500 A2 推理产品|×|
 |Atlas 推理系列产品|√|
 |Atlas 训练系列产品|×|
 
 ## 功能说明
 
-- 算子功能：基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。
+- 算子功能：基础循环神经网络(Recurrent Neural Network)算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。
 - 算子公式：以LSTM格式为例给定输入 $x_t$、前一时刻隐藏状态 $h_{t-1}$ 和细胞状态 $c_{t-1}$，DynamicRNN的计算过程如下：
 
     1. **遗忘门** (Forget Gate):
@@ -31,8 +31,8 @@
        $$h_t = o_t \odot \tanh(c_t)$$
 
     其中：
-    - $\sigma$ 是 sigmoid 函数
-    - $\odot$ 表示逐元素乘法 (Hadamard product)
+    - $\sigma$ 是sigmoid函数
+    - $\odot$ 表示逐元素乘法(Hadamard product)
     - $W_*$ 是可学习的权重矩阵
     - $b_*$ 是可学习的偏置项
 
@@ -64,14 +64,14 @@
     <tr>
       <td>w</td>
       <td>输入</td>
-      <td>输入权重 （input_size + hidden_size, 4 * hidden_size）。</td>
+      <td>输入权重（input_size + hidden_size, 4 * hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>b</td>
       <td>输入</td>
-      <td>输入偏置 （4 * hidden_size）。</td>
+      <td>输入偏置（4 * hidden_size）。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
@@ -85,14 +85,14 @@
     <tr>
       <td>init_h</td>
       <td>输入</td>
-      <td>初始时刻的hidden state, 维度为(1, batch_size, hidden_size)。</td>
+      <td>初始时刻的hidden state,维度为(1, batch_size, hidden_size)。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>init_c</td>
       <td>输入</td>
-      <td>初始时刻的cell state, 维度为(1, batch_size, hidden_size)。</td>
+      <td>初始时刻的cell state,维度为(1, batch_size, hidden_size)。</td>
       <td>FLOAT、FLOAT16</td>
       <td>ND</td>
     </tr>
@@ -162,7 +162,7 @@
     <tr>
       <td>cell_type</td>
       <td>属性</td>
-      <td>默认为"LSTM", 当前实现"LSTM"、"GRU"。</td>
+      <td>默认为"LSTM",当前实现"LSTM"、"GRU"。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
@@ -176,14 +176,14 @@
     <tr>
       <td>cell_depth</td>
       <td>属性</td>
-      <td>multi_rnn的级数，默认为1, 且当前只支持1。</td>
+      <td>multi_rnn的级数，默认为1,且当前只支持1。</td>
       <td>INT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>use_peephole</td>
       <td>属性</td>
-      <td>是否使用peephole, 默认false。</td>
+      <td>是否使用peephole,默认false。</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>

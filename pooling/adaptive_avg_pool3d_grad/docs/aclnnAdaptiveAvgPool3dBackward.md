@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-[aclnnAdaptiveAvgPool3d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md) 的反向计算。
+[aclnnAdaptiveAvgPool3d](../../adaptive_avg_pool3d/docs/aclnnAdaptiveAvgPool3d.md)的反向计算。
 
 ## 函数原型
 

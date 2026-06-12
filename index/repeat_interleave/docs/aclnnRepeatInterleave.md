@@ -18,13 +18,13 @@
 - 接口功能：将tensor self进行flatten后，重复Tensor repeats中的相应次数。
 
 - 示例：
-  假设input tensor是 ([[a, b], [c, d], [e, f]])，repeats为([1, 2, 2, 1, 1, 1])。
-  那么最后生成的tensor为 tensor([a, b, b, c, c, d, e, f])，输出tensor的元素个数为8，与repeats中所有元素之和相同
-  将tensor进行flatten后，input转变为 ([a, b, c, d, e, f])。该tensor与repeats一一对应进行复制，a重复1次、b重复2次、c重复2次，以此类推。
+  假设input tensor是([[a, b], [c, d], [e, f]])，repeats为([1, 2, 2, 1, 1, 1])。
+  那么最后生成的tensor为tensor([a, b, b, c, c, d, e, f])，输出tensor的元素个数为8，与repeats中所有元素之和相同
+  将tensor进行flatten后，input转变为([a, b, c, d, e, f])。该tensor与repeats一一对应进行复制，a重复1次、b重复2次、c重复2次，以此类推。
 
-  假设input tensor是 ([[a, b], [c, d], [e, f]])，repeats为([2])。 那么最后生成的tensor为 tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
-  将tensor进行flatten后，input转变为 ([a, b, c, d, e, f])。该tensor中的每个元素复制repeats中的元素次数，也就是每个元素复制2次。
-  注意：该场景等效于 repeats为(2)。
+  假设input tensor是([[a, b], [c, d], [e, f]])，repeats为([2])。那么最后生成的tensor为tensor([a, a, b, b, c, c, d, d, e, e, f, f])。
+  将tensor进行flatten后，input转变为([a, b, c, d, e, f])。该tensor中的每个元素复制repeats中的元素次数，也就是每个元素复制2次。
+  注意：该场景等效于repeats为(2)。
 
 ## 函数原型
 
@@ -299,7 +299,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -347,7 +347,7 @@ int main() {
   ret = aclnnRepeatInterleave(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRepeatInterleave failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

@@ -32,8 +32,8 @@
 
     其中：
 
-    - $\sigma$ 是 sigmoid 函数
-    - $\odot$ 表示逐元素乘法 (Hadamard product)
+    - $\sigma$ 是sigmoid函数
+    - $\odot$ 表示逐元素乘法(Hadamard product)
     - $W_*$ 是可学习的权重矩阵
     - $b_*$ 是可学习的偏置项
   </details>
@@ -49,7 +49,7 @@
 
   <details>
 
-    <summary> 反向传播算法（时间步 t -> t-1）</summary>
+    <summary> 反向传播算法（时间步t -> t-1）</summary>
 
     - **初始化**
 
@@ -185,7 +185,7 @@
       \frac{\partial L}{\partial \mathbf{W}_f} = \sum_{t=1}^{T} \delta\mathbf{f}_t \mathbf{z}_t^\top
       $$
 
-    - **LSTM 梯度流动特性**
+    - **LSTM梯度流动特性**
 
       **长程依赖处理**
 
@@ -316,7 +316,7 @@ aclnnStatus aclnnLstmBackward(
       <td>params</td>
       <td>输入</td>
       <td>LSTM每层的权重和偏置张量列表，对应公式中的w与b。</td>
-      <td><ul><li>bidirection为True时 `D = 2`，否则 `D = 1`，hasBiases为True时 `B = 2`，否则 `B = 1`。列表长度为 D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
+      <td><ul><li>bidirection为True时`D = 2`，否则`D = 1`，hasBiases为True时`B = 2`，否则`B = 1`。列表长度为D * B * num_layers。</li><li>当bidirection和hasBias均为True时排布为：[weight_ih_0, weight_hh_0, bias_ih_0, bias_hh_0, weight_ih_reverse_0, weight_hh_reverse_0, bias_ih_reverse_0, bias_hh_reverse_0]。</li>
       <li>hasBias为False时无bias项；bidirection为False时无reverse项。</li><li>多层时逐层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
@@ -359,7 +359,7 @@ aclnnStatus aclnnLstmBackward(
     <td>i</td>
       <td>输入</td>
       <td>LSTM正向中每层输出的输入门的激活值。对应公式中的i。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -369,7 +369,7 @@ aclnnStatus aclnnLstmBackward(
       <td>g</td>
       <td>输入</td>
       <td>LSTM正向中每层输出的候选cell状态的激活值。对应公式中的g。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -379,7 +379,7 @@ aclnnStatus aclnnLstmBackward(
       <td>f</td>
       <td>输入</td>
       <td>LSTM正向中每层遗忘门的激活值。对应公式中的f。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -389,7 +389,7 @@ aclnnStatus aclnnLstmBackward(
       <td>o</td>
       <td>输入</td>
       <td>LSTM正向中每层输出门的激活值。对应公式中的o。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -399,7 +399,7 @@ aclnnStatus aclnnLstmBackward(
       <td>h</td>
       <td>输入</td>
       <td>LSTM正向中每层的隐藏hidden状态。对应公式中的h。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -409,7 +409,7 @@ aclnnStatus aclnnLstmBackward(
       <td>c</td>
       <td>输入</td>
       <td>LSTM正向中每层的最终cell状态。对应公式中的c。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -419,7 +419,7 @@ aclnnStatus aclnnLstmBackward(
       <td>tanhc</td>
       <td>输入</td>
       <td>LSTM正向中每层最终cell状态经过tanh激活函数后的输出。对应tanh(c)。</td>
-      <td><ul><li>列表长度为 D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * num_layers。</li><li>多层双向时tensor间按先双向后多层排布。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td>[time_step, batch_size, hidden_size]</td>
@@ -529,7 +529,7 @@ aclnnStatus aclnnLstmBackward(
       <td>dparamsOut</td>
       <td>输出</td>
       <td>权重和偏置的梯度张量列表。对应公式中的δw和δb。</td>
-      <td><ul><li>列表长度为 D * B * num_layers。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
+      <td><ul><li>列表长度为D * B * num_layers。</li><li>排布与输入params一致。</li><li>数据类型与input一致。</li></ul></td>
       <td>FLOAT32、FLOAT16</td>
       <td>ND</td>
       <td><ul><li>dweight_ih：[4*hidden_size, cur_input_size]</li><li>dweight_hh：[4*hidden_size, hidden_size]</li><li>dbias：[4*hidden_size]</li></ul></td>
@@ -712,7 +712,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1.（固定写法）device/stream初始化，参考AscendCL对外接口列表
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -782,7 +782,7 @@ int main() {
   void* dhPrevDeviceAddr = nullptr;
   void* dcPrevDeviceAddr = nullptr;
 
-  // ACL Tensor 指针
+  // ACL Tensor指针
   aclTensor* x = nullptr;
   aclTensor* wi = nullptr;
   aclTensor* wh = nullptr;
@@ -802,7 +802,7 @@ int main() {
   aclTensor* o = nullptr;
   aclTensor* tanhCt = nullptr;
 
-  // 反向传播输出 ACL Tensor 指针
+  // 反向传播输出ACL Tensor指针
   aclTensor* dwi = nullptr;
   aclTensor* dwh = nullptr;
   aclTensor* dbi = nullptr;
@@ -831,7 +831,7 @@ int main() {
   std::vector<float> tanhCtHostData;
   tanhCtHostData.reserve(cHostData.size());
   for (const auto& cVal : cHostData) {
-      tanhCtHostData.push_back(std::tanh(cVal)); // 对每个 c 值应用 tanh 函数
+      tanhCtHostData.push_back(std::tanh(cVal)); // 对每个c值应用tanh函数
   }
   // 反向传播输出主机数据（初始化为0）
   std::vector<float> dwiHostData(dwiShape[0] * dwiShape[1], 0.0f);
@@ -843,11 +843,11 @@ int main() {
   std::vector<float> dcPrevHostData(dcPrevShape[0] * dcPrevShape[1] * dcPrevShape[2], 0.0f);
 
 
-  // 创建 x aclTensor
+  // 创建x aclTensor
   ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT, &x, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 params aclTensorList
+  // 创建params aclTensorList
   ret = CreateAclTensor(wiHostData, wiShape, &wiDeviceAddr, aclDataType::ACL_FLOAT, &wi);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(whHostData, whShape, &whDeviceAddr, aclDataType::ACL_FLOAT, &wh);
@@ -859,69 +859,69 @@ int main() {
   aclTensor* paramsArray[] = {wi, wh, bi, bh};
   auto paramsList = aclCreateTensorList(paramsArray, 4);
 
-  // 创建 y aclTensor
+  // 创建y aclTensor
   ret = CreateAclTensor(yHostData, yShape, &yDeviceAddr, aclDataType::ACL_FLOAT, &y);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 initH aclTensor
+  // 创建initH aclTensor
   ret = CreateAclTensor(initHHostData, initHShape, &initHDeviceAddr, aclDataType::ACL_FLOAT, &initH, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 initC aclTensor
+  // 创建initC aclTensor
   ret = CreateAclTensor(initCHostData, initCShape, &initCDeviceAddr, aclDataType::ACL_FLOAT, &initC, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* initHcArray[] = {initH, initC};
   auto initHcList = aclCreateTensorList(initHcArray, 2);
 
-  // 创建 h aclTensor
+  // 创建h aclTensor
   ret = CreateAclTensor(hHostData, hShape, &hDeviceAddr, aclDataType::ACL_FLOAT, &h, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* hArray[] = {h};
   auto hList = aclCreateTensorList(hArray, 1);
 
-  // 创建 c aclTensor
+  // 创建c aclTensor
   ret = CreateAclTensor(cHostData, cShape, &cDeviceAddr, aclDataType::ACL_FLOAT, &c, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* cArray[] = {c};
   auto cList = aclCreateTensorList(cArray, 1);
 
-  // 创建 dy aclTensor
+  // 创建dy aclTensor
   ret = CreateAclTensor(dyHostData, dyShape, &dyDeviceAddr, aclDataType::ACL_FLOAT, &dy, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dh aclTensor
+  // 创建dh aclTensor
   ret = CreateAclTensor(dhHostData, dhShape, &dhDeviceAddr, aclDataType::ACL_FLOAT, &dh, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dc aclTensor
+  // 创建dc aclTensor
   ret = CreateAclTensor(dcHostData, dcShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 i aclTensor
+  // 创建i aclTensor
   ret = CreateAclTensor(iHostData, iShape, &iDeviceAddr, aclDataType::ACL_FLOAT, &i, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* iArray[] = {i};
   auto iList = aclCreateTensorList(iArray, 1);
 
-  // 创建 j aclTensor
+  // 创建j aclTensor
   ret = CreateAclTensor(jHostData, jShape, &jDeviceAddr, aclDataType::ACL_FLOAT, &j, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* jArray[] = {j};
   auto jList = aclCreateTensorList(jArray, 1);
 
-  // 创建 f aclTensor
+  // 创建f aclTensor
   ret = CreateAclTensor(fHostData, fShape, &fDeviceAddr, aclDataType::ACL_FLOAT, &f, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* fArray[] = {f};
   auto fList = aclCreateTensorList(fArray, 1);
 
-  // 创建 o aclTensor
+  // 创建o aclTensor
   ret = CreateAclTensor(oHostData, oShape, &oDeviceAddr, aclDataType::ACL_FLOAT, &o, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* oArray[] = {o};
   auto oList = aclCreateTensorList(oArray, 1);
 
-  // 创建 tanhCt aclTensor
+  // 创建tanhCt aclTensor
   ret = CreateAclTensor(tanhCtHostData, tanhCtShape, &tanhCtDeviceAddr, aclDataType::ACL_FLOAT, &tanhCt, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   aclTensor* tanhCtArray[] = {tanhCt};
@@ -929,19 +929,19 @@ int main() {
 
   // 创建反向传播输出张量
 
-  // 创建 dx aclTensor
+  // 创建dx aclTensor
   ret = CreateAclTensor(dxHostData, dxShape, &dxDeviceAddr, aclDataType::ACL_FLOAT, &dx, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dhPrev aclTensor
+  // 创建dhPrev aclTensor
   ret = CreateAclTensor(dhPrevHostData, dhPrevShape, &dhPrevDeviceAddr, aclDataType::ACL_FLOAT, &dhPrev, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dcPrev aclTensor
+  // 创建dcPrev aclTensor
   ret = CreateAclTensor(dcPrevHostData, dcPrevShape, &dcPrevDeviceAddr, aclDataType::ACL_FLOAT, &dcPrev, aclFormat::ACL_FORMAT_NCL);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dparams aclTensorList
+  // 创建dparams aclTensorList
   ret = CreateAclTensor(dwiHostData, dwiShape, &dwiDeviceAddr, aclDataType::ACL_FLOAT, &dwi);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(dwhHostData, dwhShape, &dwhDeviceAddr, aclDataType::ACL_FLOAT, &dwh);
@@ -971,12 +971,12 @@ int main() {
   ret = aclnnLstmBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnLstmBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  // 打印 dparams 结果
+  // 打印dparams结果
   auto dwiSize = GetShapeSize(dwiShape);
   std::vector<float> resultDwiData(dwiSize, 0);
   ret = aclrtMemcpy(resultDwiData.data(), resultDwiData.size() * sizeof(resultDwiData[0]), dwiDeviceAddr,
@@ -1013,7 +1013,7 @@ int main() {
     LOG_PRINT("result dbh[%ld] is: %f\n", i, resultDbhData[i]);
   }
 
-  // 打印 dx 结果
+  // 打印dx结果
   auto dxSize = GetShapeSize(dxShape);
   std::vector<float> resultDxData(dxSize, 0);
   ret = aclrtMemcpy(resultDxData.data(), resultDxData.size() * sizeof(resultDxData[0]), dxDeviceAddr,
@@ -1023,7 +1023,7 @@ int main() {
     LOG_PRINT("result dx[%ld] is: %f\n", i, resultDxData[i]);
   }
 
-  // 打印 dh_prev 结果
+  // 打印dh_prev结果
   auto dhPrevSize = GetShapeSize(dhPrevShape);
   std::vector<float> resultDhPrevData(dhPrevSize, 0);
   ret = aclrtMemcpy(resultDhPrevData.data(), resultDhPrevData.size() * sizeof(resultDhPrevData[0]), dhPrevDeviceAddr,
@@ -1033,7 +1033,7 @@ int main() {
     LOG_PRINT("result dh_prev[%ld] is: %f\n", i, resultDhPrevData[i]);
   }
 
-  // 打印 dc_prev 结果
+  // 打印dc_prev结果
   auto dcPrevSize = GetShapeSize(dcPrevShape);
   std::vector<float> resultDcPrevData(dcPrevSize, 0);
   ret = aclrtMemcpy(resultDcPrevData.data(), resultDcPrevData.size() * sizeof(resultDcPrevData[0]), dcPrevDeviceAddr,
@@ -1043,7 +1043,7 @@ int main() {
     LOG_PRINT("result dc_prev[%ld] is: %f\n", i, resultDcPrevData[i]);
   }
 
-  // 释放 aclTensor
+  // 释放aclTensor
   aclDestroyTensor(x);
   aclDestroyTensor(wi);
   aclDestroyTensor(wh);
@@ -1082,7 +1082,7 @@ int main() {
   aclDestroyTensorList(tanhCtList);
   aclDestroyTensorList(dparamsList);
 
-  // 释放 Device 资源
+  // 释放Device资源
   aclrtFree(xDeviceAddr);
   aclrtFree(wiDeviceAddr);
   aclrtFree(whDeviceAddr);

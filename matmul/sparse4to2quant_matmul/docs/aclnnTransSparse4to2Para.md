@@ -88,7 +88,7 @@ aclnnStatus aclnnTransSparse4to2Para(
         <td>sparseWeightDims</td>
         <td>输出</td>
         <td>矩阵乘运算中压缩后右矩阵StorageShape数组指针首地址。</td>
-        <td><ul><li>内存由调用者释放。</li><li>StorageShape可表达为（ceil（k_half / 32），ceil（n / 16），16，32），其中k_half=ceil（k / 8） * 8 / 2。</li></ul></td>
+        <td><ul><li>内存由调用者释放。</li><li>StorageShape可表达为（ceil（k_half / 32），ceil（n / 16），16，32），其中k_half=ceil（k / 8）* 8 / 2。</li></ul></td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -118,7 +118,7 @@ aclnnStatus aclnnTransSparse4to2Para(
         <td>indexDims</td>
         <td>输出</td>
         <td>矩阵乘运算中的压缩后右矩阵对应的索引矩阵StorageShape数组指针首地址。</td>
-        <td><ul><li>内存由调用者释放。</li><li>StorageShape可表达为（ceil（k_half / 32），ceil（n / 16），16，8），其中k_half=ceil（k / 8） * 8 / 2。</li></ul></td>
+        <td><ul><li>内存由调用者释放。</li><li>StorageShape可表达为（ceil（k_half / 32），ceil（n / 16），16，8），其中k_half=ceil（k / 8）* 8 / 2。</li></ul></td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -383,7 +383,7 @@ aclnnStatus aclnnTransSparse4to2Para(
 
       CREATE_TENSOR(xHostData, xShape, xDeviceAddr, aclDataType::ACL_INT8, x);
 
-      weightShape.back() = (weightShape.back() + 7) / 8 * 8 / 2; // 4选2后 K轴向上8对齐后减半
+      weightShape.back() = (weightShape.back() + 7) / 8 * 8 / 2; // 4选2后K轴向上8对齐后减半
       auto sparseWeightStorageShape = GenStorageShape(sparseWeightDims, sparseWeightDimsNum);
       CREATE_SPARSE_TENSOR(
           sparseWeightHostData, weightShape, sparseWeightStorageShape, sparseWeightDeviceAddr, aclDataType::ACL_INT8,
@@ -418,7 +418,7 @@ aclnnStatus aclnnTransSparse4to2Para(
       ret = aclnnSparse4to2QuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -438,7 +438,7 @@ aclnnStatus aclnnTransSparse4to2Para(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;

@@ -116,7 +116,7 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
     </tr>
   </tbody></table>
   
-  - <term>Atlas 推理系列产品</term>： 参数`self`、`out`的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>：参数`self`、`out`的数据类型不支持BFLOAT16。
 
 - **返回值**
 
@@ -166,7 +166,7 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
       </tr>
     </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>： 参数`self`、`out`维度不支持第一维度不大于0。
+  - <term>Atlas 推理系列产品</term>：参数`self`、`out`维度不支持第一维度不大于0。
 
 ## aclnnAdaptiveAvgPool3d
 
@@ -216,9 +216,9 @@ aclnnStatus aclnnAdaptiveAvgPool3d(
   - aclnnAdaptiveAvgPool3d默认确定性实现。
 
 - Shape描述：
-  - self.shape = (N, C, Din, Hin, Win) 或者 (C, Din, Hin, Win)
+  - self.shape = (N, C, Din, Hin, Win)或者(C, Din, Hin, Win)
   - outputSize = [Dout, Hout, Wout]
-  - out.shape = (N, C, Dout, Hout, Wout) 或者 (C, Dout, Hout, Wout)
+  - out.shape = (N, C, Dout, Hout, Wout)或者(C, Dout, Hout, Wout)
 
 ## 调用示例
 
@@ -286,7 +286,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -328,7 +328,7 @@ int main() {
   ret = aclnnAdaptiveAvgPool3d(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAdaptiveAvgPool3d failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

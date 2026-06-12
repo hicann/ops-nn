@@ -27,7 +27,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnAddmmWeightNzGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnAddmmWeightNz”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnAddmmWeightNzGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnAddmmWeightNz”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
@@ -223,7 +223,7 @@ aclnnStatus aclnnAddmmWeightNz(
           <td>mat1和mat2不满足相乘条件。</td>
         </tr>
         <tr>
-          <td>out和 mat1@mat2 shape不一致。</td>
+          <td>out和mat1@mat2 shape不一致。</td>
         </tr>
       </tbody>
       </table>
@@ -409,7 +409,7 @@ aclnnStatus aclnnAddmmWeightNz(
   }
 
   int main() {
-    // 1. （固定写法）device/stream初始化，参考acl API手册
+    // 1.（固定写法）device/stream初始化，参考acl API手册
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
@@ -432,9 +432,9 @@ aclnnStatus aclnnAddmmWeightNz(
     aclScalar* alpha = nullptr;
     aclScalar* beta = nullptr;
 
-    std::vector<uint16_t> selfHostData(16, 0x3C00); // float16_t 用0x3C00表示int_16的1
-    std::vector<uint16_t> mat1HostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
-    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16_t 用0x3C00表示int_16的1
+    std::vector<uint16_t> selfHostData(16, 0x3C00); // float16_t用0x3C00表示int_16的1
+    std::vector<uint16_t> mat1HostData(512, 0x3C00); // float16_t用0x3C00表示int_16的1
+    std::vector<uint16_t> mat2HostData(512, 0x3C00); // float16_t用0x3C00表示int_16的1
     std::vector<uint16_t> outHostData(256, 0);
     float alphaValue = 1.0f;
     float betaValue = 1.0f;
@@ -493,7 +493,7 @@ aclnnStatus aclnnAddmmWeightNz(
     ret = aclnnAddmmWeightNz(workspaceAddrMm, workspaceSizeMm, executor, stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddmmWeightNz failed. ERROR: %d\n", ret); return ret);
 
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

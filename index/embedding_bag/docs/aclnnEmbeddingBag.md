@@ -22,7 +22,7 @@
 
     ```bash
     output的shape为includeLastOffset ? (bagOffsets - 1, embeddingDim) : (bagOffsets, embeddingDim)
-    offset2bag的shape 为 (bagIndices,)
+    offset2bag的shape为(bagIndices,)
     bagSize的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     maxIndices的shape为includeLastOffset ? (bagOffsets - 1) : (bagOffsets,)
     ```
@@ -306,7 +306,7 @@ aclnnStatus aclnnEmbeddingBag(
       <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的 weight、indices、offsets、output、offset2bag、bagSize、maxIndices是空指针。</td>
+      <td>传入的weight、indices、offsets、output、offset2bag、bagSize、maxIndices是空指针。</td>
       </tr>
       <tr>
       <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
@@ -323,7 +323,7 @@ aclnnStatus aclnnEmbeddingBag(
       <td>indices和offsets的数据类型都不是INT32或INT64。</td>
       </tr>
       <tr>
-      <td>perSampleWeights在传入非nullptr的情况下，数据类型与weight不一致, perSampleWeights不是1维，perSampleWeights元素数量与indices不相等, 在非sum模式下，perSampleWeights不是nullptr。</td>
+      <td>perSampleWeights在传入非nullptr的情况下，数据类型与weight不一致, perSampleWeights不是1维，perSampleWeights元素数量与indices不相等,在非sum模式下，perSampleWeights不是nullptr。</td>
       </tr>
       <tr>
       <td>output数据类型与weight不一致,shape与定义不符。</td>
@@ -449,7 +449,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -549,7 +549,7 @@ int main() {
   ret = aclnnEmbeddingBag(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnEmbeddingBag failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -600,7 +600,7 @@ int main() {
   aclDestroyTensor(bagSize);
   aclDestroyTensor(maxIndices);
 
-  // 7. 释放device资源, 需要根据具体API的接口定义修改
+  // 7. 释放device资源,需要根据具体API的接口定义修改
   aclrtFree(weightDeviceAddr);
   aclrtFree(indicesDeviceAddr);
   aclrtFree(offsetsDeviceAddr);

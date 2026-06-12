@@ -197,7 +197,7 @@ aclnnStatus aclnnMaxPool3dWithArgmax(
     </tr>
   </tbody></table>
 
-   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`dilation` 元素值仅支持为1；`indices` 数据类型不支持INT64。输入数据排布不支持NDHWC。depth *height* width 不支持大于 max int32。
+   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`dilation`元素值仅支持为1；`indices`数据类型不支持INT64。输入数据排布不支持NDHWC。depth *height* width不支持大于max int32。
 
 * **返回值**
   

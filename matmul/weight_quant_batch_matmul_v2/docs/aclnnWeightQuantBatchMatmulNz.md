@@ -331,7 +331,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
   仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
-- x为FLOAT16，weight为FLOAT32调用示例，需要调用 `aclnnConvertWeightToINT4Pack` 接口辅助完成调用：
+- x为FLOAT16，weight为FLOAT32调用示例，需要调用`aclnnConvertWeightToINT4Pack`接口辅助完成调用：
 
   ```Cpp
   #include <iostream>
@@ -619,7 +619,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       ret = aclnnWeightQuantBatchMatmulNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -655,7 +655,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
@@ -668,7 +668,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
   }
   ```
 
-- x为FLOAT16，weight为INT8调用示例，需要调用 `aclnnTransMatmulWeight` 接口辅助完成调用：
+- x为FLOAT16，weight为INT8调用示例，需要调用`aclnnTransMatmulWeight`接口辅助完成调用：
 
   ```Cpp
   #include <cmath>
@@ -828,11 +828,11 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       aclTensor* weight = nullptr;
       aclTensor* antiquantScale = nullptr;
       aclTensor* y = nullptr;
-      std::vector<uint16_t> xHostData(m * k, 0b0011110000000000); // 0b0011110000000000 为 fp16 的 1.0
+      std::vector<uint16_t> xHostData(m * k, 0b0011110000000000); // 0b0011110000000000为fp16的1.0
       std::vector<int8_t> weightHostData(k * n, 1);
       std::vector<float> yHostData(m * n, 0);
 
-      std::vector<uint16_t> antiquantScaleHostData(n, 0b0011110000000000); // 0b0011110000000000 为 fp16 的 1.0
+      std::vector<uint16_t> antiquantScaleHostData(n, 0b0011110000000000); // 0b0011110000000000为fp16的1.0
 
       // 创建x aclTensor
       ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
@@ -896,7 +896,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       ret = aclnnWeightQuantBatchMatmulNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnWeightQuantBatchMatmulNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -915,7 +915,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;

@@ -24,7 +24,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulV2GetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmulV2 接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用aclnnQuantMatmulV2GetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantMatmulV2接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulV2GetWorkspaceSize(
@@ -107,7 +107,7 @@ aclnnStatus aclnnQuantMatmulV2(
       <td>deqScale</td>
       <td>输入</td>
       <td>表示量化参数，公式中的输入deqScale。</td>
-      <td>shape是1维（t，），t = align（n， 16）， 其中n与x2的n一致。</td>
+      <td>shape是1维（t，），t = align（n， 16），其中n与x2的n一致。</td>
       <td>UINT64</td>
       <td>ND</td>
       <td>1</td>
@@ -425,7 +425,7 @@ int aclnnQuantMatmulV2Test(int32_t deviceId, aclrtStream &stream) {
   ret = aclnnQuantMatmulV2(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulV2 failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -443,7 +443,7 @@ int aclnnQuantMatmulV2Test(int32_t deviceId, aclrtStream &stream) {
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

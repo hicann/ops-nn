@@ -13,21 +13,21 @@
 
 ## 功能说明
 
-- 算子功能: 将tensor updates中的值按指定的轴和方向以及对应的位置关系逐个替换/累加/累乘至输出tensor中, 输出tensor非更新位置的值和输入tensor一致。
+- 算子功能: 将tensor updates中的值按指定的轴和方向以及对应的位置关系逐个替换/累加/累乘至输出tensor中,输出tensor非更新位置的值和输入tensor一致。
 
 - 示例：
   对于一个3D tensor，输出会按照如下的规则进行更新：
 
   ```bash
-  y[indices[i][j][k]][j][k] += updates[i][j][k] # 如果 dim == 0 && reduction == 1
-  y[i][indices[i][j][k]][k] *= updates[i][j][k] # 如果 dim == 1 && reduction == 2
-  y[i][j][indices[i][j][k]] = updates[i][j][k]  # 如果 dim == 2 && reduction == 0
+  y[indices[i][j][k]][j][k] += updates[i][j][k] # 如果dim == 0 && reduction == 1
+  y[i][indices[i][j][k]][k] *= updates[i][j][k] # 如果dim == 1 && reduction == 2
+  y[i][j][indices[i][j][k]] = updates[i][j][k]  # 如果dim == 2 && reduction == 0
   ```
 
   在计算时需要满足以下要求：
   - data、indices和updates的维度数量必须相同。
   - 对于每一个维度d，有indices.size(d) <= updates.size(d)的限制。
-  - 对于每一个维度d，如果d != dim, 有indices.size(d) <= data.size(d)的限制。
+  - 对于每一个维度d，如果d != dim,有indices.size(d) <= data.size(d)的限制。
   - dim的值的大小必须在 [-data的维度数量, data的维度数量-1] 之间。
   - data的维度数应该小于等于8。
   - indices的值大小必须在[0, data.size(dim)-1]之间。

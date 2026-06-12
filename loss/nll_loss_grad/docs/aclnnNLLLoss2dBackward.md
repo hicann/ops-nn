@@ -341,7 +341,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -416,7 +416,7 @@ int main() {
   ret = aclnnNLLLoss2dBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnNLLLoss2dBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -438,7 +438,7 @@ int main() {
   aclDestroyTensor(totalWeight);
   aclDestroyTensor(out);
 
-  // 7. 释放device 资源
+  // 7. 释放device资源
   aclrtFree(gradDeviceAddr);
   aclrtFree(selfDeviceAddr);
   aclrtFree(targetDeviceAddr);

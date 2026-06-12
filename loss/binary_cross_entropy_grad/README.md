@@ -106,4 +106,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| aclnn接口  | [test_aclnn_binary_cross_entropy_backward.cpp](examples/test_aclnn_binary_cross_entropy_backward.cpp) | 通过[aclnnBinaryCrossEntropyBackward](docs/aclnnBinaryCrossEntropyBackward.md)接口方式调用BinaryCrossEntropyGrad算子。 |
+| aclnn接口  | [test_aclnn_binary_cross_entropy_backward.cpp](examples/arch35/test_aclnn_binary_cross_entropy_backward.cpp) | 通过[aclnnBinaryCrossEntropyBackward](docs/aclnnBinaryCrossEntropyBackward.md)接口方式调用BinaryCrossEntropyGrad算子。 |

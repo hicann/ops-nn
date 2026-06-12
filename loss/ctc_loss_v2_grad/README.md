@@ -138,13 +138,13 @@
 
 ## 约束说明
 
-* grad_out的元素数量必须为 N。
-* log_probs的shape为 (T, N, C)，？其中 T >= max( input_lengths )。
-* targets的shape为 (N, S)或者 ( sum( target_lengths ),)。
-* input_lengths的元素数量必须为 N。
-* target_lengths的元素数量必须为 N。
-* neg_log_likelihood的shape必须为1维 (N)。
-* log_alpha的shape必须为3维 (N, T, X)，其中 X = ( 2 * S + 1 )。
+* grad_out的元素数量必须为N。
+* log_probs的shape为(T, N, C)，？其中T >= max( input_lengths )。
+* targets的shape为(N, S)或者( sum( target_lengths ),)。
+* input_lengths的元素数量必须为N。
+* target_lengths的元素数量必须为N。
+* neg_log_likelihood的shape必须为1维(N)。
+* log_alpha的shape必须为3维(N, T, X)，其中X = ( 2 * S + 1 )。
 * reduction的取值范围为{'none', 'mean', 'sum'}。
 
 ## 调用说明

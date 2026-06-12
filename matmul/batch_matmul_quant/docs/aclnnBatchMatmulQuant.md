@@ -16,7 +16,7 @@
 ## 功能说明
 
 - 接口功能：
-实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。
+实现输入Tensor的dtype是float16,输出的dtype是int8的矩阵乘计算。
 
 - 计算公式：
 
@@ -26,7 +26,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnBatchMatmulQuantGetWorkspaceSize 接口获取入参并根据流程计算所需workspace大小，再调用 aclnnBatchMatmulQuant 接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用aclnnBatchMatmulQuantGetWorkspaceSize接口获取入参并根据流程计算所需workspace大小，再调用aclnnBatchMatmulQuant接口执行计算。
 
 ```cpp
 aclnnStatus aclnnBatchMatmulQuantGetWorkspaceSize(
@@ -200,7 +200,7 @@ aclnnStatus aclnnBatchMatmulQuant(
       <td>x1、x2、quantParam或out的数据格式不在支持的范围内。</td>
     </tr>
     <tr>
-      <td>quantParam的维度值不为1, 或者不为输出tensor(out)最后一个维度的大小向上对齐到16的倍数。</td>
+      <td>quantParam的维度值不为1,或者不为输出tensor(out)最后一个维度的大小向上对齐到16的倍数。</td>
     </tr>
     <tr>
       <td>x1和x2的输入shape在根据输入transpose描述处理后不满足矩阵乘的关系。</td>
@@ -493,7 +493,7 @@ int aclnnBatchMatmulQuantTest(int32_t deviceId, aclrtStream &stream) {
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBatchMatmulQuant failed. ERROR: %d\n", ret); return ret);
 
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -511,7 +511,7 @@ int aclnnBatchMatmulQuantTest(int32_t deviceId, aclrtStream &stream) {
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

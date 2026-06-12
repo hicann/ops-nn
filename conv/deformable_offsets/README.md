@@ -82,14 +82,14 @@
     <tr>
       <td>data_format</td>
       <td>属性</td>
-      <td>指定输入 x 的数据格式。</td>
+      <td>指定输入x的数据格式。</td>
       <td>STRING</td>
       <td>-</td>
     </tr>
     <tr>
       <td>deformable_groups</td>
       <td>属性</td>
-      <td>指定输入 x 在 C 轴上的分组数。</td>
+      <td>指定输入x在C轴上的分组数。</td>
       <td>INT32</td>
       <td>-</td>
     </tr>

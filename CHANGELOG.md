@@ -7,7 +7,7 @@
 发布日期：2026-03-30
 
 本版本新增多项新增特性、问题修复及性能改进，支持最新的950硬件。
-我们诚挚欢迎社区反馈，以进一步提升 ops-nn 的稳定性和功能完备性。
+我们诚挚欢迎社区反馈，以进一步提升ops-nn的稳定性和功能完备性。
 使用方式请参阅[官方文档](https://gitcode.com/cann/ops-nn/blob/master/README.md)。
 
 [CANN 9.0.0-beta.2](https://ascend.devcloud.huaweicloud.com/cann/run/software/9.0.0-beta.2/)
@@ -64,16 +64,16 @@
 ### 🐛 问题修复
 
 - ScatterNd算子确定性计算按列分核偏移修复([!3137](https://gitcode.com/cann/ops-nn/pull/3137))
-- scatter_elements 确定性模板([!3092](https://gitcode.com/cann/ops-nn/pull/3092))
+- scatter_elements确定性模板([!3092](https://gitcode.com/cann/ops-nn/pull/3092))
 - Matmul算子FP32场景下单核切K模板的精度（[!2651](https://gitcode.com/cann/ops-nn/pull/2651)）
 
 ## v8.5.0-beta.1
 
 发布日期：2025-12-30
 
-ops-nn 算子首个 Beta 版本 v8.5.0-beta.1 现已发布。
+ops-nn算子首个Beta版本v8.5.0-beta.1现已发布。
 本版本引入了多项新增特性、问题修复及性能改进，目前仍处于测试阶段。
-我们诚挚欢迎社区反馈，以进一步提升 ops-nn 的稳定性和功能完备性。
+我们诚挚欢迎社区反馈，以进一步提升ops-nn的稳定性和功能完备性。
 使用方式请参阅[官方文档](https://gitcode.com/cann/ops-nn/blob/master/README.md)。
 
 ### 🔗 版本地址

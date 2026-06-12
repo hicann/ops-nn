@@ -19,14 +19,14 @@
   对于一个3D tensor， self会按照如下的规则进行更新：
 
   ```text
-  self[index[i][j][k]][j][k] = value # 如果 dim == 0
-  self[i][index[i][j][k]][k] = value # 如果 dim == 1
-  self[i][j][index[i][j][k]] = value # 如果 dim == 2
+  self[index[i][j][k]][j][k] = value # 如果dim == 0
+  self[i][index[i][j][k]][k] = value # 如果dim == 1
+  self[i][j][index[i][j][k]] = value # 如果dim == 2
   ```
 
   在计算时需要满足以下要求：
   - self、index维度数量必须相同。
-  - 对于每一个维度d，如果d != dim, 有index.size(d) <= self.size(d)的限制。
+  - 对于每一个维度d，如果d != dim,有index.size(d) <= self.size(d)的限制。
   - dim的值的大小必须在 [-self的维度数量, self的维度数量-1] 之间。
   - self的维度数应该小于等于8。
   - index中对应维度dim的值大小必须在[0, self.size(dim)-1]之间。
@@ -149,7 +149,7 @@
       <td rowspan="4">reduce</td>
       <td rowspan="4">输入</td>
       <td rowspan="4">选择应用的reduction操作。</td>
-      <td rowspan="4">选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。具体操作含义如下：<br>0：表示替换操作，将value按照index替换到out中的对应位置。<br>1：表示累加操作，将value按照index累加到out中的对应位置。<br>2：表示累乘操作，将value按照index累乘到out的对应位置。<br></td>
+      <td rowspan="4">选的操作选项以及对应的int值为(add, 1), (mul, 2)，(none, 0)。具体操作含义如下：<br>0：表示替换操作，将value按照index替换到out中的对应位置。<br>1：表示累加操作，将value按照index累加到out中的对应位置。<br>2：表示累乘操作，将value按照index累乘到out的对应位置。<br></td>
       <td rowspan="4">-</td>
       <td rowspan="4">-</td>
       <td rowspan="4">-</td>
@@ -231,7 +231,7 @@
       <td>self和out的shape不一致。</td>
     </tr>
     <tr>
-      <td rowspan="2">self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim, 有index.size(d) <= self.size(d)的限制。 </td>
+      <td rowspan="2">self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim,有index.size(d) <= self.size(d)的限制。 </td>
     </tr>
     <tr>
     </tr>
@@ -340,7 +340,7 @@
         <td>index</td>
         <td>输入</td>
         <td>公式中的index。</td>
-        <td>索引张量。index的维度数量需要与selfRef相同。对于每一个维度d，如果d != dim, 需保证index.size(d) &lt;= selfRef.size(d)。支持空tensor。</td>
+        <td>索引张量。index的维度数量需要与selfRef相同。对于每一个维度d，如果d != dim,需保证index.size(d) &lt;= selfRef.size(d)。支持空tensor。</td>
         <td>INT32、INT64</td>
         <td>ND</td>
         <td>0-8</td>
@@ -360,7 +360,7 @@
         <td rowspan="4">reduce</td>
         <td rowspan="4">输入</td>
         <td rowspan="4">选择应用的reduction操作。</td>
-        <td rowspan="4">选的操作选项以及对应的int值为 (add, 1), (mul, 2)，(none, 0)。具体操作含义如下：<br>0：表示替换操作，将value按照index替换到selfRef中的对应位置。<br>1：表示累加操作，将value按照index累加到selfRef中的对应位置<br>2：表示累乘操作，将value按照index累乘到selfRef的对应位置</td>
+        <td rowspan="4">选的操作选项以及对应的int值为(add, 1), (mul, 2)，(none, 0)。具体操作含义如下：<br>0：表示替换操作，将value按照index替换到selfRef中的对应位置。<br>1：表示累加操作，将value按照index累加到selfRef中的对应位置<br>2：表示累乘操作，将value按照index累乘到selfRef的对应位置</td>
         <td rowspan="4">-</td>
         <td rowspan="4">-</td>
         <td rowspan="4">-</td>
@@ -426,7 +426,7 @@
       <td>selfRef、index的维度数不一致</td>
     </tr>
     <tr>
-      <td rowspan="2">self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim, 有index.size(d) <= selfRef.size(d)的限制。<br></td>
+      <td rowspan="2">self、index的shape不符合以下限制：<br>对于每一个维度d，如果d != dim,有index.size(d) <= selfRef.size(d)的限制。<br></td>
     </tr>
     <tr>
     </tr>
@@ -488,7 +488,7 @@
 ## 约束说明
 
 确定性说明:
-- <term>Ascend 950PR/Ascend 950DT</term>： 默认非确定性, 支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
+- <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性,支持通过aclrtCtxSetSysParamOpt开启确定性（当reduciton为累乘场景，开启确定性也不生效，依旧为非确定性）。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。 
 
 ## 调用示例
@@ -558,7 +558,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -612,7 +612,7 @@ int main() {
   ret = aclnnScatterValue(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnScatterValue failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -709,7 +709,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -756,7 +756,7 @@ int main() {
   ret = aclnnInplaceScatterValue(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplaceScatterValue failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

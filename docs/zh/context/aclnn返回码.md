@@ -3,7 +3,7 @@
 调用aclnn API时，常见的接口返回码如[表1](#zh-cn_topic_0000001563019104_table8155243135018)所示。
 对于异常状态码值，可以通过aclGetRecentErrMsg接口（参见[《acl API（C）》](https://hiascend.com/document/redirect/CannCommunityCppApi)）获取异常信息，您可以根据报错提示排查问题或者联系技术支持。
 
-**表 1**  返回状态码
+**表1**  返回状态码
 
 <a name="zh-cn_topic_0000001563019104_table8155243135018"></a>
 <table><thead align="left"><tr id="zh-cn_topic_0000001563019104_row111561243135019"><th class="cellrowborder" valign="top" width="30.543054305430545%" id="mcps1.2.4.1.1"><p id="zh-cn_topic_0000001563019104_p6676115185014"><a name="zh-cn_topic_0000001563019104_p6676115185014"></a><a name="zh-cn_topic_0000001563019104_p6676115185014"></a>状态码名称</p>
@@ -55,7 +55,7 @@
 
 更多关于ACLNN_ERR_INNER_XXX类状态码的说明如[表2](#zh-cn_topic_0000001563019104_table3354143205413)所示。
 
-**表 2**  异常状态码
+**表2**  异常状态码
 
 <a name="zh-cn_topic_0000001563019104_table3354143205413"></a>
 <table><thead align="left"><tr id="zh-cn_topic_0000001563019104_row15354124318546"><th class="cellrowborder" valign="top" width="30.183018301830185%" id="mcps1.2.4.1.1"><p id="zh-cn_topic_0000001563019104_p5354164365416"><a name="zh-cn_topic_0000001563019104_p5354164365416"></a><a name="zh-cn_topic_0000001563019104_p5354164365416"></a>状态码名称</p>

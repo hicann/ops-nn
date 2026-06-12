@@ -33,8 +33,8 @@
 
 其中：
 
-- $\sigma$ 是 sigmoid 函数
-- $\odot$ 表示逐元素乘法 (Hadamard product)
+- $\sigma$ 是sigmoid函数
+- $\odot$ 表示逐元素乘法(Hadamard product)
 - $W_*$ 是可学习的权重矩阵
 - $b_*$ 是可学习的偏置项
 
@@ -172,7 +172,7 @@ $$
 \frac{\partial L}{\partial \mathbf{W}_f} = \sum_{t=1}^{T} \delta\mathbf{f}_t \mathbf{z}_t^\top
 $$
 
-**LSTM 梯度流动特性**
+**LSTM梯度流动特性**
 **长程依赖处理**
 
 $$

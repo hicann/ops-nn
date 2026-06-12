@@ -14,7 +14,7 @@
 ## 功能说明
 
 - 算子功能：
-实现输入Tensor的dtype是float16, 输出的dtype是int8的矩阵乘计算。
+实现输入Tensor的dtype是float16,输出的dtype是int8的矩阵乘计算。
 
 - 计算公式：
 

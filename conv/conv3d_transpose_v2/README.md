@@ -7,7 +7,7 @@
 | <term>Ascend 950PR/Ascend 950DT</term>                   |    √     |
 | <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term> |    √     |
 | <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    √     |
-| <term>Atlas 200I/500 A2推理产品</term>                   |    ×     |
+| <term>Atlas 200I/500 A2 推理产品</term>                   |    ×     |
 | <term>Atlas 推理系列产品</term> |    ×     |
 | <term>Atlas 训练系列产品</term> |    ×     |
 
@@ -46,7 +46,7 @@
 | groups | 可选属性 | <ul><li>整数，范围为[1,65535]，默认1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>$c_{in}$与$c_{out}$必须能被'groups'整除。</li><li>不同'groups'与dtype的组合支持见下方表格说明。</li></ul> | INT | - |
 | data_format | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。对应关系为：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>指定'x'与'y'的数据排布格式。</li></ul> | STRING | - |
 | output_padding | 可选属性 | <ul><li>将在输出形状末尾额外增加的尺寸，默认值为[0,0,0,0,0]。</li><li>相当于公式中的output_padding[0]、output_padding[1]、output_padding[2]。</li></ul> | - | - |
-| offset_x  | 可选属性 | <ul><li>默认值为 0，保留字段。</li></ul> | INT | - |
+| offset_x  | 可选属性 | <ul><li>默认值为0，保留字段。</li></ul> | INT | - |
 | y | 输出 | <ul><li>相当于公式中的($N,C_{out},D_{out},H_{out},W_{out}$)。</li><li>数据格式与'x'一致。</li></ul> | FLOAT16、BFLOAT16、FLOAT32、HIFLOAT8、FLOAT8_E4M3FN | NDHWC、NCDHW |
 
 - <term>Ascend 950PR/Ascend 950DT处理器</term>：当'X'和'y'数据格式为NDHWC，dtype为非8bit时，暂不支持groups>1。

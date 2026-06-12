@@ -178,7 +178,7 @@ aclnnStatus aclnnKthvalue(
       <tr>
       <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="3">161002</td>
-      <td>self、valuesOut或indicesOut的数据类型不在支持的范围之内, 或shape不相互匹配。</td>
+      <td>self、valuesOut或indicesOut的数据类型不在支持的范围之内,或shape不相互匹配。</td>
       </tr>
       <tr>
       <td>dim的取值不在输入tensor self的维度范围中。</td>
@@ -302,7 +302,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
+  // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -349,7 +349,7 @@ int main() {
   // 调用aclnnKthvalue第二段接口
   ret = aclnnKthvalue(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnKthvalue failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

@@ -21,9 +21,9 @@
   对于一个3D tensor，self会按照如下的规则进行更新：
 
   ```text
-  self[index[i][j][k]][j][k] += src[i][j][k] # 如果 dim == 0
-  self[i][index[i][j][k]][k] += src[i][j][k] # 如果 dim == 1
-  self[i][j][index[i][j][k]] += src[i][j][k] # 如果 dim == 2
+  self[index[i][j][k]][j][k] += src[i][j][k] # 如果dim == 0
+  self[i][index[i][j][k]][k] += src[i][j][k] # 如果dim == 1
+  self[i][j][index[i][j][k]] += src[i][j][k] # 如果dim == 2
   ```
 
   在计算时需要满足以下要求：
@@ -39,7 +39,7 @@
   源tensor $src = \begin{bmatrix} [10&11&12] \\ [13&14&15] \end{bmatrix}$，
   输出tensor $output = \begin{bmatrix} [11&14&14] \\ [31&20&6] \\ [7&8&9] \end{bmatrix}$
 
-  dim = 1 表示scatter_add根据$index$在tensor的列上进行累加。
+  dim = 1表示scatter_add根据$index$在tensor的列上进行累加。
 
   $output[0][0] = self[0][0] + src[0][0]$ = 1 + 10，
 
@@ -263,7 +263,7 @@ aclnnStatus aclnnScatterAdd(
 ## 约束说明
 
 确定性说明:
-- <term>Ascend 950PR/Ascend 950DT</term>： 默认非确定性。
+- <term>Ascend 950PR/Ascend 950DT</term>：默认非确定性。
 - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：默认确定性。
 
 ## 调用示例
@@ -331,7 +331,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -385,7 +385,7 @@ int main() {
   ret = aclnnScatterAdd(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnScatterAdd failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

@@ -15,7 +15,7 @@
 
 - 接口功能：实现输入输出维度为**T**（时间或空间维度）、**B**（批次）、**C**（通道）的一维卷积的反向传播。
 
-- 计算公式： 假定输入Conv_tbc正向的输入$input$的shape是$(H_{\text{in}},N,C_{\text{in}})$，输出梯度$gradOutput$
+- 计算公式：假定输入Conv_tbc正向的输入$input$的shape是$(H_{\text{in}},N,C_{\text{in}})$，输出梯度$gradOutput$
   的shape是$(H_{\text{out}},N,C_{\text{out}})$，卷积核$weight$的shape是$(K,C_{\text{in}},C_{\text{out}})$，偏置$bias$
   的shape为$(C_{\text{out}})$，反向传播过程中对于输入的填充为 $pad$，上述参数的关系是：
 
@@ -107,7 +107,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>输入</td>
      <td>公式中的输出张量y对L的梯度，表示卷积反向的输入。</td>
      <td>
-       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li></ul>
+       <ul><li>支持空Tensor。</li><li>shape为(N,C<sub>out</sub>,H<sub>out</sub>)。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>
@@ -122,7 +122,7 @@ aclnnStatus aclnnConvTbcBackward(
        <ul>
         <li>支持空Tensor。</li>
         <li>shape为(N,C<sub>in</sub>,H<sub>in</sub>)。</li>
-        <li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li></ul>
+        <li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
      <td>ND、NCL</td>
@@ -137,7 +137,7 @@ aclnnStatus aclnnConvTbcBackward(
        <ul>
         <li>支持空Tensor。</li>
         <li>shape为(C<sub>out</sub>,C<sub>in</sub>,K)。</li>
-        <li>数据类型与 input、self 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li>
+        <li>数据类型与input、self的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>)。</li>
       </ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
@@ -152,7 +152,7 @@ aclnnStatus aclnnConvTbcBackward(
      <td>
        <ul>
         <li>shape为(C<sub>out</sub>)。</li>
-        <li>一维且与 weight 第一维相等，不允许传入空指针。</li>
+        <li>一维且与weight第一维相等，不允许传入空指针。</li>
         <li>数据类型与self、weight一致。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
@@ -385,39 +385,39 @@ aclnnStatus aclnnConvTbcBackward(
      <th scope="row">self约束</th>
      <td>
       <ul>
-        <li>支持 N 维度大于等于 0，支持 C 维度大于等于 0（等于 0 的场景仅在 weight 的 N 维度等于 0 时支持）。</li>
-        <li>支持 L 维度大于等于 0（等于 0 的场景仅在 self 的 L 维度等于 0 时支持）。</li>
+        <li>支持N维度大于等于0，支持C维度大于等于0（等于0的场景仅在weight的N维度等于0时支持）。</li>
+        <li>支持L维度大于等于0（等于0的场景仅在self的L维度等于0时支持）。</li>
       </ul>
      </td>   
      <td colspan="2">
-        支持 N、C、L 维度大于等于 0（等于 0 的场景仅在 self 的 N 或 C 或 L 维度等于 0 时支持）。
+        支持N、C、L维度大于等于0（等于0的场景仅在self的N或C或L维度等于0时支持）。
      </td>
    </tr>
    <tr>
      <th scope="row">input约束</th>
      <td>
-      input 支持 N、C 维度大于等于 0，支持 L 维度大于等于 0（等于 0 的场景仅在 out 推导的 L 维度也等于 0 时支持）。
+      input支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在out推导的L维度也等于0时支持）。
       </td>   
      <td>
-        input 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。
+        input数据类型不支持HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
      <td>
-        input 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。
+        input数据类型不支持BFLOAT16、HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
    </tr>
    <tr>
      <th scope="row">weight约束</th>
      <td>
         <ul>
-          <li>weight 支持 N、C 维度大于等于 0，支持 L 维度大于等于 0（等于 0 的场景仅在 out 推导的 L 维度也等于 0 时支持）。</li>
-          <li>weight 支持 N 维度大于等于 0（等于 0 的场景仅在 bias 的 N 维度和 out 的 C 维度也等于 0 时支持），C 维度大小的支持情况与 self 的 C 维度一致，L 维度的大小应该在 [1,255] 的范围内。</li>
+          <li>weight支持N、C维度大于等于0，支持L维度大于等于0（等于0的场景仅在out推导的L维度也等于0时支持）。</li>
+          <li>weight支持N维度大于等于0（等于0的场景仅在bias的N维度和out的C维度也等于0时支持），C维度大小的支持情况与self的C维度一致，L维度的大小应该在 [1,255] 的范围内。</li>
         </ul>
      </td>   
      <td>
-          weight 数据类型不支持 HIFLOAT8。支持 N、C、L 维度大于等于 0。
+          weight数据类型不支持HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
      <td>
-          weight 数据类型不支持 BFLOAT16、HIFLOAT8。支持 N、C、L 维度大于等于 0。
+          weight数据类型不支持BFLOAT16、HIFLOAT8。支持N、C、L维度大于等于0。
      </td>
    </tr>
    <tr>
@@ -443,15 +443,15 @@ aclnnStatus aclnnConvTbcBackward(
      </td>
      <td>
         <ul><li>枚举值为0：当输入是FLOAT，Cube计算单元暂不支持，取0时会报错。</li>
-        <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32 计算。当输入为其他数据类型时不做处理。</li>
-        <li>枚举值为2：当输入是 BFLOAT16 不支持该选项。</li>
+        <li>枚举值为1：当输入是FLOAT，转换为HFLOAT32计算。当输入为其他数据类型时不做处理。</li>
+        <li>枚举值为2：当输入是BFLOAT16不支持该选项。</li>
         <li>枚举值为3：当输入是FLOAT，Cube计算单元暂不支持，取3时会报错。</li>
         </ul>
      </td>
      <td>
         <ul><li>枚举值为0：当输入是FLOAT，Cube计算单元暂不支持，取0时会报错。</li>
         <li>枚举值为1：当输入是FLOAT，转换为FLOAT16计算。当输入为其他数据类型时不做处理。</li>
-        <li>枚举值为2：当输入是 BFLOAT16 不支持该选项。</li>
+        <li>枚举值为2：当输入是BFLOAT16不支持该选项。</li>
         <li>枚举值为3：暂时不支持。</li>
         </ul>
      </td>
@@ -656,7 +656,7 @@ int aclnnConvTbcBackwardTest(int32_t deviceId, aclrtStream &stream)
     // 调用aclnnConvTbcBackward第二段接口
     ret = aclnnConvTbcBackward(workspaceAddr, workspaceSize, executor, stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnConvTbcBackward failed. ERROR: %d\n", ret); return ret);
-    // 4. （固定写法）同步等待任务执行结束
+    // 4.（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
     CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
     // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
@@ -694,7 +694,7 @@ int aclnnConvTbcBackwardTest(int32_t deviceId, aclrtStream &stream)
 
 int main()
 {
-    // 1. （固定写法）device/stream初始化
+    // 1.（固定写法）device/stream初始化
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

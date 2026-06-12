@@ -20,7 +20,7 @@
 
 * **输入梯度**：$\delta h_t$ (`gradHy`)， $\delta c_t$ (`gradC`)
 * **前向缓存**：$i，f，g，o$ (各门激活值`storage`)，$c_{t-1}$ (`cx`)，$c_t$ (`cy`)
-* **输出梯度**：$\delta a_i，\delta a_f，\delta a_g，\delta a_o$ (存入 `gradGatesOut`)，$\delta c_{t-1}$ (`gradCxOut`)
+* **输出梯度**：$\delta a_i，\delta a_f，\delta a_g，\delta a_o$ (存入`gradGatesOut`)，$\delta c_{t-1}$ (`gradCxOut`)
 
 **第一阶段：中间梯度与状态回传**
 
@@ -34,7 +34,7 @@ gcx &= \tanh(c_t) \\
 \end{aligned}
 $$
 
-**第二阶段：门控分量梯度 (Pre-activation)**
+**第二阶段：门控分量梯度(Pre-activation)**
 
 根据代码逻辑，各门控在进入激活函数前的梯度 $\delta a$ 计算如下：
 
@@ -47,9 +47,9 @@ $$
 \end{aligned}
 $$
 
-**第三阶段：参数梯度 (db)**
+**第三阶段：参数梯度(db)**
 
-**1. 偏置梯度 (db)：**对 Batch 维度（$N$）进行求和：
+**1. 偏置梯度(db)：**对Batch维度（$N$）进行求和：
 
 $$
 \delta b = \sum_{n=1}^{N} \begin{bmatrix} \delta a_i \\ \delta a_f \\ \delta a_g \\ \delta a_o \end{bmatrix}_n
@@ -370,7 +370,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1.（固定写法）device/stream初始化，参考AscendCL对外接口列表
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -399,14 +399,14 @@ int main() {
   void* dcPrevDeviceAddr = nullptr;
   void* dbDeviceAddr = nullptr;
 
-  // ACL Tensor 指针
+  // ACL Tensor指针
   aclTensor* dhy = nullptr;
   aclTensor* dc = nullptr;
   aclTensor* cx = nullptr;
   aclTensor* cy = nullptr;
   aclTensor* storage = nullptr;
 
-  // 反向传播输出 ACL Tensor 指针
+  // 反向传播输出ACL Tensor指针
   aclTensor* dgates = nullptr;
   aclTensor* dcPrev = nullptr;
   aclTensor* db = nullptr;
@@ -422,11 +422,11 @@ int main() {
   std::vector<float> dcPrevHostData(n * hiddenSize, 0.0f);
   std::vector<float> dbHostData(hiddenSize * 4, 0.0f);
 
-  // 创建 dhy aclTensor
+  // 创建dhy aclTensor
   ret = CreateAclTensor(dhyHostData, dhShape, &dhyDeviceAddr, aclDataType::ACL_FLOAT, &dhy);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 params aclTensorList
+  // 创建params aclTensorList
   ret = CreateAclTensor(dcHostData, dhShape, &dcDeviceAddr, aclDataType::ACL_FLOAT, &dc);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(cxHostData, dhShape, &cxDeviceAddr, aclDataType::ACL_FLOAT, &cx);
@@ -437,15 +437,15 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建反向传播输出张量
-  // 创建 dgates aclTensor
+  // 创建dgates aclTensor
   ret = CreateAclTensor(dgatesHostData, gatesShape, &dgatesDeviceAddr, aclDataType::ACL_FLOAT, &dgates);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 dcPrev aclTensor
+  // 创建dcPrev aclTensor
   ret = CreateAclTensor(dcPrevHostData, dhShape, &dcPrevDeviceAddr, aclDataType::ACL_FLOAT, &dcPrev);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建 db aclTensor
+  // 创建db aclTensor
   ret = CreateAclTensor(dbHostData, bShape, &dbDeviceAddr, aclDataType::ACL_FLOAT, &db);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
@@ -466,12 +466,12 @@ int main() {
   ret = aclnnThnnFusedLstmCellBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCellBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  // 打印 dparams 结果
+  // 打印dparams结果
   auto dgatesSize = GetShapeSize(gatesShape);
   std::vector<float> resultDgatesData(dgatesSize, 0);
   ret = aclrtMemcpy(resultDgatesData.data(), resultDgatesData.size() * sizeof(resultDgatesData[0]), dgatesDeviceAddr,
@@ -498,7 +498,7 @@ int main() {
   for (int64_t i = 0; i < dcPrevSize; i++) {
     LOG_PRINT("result dcPrev[%ld] is: %f\n", i, resultDcPrevData[i]);
   }
-  // 释放 aclTensor
+  // 释放aclTensor
   aclDestroyTensor(dhy);
   aclDestroyTensor(dc);
   aclDestroyTensor(cx);
@@ -508,7 +508,7 @@ int main() {
   aclDestroyTensor(dcPrev);
   aclDestroyTensor(db);
 
-  // 释放 Device 资源
+  // 释放Device资源
   aclrtFree(dhyDeviceAddr);
   aclrtFree(dcDeviceAddr);
   aclrtFree(cxDeviceAddr);

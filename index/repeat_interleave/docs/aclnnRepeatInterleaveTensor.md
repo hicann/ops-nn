@@ -15,10 +15,10 @@
 
 ## 功能说明
 
-- 接口功能：针对Tensor repeats的第i个元素，将 i 重复 repeats[i]次。
+- 接口功能：针对Tensor repeats的第i个元素，将i重复repeats[i]次。
 
-- 示例：假设 repeats为([1, 3])。那么最后生成的tensor为 tensor([0, 1, 1, 1])。
-  对于repeats的第0个元素 1，意为将0重复1次。对于repeats的第1个元素3，意为将1重复3次。
+- 示例：假设repeats为([1, 3])。那么最后生成的tensor为tensor([0, 1, 1, 1])。
+  对于repeats的第0个元素1，意为将0重复1次。对于repeats的第1个元素3，意为将1重复3次。
 
 ## 函数原型
 
@@ -207,7 +207,7 @@ aclnnStatus aclnnRepeatInterleaveTensor(
 - 输入shape限制：repeats只能为1D tensor（包括shape=[0,]的场景）。
 - 输入值域限制：repeats tensor中的值必须为自然数。
 - 其他限制：
-  - outputSize的值必须等于 repeats的值之和。
+  - outputSize的值必须等于repeats的值之和。
   - outputSize的值不能超过2^22。
 
 ## 调用示例
@@ -275,7 +275,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -316,7 +316,7 @@ int main() {
   ret = aclnnRepeatInterleaveTensor(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnRepeatInterleaveTensor failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

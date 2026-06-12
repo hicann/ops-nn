@@ -7,7 +7,7 @@
 |Ascend 950PR/Ascend 950DT|√|
 |Atlas A3 训练系列产品/Atlas A3 推理系列产品|√|
 |Atlas A2 训练系列产品/Atlas A2 推理系列产品|√|
-|Atlas 200I/500 A2推理产品|×|
+|Atlas 200I/500 A2 推理产品|×|
 |Atlas 推理系列产品|×|
 |Atlas 训练系列产品|×|
 |Kirin X90 处理器系列产品|√|
@@ -30,7 +30,7 @@
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lfloor{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rfloor + 1,\lfloor{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rfloor + 1, \lfloor{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rfloor + 1]
     $$
     
-  * out tensor的shape推导公式 (默认ceilMode=true，即向上取整)：
+  * out tensor的shape推导公式(默认ceilMode=true，即向上取整)：
     
     $$
     [N, C, D_{out}, H_{out}, W_{out}]=[N,C,\lceil{\frac{D_{in}+2 \times {padding[0] - dilation[0] \times(kernelSize[0] - 1) - 1}}{stride[0]}}\rceil + 1,\lceil{\frac{H_{in}+2 \times {padding[1] - dilation[1] \times(kernelSize[1] - 1) - 1}}{stride[1]}}\rceil + 1, \lceil{\frac{W_{in}+2 \times {padding[2] - dilation[2] \times(kernelSize[2] - 1) - 1}}{stride[2]}}\rceil + 1]
@@ -119,8 +119,8 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`argmax` 数据类型不支持INT64。输入数据排布不支持NDHWC。
-  - Kirin X90/Kirin 9030 处理器系列产品: 输入/输出不支持BFLOAT16；`argmax` 数据类型不支持INT64。
+  - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：`argmax`数据类型不支持INT64。输入数据排布不支持NDHWC。
+  - Kirin X90/Kirin 9030 处理器系列产品: 输入/输出不支持BFLOAT16；`argmax`数据类型不支持INT64。
 
 ## 约束说明
 

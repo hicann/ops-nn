@@ -30,7 +30,7 @@
 
       其中：$x_{1_i}∈xyz1$，$x_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的横坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以考虑多点并行计算。
 
-    - $dist1_i 对y_{1_i}$ 的导数 $=2*grad\_dist1*(y_{1_i}-y_2)$
+    - $dist1_i对y_{1_i}$ 的导数 $=2*grad\_dist1*(y_{1_i}-y_2)$
 
       其中$y_{1_i}∈xyz1$，$y_2$是根据正向输出的id1的索引值从xyz2中取出距离最小的点的纵坐标，单点求导公式如上，因为单点梯度更新的位置是连续的，所以也可以考虑多点并行计算。
 
@@ -359,7 +359,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-    // 1.(固定写法)device/stream初始化, 参考acl对外接口列表
+    // 1.(固定写法)device/stream初始化,参考acl对外接口列表
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;

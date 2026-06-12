@@ -106,7 +106,7 @@ aclnnStatus aclnnMaxUnpool2d(
       <td class="tg-0pky">outputSize（aclIntArray*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">表示输出结果在H和W维度上的空间大小。</td>
-      <td class="tg-0pky">size大小为2, 两个元素乘积值需大于等于self在H和W维度上的size乘积值。</td>
+      <td class="tg-0pky">size大小为2,两个元素乘积值需大于等于self在H和W维度上的size乘积值。</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
       <td class="tg-0pky">-</td>
@@ -317,7 +317,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -369,7 +369,7 @@ int main() {
   ret = aclnnMaxUnpool2d(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMaxUnpool2d failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -390,7 +390,7 @@ int main() {
   aclDestroyTensor(indices);
   aclDestroyIntArray(outputSize);
 
-  // 7. 释放device 资源
+  // 7. 释放device资源
   aclrtFree(selfDeviceAddr);
   aclrtFree(indicesDeviceAddr);
   aclrtFree(outDeviceAddr);

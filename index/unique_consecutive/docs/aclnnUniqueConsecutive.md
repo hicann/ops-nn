@@ -179,21 +179,21 @@ aclnnStatus aclnnUniqueConsecutive(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的 self 或 valueOut 或inverseOut 或 countsOut 是空指针时。</td>
+      <td>传入的self或valueOut或inverseOut或countsOut是空指针时。</td>
     </tr>
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self 或valueOut 的数据类型不在支持的范围之内。</td>
+      <td>self或valueOut的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>self 的数据类型不在支持的范围之内。</td>
+      <td>self的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>inverseOut 或 countsOut 的数据类型不在支持的范围之内。</td>
+      <td>inverseOut或countsOut的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>inverseOut 和 countsOut 的数据类型不一致。</td>
+      <td>inverseOut和countsOut的数据类型不一致。</td>
     </tr>
   </tbody>
   </table>
@@ -313,7 +313,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
+  // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -369,7 +369,7 @@ int main() {
   // 调用aclnnUniqueConsecutive第二段接口
   ret = aclnnUniqueConsecutive(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnUniqueConsecutive failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

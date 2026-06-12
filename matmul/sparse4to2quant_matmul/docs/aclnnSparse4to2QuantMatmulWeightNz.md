@@ -84,7 +84,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
         <td>sparseWeight</td>
         <td>输入</td>
         <td>矩阵乘运算中的右矩阵，经过aclnnTransSparse4to2Para接口处理后的稀疏矩阵。</td>
-        <td><ul><li>仅支持2维输入，ViewShape可表达为（n，k_half），其中k_half=ceil（k / 8） * 8 / 2。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参sparseWeightDims和sparseWeightDimsNum获取，获取的值为4维，与ViewShape的关系为（ceil（k_half / 32），ceil（n / 16），16，32）。</li></ul></td>
+        <td><ul><li>仅支持2维输入，ViewShape可表达为（n，k_half），其中k_half=ceil（k / 8）* 8 / 2。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参sparseWeightDims和sparseWeightDimsNum获取，获取的值为4维，与ViewShape的关系为（ceil（k_half / 32），ceil（n / 16），16，32）。</li></ul></td>
         <td>INT8</td>
         <td>FRACTAL_NZ</td>
         <td>2</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
         <td>index</td>
         <td>输入</td>
         <td>经过aclnnTransSparse4to2Para接口压缩后计算得到的索引矩阵。</td>
-        <td><ul><li>4维输入，ViewShape可表达为ceil（k_half / 32），ceil(n / 16)，16，8）。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参indexDims和indexDimsNum获取, 获取的值为4维，与ViewShape相同，为（ceil（k_half / 32），ceil(n / 16)，16，8）。</li></ul></td>
+        <td><ul><li>4维输入，ViewShape可表达为ceil（k_half / 32），ceil(n / 16)，16，8）。</li><li>StorageShape从aclnnTransSparse4to2Para接口出参indexDims和indexDimsNum获取,获取的值为4维，与ViewShape相同，为（ceil（k_half / 32），ceil(n / 16)，16，8）。</li></ul></td>
         <td>UINT8</td>
         <td>ND</td>
         <td>4</td>
@@ -460,7 +460,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 
       CREATE_TENSOR(xHostData, xShape, xDeviceAddr, aclDataType::ACL_INT8, x);
 
-      weightShape.back() = (weightShape.back() + 7) / 8 * 8 / 2; // 4选2后 K轴向上8对齐后减半
+      weightShape.back() = (weightShape.back() + 7) / 8 * 8 / 2; // 4选2后K轴向上8对齐后减半
       auto sparseWeightStorageShape = GenStorageShape(sparseWeightDims, sparseWeightDimsNum);
       CREATE_SPARSE_TENSOR(
           sparseWeightHostData, weightShape, sparseWeightStorageShape, sparseWeightDeviceAddr, aclDataType::ACL_INT8,
@@ -495,7 +495,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
       ret = aclnnSparse4to2QuantMatmulWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSparse4to2QuantMatmulWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -515,7 +515,7 @@ aclnnStatus aclnnSparse4to2QuantMatmulWeightNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;

@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算, 将相同索引`indices`对应grad的一行累加到out上。
+实现[aclnnEmbedding](../../../index/embedding/docs/aclnnEmbedding.md)的反向计算,将相同索引`indices`对应grad的一行累加到out上。
 
 ## 函数原型
 
@@ -26,18 +26,18 @@
 
 - **参数说明：**
 
-  - grad(aclTensor*, 计算输入)：数据的原始梯度，Device侧的aclTensor，支持维度2-8维，除尾轴外合轴后shape与indices合轴后shape相同，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
+  - grad(aclTensor*,计算输入)：数据的原始梯度，Device侧的aclTensor，支持维度2-8维，除尾轴外合轴后shape与indices合轴后shape相同，支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-  - indices(aclTensor*, 计算输入)：grad输入对应的索引值，Device侧的aclTensor，取值范围为[0, numWeights)，支持维度1-8维, 支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL。
-  - numWeights(uint64_t, 计算输入)：输出tensor的首轴大小。
-  - paddingIdx(uint64_t, 计算输入)：将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。
-  - scaleGradByFreq(bool, 计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
-  - out(aclTensor*, 计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/数据格式.md)仅支持ND。
+  - indices(aclTensor*,计算输入)：grad输入对应的索引值，Device侧的aclTensor，取值范围为[0, numWeights)，支持维度1-8维,支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。数据类型支持FLOAT、FLOAT16、DOUBLE、INT32、INT64、INT16、INT8、UINT8、BOOL。
+  - numWeights(uint64_t,计算输入)：输出tensor的首轴大小。
+  - paddingIdx(uint64_t,计算输入)：将输出tensor中第paddingIdx行填充成0，如果paddingIdx为负数则不进行处理。
+  - scaleGradByFreq(bool,计算输入)：根据单词出现的频率，是否对梯度进行缩放。若为true，对结果按词频进行缩放，若为false，不进行处理。
+  - out(aclTensor*,计算输出)：梯度求和的结果输出，Device侧的aclTensor，维度为2维，首轴大小为numWeights，尾轴大小与grad尾轴相同，数据类型与grad类型相同，[数据格式](../../../docs/zh/context/数据格式.md)仅支持ND。
     - <term>Atlas 训练系列产品</term>：数据类型支持FLOAT16、FLOAT。
     - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Ascend 950PR/Ascend 950DT</term>：数据类型支持BFLOAT16、FLOAT16、FLOAT。
-  - workspaceSize(uint64_t *, 出参): 返回需要在Device侧申请的workspace大小。
-  - executor(aclOpExecutor **, 出参): 返回op执行器，包含了算子计算流程。
+  - workspaceSize(uint64_t *,出参): 返回需要在Device侧申请的workspace大小。
+  - executor(aclOpExecutor **,出参): 返回op执行器，包含了算子计算流程。
 
 - **返回值：**
 
@@ -188,7 +188,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -241,7 +241,7 @@ int main() {
   ret = aclnnEmbeddingDenseBackward(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnEmbeddingDenseBackward failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

@@ -21,13 +21,13 @@
   accum = accum \times momentum + grad
   $$
 
-  - 若 use_nesterov = True:
+  - 若use_nesterov = True:
 
     $$
     var = var - grad \times lr + accum \times momentum \times lr
     $$
 
-  - 若 use_nesterov = False:
+  - 若use_nesterov = False:
 
     $$
     var = var - lr \times accum

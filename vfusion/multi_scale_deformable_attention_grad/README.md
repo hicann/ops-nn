@@ -25,7 +25,7 @@
     \tilde{G}_{b,q,h,\ell,p,:} = A_{b,q,h,\ell,p} \cdot G^{\text{out}}_{b,q,h,:}
     $$
 
-    计算 Value 的梯度，对每个邻点 (y,x)：
+    计算Value的梯度，对每个邻点(y,x)：
 
     $$
     \nabla V_{b,\ell,y,x,h,:} \; += \;
@@ -82,24 +82,24 @@
     </tr>
 </thead>
 <tbody>
-    <tr><td><b>G<sup>out</sup>(grad_output)</b></td><td>梯度输入</td><td>输出 O 的上游梯度，维度 D 的向量</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>G<sup>out</sup>(grad_output)</b></td><td>梯度输入</td><td>输出O的上游梯度，维度D的向量</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>ṠG = A · G<sup>out</sup></b></td><td>中间量</td><td>按注意力权重展开的上游梯度（逐层逐采样点）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>V(b,ℓ,y,x,h,:)</b></td><td>输入</td><td>Value 特征向量（被插值采样的底图）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>V(b,ℓ,y,x,h,:)</b></td><td>输入</td><td>Value特征向量（被插值采样的底图）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>A(b,q,h,ℓ,p)</b></td><td>输入</td><td>注意力权重（每层每采样点的权重）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>u, v</b></td><td>输入</td><td>采样点的归一化坐标（loc_w, loc_h）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>x, y</b></td><td>中间量</td><td>像素坐标</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>x₀, x₁, y₀, y₁</b></td><td>中间量</td><td>四邻点整数坐标</td><td>INT32、INT64</td></tr>
     <tr><td><b>αx, αy</b></td><td>中间量</td><td>相对左上角的小数偏移</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>w₀₀, w₁₀, w₀₁, w₁₁</b></td><td>中间量</td><td>双线性插值权重（四权重和为 1）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>∇V(grad_value)</b></td><td>梯度输出</td><td>对 Value 特征的梯度（累加到四邻点）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>w₀₀, w₁₀, w₀₁, w₁₁</b></td><td>中间量</td><td>双线性插值权重（四权重和为1）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>∇V(grad_value)</b></td><td>梯度输出</td><td>对Value特征的梯度（累加到四邻点）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>∇A(grad_attn_weight)</b></td><td>梯度输出</td><td>对注意力权重的梯度（与采样到的特征点内积）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>∇x, ∇y</b></td><td>中间量</td><td>像素坐标处的梯度（由双线性偏导得到）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>∇u, ∇v</b></td><td>中间量</td><td>缩放回归一化坐标的梯度</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
-    <tr><td><b>grad_sampling_loc_out</b></td><td>梯度输出</td><td>采样位置的最终梯度（按代码写入：先 u 再 v）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
+    <tr><td><b>grad_sampling_loc_out</b></td><td>梯度输出</td><td>采样位置的最终梯度（按代码写入：先u再v）</td><td>FLOAT、FLOAT16、BFLOAT16</td></tr>
     <tr><td><b>W<sub>ℓ</sub>, H<sub>ℓ</sub></b></td><td>属性</td><td>第 ℓ 层特征图的宽与高</td><td>INT32、INT64</td></tr>
     <tr><td><b>b, q, h, ℓ, p</b></td><td>属性</td><td>batch、query、head、层、采样点索引</td><td>INT32、INT64</td></tr>
-    <tr><td><b>D</b></td><td>属性</td><td>每个 head 的嵌入维度</td><td>INT32、INT64</td></tr>
-    <tr><td><b>Nq, Nh, L, Np</b></td><td>属性</td><td>query 数、head 数、层数、每层采样点数</td><td>INT32、INT64</td></tr>
+    <tr><td><b>D</b></td><td>属性</td><td>每个head的嵌入维度</td><td>INT32、INT64</td></tr>
+    <tr><td><b>Nq, Nh, L, Np</b></td><td>属性</td><td>query数、head数、层数、每层采样点数</td><td>INT32、INT64</td></tr>
 </tbody>
 </table>
 

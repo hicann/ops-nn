@@ -25,7 +25,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 aclnnQuantMatmulGetWorkspaceSize 接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用 aclnnQuantMatmul 接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用aclnnQuantMatmulGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantMatmul接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantMatmulGetWorkspaceSize(
@@ -238,7 +238,7 @@ aclnnStatus aclnnQuantMatmul(
 该接口迁移到aclnnQuantMatmulV4接口的方法：
 
 - 输入x1，x2，bias可以直接转为aclnnQuantMatmulV4接口中的x1，x2，bias。
-- 输入deqScale为FLOAT型，将这个FLOAT数构造成shape为（1，）的FLOAT型aclTensor（参考[调用示例](#调用示例)中的CreateAclTensor）, 再利用aclnnTransQuantParamV2转为shape为（1，）的uint64_t的aclTensor（参考[aclnnQuantMatmulV4调用示例](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md#调用示例)），记为**scale**，对标aclnnQuantMatmulV4接口中的scale。
+- 输入deqScale为FLOAT型，将这个FLOAT数构造成shape为（1，）的FLOAT型aclTensor（参考[调用示例](#调用示例)中的CreateAclTensor）,再利用aclnnTransQuantParamV2转为shape为（1，）的uint64_t的aclTensor（参考[aclnnQuantMatmulV4调用示例](../../quant_batch_matmul_v3/docs/aclnnQuantMatmulV4.md#调用示例)），记为**scale**，对标aclnnQuantMatmulV4接口中的scale。
 - aclnnQuantMatmulV4接口中的可选输入offset/pertokenScaleOptional设置为nullptr，transposeX1和transposeX2均设置为false。
 - 接口参数设置为`aclnnQuantMatmulV4GetWorkspaceSize(x1, x2, scale, nullptr, nullptr, bias, false, false, out, workspaceSize, executor)`。
 
@@ -380,7 +380,7 @@ int aclnnQuantMatmulTest(int32_t deviceId, aclrtStream &stream) {
   ret = aclnnQuantMatmul(workspaceAddr, workspaceSize, executor, stream);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmul failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -398,7 +398,7 @@ int aclnnQuantMatmulTest(int32_t deviceId, aclrtStream &stream) {
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

@@ -25,7 +25,7 @@
   MselossBackward(grad, x, y) = grad * (x - y) * 2 / x.numel()
   $$
 
-  其中`x.numel()`表示`x`中的元素个数。如果`reduction`不是`mean`, 那么：
+  其中`x.numel()`表示`x`中的元素个数。如果`reduction`不是`mean`,那么：
 
   $$
   MselossBackward(grad, x, y) = grad * (x - y) * 2
@@ -73,7 +73,7 @@
     <tr>
       <td>reduction</td>
       <td>输入</td>
-      <td>公式中的输入reduction，指定损失函数的计算方式，支持 0('none') | 1('mean') | 2('sum')。'none' 表示不应用减少，'mean' 表示输出的总和将除以self中的元素数，'sum' 表示输出将被求和。</td>
+      <td>公式中的输入reduction，指定损失函数的计算方式，支持0('none') | 1('mean') | 2('sum')。'none'表示不应用减少，'mean'表示输出的总和将除以self中的元素数，'sum'表示输出将被求和。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>

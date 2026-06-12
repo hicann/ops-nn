@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：计算输入 logits 与标签 target 之间的 Sigmoid Cross Entropy 损失。
+- 算子功能：计算输入logits与标签target之间的Sigmoid Cross Entropy损失。
 
 - 计算公式：
 
@@ -23,22 +23,22 @@
 
   其中：
   
-  - predict 为输入的 logits
-  - target 为标签值
-  - loss 为计算得到的损失值
+  - predict为输入的logits
+  - target为标签值
+  - loss为计算得到的损失值
 
 ## 参数说明
 
 | 参数名 | 输入/输出/属性 | 描述 | 数据类型 | 数据格式 |  
 | ----- | ----- |----- |----- |----- |
-| predict | 输入 | 预测值 logits。 | FLOAT16、FLOAT、BFLOAT16 | ND |
+| predict | 输入 | 预测值logits。 | FLOAT16、FLOAT、BFLOAT16 | ND |
 | target | 输入 | 标签值。 | FLOAT16、FLOAT、BFLOAT16 | ND |
 | loss | 输出 | 损失值。shape和输入predict一致。 | FLOAT16、FLOAT、BFLOAT16 | ND |
 
 ## 约束说明
 
-- predict 和 target 必须具有相同的数据类型和形状。
-- 支持 FLOAT16、FLOAT、BFLOAT16 数据类型。
+- predict和target必须具有相同的数据类型和形状。
+- 支持FLOAT16、FLOAT、BFLOAT16数据类型。
 
 ## 调用说明
 

@@ -95,7 +95,7 @@ aclnnStatus aclnnMatmulCompress(
     <tr>
       <td>bias</td>
       <td>输入</td>
-      <td>表示偏置的输入，公式中的矩阵bias，数据类型仅支持FLOAT，支持空指针传入，shape仅支持(1, n)或者(n), 其中n为输出shape(m, n)的n。</td>
+      <td>表示偏置的输入，公式中的矩阵bias，数据类型仅支持FLOAT，支持空指针传入，shape仅支持(1, n)或者(n),其中n为输出shape(m, n)的n。</td>
       <td>-</td>
       <td>FLOAT</td>
       <td>ND</td>
@@ -402,7 +402,7 @@ aclnnStatus aclnnMatmulCompress(
     }
 
     int main(int argc, char* argv[]) {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;
@@ -488,7 +488,7 @@ aclnnStatus aclnnMatmulCompress(
       ret = aclnnMatmulCompress(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnMatmulCompress failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

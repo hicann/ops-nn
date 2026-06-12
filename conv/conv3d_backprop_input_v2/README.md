@@ -29,7 +29,7 @@
 | filter | 输入   | <ul><li>5D卷积核张量$w_{c_{out}, c_{in}, r, p, q}$。</li><li>$c_{out}$相当于'filter'的N维度。</li><li>$k_H$、$k_W$、$k_D$相当于'filter'的H维度、W维度和D维度。</li></ul> | FLOAT16、BFLOAT16、FLOAT32 | NCDHW、NDHWC、DHWCN |
 | out_backprop | 输入 | <ul><li>5D输出梯度张量，等同于公式中的$\frac{\partial L}{\partial y_{n, c_{out}, d-r, i-p, j-q}}$。</li><li>数据格式与'y'一致。</li></ul> | FLOAT16、FLOAT32、BFLOAT16 | NDHWC、NCDHW |
 | strides | 必填属性 | <ul><li>一个包含5个整数的元组或列表，用于指定滑动窗口在特征图每个维度上的步长。</li><li>轴顺序与特征图格式一致。</li></ul> | - | - |
-| pads | 必填属性 | <ul><li>一个包含 6 个整数的元组或列表，用于指定特征图在各个方向上的填充量。</li><li>仅沿深度（D）、高度（H）和宽度（W）维度进行填充。</li><li>通过为各方向设置合适的填充值，可实现“SAME”和“VALID”两种填充模式。</li></ul> | - | - |
+| pads | 必填属性 | <ul><li>一个包含6个整数的元组或列表，用于指定特征图在各个方向上的填充量。</li><li>仅沿深度（D）、高度（H）和宽度（W）维度进行填充。</li><li>通过为各方向设置合适的填充值，可实现“SAME”和“VALID”两种填充模式。</li></ul> | - | - |
 | dilations  | 可选属性 | <ul><li>一个包含5个整数的元组或列表，表示特征图各维度的膨胀（空洞）因子。</li><li>默认值为[1,1,1,1,1]。</li><li>轴顺序与特征图格式一致。</li></ul> | - | - |
 | groups  | 可选属性 | <ul><li>整数，范围为[1,65535]，默认1。</li><li>表示从$c_{in}$到$c_{out}$的分组连接数。</li><li>$c_{in}$与$c_{out}$必须能被'groups'整除。</li><li>不同'groups'与dtype的组合支持见下方表格说明。</li></ul> | INT | - |
 | data_format  | 可选属性 | <ul><li>字符串，取值必须为["NDHWC","NCDHW"]之一，默认"NDHWC"。对应关系为：batch(N)、depth(D)、height(H)、width(W)、channels(C)。</li><li>指定'out_backprop'与'y'的数据排布格式。</li></ul> | STRING | - |

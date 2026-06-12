@@ -82,7 +82,7 @@ $$
   </tr>
   <tr>
     <td>图模式调用</td>
-    <td><a href="./examples/test_geir_add_example_aicpu.cpp">test_geir_add_example_aicpu</a></td>
+    <td><a href="./examples/test_geir_add_example.cpp">test_geir_add_example_aicpu</a></td>
   </tr>
 </tbody>
 </table>

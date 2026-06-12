@@ -81,7 +81,7 @@ aclnnStatus aclnnInplacePut(
       <tr>
         <td>selfRef（aclTensor*）</td>
         <td>输入/输出</td>
-        <td>公式中的 selfRef。</td>
+        <td>公式中的selfRef。</td>
         <td>数据类型和source一致。</td>
         <td>BOOL、FLOAT、FLOAT16、BFLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、COMPLEX64、COMPLEX128</td>
         <td>ND</td>
@@ -91,7 +91,7 @@ aclnnStatus aclnnInplacePut(
       <tr>
         <td>index（aclTensor*）</td>
         <td>输入</td>
-        <td>公式中的 index，元素个数要求和source保持一致。index中的索引数据不支持越界。</td>
+        <td>公式中的index，元素个数要求和source保持一致。index中的索引数据不支持越界。</td>
         <td>-</td>
         <td>INT32、INT64</td>
         <td>ND</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnInplacePut(
       <tr>
         <td>source（aclTensor*）</td>
         <td>输入</td>
-        <td>公式中的 source，数据类型和selfRef一致，元素个数和index一致。</td>
+        <td>公式中的source，数据类型和selfRef一致，元素个数和index一致。</td>
         <td>-</td>
         <td>和selfRef一致</td>
         <td>ND</td>
@@ -293,7 +293,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -339,7 +339,7 @@ int main() {
   ret = aclnnInplacePut(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnInplacePut failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

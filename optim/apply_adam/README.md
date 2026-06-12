@@ -29,13 +29,13 @@
   v = v + (1 - beta2) \times (grad \times grad - v)
   $$
 
-  - 若 use_nesterov = True:
+  - 若use_nesterov = True:
 
     $$
     var = var - lr \times \frac{m \times beta1 + (1 - beta1) \times grad}{\epsilon + \sqrt{v}}
     $$
 
-  - 若 use_nesterov = False:
+  - 若use_nesterov = False:
 
     $$
     var = var - lr \times \frac{m}{\epsilon + \sqrt{v}}

@@ -238,10 +238,10 @@ aclnnStatus aclnnAdaptiveMaxPool2d(
   - aclnnAdaptiveMaxPool2d默认确定性实现。
 
 - Shape描述：
-  - self.shape = (N, C, Hin, Win) 或者 (C, Hin, Win) 或 (N, Hin, Win, C)
+  - self.shape = (N, C, Hin, Win)或者(C, Hin, Win)或(N, Hin, Win, C)
   - outputSize = [Hout, Wout]
-  - outputOut.shape = (N, C, Hout, Wout) 或者 (C, Hout, Wout) 或 (N, Hout, Wout, C)
-  - indicesOut.shape = (N, C, Hout, Wout) 或者 (C, Hout, Wout) 或 (N, Hout, Wout, C)
+  - outputOut.shape = (N, C, Hout, Wout)或者(C, Hout, Wout)或(N, Hout, Wout, C)
+  - indicesOut.shape = (N, C, Hout, Wout)或者(C, Hout, Wout)或(N, Hout, Wout, C)
 
 ## 调用示例
 
@@ -309,7 +309,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -361,7 +361,7 @@ int main() {
   ret = aclnnAdaptiveMaxPool2d(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAdaptiveMaxPool2d failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -388,7 +388,7 @@ int main() {
   aclDestroyTensor(indices);
   aclDestroyIntArray(outputSize);
 
-  // 7. 释放device 资源
+  // 7. 释放device资源
   aclrtFree(selfDeviceAddr);
   aclrtFree(outDeviceAddr);
   aclrtFree(indDeviceAddr);

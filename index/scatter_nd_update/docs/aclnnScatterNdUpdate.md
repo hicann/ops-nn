@@ -197,8 +197,8 @@ aclnnStatus aclnnScatterNdUpdate(
   - aclnnScatterNdUpdate默认确定性实现。
 
 - 输入shape限制：
-  - varRef 支持8维，varRef.rank为[1,8]。
-  - indices至少是2维，indices最后1维rank表示索引的维度数，rank取值范围为[1, 7], 且必须满足rank <= varRef.rank, 即索引维度数不能超过varRef的维度数。
+  - varRef支持8维，varRef.rank为[1,8]。
+  - indices至少是2维，indices最后1维rank表示索引的维度数，rank取值范围为[1, 7],且必须满足rank <= varRef.rank,即索引维度数不能超过varRef的维度数。
   - 假设indices最后1维的大小是a，则updates的shape等于indices除最后1维外的shape加上varRef除前a维外的shape。举例：varRef的shape是(4, 5, 6)，indices的shape是(3, 2)，则updates的shape必须是(3, 6)。
 
 - 非连续Tensor支持：
@@ -269,7 +269,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -321,7 +321,7 @@ int main() {
   ret = aclnnScatterNdUpdate(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnScatterNdUpdate failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 

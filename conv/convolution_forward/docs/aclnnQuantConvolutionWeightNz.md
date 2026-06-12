@@ -15,11 +15,11 @@
 
 ## 功能说明
 
-- 接口功能：完成 per-channel 量化的 3D 卷积计算，weight仅支持FRACTAL_Z_3D格式，其中卷积计算过程与 aclnnConvolution 接口一致。
+- 接口功能：完成per-channel量化的3D卷积计算，weight仅支持FRACTAL_Z_3D格式，其中卷积计算过程与aclnnConvolution接口一致。
 
 - 计算公式：
 
-  假定输入（input）的 shape 是 $(N, C_{\text{in}}, D, H, W)$，weight 的原shape 是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale 的 shape 是 $(C_{\text{out}})$，bias 的 shape 是 $C_{\text{out}}$，输出（output）的 shape 是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
+  假定输入（input）的shape是 $(N, C_{\text{in}}, D, H, W)$，weight的原shape是 $(C_{\text{out}}, C_{\text{in}}, K_d, K_h, K_w)$，scale的shape是 $(C_{\text{out}})$，bias的shape是 $C_{\text{out}}$，输出（output）的shape是 $(N, C_{\text{out}}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}})$，其中 $N$ 表示批次大小（batch size），$C$ 是通道数，$D$、$H$ 和 $W$ 分别是样本的深度、高度和宽度，$K_d$、$K_h$ 和 $K_w$ 分别是卷积核的深度、高度和宽度，那输出将被表示为：
 
   $$
   \text{output}(N_i, C_{\text{out}_j}, D_{\text{out}}, H_{\text{out}}, W_{\text{out}}) = \left[\sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)\right] \times \text{scale}(C_{\text{out}_j}) + \text{bias}(C_{\text{out}_j})
@@ -35,7 +35,7 @@
 
 ## 函数原型
 
-每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用 aclnnQuantConvolutionWeightNzGetWorkspaceSize 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 aclnnQuantConvolutionWeightNz 接口执行计算。
+每个算子分为<a href="../../../docs/zh/context/两段式接口.md">两段式接口</a>，必须先调用aclnnQuantConvolutionWeightNzGetWorkspaceSize接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用aclnnQuantConvolutionWeightNz接口执行计算。
 
 ```cpp
 aclnnStatus aclnnQuantConvolutionWeightNzGetWorkspaceSize(
@@ -78,13 +78,13 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <th style="width:212px">数据类型</th>
   <th style="width:120px">数据格式</th>
   <th style="width:145px">维度（shape）</th>
-  <th style="width:145px">非连续 Tensor</th>
+  <th style="width:145px">非连续Tensor</th>
   </tr>
     <tr>
   <td>input（aclTensor*）</td>
   <td>输入</td>
-  <td>公式中的 input，表示卷积输入。</td>
-  <td><ul><li>input、weight原shape、output 的维度需要相同。</li><li>不支持空 Tensor。</li><li>数据类型与 weight 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
+  <td>公式中的input，表示卷积输入。</td>
+  <td><ul><li>input、weight原shape、output的维度需要相同。</li><li>不支持空Tensor。</li><li>数据类型与weight的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>N≥0，C≥1，D≥0，H≥0，W≥0。</li></ul></td>
   <td>INT8</td>
   <td>NCDHW</td>
   <td>5</td>
@@ -93,8 +93,8 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>weight（aclTensor*）</td>
   <td>输入</td>
-  <td>公式中的 weight，表示卷积权重。</td>
-  <td><ul><li>其原 shape 的 C 维度需要与 input 的 C 维度保持一致。</li><li>不支持空 Tensor。</li><li>数据类型与 input 的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
+  <td>公式中的weight，表示卷积权重。</td>
+  <td><ul><li>其原shape的C维度需要与input的C维度保持一致。</li><li>不支持空Tensor。</li><li>数据类型与input的数据类型需满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>）。</li><li>FRACTAL_Z_3D是3D卷积权重格式。格式各个维度表示：（D * C1 * H * W，N1，N0，C0），其中D，H，W为transdata前的NCDWH。N0=16，C0=32，N1与N满足关系：N1=CEIL(N,N0)。 </li><li>所有维度≥1。</li></ul></td>
   <td>INT8</td>
   <td>Fractal_Z_3D</td>
   <td>4</td>
@@ -103,8 +103,8 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>bias（aclTensor*）</td>
   <td>输入</td>
-  <td>公式中的 bias，表示卷积偏置。</td>
-  <td>一维且与 weight 原shape第一维相等。</td>
+  <td>公式中的bias，表示卷积偏置。</td>
+  <td>一维且与weight原shape第一维相等。</td>
   <td>BFLOAT16、FLOAT16、FLOAT</td>
   <td>ND</td>
   <td>1</td>
@@ -113,8 +113,8 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>scale（aclTensor*）</td>
   <td>输入</td>
-  <td>公式中的 scale，表示量化参数。</td>
-  <td>一维且与 weight 原shape第一维相等。</td>
+  <td>公式中的scale，表示量化参数。</td>
+  <td>一维且与weight原shape第一维相等。</td>
   <td>FLOAT</td>
   <td>ND</td>
   <td>1</td>
@@ -124,7 +124,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>offset（aclTensor*）</td>
   <td>输入</td>
   <td>预留量化参数。</td>
-  <td>目前暂不支持，传入空指针 nullptr 即可。</td>
+  <td>目前暂不支持，传入空指针nullptr即可。</td>
   <td>-</td>
   <td>-</td>
   <td>-</td>
@@ -134,7 +134,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>stride（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积扫描步长。</td>
-  <td><ul><li>数组长度=3。</li><li>strideH 和 strideW 应在 [1,63] 范围内。</li><li>conv3d 场景下 strideD 应在 [1,1000000] 范围内。</li></ul></td>
+  <td><ul><li>数组长度=3。</li><li>strideH和strideW应在 [1,63] 范围内。</li><li>conv3d场景下strideD应在 [1,1000000] 范围内。</li></ul></td>
   <td>INT32</td>
   <td>-</td>
   <td>-</td>
@@ -143,8 +143,8 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>padding（aclIntArray*）</td>
   <td>输入</td>
-  <td>对 input 的填充。</td>
-  <td><ul><li>值应≥0。</li><li>paddingH 和 paddingW 应在 [0,255] 范围内。</li><li>conv3d 场景下 paddingD 应在 [0,1000000] 范围内。</li></ul></td>
+  <td>对input的填充。</td>
+  <td><ul><li>值应≥0。</li><li>paddingH和paddingW应在 [0,255] 范围内。</li><li>conv3d场景下paddingD应在 [0,1000000] 范围内。</li></ul></td>
   <td>INT32</td>
   <td>-</td>
   <td>-</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>dilation（aclIntArray*）</td>
   <td>输入</td>
   <td>卷积核中元素的间隔。</td>
-  <td><ul><li>值应>0。</li><li>dilationH 和 dilationW 应在 [1,255] 范围内。</li><li>conv3d 场景下 dilationD 应在 [1,1000000] 范围内。</li></ul></td>
+  <td><ul><li>值应>0。</li><li>dilationH和dilationW应在 [1,255] 范围内。</li><li>conv3d场景下dilationD应在 [1,1000000] 范围内。</li></ul></td>
   <td>INT32</td>
   <td>-</td>
   <td>-</td>
@@ -164,7 +164,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>transposed（bool）</td>
   <td>输入</td>
   <td>预留参数。表示是否为转置量化卷积。</td>
-  <td>目前暂不支持，传入 false 即可。</td>
+  <td>目前暂不支持，传入false即可。</td>
   <td>BOOL</td>
   <td>-</td>
   <td>-</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>outputPadding（aclIntArray*）</td>
   <td>输入</td>
   <td>预留参数。表示转置卷积情况下，对输出所有边的填充。</td>
-  <td>非转置卷积情况下，忽略该属性配置。目前暂不支持，传入空指针 nullptr 即可。</td>
+  <td>非转置卷积情况下，忽略该属性配置。目前暂不支持，传入空指针nullptr即可。</td>
   <td>INT32</td>
   <td>-</td>
   <td>-</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>offsetx（int32_t）</td>
   <td>输入</td>
   <td>表示量化因子。</td>
-  <td>[-128,127] 或 0。</td>
+  <td>[-128,127] 或0。</td>
   <td>INT32</td>
   <td>-</td>
   <td>-</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <td>roundMode（char*）</td>
   <td>输入</td>
   <td>表示取整模式。</td>
-  <td>rint、round 或 nullptr。</td>
+  <td>rint、round或nullptr。</td>
   <td>CHAR*</td>
   <td>-</td>
   <td>-</td>
@@ -213,8 +213,8 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>output（aclTensor*）</td>
   <td>输出</td>
-  <td>公式中的 output，表示卷积输出。</td>
-  <td><ul><li>其 shape 满足卷积的推导规则。</li><li>不支持空 Tensor 输出。</li><li>通道数等于 weight 原shape第一维，其他维度≥0。</li></ul></td>
+  <td>公式中的output，表示卷积输出。</td>
+  <td><ul><li>其shape满足卷积的推导规则。</li><li>不支持空Tensor输出。</li><li>通道数等于weight原shape第一维，其他维度≥0。</li></ul></td>
   <td>BFLOAT16、FLOAT16</td>
   <td>NCDHW</td>
   <td>5</td>
@@ -223,7 +223,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>workspaceSize（uint64_t*）</td>
   <td>输出</td>
-  <td>返回需要在 Device 侧申请的 workspace 大小。</td>
+  <td>返回需要在Device侧申请的workspace大小。</td>
   <td>-</td>
   <td>-</td>
   <td>-</td>
@@ -233,7 +233,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>executor（aclOpExecutor**）</td>
   <td>输出</td>
-  <td>返回 op 执行器，包含算子计算流程。</td>
+  <td>返回op执行器，包含算子计算流程。</td>
   <td>-</td>
   <td>-</td>
   <td>-</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
 
   一段接口完成入参校验，出现以下场景时报错：
 
@@ -267,27 +267,27 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
     <tr>
     <td rowspan="11" align="left">ACLNN_ERR_PARAM_INVALID</td>
     <td rowspan="11" align="left">161002</td>
-    <td align="left">input、weight、bias、scale、offset、output 数据类型和数据格式不在支持的范围之内。</td>
+    <td align="left">input、weight、bias、scale、offset、output数据类型和数据格式不在支持的范围之内。</td>
     </tr>
-    <tr><td align="left">stride、padding、dilation 输入 shape 不对。</td></tr>
-    <tr><td align="left">groups 输入不对的情况。</td></tr>
-    <tr><td align="left">scale 和 bias 输入 shape 不对。</td></tr>
-    <tr><td align="left">output 的 shape 不满足 infershape 结果。</td></tr>
-    <tr><td align="left">传入 tensor 中任意维度为零的均不满足要求。</td></tr>
-    <tr><td align="left">input 空间尺度在 padding 操作后小于 weight(经过 dilation 扩张（如存在 dilation>1 的情况）)的空间尺度。</td></tr>
-    <tr><td align="left">weight 和 input 通道数不满足要求。</td></tr>
+    <tr><td align="left">stride、padding、dilation输入shape不对。</td></tr>
+    <tr><td align="left">groups输入不对的情况。</td></tr>
+    <tr><td align="left">scale和bias输入shape不对。</td></tr>
+    <tr><td align="left">output的shape不满足infershape结果。</td></tr>
+    <tr><td align="left">传入tensor中任意维度为零的均不满足要求。</td></tr>
+    <tr><td align="left">input空间尺度在padding操作后小于weight(经过dilation扩张（如存在dilation>1的情况）)的空间尺度。</td></tr>
+    <tr><td align="left">weight和input通道数不满足要求。</td></tr>
     <tr><td align="left">weight的转化前后shape不满足转化关系。</td></tr>
-    <tr><td align="left">stride、dilation 小于 0 情况下不满足要求。</td></tr>
+    <tr><td align="left">stride、dilation小于0情况下不满足要求。</td></tr>
     <tr><td align="left">当前处理器不支持卷积。</td></tr>
     <tr>
     <td align="left">ACLNN_ERR_INNER_NULLPTR</td>
     <td align="left">561103</td>
-    <td align="left">API 内部校验错误，通常由于输入数据或属性的规格不在支持的范围之内导致。</td>
+    <td align="left">API内部校验错误，通常由于输入数据或属性的规格不在支持的范围之内导致。</td>
     </tr>
     <tr>
     <td align="left">ACLNN_ERR_RUNTIME_ERROR</td>
     <td align="left">361001</td>
-    <td align="left">API 调用 npu runtime 的接口异常，如 SocVersion 不支持。</td>
+    <td align="left">API调用npu runtime的接口异常，如SocVersion不支持。</td>
     </tr>
     </table>
 
@@ -304,28 +304,28 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
   <tr>
   <td>workspace</td>
   <td>输入</td>
-  <td>在 Device 侧申请的 workspace 内存地址。</td>
+  <td>在Device侧申请的workspace内存地址。</td>
   </tr>
   <tr>
   <td>workspaceSize</td>
   <td>输入</td>
-  <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnQuantConvolutionWeightNzGetWorkspaceSize 获取。</td>
+  <td>在Device侧申请的workspace大小，由第一段接口aclnnQuantConvolutionWeightNzGetWorkspaceSize获取。</td>
   </tr>
   <tr>
   <td>executor</td>
   <td>输入</td>
-  <td>op 执行器，包含了算子计算流程。</td>
+  <td>op执行器，包含了算子计算流程。</td>
   </tr>
   <tr>
   <td>stream</td>
   <td>输入</td>
-  <td>指定执行任务的 Stream。</td>
+  <td>指定执行任务的Stream。</td>
   </tr>
   </table>
 
 - **返回值**
 
-  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn 返回码</a>。
+  aclnnStatus：返回状态码，具体参见 <a href="../../../docs/zh/context/aclnn返回码.md">aclnn返回码</a>。
 
 ## 约束说明
 
@@ -364,25 +364,25 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
    <tr>
      <th scope="row">padding</th>
      <td>
-          padding 的数组长度需要等于 3。
+          padding的数组长度需要等于3。
      </td>
    </tr>
    <tr>
      <th scope="row">groups</th>
      <td>
-          groups 数值必须为 1。
+          groups数值必须为1。
      </td>
    </tr>
    <tr>
      <th scope="row">offsetx</th>
      <td>
-          offsetx 暂不支持，传入 0 值即可。
+          offsetx暂不支持，传入0值即可。
      </td>
    </tr>
    <tr>
      <th scope="row">roundMode</th>
      <td>
-          roundMode 暂不支持，传入空指针 nullptr。
+          roundMode暂不支持，传入空指针nullptr。
      </td>
    </tr>
    <tr>
@@ -397,7 +397,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
         <ul>
           <li>算子仅支持在推理场景下调用。</li>
           <li>仅支持正向三维卷积。</li>
-          <li>input, weight原shape, bias, scale 中每一组 tensor 的每一维大小都应小于 1000000。</li>
+          <li>input, weight原shape, bias, scale中每一组tensor的每一维大小都应小于1000000。</li>
         </ul>
      </td>
    </tr>
@@ -408,7 +408,7 @@ aclnnStatus aclnnQuantConvolutionWeightNz(
 
 示例代码如下，仅供参考，具体编译和执行过程请参考[编译与运行样例](../../../docs/zh/context/编译与运行样例.md)。
 
-不同产品型号请参考使用不同的 main 函数。
+不同产品型号请参考使用不同的main函数。
 
 ```Cpp
 #include <iostream>
@@ -461,11 +461,11 @@ template <typename T>
 int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                     aclDataType dataType, aclTensor** tensor) {
   auto size = GetShapeSize(shape) * sizeof(T);
-  // 调用 aclrtMalloc 申请 device 侧内存
+  // 调用aclrtMalloc申请device侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
 
-  // 调用 aclrtMemcpy 将 host 侧数据拷贝到 device 侧内存上
+  // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
@@ -507,11 +507,11 @@ template <typename T>
 int CreateAclTensorND(const std::vector<T>& hostData, const std::vector<int64_t>& shape, void** deviceAddr,
                       aclDataType dataType, aclTensor** tensor) {
   auto size = GetShapeSize(shape) * sizeof(T);
-  // 调用 aclrtMalloc 申请 device 侧内存
+  // 调用aclrtMalloc申请device侧内存
   auto ret = aclrtMalloc(deviceAddr, size, ACL_MEM_MALLOC_HUGE_FIRST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMalloc failed. ERROR: %d\n", ret); return ret);
 
-  // 调用 aclrtMemcpy 将 host 侧数据拷贝到 device 侧内存上
+  // 调用aclrtMemcpy将host侧数据拷贝到device侧内存上
   ret = aclrtMemcpy(*deviceAddr, size, hostData.data(), size, ACL_MEMCPY_HOST_TO_DEVICE);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtMemcpy failed. ERROR: %d\n", ret); return ret);
 
@@ -540,7 +540,7 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   // check根据自己的需要处理
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
 
-  // 2. 构造输入与输出，需要根据 API 的接口自定义构造
+  // 2. 构造输入与输出，需要根据API的接口自定义构造
   std::vector<int64_t> shapeInput = {2, 2, 32, 32, 32};
   std::vector<int64_t> shapeWeight = {2, 2, 3, 3, 3};
   std::vector<int64_t> shapeScale = {2};
@@ -621,7 +621,7 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   std::unique_ptr<aclIntArray, aclnnStatus (*)(const aclIntArray *)> dilationsPtr(dilations, aclDestroyIntArray);
   CHECK_FREE_RET(dilations != nullptr, return ACL_ERROR_INTERNAL_ERROR);
 
-  // 3. 调用 CANN 算子库 API，需要修改为具体的 API
+  // 3. 调用CANN算子库API，需要修改为具体的API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
   void* workspaceAddr = nullptr;
@@ -668,11 +668,11 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
   ret = aclnnQuantConvolutionWeightNz(workspaceAddrNz, workspaceSizeNz, executor, stream);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantConvolutionWeightNz failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
-  // 5. 获取输出的值，将 device 侧内存上的结果拷贝至 host 侧，需要根据具体 API 的接口定义修改
+  // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
   auto size = GetShapeSize(shapeResult);
   std::vector<uint16_t> resultData(size, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), deviceDataResult,
@@ -687,7 +687,7 @@ int aclnnQuantConvolutionWeightNzTest(int32_t deviceId, aclrtStream& stream, std
 }
 
 int main() {
-  // 1. （固定写法）device/stream 初始化，参考 acl API 手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;

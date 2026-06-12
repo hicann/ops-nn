@@ -77,7 +77,7 @@ aclnnStatus aclnnUnique(
     <tr>
       <td>sorted</td>
       <td>输入</td>
-      <td>表示是否对 valueOut 按升序进行排序。true时排序，false时乱序。</td>
+      <td>表示是否对valueOut按升序进行排序。true时排序，false时乱序。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -87,7 +87,7 @@ aclnnStatus aclnnUnique(
     <tr>
       <td>returnInverse</td>
       <td>输入</td>
-      <td>表示是否返回输入数据中各个元素在 valueOut 中的下标。</td>
+      <td>表示是否返回输入数据中各个元素在valueOut中的下标。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -157,12 +157,12 @@ aclnnStatus aclnnUnique(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>传入的 self或valueOut或inverseOut是空指针时。</td>
+      <td>传入的self或valueOut或inverseOut是空指针时。</td>
     </tr>
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>self 或valueOut 的数据类型不在支持的范围之内。</td>
+      <td>self或valueOut的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>self为非连续张量。</td>
@@ -225,9 +225,9 @@ aclnnStatus aclnnUnique(
   - aclnnUnique默认确定性实现。
 
   * <term>Ascend 950PR/Ascend 950DT</term>：
-      - 由于去重算法实现差异，当满足下列所有条件时，算子将无视 sorted 入参的值，固定对输出结果进行升序排序：
-          - self 输入为 1D
-          - self 的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
+      - 由于去重算法实现差异，当满足下列所有条件时，算子将无视sorted入参的值，固定对输出结果进行升序排序：
+          - self输入为1D
+          - self的数据类型为下列类型：FLOAT、FLOAT16、UINT8、INT8、UINT16、INT16、INT32、UINT32、UINT64、INT64、BFLOAT16
   * <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：在输入self包含0的情况下，算子的输出中会包含正0和负0，而非只输出一个0。
 
 ## 调用示例
@@ -297,7 +297,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化, 参考acl API手册
+  // 1.（固定写法）device/stream初始化,参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -345,7 +345,7 @@ int main() {
   // 调用aclnnUnique第二段接口
   ret = aclnnUnique(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnUnique failed. ERROR: %d\n", ret); return ret);
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改

@@ -35,7 +35,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>标准 CeLU 激活函数的昇腾硬件优化实现，用于网络非线性建模，保障训练稳定并提升运行效率。</td>
+    <td>标准CeLU激活函数的昇腾硬件优化实现，用于网络非线性建模，保障训练稳定并提升运行效率。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -75,7 +75,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>计算BNLL (Binomial Normal Log Likelihood) 激活函数，即数值稳定版本的softplus：y = ln(1 + exp(x))。</td>
+    <td>计算BNLL (Binomial Normal Log Likelihood)激活函数，即数值稳定版本的softplus：y = ln(1 + exp(x))。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -145,7 +145,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对输入特征做非线性激活，用轻量化指数 /sigmoid 近似替代原版 GELU 的复杂计算。</td>
+    <td>对输入特征做非线性激活，用轻量化指数 /sigmoid近似替代原版GELU的复杂计算。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -255,7 +255,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>将输入张量中绝对值小于等于阈值 lambd 的元素置零，大于阈值的元素保持不变。</td>
+    <td>将输入张量中绝对值小于等于阈值lambd的元素置零，大于阈值的元素保持不变。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -495,7 +495,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>ReLU6 是受限版 ReLU 激活函数，将输出钳位在 [0, 6] 区间，具备数值稳定、抗溢出、适合量化与端侧推理的特点，广泛用于轻量级卷积神经网络。</td>
+    <td>ReLU6是受限版ReLU激活函数，将输出钳位在 [0, 6] 区间，具备数值稳定、抗溢出、适合量化与端侧推理的特点，广泛用于轻量级卷积神经网络。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -505,7 +505,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对应 ReLU6 操作的反向传播梯度，对前向输入落在开区间 (0, 6) 的位置透传上游梯度，落在区间外（含端点 0 与 6）的位置输出 0。</td>
+    <td>对应ReLU6操作的反向传播梯度，对前向输入落在开区间(0, 6)的位置透传上游梯度，落在区间外（含端点0与6）的位置输出0。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -745,7 +745,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI CPU</td>
-    <td>断言给定条件为 true，如果输入张量 input_condition 判定为 false，则打印 input_data 中的张量列表。</td>
+    <td>断言给定条件为true，如果输入张量input_condition判定为false，则打印input_data中的张量列表。</td>
   </tr>
   <tr>
     <td>conv</td>
@@ -785,7 +785,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>实现 3D 卷积功能。</td>
+    <td>实现3D卷积功能。</td>
   </tr>
   <tr>
     <td>conv</td>
@@ -795,7 +795,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>实现 2D 卷积功能。</td>
+    <td>实现2D卷积功能。</td>
   </tr>
   <tr>
     <td>conv</td>
@@ -815,7 +815,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>实现卷积功能，支持 1D 卷积、2D 卷积、3D 卷积，同时支持转置卷积、空洞卷积、分组卷积。</td>
+    <td>实现卷积功能，支持1D卷积、2D卷积、3D卷积，同时支持转置卷积、空洞卷积、分组卷积。</td>
   </tr>
   <tr>
     <td>conv</td>
@@ -845,7 +845,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>DeformableOffsets 算子的目的是根据 offsets（ kernel 采样点的偏移值）来收集用于卷积的特征采样点，并对其进行重组，方便 Conv2d 算子进行卷积计算。而 DeformableOffsetsGrad 即为这一过程的反向。</td>
+    <td>DeformableOffsets算子的目的是根据offsets（ kernel采样点的偏移值）来收集用于卷积的特征采样点，并对其进行重组，方便Conv2d算子进行卷积计算。而DeformableOffsetsGrad即为这一过程的反向。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1455,17 +1455,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>用于将张量中的值按照给定的边界进行离散化, 根据给定的边界将输入张量中的每个值映射到对应的分箱区间，并返回该值所属区间索引。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/concat_offset/README.md">concat_offset</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>用于将张量中的值按照给定的边界进行离散化,根据给定的边界将输入张量中的每个值映射到对应的分箱区间，并返回该值所属区间索引。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1555,7 +1545,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>对于输入张量 self 和 输入张量 indices，将数据切片收集到输出张量out中。</td>
+    <td>对于输入张量self和输入张量indices，将数据切片收集到输出张量out中。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1619,23 +1609,13 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/index_put/README.md">index_put</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/index_put_v2/README.md">index_put_v2</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>根据索引 indices 将输入 self 对应坐标的数据与输入 values 进行替换或累加。</td>
+    <td>根据索引indices将输入self对应坐标的数据与输入values进行替换或累加。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1656,16 +1636,6 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>执行scatter操作，根据pos_idx的值循环对应的values，累加/替换到linear_index指向的self的位置。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/inplace_index_add/README.md">inplace_index_add</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1789,23 +1759,13 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/reverse_sequence/README.md">reverse_sequence</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core/AI CPU</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/repeat_interleave_grad/README.md">repeat_interleave_grad</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>算子RepeatInterleave的反向, 将y_grad tensor的axis维度按repeats进行ReduceSum。</td>
+    <td>算子RepeatInterleave的反向,将y_grad tensor的axis维度按repeats进行ReduceSum。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -1887,16 +1847,6 @@
     <td>AI Core</td>
     <td>算子功能：拷贝data的数据至out，同时在指定indices处根据updates更新out中的数据。</td>
   </tr>
-    <tr>
-    <td>index</td>
-    <td><a href="../../index/scatter_nd_add/README.md">scatter_nd_add</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_nd_max/README.md">scatter_nd_max</a></td>
@@ -1928,62 +1878,12 @@
     <td>算子功能：根据indices在给定变量内，将updates应用于变量的单个值或切片。</td>
   </tr>
   </tr>
-    <tr>
-    <td>index</td>
-    <td><a href="../../index/scatter_sub/README.md">scatter_sub</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
   <tr>
     <td>index</td>
     <td><a href="../../index/scatter_update/README.md">scatter_update</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/segment_sum/README.md">segment_sum</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/sorted_sparse_segment_mean_grad/README.md">sorted_sparse_segment_mean_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/sparse_segment_mean/README.md">sparse_segment_mean</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/sparse_slice/README.md">sparse_slice</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
@@ -2060,26 +1960,6 @@
   </tr>
   <tr>
     <td>index</td>
-    <td><a href="../../index/unsorted_segment_common/README.md">unsorted_segment_common</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
-    <td><a href="../../index/unsorted_segment_min/README.md">unsorted_segment_min</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
-  </tr>
-  <tr>
-    <td>index</td>
     <td><a href="../../index/where/README.md">where</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -2146,7 +2026,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>用于计算经过 Sigmoid 激活后的交叉熵损失的函数。</td>
+    <td>用于计算经过Sigmoid激活后的交叉熵损失的函数。</td>
   </tr>
   <tr>
     <td>loss</td>
@@ -2510,16 +2390,6 @@
   </tr>
   <tr>
     <td>matmul</td>
-    <td><a href="../../matmul/matmul_compress/README.md">matmul_compress</a></td>
-    <td>✗</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>AI Core</td>
-    <td>完成无损压缩矩阵乘计算。</td>
-  </tr>
-  <tr>
-    <td>matmul</td>
     <td><a href="../../matmul/matmul_v2_compress_dequant/README.md">matmul_v2_compress_dequant</a></td>
     <td>✗</td>
     <td>✗</td>
@@ -2786,7 +2656,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果 。</td>
+    <td>RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。AddRmsNormDynamicQuantV2算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的1个或2个DynamicQuant算子融合起来，减少搬入搬出操作。AddRmsNormDynamicQuant算子相较于AddRmsNormDynamicQuantV2在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算对应公式中的beta，以及新增输出配置项output_mask参数，用于配置是否输出对应位置的量化结果。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -2866,7 +2736,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch batch_norm_backward(..., training=false, ...) 中 grad_input 的子计算。</td>
+    <td>计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch batch_norm_backward(..., training=false, ...)中grad_input的子计算。</td>
   </tr>
   <tr>
     <td>norm</td>
@@ -3977,7 +3847,7 @@
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。</td>
+    <td>基础循环神经网络(Recurrent Neural Network)算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据。</td>
   </tr>
   <tr>
     <td>rnn</td>
@@ -3987,7 +3857,7 @@
     <td>✗</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>基础循环神经网络 (Recurrent Neural Network) 算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据， 仅支持单层RNN。</td>
+    <td>基础循环神经网络(Recurrent Neural Network)算子，用于处理序列数据。它通过隐藏状态传递时序信息，适合处理具有时间/顺序依赖性的数据，仅支持单层RNN。</td>
   </tr>
   <tr>
     <td>index</td>

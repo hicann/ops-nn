@@ -47,9 +47,9 @@
   相关符号说明：
   
   * 偏置 $b_{ih} = \text{inputBiasOptional}$, $b_{hh} = \text{hiddenBiasOptional}$ ，如未输入偏置则为零
-  * 将 $gates$ 沿最后一维平均切分为 4 个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
+  * 将 $gates$ 沿最后一维平均切分为4个分量，即 $gates \xrightarrow{\text{split}} [gates_i, gates_g, gates_f, gates_o]$
   * 将得到的4个门控激活值沿最后一维拼接成$\text{storageOut}$，即 $[i_{out}, g_{out}, f_{out}, o_{out}] \xrightarrow{\text{concat}} \text{storageOut}$
-  * $\sigma$ 为 Sigmoid 激活函数，$\odot$ 为逐元素乘积
+  * $\sigma$ 为Sigmoid激活函数，$\odot$ 为逐元素乘积
 
 ## 函数原型
 
@@ -353,7 +353,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考AscendCL对外接口列表
+  // 1.（固定写法）device/stream初始化，参考AscendCL对外接口列表
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -380,14 +380,14 @@ int main() {
   void* cyDeviceAddr = nullptr;
   void* storageDeviceAddr = nullptr;
 
-  // 输入ACL Tensor 指针
+  // 输入ACL Tensor指针
   aclTensor* inputGates = nullptr;
   aclTensor* hiddenGates = nullptr;
   aclTensor* cx = nullptr;
   aclTensor* inputBias = nullptr;
   aclTensor* hiddenBias = nullptr;
 
-  // 输出 ACL Tensor 指针
+  // 输出ACL Tensor指针
   aclTensor* hy = nullptr;
   aclTensor* cy = nullptr;
   aclTensor* storage = nullptr;
@@ -400,7 +400,7 @@ int main() {
   std::vector<float> cyHostData(batchSize * hiddenSize, 0.0f);
   std::vector<float> storageHostData(batchSize * hiddenSize * 4, 0.0f);
 
-  // 创建 input aclTensor
+  // 创建input aclTensor
   ret = CreateAclTensor(inputGatesHostData, gatesShape, &inputGatesDeviceAddr, aclDataType::ACL_FLOAT, &inputGates);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(hiddenGatesHostData, gatesShape, &hiddenGatesDeviceAddr, aclDataType::ACL_FLOAT, &hiddenGates);
@@ -408,7 +408,7 @@ int main() {
   ret = CreateAclTensor(cxHostData, commonShape, &cxDeviceAddr, aclDataType::ACL_FLOAT, &cx);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  // 创建输出 aclTensor
+  // 创建输出aclTensor
   ret = CreateAclTensor(hyHostData, commonShape, &hyDeviceAddr, aclDataType::ACL_FLOAT, &hy);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(cyHostData, commonShape, &cyDeviceAddr, aclDataType::ACL_FLOAT, &cy);
@@ -433,12 +433,12 @@ int main() {
   ret = aclnnThnnFusedLstmCell(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnThnnFusedLstmCell failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
   // 5. 获取输出的值，将device侧内存上的结果拷贝至host侧，需要根据具体API的接口定义修改
-  // 打印 hy 结果
+  // 打印hy结果
   auto commonSize = GetShapeSize(commonShape);
   std::vector<float> resultData(commonSize, 0);
   ret = aclrtMemcpy(resultData.data(), resultData.size() * sizeof(resultData[0]), hyDeviceAddr,
@@ -448,7 +448,7 @@ int main() {
     LOG_PRINT("result hy[%ld] is: %f\n", i, resultData[i]);
   }
 
-  // 释放 aclTensor
+  // 释放aclTensor
   aclDestroyTensor(inputGates);
   aclDestroyTensor(hiddenGates);
   aclDestroyTensor(cx);
@@ -456,7 +456,7 @@ int main() {
   aclDestroyTensor(cy);
   aclDestroyTensor(storage);
 
-  // 释放 Device 资源
+  // 释放Device资源
   aclrtFree(inputGatesDeviceAddr);
   aclrtFree(hiddenGatesDeviceAddr);
   aclrtFree(cxDeviceAddr);

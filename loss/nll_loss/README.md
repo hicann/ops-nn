@@ -25,7 +25,7 @@
     w_{c} = \text{weight}[c] \cdot \mathbb{1}\{c \not=   \text{ignoreIndex}\},
     $$
 
-    其中$x$是self, $y$是target, $w$是weight，$N$是batch的大小. 如果`reduction`不是`'none'`, 那么：
+    其中$x$是self, $y$是target, $w$是weight，$N$是batch的大小. 如果`reduction`不是`'none'`,那么：
 
     $$
     \ell(x, y) = \begin{cases}

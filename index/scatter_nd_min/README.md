@@ -15,10 +15,10 @@
 
 - 算子功能：根据indices在给定变量内，在updates和单个值或切片之间求最小值。
 - 计算公式：ref[indices[k]]=min(ref[indices[k]], updates[k])
-    - ref是一个维度为 P的张量Tensor；
-    - indices是一个维度为 Q的整型张量Tensor；
+    - ref是一个维度为P的张量Tensor；
+    - indices是一个维度为Q的整型张量Tensor；
     - indices的shape一定是[d0,..., d_Q-2, K]，此处0<K<=P；
-    - updates 是一个维度为Q−1+P−K 的张量：[d_0, ..., d_{Q-2}, ref.shape[K], ..., ref.shape[P-1]]
+    - updates是一个维度为Q−1+P−K的张量：[d_0, ..., d_{Q-2}, ref.shape[K], ..., ref.shape[P-1]]
 
 ## 参数说明
 
@@ -41,7 +41,7 @@
     <tr>
       <td>var</td>
       <td>输入</td>
-      <td>表示一个待被更新的张量, 等同于公式中的`ref`</td>
+      <td>表示一个待被更新的张量,等同于公式中的`ref`</td>
       <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32</td>
       <td>ND</td>
     </tr>
@@ -69,7 +69,7 @@
     <tr>
       <td>use_locking</td>
       <td>可选属性</td>
-      <td>可选属性，默认值为`false`, 如果为`true`, 这次操作将会被一个lock保护</td>
+      <td>可选属性，默认值为`false`,如果为`true`,这次操作将会被一个lock保护</td>
       <td>BOOL</td>
       <td>-</td>
     </tr>
@@ -85,4 +85,4 @@
 
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
-| 图模式 | [test_geir_scatter_nd_min](examples/test_geir_scatter_nd_min.cpp) | 通过 GE IR 构图方式调用 ScatterNdMin 算子。 |
+| 图模式 | [test_geir_scatter_nd_min](examples/test_geir_scatter_nd_min.cpp) | 通过GE IR构图方式调用ScatterNdMin算子。 |

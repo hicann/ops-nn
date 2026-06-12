@@ -343,7 +343,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
 - 返回值
 
-  aclnnStatus： 返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
@@ -538,7 +538,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
       // 3. 调用CANN算子库API，需要修改为具体的Api名称
       uint64_t workspaceSize = 0;
       aclOpExecutor *executor = nullptr;
-      // 调用 aclnnQuantMatmulReduceSumWeightNz 第一段接口 
+      // 调用aclnnQuantMatmulReduceSumWeightNz第一段接口 
       ret = aclnnQuantMatmulReduceSumWeightNzGetWorkspaceSize(
         x1, x2, x1Scale, x2Scale, nullptr, nullptr, nullptr, nullptr, nullptr, transposeX1, transposeX2, 0,
         dims, false, out, &workspaceSize, &executor);
@@ -552,11 +552,11 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
           CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
           workspaceAddrPtr.reset(workspaceAddr);
       }
-      // 调用 aclnnQuantMatmulReduceSumWeightNz 第二段接口
+      // 调用aclnnQuantMatmulReduceSumWeightNz第二段接口
       ret = aclnnQuantMatmulReduceSumWeightNz(workspaceAddr, workspaceSize, executor, stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnQuantMatmulReduceSumWeightNz failed. ERROR: %d\n", ret); return ret);
 
-      // 4. （固定写法）同步等待任务执行结束
+      // 4.（固定写法）同步等待任务执行结束
       ret = aclrtSynchronizeStream(stream);
       CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
@@ -576,7 +576,7 @@ aclnnStatus aclnnQuantMatmulReduceSumWeightNz(
 
   int main()
   {
-      // 1. （固定写法）device/stream初始化，参考acl API手册
+      // 1.（固定写法）device/stream初始化，参考acl API手册
       // 根据自己的实际device填写deviceId
       int32_t deviceId = 0;
       aclrtStream stream;

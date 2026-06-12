@@ -17,7 +17,7 @@
 - 计算流程：
   - 如果indices_shape[-1] > r，不合法场景。
   - 如果indices_shape[-1] = r，则输出张量out的维度为q-1，即out的shape为 [indices_shape[0:q-1]]，out中元素为self的索引对位置的元素。（见例1）
-  - 如果indices_shape[-1] < r，则输出张量out的维度为 (q-1) + (r - indices_shape[-1])，设c=indices_shape[-1]，即out的shape为 [indices_shape[0:q-1],self_shape[c:r]] ，`out`由`self`的索引对位置的切片组成。（见例2、例3、例4）
+  - 如果indices_shape[-1] < r，则输出张量out的维度为(q-1) + (r - indices_shape[-1])，设c=indices_shape[-1]，即out的shape为 [indices_shape[0:q-1],self_shape[c:r]]，`out`由`self`的索引对位置的切片组成。（见例2、例3、例4）
 
   关于**r**、**q**、**indices_shape[-1]** 的一些限制条件如下：
   - 必须满足r≥1，q≥1。

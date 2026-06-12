@@ -159,7 +159,7 @@ uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
   // 从CpuKernelContext中获取output tensor
   Tensor* output = ctx.Output(0);
 
-  // 对tensor进行基本校验, 判断是否为空指针
+  // 对tensor进行基本校验,判断是否为空指针
   if (input0 == nullptr || input1 == nullptr || output == nullptr) {
     return kParamInvalid;
   }
@@ -193,7 +193,7 @@ REGISTER_CPU_KERNEL(kAddExample, AddExampleCpuKernel);
 
 ## aclnn适配
 
-通常算子开发和编译完成后，会自动生成aclnn接口（一套基于C 的API），无需做其他配置，可直接在应用程序中调用aclnn接口实现调用算子。
+通常算子开发和编译完成后，会自动生成aclnn接口（一套基于C的API），无需做其他配置，可直接在应用程序中调用aclnn接口实现调用算子。
 
 ## 编译部署
 

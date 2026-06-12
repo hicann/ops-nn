@@ -147,7 +147,7 @@ TORCH_LIBRARY_IMPL(EXTENSION_MODULE_NAME, PrivateUse1, m)
 
 ```cmake
 add_sources()
-# 若需指定自定义源文件列表，使用 add_sources("file1.cpp;file2.cpp")
+# 若需指定自定义源文件列表，使用add_sources("file1.cpp;file2.cpp")
 ```
 
 ## 编译与打包

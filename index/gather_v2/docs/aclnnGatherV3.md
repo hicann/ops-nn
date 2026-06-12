@@ -18,20 +18,20 @@
 - 接口功能：从输入Tensor的指定维度dim，按index中的下标序号提取元素，batchDims代表运算批次。保存到out Tensor中。
 - 示例：
 
-  例如，当batchDims为0时，输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量 index=[1, 0],。
+  例如，当batchDims为0时，输入张量 $self=\begin{bmatrix}1 & 2 & 3 \\ 4 & 5 & 6 \\ 7 & 8 & 9\end{bmatrix}$ 和索引张量index=[1, 0],。
   - dim=0的结果：$out=\begin{bmatrix}4 & 5 & 6 \\ 1 & 2 & 3\end{bmatrix}$
 
   - dim=1的结果： $out=\begin{bmatrix}2 & 1\\ 5 & 4\\ 8 & 7\end{bmatrix}$
 
   具体计算过程如下：
-  以三维张量为例，shape为(3,2,2)的张量 self =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   index=[1, 0],   self张量dim=0，1，2对应的下标分别是$l， m， n$，index是一维（零维的情况：当成是size为1的一维）
+  以三维张量为例，shape为(3,2,2)的张量self =$\begin{bmatrix}[[1,&2],&[3,&4]], \\ [[5,&6],&[7,&8]], \\ [[9,&10],&[11,&12]]\end{bmatrix}$   index=[1, 0],   self张量dim=0，1，2对应的下标分别是$l， m， n$，index是一维（零维的情况：当成是size为1的一维）
   - dim为0：I=index[i];  &nbsp;&nbsp;   out$[i][m][n]$ = self$[I][m][n]$
 
   - dim为1：J=index[j];  &nbsp;&nbsp;   out$[l][j][n]$ = self$[l][J][n]$
 
   - dim为2：K=index[k];  &nbsp;&nbsp;   out$[l][m][k]$ = self$[l][m][K]$ 
 
-  当batchDims为1时：以四维张量为例 shape为(3,3,2,2)的张量 self 与shape为(3,2)的张量 index，相当于进行3次batchDims为0，dim=dim-batchDims的gather操作。
+  当batchDims为1时：以四维张量为例shape为(3,3,2,2)的张量self与shape为(3,2)的张量index，相当于进行3次batchDims为0，dim=dim-batchDims的gather操作。
 
 ## 函数原型
 
@@ -107,7 +107,7 @@ aclnnStatus aclnnGatherV3(
         <td>index</td>
         <td>输入</td>
         <td>收集数据的索引。</td>
-        <td>取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。batchDims = N, N != 0 时，index前N维与self一致</td>
+        <td>取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。batchDims = N, N != 0时，index前N维与self一致</td>
         <td>INT64、INT32</td>
         <td>ND</td>
         <td>1-8</td>
@@ -319,7 +319,7 @@ int CreateAclTensor(const std::vector<T>& hostData, const std::vector<int64_t>& 
 }
 
 int main() {
-  // 1. （固定写法）device/stream初始化，参考acl API手册
+  // 1.（固定写法）device/stream初始化，参考acl API手册
   // 根据自己的实际device填写deviceId
   int32_t deviceId = 0;
   aclrtStream stream;
@@ -368,7 +368,7 @@ int main() {
   ret = aclnnGatherV3(workspaceAddr, workspaceSize, executor, stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnGatherV3 failed. ERROR: %d\n", ret); return ret);
 
-  // 4. （固定写法）同步等待任务执行结束
+  // 4.（固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclrtSynchronizeStream failed. ERROR: %d\n", ret); return ret);
 
