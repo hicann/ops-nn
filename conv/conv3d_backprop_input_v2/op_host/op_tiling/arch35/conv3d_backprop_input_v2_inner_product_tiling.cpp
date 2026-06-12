@@ -133,8 +133,7 @@ bool Conv3DDXV2InnerProductTiling::CheckBasicSplitKCondition()
 {
     // 拦截c04场景,group场景和8bit场景
     if (tilingRunInfo_.enableC04Flag || (unlikely(runInfo_.groups > 1)) || context_->GetOutputDesc(Y_INDEX)->GetDataType() == ge::DT_INT8) {
-        splitKMode_ = 0;
-        tilingRunInfo_.enableSplitK = splitKMode_;
+        tilingRunInfo_.enableSplitK = 0;
         return false;
     }
     return true;
@@ -146,8 +145,7 @@ void Conv3DDXV2InnerProductTiling::SetSplitKRunInfo(uint32_t hkWk, uint32_t cout
     // kValueSegment: 每次循环计算的 K 大小 = kSegment * HkWk，对齐到k0
     tilingRunInfo_.kValueSegment = Ops::Base::CeilAlign(tilingRunInfo_.kSegment * hkWk, static_cast<uint64_t>(tilingRunInfo_.k0));
 
-    splitKMode_ = (coutSegmentCount > 1) ? 1 : 0;
-    tilingRunInfo_.enableSplitK = splitKMode_;
+    tilingRunInfo_.enableSplitK = (coutSegmentCount > 1) ? 1 : 0;
 
     if (tilingRunInfo_.enableSplitK) {
         // workspace累加支持fp16、bf16
@@ -159,13 +157,6 @@ void Conv3DDXV2InnerProductTiling::SetSplitKRunInfo(uint32_t hkWk, uint32_t cout
         // 未开启切K且Dtype为fp32
         tilingRunInfo_.useUbAccumForSplitK = false;
     }
-
-    OP_LOGD(
-        opName_,
-        "Split K status: kValue=%lu, kSegment=%lu, kValueSegment=%lu, kSegmentTail=%lu,"
-        "enableSplitK=%d, useUbAccumForSplitK=%d, coutThreshold=%u, coutSegmentCount=%u",
-        tilingRunInfo_.kValue, tilingRunInfo_.kSegment, tilingRunInfo_.kValueSegment, tilingRunInfo_.kSegmentTail,
-        tilingRunInfo_.enableSplitK, tilingRunInfo_.useUbAccumForSplitK, coutThreshold, coutSegmentCount);
 }
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
@@ -712,6 +703,11 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(std::shared_ptr<tuningtil
     tilingData_.conv3DDxTiling.singleIterateDk = tunerTiling->singleIterateDk;
     tilingData_.conv3DDxTiling.singleCoreBatch = tunerTiling->singleCoreBatch;
     tilingData_.conv3DDxTiling.singleCoreM = tunerTiling->singleCoreM;
+    tilingData_.conv3DDxTiling.kSegment = tunerTiling->kSegment;
+    tilingData_.conv3DDxTiling.kSegmentTail = tunerTiling->kSegmentTail;
+    tilingData_.conv3DDxTiling.kValueSegment = tunerTiling->kValueSegment;
+    tilingData_.conv3DDxTiling.enableSplitK = tunerTiling->enableSplitK;
+    tilingData_.conv3DDxTiling.useUbAccumForSplitK = tunerTiling->useUbAccumForSplitK;
     tilingData_.conv3DDxTiling.enRelu = tunerTiling->enRelu;
     tilingData_.params.coreNum = tunerTiling->coreNum;
     tilingData_.conv3DDxKSTiling.kSCoutFullLoad = tunerTiling->kSCoutFullLoad;
@@ -721,12 +717,14 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(std::shared_ptr<tuningtil
 void Conv3DDXV2InnerProductTiling::TranslateTilingRunInfo(std::shared_ptr<tuningtiling::Conv3DBackpropInputTunerTiling> tunerTiling) {
     loadB1Condition_ = tunerTiling->loadB1Condition;
     loadB2Condition_ = tunerTiling->loadB2Condition;
-    kernelSplitMode_ = tunerTiling->kernelSplitMode;
+    kernelSplitMode_ = tunerTiling->kernelSplitMode;   
     tilingRunInfo_.enableC04Flag = tunerTiling->enableC04Flag;
     tilingRunInfo_.enableFullLoadTiling = tunerTiling->enableFullLoadTiling;
     tilingRunInfo_.enableVecTransFlag = tunerTiling->enableVecTransFlag;
     tilingRunInfo_.enableSplitKernelFlag = tunerTiling->enableSplitKernelFlag;
     tilingRunInfo_.tilingHkWkMode = tunerTiling->tilingHkWkMode;
+    tilingRunInfo_.enableSplitK = tunerTiling->enableSplitK;
+    tilingRunInfo_.useUbAccumForSplitK = tunerTiling->useUbAccumForSplitK;
 }
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::DoLibApiTiling()
@@ -815,8 +813,8 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
 uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
 {
     const uint64_t tilingKey = GET_TPL_TILING_KEY(loadB2Condition_, 0, groupConvMode_, true, loadB1Condition_);
-    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_, splitKMode_ is: [%u, %u, %u, %u]",
-            loadB2Condition_, loadB1Condition_, kernelSplitMode_, splitKMode_);
+    OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]",
+            loadB2Condition_, loadB1Condition_, kernelSplitMode_);
     return tilingKey;
 }
 

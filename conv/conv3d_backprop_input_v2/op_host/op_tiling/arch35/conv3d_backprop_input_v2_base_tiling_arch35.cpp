@@ -1101,7 +1101,10 @@ void Conv3DBackpropInputV2TilingArch35::PrintTilingData()
        << " enableVecTrans: " << static_cast<uint32_t>(tiling.enableVecTrans)
        << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace
        << " enableFullLoad: " << static_cast<uint32_t>(tiling.enableFullLoad)
-       << " quantMode: " << static_cast<uint32_t>(tiling.quantMode) << " enRelu: " << tiling.enRelu;
+       << " quantMode: " << static_cast<uint32_t>(tiling.quantMode) << " enRelu: " << tiling.enRelu
+       << " enableSplitK: " << static_cast<uint32_t>(tiling.enableSplitK)
+       << " useUbAccumForSplitK: " << static_cast<uint32_t>(tiling.useUbAccumForSplitK)
+       << " kSegment: " << tiling.kSegment << " kSegmentTail: " << tiling.kSegmentTail << " kValueSegment: " << tiling.kValueSegment;
     OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
     PrintInputsAttrs(tiling);
 }
