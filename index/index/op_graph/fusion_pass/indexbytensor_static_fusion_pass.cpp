@@ -30,6 +30,7 @@
 #include "ge/fusion/graph_rewriter.h"
 #include "ge/ge_utils.h"
 #include "ge/fusion/pass/decompose_pass.h"
+#include "ge/fusion/graph_fuse_inspector_utils.h"
 #include "common/inc/error_util.h"
 #include "indexbytensor_static_fusion_pass.h"
 
@@ -235,8 +236,15 @@ static std::unique_ptr<SubgraphBoundary> ConstructSubgraphBoundary(const GNode& 
 }
 
 // 对单个 IndexByTensor 节点执行替换
-static bool ReplaceIndexByTensor(const GNode& node)
+static bool ReplaceIndexByTensor(const GNode& node, CustomPassContext& passContext)
 {
+    // 检查节点是否可以被融合，避免重复融合
+    AscendString failedReason;
+    if (!GraphFuseInspectorUtils::CanFuse({node}, failedReason)) {
+        OPS_LOG_E(kPassName.c_str(), "CanFuse check failed: %s", failedReason.GetString());
+        return false;
+    }
+
     auto replacement = Replacement(node);
     if (replacement == nullptr) {
         OPS_LOG_E(kPassName.c_str(), "Failed to create replacement graph.");
@@ -246,6 +254,13 @@ static bool ReplaceIndexByTensor(const GNode& node)
     auto boundary = ConstructSubgraphBoundary(node);
     if (boundary == nullptr) {
         OPS_LOG_E(kPassName.c_str(), "Failed to construct subgraph boundary.");
+        return false;
+    }
+
+    // 上报融合结果，通知融合检查器该融合规则已生效
+    // 必须在 Replace 之前调用，因为 Replace 会移除旧节点导致 node 引用失效
+    if (GraphFuseInspectorUtils::ReportFuse({node}, {}, passContext) != SUCCESS) {
+        OPS_LOG_E(kPassName.c_str(), "ReportFuse failed.");
         return false;
     }
 
@@ -296,7 +311,7 @@ Status IndexByTensorStaticFusionPass::Run(GraphPtr& graph, CustomPassContext& pa
 
     // 遍历每个符合条件的节点进行替换
     for (auto& node : matchedNodes) {
-        if (!ReplaceIndexByTensor(node)) {
+        if (!ReplaceIndexByTensor(node, passContext)) {
             OPS_LOG_E(kPassName.c_str(), "ReplaceIndexByTensor failed.");
             *graph = originGraph;
             return FAILED;
