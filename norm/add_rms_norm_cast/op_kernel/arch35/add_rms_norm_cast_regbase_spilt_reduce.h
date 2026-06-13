@@ -256,9 +256,11 @@ private:
             offset += tail;
             workspaceOffset += tail;
         }
-        RmsNorm::ComputeSum(level1Local, tempLocal, level1Idx, SUM_COUNT);
-        level1Idx += 1;
-        RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
+        if (tail > 0) {
+            RmsNorm::ComputeSum(level1Local, tempLocal, level1Idx, SUM_COUNT);
+            level1Idx += 1;
+            RmsNorm::ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1Idx, level2Idx, level3Idx);
+        }
         // Stage3: Cal MasterLoop
         for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
             ComputeFormerHandle(level1Local, offset, level1Idx, workspaceOffset, powerSplit_, powerSplit_);

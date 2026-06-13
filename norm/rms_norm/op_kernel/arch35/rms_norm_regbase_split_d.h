@@ -179,8 +179,10 @@ private:
 
             ComputeSum(level1Local, tempLocal, level1, SUM_COUNT);
         }
-        level1 += 1;
-        ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        if (tail > 0) {
+            level1 += 1;
+            ComputeMultiLevelReduce(level1Local, level2Local, level3Local, level1, level2, level3);
+        }
         loop += 1;
         // stage3: 处理主块逻辑
         for (uint32_t repeat = 0; repeat < masterLoop; repeat++) {
