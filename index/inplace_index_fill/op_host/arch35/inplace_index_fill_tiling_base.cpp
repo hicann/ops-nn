@@ -35,47 +35,63 @@ inline static bool IsSupportDtype(const std::set<ge::DataType>& supportDtype, co
 }
 ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
 {
+    const char* opName_ = "InplaceIndexFill";
     auto inputXShape_ = context_->GetInputShape(INPUT_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXShape_);
     int64_t xShapeSize = inputXShape_->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(xShapeSize <= 0, OP_LOGE(context_->GetNodeName(), "input x shape size %ld is less than or equal to zero", xShapeSize), return ge::GRAPH_FAILED);
+    if (xShapeSize <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "x", std::to_string(xShapeSize).c_str(),
+            "shape size must be greater than zero");
+        return ge::GRAPH_FAILED;
+    }
     auto indicesShape_ = context_->GetInputShape(INPUT_INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesShape_);
     int64_t indicesShapeSize = indicesShape_->GetStorageShape().GetShapeSize();
-    OP_CHECK_IF(indicesShapeSize <= 0, OP_LOGE(context_->GetNodeName(), "indices shape size %ld is less than or equal to zero", indicesShapeSize), return ge::GRAPH_FAILED);
+    if (indicesShapeSize <= 0) {
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "indices", std::to_string(indicesShapeSize).c_str(),
+            "shape size must be greater than zero");
+        return ge::GRAPH_FAILED;
+    }
     // 校验x的dtype是否满足
     auto inputXDesc = context_->GetInputDesc(INPUT_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputXDesc);
     auto xDType = inputXDesc->GetDataType();
-    OP_CHECK_IF(
-        !IsSupportDtype(X_SUPPORT_DTYPE, xDType),
-        OP_LOGE(
-            context_->GetNodeName(),
-            "The dtype only support float32, float16, bfloat16, \
-                int32, int64, bool, int8, uint8, int16, double, but got [%s], please check.",
-                Ops::Base::ToString(xDType).c_str()),
-        return ge::GRAPH_FAILED);
+    if (!IsSupportDtype(X_SUPPORT_DTYPE, xDType)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x",
+            std::to_string(static_cast<int32_t>(xDType)).c_str(),
+            "dtype must be in [DT_FLOAT, DT_DOUBLE, DT_FLOAT16, DT_BF16, DT_INT8, DT_UINT8, DT_INT16, DT_INT32, DT_INT64, DT_BOOL]");
+        return ge::GRAPH_FAILED;
+    }
     // 校验x和y的dtype是否相同
     auto outputDesc = context_->GetOutputDesc(OUTPUT_X_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputDesc);
     auto yDType = outputDesc->GetDataType();
-    OP_CHECK_IF(
-        xDType != yDType, OP_LOGE(context_->GetNodeName(), "x and y should have same dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (xDType != yDType) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, y",
+            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(yDType))).c_str(),
+            "x and y must have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
     // 校验x和value的dtype是否相同
     auto valueDesc = context_->GetInputDesc(INPUT_VALUE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, valueDesc);
     auto valueDType = valueDesc->GetDataType();
-    OP_CHECK_IF(
-        xDType != valueDType, OP_LOGE(context_->GetNodeName(), "x and value should have same dtype, please check."),
-        return ge::GRAPH_FAILED);
+    if (xDType != valueDType) {
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "x, value",
+            (std::to_string(static_cast<int32_t>(xDType)) + ", " + std::to_string(static_cast<int32_t>(valueDType))).c_str(),
+            "x and value must have the same dtype");
+        return ge::GRAPH_FAILED;
+    }
     // 校验indices数据类型
     auto indicesDesc = context_->GetInputDesc(INPUT_INDICES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, indicesDesc);
     auto indicesDType = indicesDesc->GetDataType();
-    OP_CHECK_IF(
-        !IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDType),
-        OP_LOGE(context_->GetNodeName(), "indices should be of type int32 or int64."), return ge::GRAPH_FAILED);
+    if (!IsSupportDtype(INDICES_SUPPORT_DTYPE, indicesDType)) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "indices",
+            std::to_string(static_cast<int32_t>(indicesDType)).c_str(),
+            "dtype must be DT_INT32 or DT_INT64");
+        return ge::GRAPH_FAILED;
+    }
     inputData.xDtypeSize = ge::GetSizeByDataType(xDType);
     inputData.indicesDtypeSize = ge::GetSizeByDataType(indicesDType);
     inputData.indicesDtype = indicesDType;
@@ -96,9 +112,12 @@ void InplaceIndexFillTilingBase::CalculatePQ(
 }
 ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
 {
-    OP_CHECK_IF(CheckDataType() != ge::GRAPH_SUCCESS,
-                OP_LOGE(context_->GetNodeName(), "please check the data types of input and output!"),
-                return ge::GRAPH_FAILED);
+    const char* opName_ = "InplaceIndexFill";
+    if (CheckDataType() != ge::GRAPH_SUCCESS) {
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "x, y, value, indices", "unknown",
+            "please check the data types of input and output");
+        return ge::GRAPH_FAILED;
+    }
 
     // 校验x和y的shape是否相同，value、indices无需校验shape
     auto xShapePtr = context_->GetInputShape(INPUT_X_IDX);
@@ -109,9 +128,11 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShapePtr);
     auto yShape = yShapePtr->GetStorageShape();
 
-    OP_CHECK_IF(
-        xShape != yShape, OP_LOGE(context_->GetNodeName(), "input x and output y shape must be same, please check."),
-        return ge::GRAPH_FAILED);
+    if (xShape != yShape) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(opName_, "x, y", "xShape, yShape",
+            "x and y must have the same shape");
+        return ge::GRAPH_FAILED;
+    }
     // 校验dim满足xShape
     auto dimAttr = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, dimAttr);
@@ -119,9 +140,11 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
     auto dimP = dimAttr->GetAttrPointer<int64_t>(dimIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context_, dimP);
     auto dim_ = *dimP;
-    OP_CHECK_IF(
-        !((-xDim <= dim_) && (dim_ < xDim)),
-        OP_LOGE(context_->GetNodeName(), "dim index out of range, please check."), return ge::GRAPH_FAILED);
+    if (!((-xDim <= dim_) && (dim_ < xDim))) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "dim", std::to_string(dim_).c_str(),
+            "dim index must be in range [-xDim, xDim)");
+        return ge::GRAPH_FAILED;
+    }
     // dim处理
     auto curDim = dim_ >= 0 ? dim_ : dim_ + xDim;
     inputData.dim = curDim;
@@ -140,6 +163,7 @@ ge::graphStatus InplaceIndexFillTilingBase::GetShapeAttrsInfo()
 
 ge::graphStatus InplaceIndexFillTilingBase::GetPlatformInfo()
 {
+    const char* opName_ = "InplaceIndexFill";
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
         auto compileInfoPtr = reinterpret_cast<const InplaceIndexFillCompileInfo*>(context_->GetCompileInfo());
@@ -154,7 +178,10 @@ ge::graphStatus InplaceIndexFillTilingBase::GetPlatformInfo()
         ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatform);
         ubSize = static_cast<uint64_t>(ubSizePlatform);
     }
-    OP_CHECK_IF(coreNum == 0, OP_LOGE(context_, "coreNum is 0"), return ge::GRAPH_FAILED);
+    if (coreNum == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "coreNum", "0", "coreNum must be greater than 0");
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

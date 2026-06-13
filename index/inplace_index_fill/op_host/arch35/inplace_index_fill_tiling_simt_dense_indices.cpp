@@ -133,6 +133,26 @@ ge::graphStatus InplaceIndexFillTilingSimtDenseIndices::DoOpTiling()
 // ============================================================================
 // PostTiling：设置 blockDim 和 LocalMemorySize
 // ============================================================================
+// GetWorkspaceSize：申请 N 字节 mask 位图 + 系统 workspace，并设核间同步模式
+ge::graphStatus InplaceIndexFillTilingSimtDenseIndices::GetWorkspaceSize()
+{
+    size_t sysWorkspaceSize = SYS_WORKSPACE_SIZE;
+    auto platformPtr = context_->GetPlatformInfo();
+    if (platformPtr != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    }
+
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    // workspace = N 字节（mask 位图）+ 系统 workspace
+    currentWorkspace[0] = (inputData.dimSize * sizeof(int8_t)) + sysWorkspaceSize;
+
+    // 设置核间同步模式（BuildIndicesMask 的 SyncAll 依赖）
+    context_->SetScheduleMode(1);
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus InplaceIndexFillTilingSimtDenseIndices::PostTiling()
 {
     context_->SetBlockDim(usedCoreNum);

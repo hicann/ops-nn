@@ -28,19 +28,19 @@ struct ComputeTypeGet {
     using type = typename std::conditional<sizeof(T) == B64, int64_t, T>::type;
 };
 
-template <typename xType>
+template <typename xType, typename COM_T>
 __aicore__ inline void DispatchSimd(
-    InplaceIndexFillSimdTilingData& tilingData,
+    const InplaceIndexFillSimdTilingData& tilingData,
     GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace, AscendC::TPipe& pipe)
 {
-    InplaceIndexFillSimd<xType, DTYPE_INDICES> op(tilingData, pipe);
+    InplaceIndexFillSimd<xType, DTYPE_INDICES, COM_T> op(tilingData, pipe);
     op.Init(x, indices, value, workspace);
     op.Process();
 }
 
 template <typename xType, typename COM_T>
 __aicore__ inline void DispatchSimt(
-    InplaceIndexFillSimtTilingData& tilingData,
+    const InplaceIndexFillSimtTilingData& tilingData,
     GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
 {
     InplaceIndexFillSimt::InplaceIndexFillSimtImpl<xType, DTYPE_INDICES, COM_T> op(&tilingData);
@@ -50,7 +50,7 @@ __aicore__ inline void DispatchSimt(
 
 template <typename xType, typename COM_T>
 __aicore__ inline void DispatchDenseIndices(
-    InplaceIndexFillSimtDenseIndicesTilingData& tilingData,
+    const InplaceIndexFillSimtDenseIndicesTilingData& tilingData,
     GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace, AscendC::TPipe& pipe)
 {
     InplaceIndexFillDenseIndices::InplaceIndexFillDenseIndicesImpl<xType, DTYPE_INDICES, COM_T> op(&tilingData, &pipe);
@@ -72,13 +72,13 @@ __global__ __aicore__ void inplace_index_fill(
             "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B32",
             InplaceIndexFillSimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimdTilingData, tilingData, tiling);
-        DispatchSimd<xType>(tilingData, x, indices, value, workspace, pipe);
+        DispatchSimd<xType, uint32_t>(tilingData, x, indices, value, workspace, pipe);
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B64) {
         REGISTER_TILING_FOR_TILINGKEY(
             "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMD && DTYPE_MODE == TPL_MODE_DTYPE_B64",
             InplaceIndexFillSimdTilingData);
         GET_TILING_DATA_WITH_STRUCT(InplaceIndexFillSimdTilingData, tilingData, tiling);
-        DispatchSimd<xType>(tilingData, x, indices, value, workspace, pipe);
+        DispatchSimd<xType, uint64_t>(tilingData, x, indices, value, workspace, pipe);
     } else if constexpr (TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B32) {
         REGISTER_TILING_FOR_TILINGKEY(
             "TEMPLATE_MODE == TPL_MODE_TEMPLATE_SIMT && DTYPE_MODE == TPL_MODE_DTYPE_B32",

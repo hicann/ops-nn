@@ -34,11 +34,18 @@ public:
     int64_t simtUsedCoreNum = 0;     // SIMT 计算估算需要的核数
 };
 
-// DenseIndices 模板的 tiling 数据，继承自 SIMT tiling 数据
-// 适用于 indicesNum >= N*5 的极端稠密场景，使用 Sort+Unique 去重后构建 mask
-class InplaceIndexFillSimtDenseIndicesTilingData : public InplaceIndexFillSimtTilingData {
+// DenseIndices 模板的 tiling 数据
+class InplaceIndexFillSimtDenseIndicesTilingData {
 public:
-    int64_t indicesUbFactor = 0;     // UB 中每次加载的 indices 数量
+    int64_t tilingKeySimt = 0;       // tiling key，用于 kernel 侧模板选择
+    int64_t p = 0;                   // x 在 dim 轴前面所有维度的乘积（preDimProduct）
+    int64_t n = 0;                   // dim 轴的维度大小（dimSize），indices 值域 [0, n)
+    int64_t q = 0;                   // x 在 dim 轴后面所有维度的乘积（postDimProduct）
+    int64_t indicesNum = 0;          // indices 数组的长度
+    int64_t coreNum = 0;             // 平台总核数
+    int64_t usedCoreNum = 0;         // 实际使用的核数
+    int64_t simtUsedCoreNum = 0;     // SIMT 计算估算需要的核数
+    int64_t indicesUbFactor = 0;     // UB 中每次加载的 indices 数量（派生新增，放最后）
 };
 
 class InplaceIndexFillSimdTilingData {

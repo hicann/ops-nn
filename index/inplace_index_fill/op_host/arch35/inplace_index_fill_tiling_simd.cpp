@@ -39,8 +39,9 @@ bool InplaceIndexFillTilingSimd::IsCapable()
     return false;
 }
 
-void InplaceIndexFillTilingSimd::BlockTiling() 
+void InplaceIndexFillTilingSimd::BlockTiling()
 {
+    const char* opName_ = "InplaceIndexFill";
     perBlockData_ = inputData.preDimProduct * inputData.indicesNum / coreNum;
     tailBlockData_ = inputData.preDimProduct * inputData.indicesNum - perBlockData_ * coreNum;
 
@@ -53,9 +54,11 @@ void InplaceIndexFillTilingSimd::BlockTiling()
     }
     qUsedCoreNum_ = 1;
 
-    OP_CHECK_IF(inputData.xDtypeSize == 0,
-                OP_LOGE(context_->GetNodeName(), "xDtypeSize is 0, cannot divide."),
-                return);
+    if (inputData.xDtypeSize == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "xDtypeSize", "0",
+            "xDtypeSize must be greater than 0, cannot divide");
+        return;
+    }
     while (usedCoreNum_ * qUsedCoreNum_ < coreNum / HALF_CORE_FACTOR && Ops::Base::CeilDiv(inputData.postDimProduct, qUsedCoreNum_) >= (BLOCK_SPLIT_Q_THRESHOLD / inputData.xDtypeSize)) {
         qUsedCoreNum_ += 1;
     }
@@ -64,8 +67,9 @@ void InplaceIndexFillTilingSimd::BlockTiling()
     usedCoreNum_ = usedCoreNum_ * qUsedCoreNum_; 
 }
 
-void InplaceIndexFillTilingSimd::UBTiling() 
+void InplaceIndexFillTilingSimd::UBTiling()
 {
+    const char* opName_ = "InplaceIndexFill";
     int64_t blockSize = Ops::Base::GetUbBlockSize(context_);
     int64_t qAlignSize = Ops::Base::CeilAlign(inputData.xDtypeSize * qBlockFactor_, blockSize);
     int64_t indicesAlignSize = Ops::Base::CeilAlign(inputData.indicesDtypeSize * inputData.indicesNum, blockSize);
@@ -84,12 +88,16 @@ void InplaceIndexFillTilingSimd::UBTiling()
             qBufferSize_ = Ops::Base::CeilAlign(Ops::Base::CeilDiv(qAlignSize, BUFFER_SPLIT_FACTOR) , blockSize);
             indicesBufferSize_ = Ops::Base::FloorAlign(static_cast<int64_t> (ubSize)  - qBufferSize_, blockSize);
         }
-        OP_CHECK_IF(inputData.indicesDtypeSize == 0,
-                    OP_LOGE(context_->GetNodeName(), "indicesDtypeSize is 0, cannot divide."),
-                    return);
-        OP_CHECK_IF(inputData.xDtypeSize == 0,
-                    OP_LOGE(context_->GetNodeName(), "xDtypeSize is 0, cannot divide."),
-                    return);
+        if (inputData.indicesDtypeSize == 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "indicesDtypeSize", "0",
+                "indicesDtypeSize must be greater than 0, cannot divide");
+            return;
+        }
+        if (inputData.xDtypeSize == 0) {
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "xDtypeSize", "0",
+                "xDtypeSize must be greater than 0, cannot divide");
+            return;
+        }
         indicesUbFactor_ = indicesBufferSize_ / inputData.indicesDtypeSize;
         qUbFactor_ = qBufferSize_ / inputData.xDtypeSize;
         qLoopSize_ = Ops::Base::CeilDiv(qBlockFactor_, qUbFactor_);
@@ -170,7 +178,29 @@ uint64_t InplaceIndexFillTilingSimd::GetTilingKey() const{
         : static_cast<uint64_t>(TPL_MODE_DTYPE_B64);
     return GET_TPL_TILING_KEY(TPL_MODE_TEMPLATE_SIMD, dtypeMode);
 }
- 
+
+// mask 方案需要 workspace 上 N 字节存放位图, 且 InitMaskZero/MaskFill 后有 SyncAll 核间同步
+ge::graphStatus InplaceIndexFillTilingSimd::GetWorkspaceSize()
+{
+    size_t sysWorkspaceSize = SYS_WORKSPACE_SIZE;
+    auto platformPtr = context_->GetPlatformInfo();
+    if (platformPtr != nullptr) {
+        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformPtr);
+        sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
+    }
+    size_t* currentWorkspace = context_->GetWorkspaceSizes(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, currentWorkspace);
+    currentWorkspace[0] = (inputData.dimSize * sizeof(int8_t)) + sysWorkspaceSize;
+    context_->SetScheduleMode(1);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus InplaceIndexFillTilingSimd::PostTiling()
+{
+    context_->SetBlockDim(usedCoreNum);
+    return ge::GRAPH_SUCCESS;
+}
+
 REGISTER_OPS_TILING_TEMPLATE(InplaceIndexFill, InplaceIndexFillTilingSimd, 1);
 }
 #endif

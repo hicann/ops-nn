@@ -51,7 +51,9 @@ int64_t InplaceIndexFillTilingSimt::CalcSimtUsedCoreNum()
         simtUsedCoreNum = std::min(coreNum_, numel / threadNum);
     }
 
-    return simtUsedCoreNum;
+    // numel < threadNum（小张量）时 numel/threadNum 整除为 0，会导致 blockDim=0 使
+    // kernel launch 失败；非空张量至少需要 1 个核（空张量已在 DoOpTiling 开头单独处理）
+    return std::max<int64_t>(simtUsedCoreNum, 1);
 }
 
 // ============================================================================

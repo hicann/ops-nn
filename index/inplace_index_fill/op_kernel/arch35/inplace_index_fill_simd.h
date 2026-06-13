@@ -10,231 +10,92 @@
 
 /*!
  * \file inplace_index_fill_simd.h
- * \brief indices process and other public function
+ * \brief SIMD kernel (mask-bitmap based, in-place)
  */
 #ifndef INPLACE_INDEX_FILL_SIMD_H
 #define INPLACE_INDEX_FILL_SIMD_H
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
-#include "op_kernel/math_util.h"
 #include "inplace_index_fill_struct.h"
+#include "inplace_index_fill_common.h"
+#include "simt_api/asc_simt.h"
 
 namespace InplaceIndexFill {
 using namespace AscendC;
 
-template <typename X_T, typename INDICES_T>
-class InplaceIndexFillSimd 
+// SIMT 核函数: 遍历 indices, 归一化后将 mask[nIdx] 置 1
+template <typename INDICES_T, typename COM_T>
+__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_NUM) inline void InplaceIndexFillSimdMaskFill(
+    uint64_t blockIdx, uint64_t blockNum, __gm__ INDICES_T* indices,
+    __gm__ int8_t* mask, COM_T indicesNum, uint64_t n)
 {
-public:
-  __aicore__ inline InplaceIndexFillSimd(const InplaceIndexFillSimdTilingData& tilingData, TPipe& pipe):tilingData_(tilingData), pipe_(pipe) {};
-
-  __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace);
-
-  __aicore__ inline void Process();
-
-  __aicore__ inline void CopyOutValues(int64_t offset, int64_t dataLen, LocalTensor<X_T>& qValuesLocal);
-
-  __aicore__ inline void CopyInIndices(int64_t offset, int64_t dataLen);
-
-  __aicore__ inline INDICES_T GetIndex(int64_t idx);
-
-  __aicore__ inline int64_t NormalizeIndex(int64_t indiceValue);
-
-  __aicore__ inline void ProcessSplitQ(LocalTensor<X_T>& qValues);
-
-  __aicore__ inline void ProcessNonSplitQ(LocalTensor<X_T>& qValues);
-
-private:
-    TPipe& pipe_;
-    const InplaceIndexFillSimdTilingData& tilingData_;
-    GlobalTensor<X_T> xGm_;
-    GlobalTensor<INDICES_T> indicesGm_;
-    GlobalTensor<X_T> valueGm_;
-    
-    TBuf<QuePosition::VECCALC> qValueBuf_;
-    TBuf<QuePosition::VECCALC> indicesBuf_;
-
-    LocalTensor<INDICES_T> indicesLocal_;
-    uint32_t blockIdx_ = 0;
-    int64_t start_ = 0;
-    int64_t end_ = 0;
-    int64_t currentBlockElements_ = 0;
-    int64_t blockOffsetBase_ = 0;
-    int64_t indicesOffsetBase_ = 0;
-    int64_t copyInIndicesCount_ = 0;
-    X_T value_ = 0;
-};
-
-template <typename X_T, typename INDICES_T>
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
-{
-    blockIdx_ = GetBlockIdx();
-    if (blockIdx_ >= tilingData_.usedCoreNum) {
-        return;
-    }
-    xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
-    indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)(indices));
-    valueGm_.SetGlobalBuffer((__gm__ X_T*)(value));
-
-    pipe_.InitBuffer(qValueBuf_, tilingData_.qBufferSize);
-    pipe_.InitBuffer(indicesBuf_, tilingData_.indicesBufferSize);
-    value_ = valueGm_(0);
-    event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-    SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-}
-
-template <typename X_T, typename INDICES_T>
-__aicore__ inline int64_t InplaceIndexFillSimd<X_T, INDICES_T>::NormalizeIndex(int64_t indiceValue)
-{
-    if (indiceValue < -tilingData_.dimSize || indiceValue >= tilingData_.dimSize) {
-        return -1;
-    }
-    if (indiceValue < 0) {
-        indiceValue = indiceValue + tilingData_.dimSize;
-    }
-    return indiceValue;
-}
-
-template <typename X_T, typename INDICES_T>
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::ProcessSplitQ(
-    LocalTensor<X_T>& qValues)
-{
-    int64_t pmIdx = blockIdx_ / tilingData_.qUsedCoreNum;
-    int64_t qCoreId = blockIdx_ - pmIdx * tilingData_.qUsedCoreNum;
-    int64_t pIdx = pmIdx / tilingData_.indicesNum;
-    int64_t mIdx = pmIdx - pIdx * tilingData_.indicesNum;
-
-    int64_t indiceValue = static_cast<int64_t>(indicesGm_(mIdx));
-    indiceValue = NormalizeIndex(indiceValue);
-    if (indiceValue < 0) {
-        return;
-    }
-
-    int64_t qLoopSize = tilingData_.qLoopSize;
-    int64_t qUbTailFactor = tilingData_.qUbTailFactor;
-
-    // 重新计算按Q切分分核场景，每一行的行尾的Q对应的blockFactor, loopSize
-    if (qCoreId == tilingData_.qUsedCoreNum - 1) {
-        int64_t tailQBlockFactor = tilingData_.postDimProduct -
-            (tilingData_.qUsedCoreNum - 1) * tilingData_.qBlockFactor;
-        qLoopSize = Ops::Base::CeilDiv(tailQBlockFactor, tilingData_.qUbFactor);
-        qUbTailFactor = tailQBlockFactor - (qLoopSize - 1) * tilingData_.qUbFactor;
-    }
-
-    int64_t baseOffset = pIdx * tilingData_.dimSize * tilingData_.postDimProduct +
-        indiceValue * tilingData_.postDimProduct +
-        qCoreId * tilingData_.qBlockFactor;
-    for (int i = 0; i < qLoopSize; i++) {
-        int64_t xGmOffset = baseOffset + i * tilingData_.qUbFactor;
-        int64_t dataLen = i == qLoopSize - 1 ? qUbTailFactor : tilingData_.qUbFactor;
-        CopyOutValues(xGmOffset, dataLen, qValues);
-    }
-}
-
-template <typename X_T, typename INDICES_T>
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::ProcessNonSplitQ(
-    LocalTensor<X_T>& qValues)
-{
-    start_ = blockOffsetBase_;
-    end_ = blockOffsetBase_ + currentBlockElements_;
-    copyInIndicesCount_ = tilingData_.indicesUbFactor;
-
-    int64_t startPIdx = start_ / tilingData_.indicesNum;
-    int64_t endPIdx = end_ / tilingData_.indicesNum;
-    if (startPIdx == endPIdx) {
-        int64_t startMIdx = start_ - startPIdx * tilingData_.indicesNum;
-        int64_t endMIdx = end_ - endPIdx * tilingData_.indicesNum;
-        if (copyInIndicesCount_ > endMIdx - startMIdx + 1) {
-            copyInIndicesCount_ = endMIdx - startMIdx + 1;
-        }
-    }
-
-    // 设置初值
-    indicesOffsetBase_ = -tilingData_.indicesUbFactor - 1;
-    indicesLocal_ = indicesBuf_.Get<INDICES_T>();
-    for (int64_t idx = start_; idx < end_; idx++) {
-        int64_t pIdx = idx / tilingData_.indicesNum;
-        int64_t mIdx = idx - pIdx * tilingData_.indicesNum;
-        int64_t indiceValue = static_cast<int64_t>(GetIndex(mIdx));
-        indiceValue = NormalizeIndex(indiceValue);
-        if (indiceValue < 0) {
+    COM_T threadIdx = static_cast<COM_T>(blockIdx * Simt::GetThreadNum() + Simt::GetThreadIdx());
+    COM_T threadNum = static_cast<COM_T>(blockNum * Simt::GetThreadNum());
+    for (COM_T idx = threadIdx; idx < indicesNum; idx += threadNum) {
+        INDICES_T nIdx = static_cast<INDICES_T>(indices[idx]);
+        nIdx = nIdx >= 0 ? nIdx : nIdx + static_cast<INDICES_T>(n);
+        if (nIdx < 0 || nIdx >= static_cast<INDICES_T>(n)) {
             continue;
         }
-        int64_t baseOffset = pIdx * tilingData_.dimSize * tilingData_.postDimProduct +
-            indiceValue * tilingData_.postDimProduct;
-        for (int i = 0; i < tilingData_.qLoopSize; i++) {
-            int64_t xGmOffset = baseOffset + i * tilingData_.qUbFactor;
-            int64_t dataLen = i == tilingData_.qLoopSize - 1 ?
-                tilingData_.qUbTailFactor : tilingData_.qUbFactor;
-            CopyOutValues(xGmOffset, dataLen, qValues);
-        }
+        mask[nIdx] = static_cast<int8_t>(1);
     }
 }
 
-template <typename X_T, typename INDICES_T> 
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::Process()
-{
-    if (blockIdx_ >= tilingData_.usedCoreNum) {
-        return;
+template <typename X_T, typename INDICES_T, typename COM_T>
+class InplaceIndexFillSimd {
+public:
+    __aicore__ inline InplaceIndexFillSimd(const InplaceIndexFillSimdTilingData& tilingData, TPipe& pipe)
+        : tilingData_(tilingData), pipe_(pipe) {}
+
+    __aicore__ inline void Init(GM_ADDR x, GM_ADDR indices, GM_ADDR value, GM_ADDR workspace)
+    {
+        xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
+        indicesGm_.SetGlobalBuffer((__gm__ INDICES_T*)(indices));
+        valueGm_.SetGlobalBuffer((__gm__ X_T*)(value));
+        blockIdx_ = GetBlockIdx();
+        blockNum_ = GetBlockNum();
+        fillValue_ = valueGm_.GetValue(0);
+        workspace_ = workspace;
     }
-    if (blockIdx_ < tilingData_.tailBlockData) {
-        // 前面的每个核多处理一个
-        blockOffsetBase_= (tilingData_.perBlockData + 1) * blockIdx_;
-        currentBlockElements_ = tilingData_.perBlockData + 1;
-    } else {
-        blockOffsetBase_= tilingData_.perBlockData  * blockIdx_ + tilingData_.tailBlockData;
-        currentBlockElements_ = tilingData_.perBlockData;
+
+    __aicore__ inline void Process()
+    {
+        COM_T p = static_cast<COM_T>(tilingData_.preDimProduct);
+        COM_T q = static_cast<COM_T>(tilingData_.postDimProduct);
+        COM_T n = static_cast<COM_T>(tilingData_.dimSize);
+
+        // 1) 多核并行清零 mask 位图(workspace 上 N 字节) + 核间同步
+        int64_t nLen = tilingData_.dimSize;
+        InplaceIndexFillCommon::InitMaskZero(maskGm_, workspace_, nLen, blockIdx_, blockNum_);
+
+        // 2) SIMT 遍历 indices, 置 mask[nIdx]=1
+        COM_T indicesNum = static_cast<COM_T>(tilingData_.indicesNum);
+        Simt::VF_CALL<InplaceIndexFillSimdMaskFill<INDICES_T, COM_T>>(
+            Simt::Dim3(SIMT_THREAD_NUM), blockIdx_, blockNum_,
+            (__gm__ INDICES_T*)(indicesGm_.GetPhyAddr()),
+            (__gm__ int8_t*)(maskGm_.GetPhyAddr()),
+            indicesNum, static_cast<uint64_t>(nLen));
+        SyncAll();
+
+        // 3) 按 P*N*Q 遍历, mask==1 的位置原地写 value (复用 common 设施)
+        InplaceIndexFillCommon::CallMaskBasedFill<X_T, INDICES_T, COM_T>(
+            (__gm__ X_T*)xGm_.GetPhyAddr(), (__gm__ int8_t*)maskGm_.GetPhyAddr(),
+            fillValue_, n, p, q);
     }
 
-    LocalTensor<X_T> qValues_ = qValueBuf_.Get<X_T>();
-    //Duplicate
-    Duplicate(qValues_, value_, tilingData_.qUbFactor);
-    event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
-    SetFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
-    WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
+private:
+    GlobalTensor<X_T> xGm_;          // in-place: 直接写回 x
+    GlobalTensor<INDICES_T> indicesGm_;
+    GlobalTensor<X_T> valueGm_;
+    GlobalTensor<int8_t> maskGm_;
+    const InplaceIndexFillSimdTilingData& tilingData_;
+    TPipe& pipe_;
+    GM_ADDR workspace_ = nullptr;
+    uint32_t blockIdx_ = 0;
+    uint32_t blockNum_ = 0;
+    X_T fillValue_ = 0;
+};
 
-    if (tilingData_.qUsedCoreNum > 1) {
-        ProcessSplitQ(qValues_);
-    } else {
-        ProcessNonSplitQ(qValues_);
-    }
-} 
-
-template <typename X_T, typename INDICES_T> 
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::CopyOutValues(int64_t offset, int64_t count, LocalTensor<X_T>& valuesLocal) 
-{
-    DataCopyExtParams copyParams = {1, static_cast<uint32_t>(count * sizeof(X_T)), 0, 0, 0};
-    DataCopyPad(xGm_[offset], valuesLocal, copyParams);
-}
-
-template <typename X_T, typename INDICES_T> 
-__aicore__ inline void InplaceIndexFillSimd<X_T, INDICES_T>::CopyInIndices(int64_t offset, int64_t count) 
-{
-    DataCopyExtParams copyParams = {1, static_cast<uint32_t>(count * sizeof(INDICES_T)), 0, 0, 0};
-    DataCopyPadExtParams<INDICES_T> padParams = {false, 0, 0, 0};
-    DataCopyPad(indicesLocal_, indicesGm_[offset], copyParams, padParams);
-}
-
-template <typename X_T, typename INDICES_T> 
-__aicore__ inline INDICES_T InplaceIndexFillSimd<X_T, INDICES_T>::GetIndex(int64_t idx) 
-{
-    //gm idx不在当前ub里，需要重新取, 每次取一个indicesUbFactor或者取到indices尾部
-    if (idx >= indicesOffsetBase_ + copyInIndicesCount_ || idx < indicesOffsetBase_){
-        if (idx + copyInIndicesCount_ > tilingData_.indicesNum) {
-            copyInIndicesCount_ = tilingData_.indicesNum - idx;
-        }
-        CopyInIndices(idx, copyInIndicesCount_);
-        indicesOffsetBase_ = idx;
-        event_t eventIdMte2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
-        SetFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-        WaitFlag<HardEvent::MTE2_S>(eventIdMte2ToS);
-    } else {
-        // 命中UB缓存，恢复copyInIndicesCount_为默认值，避免尾部缩小后影响下次搬运判断
-        copyInIndicesCount_ = tilingData_.indicesUbFactor;
-    } 
-    return indicesLocal_.GetValue(idx - indicesOffsetBase_);
-}
-}
-#endif
+} // namespace InplaceIndexFill
+#endif // INPLACE_INDEX_FILL_SIMD_H

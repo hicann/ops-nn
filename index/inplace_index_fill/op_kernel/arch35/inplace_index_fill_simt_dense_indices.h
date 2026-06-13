@@ -156,7 +156,6 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 
     // 执行 Sort+Unique：返回去重后的唯一元素个数
     uint32_t uniqueNum = SortAndUnique(sortedOut, uniqueIndicesOut, indicesLocal, length);
-
     COM_T n = static_cast<COM_T>(tilingData_->n);
     // sortedOut 的实际数据起始地址需要跳过前哨兵区
     __local_mem__ INDEX_TYPE* actualSortOut =
@@ -246,8 +245,9 @@ __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>:
 {
     valueGm_.SetGlobalBuffer((__gm__ T_X*)(value));
     indicesGm_.SetGlobalBuffer((__gm__ INDEX_TYPE*)(indices));
-    InitMask(workspace);
+    // 先读 value 标量，再做 InitMask（含 InitOutput 这个 Vector 写 GM 操作）。
     fillValue = valueGm_.GetValue(0);
+    InitMask(workspace);
 }
 
 // ============================================================================
@@ -257,6 +257,7 @@ template <typename T_X, typename INDEX_TYPE, typename COM_T>
 __aicore__ inline void InplaceIndexFillDenseIndicesImpl<T_X, INDEX_TYPE, COM_T>::Process(__gm__ T_X* x)
 {
     // Sort+Unique 去重构建 mask
+    SyncAll();
     BuildIndicesMask();
     SyncAll();
 

@@ -56,7 +56,7 @@ __aicore__ inline void PIPE_S_V() {
 }
 
 template<typename INDEX_TYPE>
-__aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ INDEX_TYPE* sortedInputAddr, __local_mem__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt64(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -80,7 +80,7 @@ __aicore__ inline void ComputeUniqueIdNumInt64(__local_mem__ INDEX_TYPE* sortedI
 }
 
 template<typename INDEX_TYPE>
-__aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ INDEX_TYPE* sortedInputAddr, __local_mem__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+__simd_callee__ inline void ComputeUniqueIdNumInt32(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
 {
     uint32_t counter = dataLen + 1;
     AscendC::MicroAPI::RegTensor<int32_t> orderReg, selReg;
@@ -103,6 +103,17 @@ __aicore__ inline void ComputeUniqueIdNumInt32(__local_mem__ INDEX_TYPE* sortedI
 }
 
 template<typename INDEX_TYPE>
+__simd_vf__ inline void ComputeUniqueIdNumVf(__ubuf__ INDEX_TYPE* sortedInputAddr, __ubuf__ int32_t* uniqueIndicesAddr, uint16_t loopCnt, int64_t dataLen)
+{
+    AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
+    if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
+        ComputeUniqueIdNumInt64<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
+    } else if constexpr (std::is_same<int32_t, INDEX_TYPE>::value) {
+        ComputeUniqueIdNumInt32<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
+    }
+}
+
+template<typename INDEX_TYPE>
 __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInput, LocalTensor<int32_t> uniqueIndicesOut, int64_t dataLen)
 {
     __local_mem__ INDEX_TYPE* sortedInputAddr = (__local_mem__ INDEX_TYPE*)sortedInput[(UB_AGLIN_VALUE / sizeof(INDEX_TYPE))].GetPhyAddr();
@@ -110,15 +121,7 @@ __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInpu
 
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(INDEX_TYPE);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
-    __VEC_SCOPE__
-    {
-        AscendC::MicroAPI::ClearSpr<AscendC::SpecialPurposeReg::AR>();
-        if constexpr (std::is_same<int64_t, INDEX_TYPE>::value) {
-            ComputeUniqueIdNumInt64<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
-        } else if constexpr (std::is_same<int32_t, INDEX_TYPE>::value) {
-            ComputeUniqueIdNumInt32<INDEX_TYPE>(sortedInputAddr, uniqueIndicesAddr, loopCnt, dataLen);
-        }
-    }
+    ComputeUniqueIdNumVf<INDEX_TYPE>((__ubuf__ INDEX_TYPE*)sortedInputAddr, (__ubuf__ int32_t*)uniqueIndicesAddr, loopCnt, dataLen);
     uint32_t uniqueIdNum = ((AscendC::MicroAPI::GetSpr<AscendC::SpecialPurposeReg::AR>()) / sizeof(int32_t)) - 1;
     return uniqueIdNum;
 }
@@ -138,14 +141,19 @@ __aicore__ inline uint32_t ComputeUniqueIdNum(LocalTensor<INDEX_TYPE> sortedInpu
 template<typename INDEX_TYPE>
 __aicore__ inline uint32_t SortAndUnique(LocalTensor<INDEX_TYPE> sortedOut, LocalTensor<int32_t> uniqueIndicesOut, LocalTensor<INDEX_TYPE> src, int64_t size)
 {
+    // 类型最小值（两补码）：int32 → 0x80000000，int64 → 0x8000000000000000
+    constexpr INDEX_TYPE SENTINEL =
+        static_cast<INDEX_TYPE>(static_cast<INDEX_TYPE>(1) << (sizeof(INDEX_TYPE) * 8 - 1));
+
     PIPE_V_S();
 
     int64_t frontSentinelAreaSize = UB_AGLIN_VALUE / sizeof(INDEX_TYPE);
     LocalTensor<INDEX_TYPE> actualSortOut = sortedOut[frontSentinelAreaSize];
     AscendC::Sort<INDEX_TYPE, true, sortConfig>(actualSortOut, src, static_cast<uint32_t>(size));
-    Duplicate(sortedOut, (INDEX_TYPE)-1, frontSentinelAreaSize);
     PIPE_V_S();
-    actualSortOut(size) = -1;
+    Duplicate(sortedOut, SENTINEL, frontSentinelAreaSize);
+    PIPE_V_S();
+    actualSortOut(size) = SENTINEL;
 
     PIPE_S_V();
     return ComputeUniqueIdNum(sortedOut, uniqueIndicesOut, size);
