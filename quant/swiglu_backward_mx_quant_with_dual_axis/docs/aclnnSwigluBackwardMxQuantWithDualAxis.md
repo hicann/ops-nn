@@ -87,7 +87,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnSwigluBackwardMxQuantWithDualAxis"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwigluBackwardMxQuantWithDualAxis”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxisGetWorkspaceSize(
@@ -372,7 +372,7 @@ aclnnStatus aclnnSwigluBackwardMxQuantWithDualAxis(
 ## 约束说明
 
 - 输入x的最后一维必须能被64整除。
-- FP8输出类型（FLOAT8_E4M3FN）仅支持"rint"舍入模式。
+- FP8输出类型（FLOAT8_E4M3FN）仅支持“rint”舍入模式。
 - groupIndexOptional采用cumsum模式，每个值表示对应group的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
 - 关于mxscale1Out、mxscale2Out的shape约束说明：
   - mxscale1Out.shape[-2] = (ceil(N/32) + 2 - 1) / 2。

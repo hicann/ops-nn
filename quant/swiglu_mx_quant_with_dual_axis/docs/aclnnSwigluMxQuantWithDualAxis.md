@@ -41,7 +41,7 @@
 
   **阶段2：双轴动态块量化**
 
-  - **-1 轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数$\{\{V_i\}_{i=1}^{32}\}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$
+  - **-1轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数$\{\{V_i\}_{i=1}^{32}\}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -55,7 +55,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32
     $$
 
-  - **-2 轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数$\{\{V_j\}_{j=1}^{32}\}$量化为$\{mxscale2, \{P_j\}_{j=1}^{32}\}$
+  - **-2轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数$\{\{V_j\}_{j=1}^{32}\}$量化为$\{mxscale2, \{P_j\}_{j=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_j(|V_j|))) - emax
@@ -82,7 +82,7 @@
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnSwigluMxQuantWithDualAxis"接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnSwigluMxQuantWithDualAxis”接口执行计算。
 
 ```cpp
 aclnnStatus aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize(
@@ -358,7 +358,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
 
 - 输入x必须为2维张量，最后一维必须能被2整除（shape为[M, 2N]）。
 - 当dstType为FLOAT4_E2M1/FLOAT4_E1M2时，x的最后一维必须可被4整除。
-- FP8输出类型（FLOAT8_E4M3FN）仅支持"rint"舍入模式。
+- FP8输出类型（FLOAT8_E4M3FN）仅支持“rint”舍入模式。
 - groupIndexOptional采用cumsum模式，每个值表示对应group的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
 - 关于mxscale1Out、mxscale2Out的shape约束说明：
   - mxscale1Out.shape[-2] = (ceil(N/32) + 2 - 1) / 2。

@@ -85,7 +85,7 @@
 
 ## 约束说明
 
-- 本算子仅支持Ascend 950 芯片架构（DAV_3510/arch35），不支持其他芯片。
+- 本算子仅支持<term>Ascend 950PR/Ascend 950DT</term>（DAV_3510/arch35），不支持其他芯片。
 - 输入tensor支持的数据类型为FLOAT16和FLOAT，输出与输入数据类型一致。
 - 输入tensor的格式必须为ND。
 - alpha2属性必须大于0，否则可能导致除零或数值不稳定。
