@@ -52,6 +52,7 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
+        // ascend950: regbase (Reg-VF) 实现，原型与 this-> 一致；config 走默认（与 A2/A3 及既有 scalar_list 同）。
         this->AICore().AddConfig("ascend950");
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");

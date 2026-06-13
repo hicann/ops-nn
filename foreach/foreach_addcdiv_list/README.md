@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -69,7 +69,7 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示混合运算中乘法的第二个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
+      <td>表示混合运算中乘法的第二个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。在<term>Ascend 950PR/Ascend 950DT</term>上，scalars数据类型为FLOAT32。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

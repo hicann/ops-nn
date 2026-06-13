@@ -1,0 +1,47 @@
+/**
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
+ * Please refer to the License for details. You may not use this file except in compliance with the License.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * See LICENSE in the root of the software repository for the full text of the License.
+ */
+
+/*!
+ * \file foreach_addcmul_list.cpp
+ * \brief arch35 regbase entry for foreach_addcmul_list (per-tensor scalar list).
+ */
+#include "foreach_addcmul_list_regbase.h"
+
+using namespace ForeachAddcmulList;
+
+template <typename T, typename ScalarT>
+__aicore__ inline void ForeachAddcmulListImpl(
+    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
+    GM_ADDR tiling, TPipe* tPipe)
+{
+    GET_TILING_DATA_WITH_STRUCT(ForeachSoloTilingDataRegbase, tiling_data_in, tiling);
+    const ForeachSoloTilingDataRegbase* __restrict tilingData = &tiling_data_in;
+    ForeachAddcmulListRegbase<T, ScalarT, ForeachSoloTilingDataRegbase> op;
+    op.Init(inputs, tensor1, tensor2, scalars, outputs, workspace, tilingData, tPipe);
+    op.Process();
+}
+
+extern "C" __global__ __aicore__ void foreach_addcmul_list(
+    GM_ADDR inputs, GM_ADDR tensor1, GM_ADDR tensor2, GM_ADDR scalars, GM_ADDR outputs, GM_ADDR workspace,
+    GM_ADDR tiling)
+{
+    TPipe pipeOp;
+    if (TILING_KEY_IS(FOREACH_TILING_KEY_HALF)) {
+        ForeachAddcmulListImpl<half, half>(
+            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+    } else if (TILING_KEY_IS(FOREACH_TILING_KEY_FLOAT)) {
+        ForeachAddcmulListImpl<float, float>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+    } else if (TILING_KEY_IS(FOREACH_TILING_KEY_INT)) {
+        ForeachAddcmulListImpl<int, int>(inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+    } else if (TILING_KEY_IS(FOREACH_TILING_KEY_BF16)) {
+        ForeachAddcmulListImpl<bfloat16_t, bfloat16_t>(
+            inputs, tensor1, tensor2, scalars, outputs, workspace, tiling, &pipeOp);
+    }
+}

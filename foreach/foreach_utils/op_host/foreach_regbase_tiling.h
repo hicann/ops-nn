@@ -53,6 +53,7 @@ protected:
     ge::graphStatus CheckScalar(int64_t scalarIdx);
     ge::graphStatus CheckScalarList(int64_t scalarIdx);
     ge::graphStatus CheckScalarListInt(int64_t scalarIdx);
+    ge::graphStatus CheckScalarListSameDtype(int64_t scalarIdx);
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
     // 5、计算TilingKey
@@ -113,10 +114,25 @@ protected:
     ge::graphStatus GetShapeAttrsInfo() override;
     // 3、计算数据切分TilingData
     ge::graphStatus DoOpTiling() override;
+    // scalar 校验：单标量用 CheckScalar；per-tensor 标量列表的派生类重写为 CheckScalarList
+    virtual ge::graphStatus CheckScalarParam();
 
 private:
     ge::graphStatus CheckContext();
     ge::graphStatus CheckShape(uint32_t idx);
+};
+
+// ternary + per-tensor 标量列表（addcmul_list/addcdiv_list）：复用 TernaryScalar 全部逻辑，仅标量校验换成列表校验
+class ForeachRegbaseTilingTernaryScalarList : public ForeachRegbaseTilingTernaryScalar
+{
+public:
+    explicit ForeachRegbaseTilingTernaryScalarList(gert::TilingContext* context)
+        : ForeachRegbaseTilingTernaryScalar(context)
+    {}
+    ~ForeachRegbaseTilingTernaryScalarList() override = default;
+
+protected:
+    ge::graphStatus CheckScalarParam() override;
 };
 
 class ForeachRegbaseTilingBinaryScalar : public ForeachRegbaseTiling

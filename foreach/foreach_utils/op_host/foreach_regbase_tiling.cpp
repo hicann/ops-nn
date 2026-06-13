@@ -56,6 +56,12 @@ static const std::vector<std::vector<ge::DataType>> SCALAR_LIST_SUPPORT_DTYPE_CO
     {ge::DT_FLOAT16, ge::DT_FLOAT},
     {ge::DT_BF16, ge::DT_FLOAT},
     {ge::DT_INT32, ge::DT_INT64}};
+// addc per-tensor 标量列表：scalars 原型 dtype 与 x 一致（所有 soc 统一），故组合为 {T, T}。
+static const std::vector<std::vector<ge::DataType>> ADDC_SCALAR_LIST_DTYPE_COMB = {
+    {ge::DT_FLOAT, ge::DT_FLOAT},
+    {ge::DT_FLOAT16, ge::DT_FLOAT16},
+    {ge::DT_BF16, ge::DT_BF16},
+    {ge::DT_INT32, ge::DT_INT32}};
 ge::graphStatus ForeachRegbaseTiling::GetShapeAttrsInfo()
 {
     auto computeNodeInfo = context_->GetComputeNodeInfo();
@@ -202,6 +208,41 @@ ge::graphStatus ForeachRegbaseTiling::CheckScalarListInt(int64_t scalarIdx)
         OP_LOGE_FOR_INVALID_SHAPESIZE(
             context_->GetNodeName(), "scalars",
             std::to_string(scalarShape_1->GetStorageShape().GetShapeSize()).c_str(),
+            (std::to_string(totalTensorCount_)).c_str()),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+// addc per-tensor 标量列表：scalars 原型 dtype 与 x 一致（{T, T}），转换在 kernel 内部完成。
+ge::graphStatus ForeachRegbaseTiling::CheckScalarListSameDtype(int64_t scalarIdx)
+{
+    OP_CHECK_IF(
+        dataType_ != ge::DT_FLOAT && dataType_ != ge::DT_FLOAT16 && dataType_ != ge::DT_BF16 &&
+            dataType_ != ge::DT_INT32,
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context_->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(dataType_).c_str(), "FP32, FP16, BF16 or INT32"),
+        return ge::GRAPH_FAILED);
+    auto scalarDesc = context_->GetRequiredInputDesc(scalarIdx);
+    OP_CHECK_IF(scalarDesc == nullptr, OP_LOGE(context_, "The scalars desc is null."), return ge::GRAPH_FAILED);
+    scalarDtype_ = scalarDesc->GetDataType();
+    std::vector<ge::DataType> dtypeComb = {dataType_, scalarDtype_};
+    OP_CHECK_IF(
+        std::find(ADDC_SCALAR_LIST_DTYPE_COMB.begin(), ADDC_SCALAR_LIST_DTYPE_COMB.end(), dtypeComb) ==
+            ADDC_SCALAR_LIST_DTYPE_COMB.end(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context_->GetNodeName(), "x and scalars",
+            (ge::TypeUtils::DataTypeToSerialString(dataType_) + " and " +
+             ge::TypeUtils::DataTypeToSerialString(scalarDtype_)).c_str(),
+            "The dtypes of x and scalars must be the same, within {F32/F32, F16/F16, BF16/BF16, INT32/INT32}"),
+        return ge::GRAPH_FAILED);
+    auto scalarShape = context_->GetRequiredInputShape(scalarIdx);
+    OP_CHECK_IF(scalarShape == nullptr, OP_LOGE(context_, "The scalars shape is null."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        scalarShape->GetStorageShape().GetShapeSize() != totalTensorCount_,
+        OP_LOGE_FOR_INVALID_SHAPESIZE(
+            context_->GetNodeName(), "scalars",
+            std::to_string(scalarShape->GetStorageShape().GetShapeSize()).c_str(),
             (std::to_string(totalTensorCount_)).c_str()),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -588,11 +629,22 @@ ge::graphStatus ForeachRegbaseTilingTernaryScalar::GetShapeAttrsInfo()
         }
     }
 
-    // check scalar shape and dtype
+    // check scalar shape and dtype（单标量 CheckScalar / 列表 CheckScalarList，由 CheckScalarParam 决定）
     OP_CHECK_IF(
-        CheckScalar(THREE_INPUTS) != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Tiling context check failed."),
+        CheckScalarParam() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "Tiling context check failed."),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus ForeachRegbaseTilingTernaryScalar::CheckScalarParam()
+{
+    return CheckScalar(THREE_INPUTS);
+}
+
+ge::graphStatus ForeachRegbaseTilingTernaryScalarList::CheckScalarParam()
+{
+    // addc_list：scalars 原型与 x 同 dtype（{T, T}），转换在 kernel 内部完成
+    return CheckScalarListSameDtype(THREE_INPUTS);
 }
 
 ge::graphStatus ForeachRegbaseTilingTernaryScalar::DoOpTiling()
@@ -897,6 +949,8 @@ REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalar, ForeachRegbaseTilingUnaryScalar, 
 REGISTER_OPS_TILING_TEMPLATE(ForeachMulScalar, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalar, ForeachRegbaseTilingUnaryScalar, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulScalar, ForeachRegbaseTilingTernaryScalar, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddcmulList, ForeachRegbaseTilingTernaryScalarList, TPL_REGISTER_PRIORITY);
+REGISTER_OPS_TILING_TEMPLATE(ForeachAddcdivList, ForeachRegbaseTilingTernaryScalarList, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachLerpScalar, ForeachRegbaseTilingBinaryScalar, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachDivScalarList, ForeachRegbaseTilingUnaryScalarList, TPL_REGISTER_PRIORITY);
 REGISTER_OPS_TILING_TEMPLATE(ForeachAddScalarList, ForeachRegbaseTilingUnaryScalarList2, TPL_REGISTER_PRIORITY);

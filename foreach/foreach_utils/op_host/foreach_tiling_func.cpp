@@ -32,8 +32,13 @@ static ge::graphStatus Tiling4ForeachAddScalarListTiling(gert::TilingContext* co
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
 }
 
-static ge::graphStatus Tiling4ForeachAddcdivListTiling(gert::TilingContext* context)
+// addcmul_list / addcdiv_list 共用：ascend950 走 regbase 模板（ForeachRegbaseTilingTernaryScalarList）；
+// A2/A3 保持原 ForeachCommonTiling 完全不变。
+static ge::graphStatus Tiling4ForeachAddcPointwiseList(gert::TilingContext* context)
 {
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
+    }
     ForeachCommonTiling tilingObject(context);
     if (tilingObject.Init(FOREACH_POINTWISE_LIST_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
@@ -41,13 +46,14 @@ static ge::graphStatus Tiling4ForeachAddcdivListTiling(gert::TilingContext* cont
     return tilingObject.RunBigKernelTiling();
 }
 
+static ge::graphStatus Tiling4ForeachAddcdivListTiling(gert::TilingContext* context)
+{
+    return Tiling4ForeachAddcPointwiseList(context);
+}
+
 static ge::graphStatus Tiling4ForeachAddcmulListTiling(gert::TilingContext* context)
 {
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POINTWISE_LIST_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
+    return Tiling4ForeachAddcPointwiseList(context);
 }
 
 static ge::graphStatus Tiling4ForeachAddcmulScalarTiling(gert::TilingContext* context)
