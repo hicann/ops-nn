@@ -30,6 +30,16 @@ static Status  ParseParamsScatterElements(const Message* op_src, ge::Operator& o
     }
   }
   op_dest.SetAttr("axis", axis);
+
+  std::string reduction = "none";
+  for (const auto& attr : node->attribute()) {
+    if (attr.name() == "reduction" && attr.type() == ge::onnx::AttributeProto::STRING) {
+      reduction = attr.s();
+      break;
+    }
+  }
+  op_dest.SetAttr("reduction", reduction);
+  
   return SUCCESS;
 }
 
