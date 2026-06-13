@@ -27,7 +27,8 @@
   &0, &otherwise \\
   \end{cases}
   $$
-其中，x 为输入张量，$\lambda$为阈值参数。
+
+其中，x为输入张量，$\lambda$为阈值参数。
 
 ## 函数原型
 

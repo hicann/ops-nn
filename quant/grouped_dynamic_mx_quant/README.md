@@ -17,7 +17,7 @@
 
 - 计算公式：
   - 场景1，当scaleAlg为0时：
-    - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度mxscale_pre, {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}, 计算公式为下面公式(1)(2)。
+    - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 {{x<sub>i</sub>}<sub>i=1</sub><sup>k</sup>} 计算出这组数对应的量化尺度mxscale_pre {mxscale_pre, {P<sub>i</sub>}<sub>i=1</sub><sup>k</sup>}，计算公式为下面公式(1)(2)。
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1} 

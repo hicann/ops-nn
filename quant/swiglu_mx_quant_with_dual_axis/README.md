@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  **阶段 1：SwiGLU 激活函数**
+  **阶段1：SwiGLU激活函数**
 
   <p style="text-align: center">
   gate, hidden = split(x, axis=-1)
@@ -31,9 +31,9 @@
   act = swish * hidden
   </p>
 
-  其中，当 `activate_left=True` 时，左半部分为hidden，右半部分为gate；当 `activate_left=False` 时，右半部分为hidden，左半部分为gate。
+  其中，当`activate_left=True`时，左半部分为hidden，右半部分为gate；当`activate_left=False`时，右半部分为hidden，左半部分为gate。
 
-  **阶段 2：双轴动态块量化**
+  **阶段2：双轴动态块量化**
 
   - **-1 轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
@@ -100,7 +100,7 @@
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>分组索引，用于控制分组量化边界。shape为[G]，采用 cumsum 模式，表示每个group的行数累积值。传入空指针时表示不分组。</td>
+      <td>分组索引，用于控制分组量化边界。shape为[G]，采用cumsum模式，表示每个group的行数累积值。传入空指针时表示不分组。</td>
       <td>INT64</td>
       <td>ND</td>
     </tr>
@@ -142,28 +142,28 @@
     <tr>
       <td>y1</td>
       <td>输出</td>
-      <td>-1轴量化后的输出张量，形状为[M, N]（SwiGLU 输出的一半）</td>
+      <td>-1轴量化后的输出张量，形状为[M, N]（SwiGLU输出的一半）。</td>
       <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mx_scale1</td>
       <td>输出</td>
-      <td>-1轴每个量化块对应的缩放因子。shape为[M, (ceil(N/32)+2-1)/2, 2]，需进行偶数pad，pad填充值为 0。</td>
+      <td>-1轴每个量化块对应的缩放因子。shape为[M, (ceil(N/32)+2-1)/2, 2]，需进行偶数pad，pad填充值为0。</td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
-      <td>-2轴量化后的输出张量，形状为[M, N]</td>
+      <td>-2轴量化后的输出张量，形状为[M, N]。</td>
       <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mx_scale2</td>
       <td>输出</td>
-      <td>-2轴每个量化块对应的缩放因子。当groupIndex存在时shape为[floor(M/64) + G, N, 2]，当groupIndex不存在时shape为[ceil(M/64), N, 2]，需进行偶数pad，pad填充值为 0。输出需要对每两行数据进行交织处理。</td>
+      <td>-2轴每个量化块对应的缩放因子。当groupIndex存在时shape为[floor(M/64) + G, N, 2]，当groupIndex不存在时shape为[ceil(M/64), N, 2]，需进行偶数pad，pad填充值为0。输出需要对每两行数据进行交织处理。</td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>

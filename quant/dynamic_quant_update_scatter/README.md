@@ -89,7 +89,7 @@
 1. indices的维数只能是1维或者2维，如果是2维，其第2维的大小必须是2。
 2. updates的维数与var、var_scale的维数一样，其第1维的大小等于indices的第1维的大小，且var不大于的第1维的大小，其axis轴的大小不大于var的axis轴的大小。
 3. var和var_scale维度一致。
-4. smooth_scales 为1维且大小和var[-1]一致。
+4. smooth_scales为1维且大小和var[-1]一致。
 5. reduce当前只支持‘update’，即更新操作。
 6. 尾轴需要32B对齐。
 7. indices映射的scatter数据段不能重合，若重合则因为多核并发原因将导致多次执行结果不一样。

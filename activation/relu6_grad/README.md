@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：激活函数Relu6的反向，计算对应Relu6操作的反向传播梯度。对前向输入落在开区间 `(0, 6)` 的位置透传上游梯度，其余位置（含端点 `features = 0` 与 `features = 6`）输出0。
+- 算子功能：激活函数Relu6的反向，计算对应Relu6操作的反向传播梯度。对前向输入落在开区间`(0, 6)`的位置透传上游梯度，其余位置（含端点`features = 0`与`features = 6`）输出0。
 
 - 计算公式：
 
@@ -82,15 +82,15 @@
 | --- | --- | --- |
 | 计算图原型 | `op_graph/relu6_grad_proto.h` | `REG_OP(Relu6Grad)`，二输入一输出 |
 | 算子定义 | `op_host/relu6_grad_def.cpp` | `OpDef::AddConfig("ascend950", ...)` |
-| InferShape | `op_host/relu6_grad_infershape.cpp` | 复用 `Ops::Base::InferShape4Broadcast` |
-| Tiling | `op_host/arch35/relu6_grad_tiling_arch35.{h,cpp}` | 按 dtype 分支调用 `Ops::Base::BroadcastBaseTiling<OpDag>` |
-| DAG | `op_kernel/arch35/relu6_grad_dag.h` | fp32 通路原生计算；fp16/bf16 通路提升 fp32 中间精度 |
+| InferShape | `op_host/relu6_grad_infershape.cpp` | 复用`Ops::Base::InferShape4Broadcast` |
+| Tiling | `op_host/arch35/relu6_grad_tiling_arch35.{h,cpp}` | 按dtype分支调用`Ops::Base::BroadcastBaseTiling<OpDag>` |
+| DAG | `op_kernel/arch35/relu6_grad_dag.h` | fp32通路原生计算；fp16/bf16通路提升fp32中间精度 |
 | Struct | `op_kernel/arch35/relu6_grad_struct.h` | `BRC_TEMP_SCH_MODE_KEY_DECL/SEL` |
-| Kernel 入口 | `op_kernel/relu6_grad_apt.cpp` | `KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY)` + `BroadcastSch<schMode, OpDag>` |
+| Kernel入口 | `op_kernel/relu6_grad_apt.cpp` | `KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY)` + `BroadcastSch<schMode, OpDag>` |
 
-### fp32 通路
+### fp32通路
 
-```
+```Cpp
 In0(dy) ─CopyInBrc─+
                    +──────────────────────────────+
                                                   |
@@ -102,24 +102,24 @@ In1(x)  ─CopyInBrc─+                              |
    Const(0,fp32) ─Duplicate─ Zero ─────────────── ┴ Select(mask, dy, Zero) ─ CopyOut ─ Out0
 ```
 
-`Vec::Compare<u8, fp32, GT/LT>` 输出位掩码，`Vec::And<u8>` 合成 `(0 < x < 6)`
-区间 mask；`Vec::Select<u8, fp32, TENSOR_TENSOR>` 按 `mask ? dy : 0` 逐元素
-选择，避免分支，硬件原生 vsel 实现。
+```Cpp
+`Vec::Compare<u8, fp32, GT/LT>`输出位掩码，`Vec::And<u8>`合成`(0 < x < 6)`
+区间mask；`Vec::Select<u8, fp32, TENSOR_TENSOR>`按`mask ? dy : 0`逐元素
+选择，避免分支，硬件原生vsel实现。
 
-### fp16 / bf16 通路
+### fp16 / bf16通路
 
-```
 In0/In1 ─CopyInBrc─ Cast(->fp32) ─+
                                   +─ Compare ── And ─ Select ── Cast(->T,RINT) ─ CopyOut ─ Out0
               Const(0,fp32) ── Zero ─+
               Const(6,fp32) ── Six ──+
 ```
 
-把 fp16 / bf16 整体提升到 fp32 做 cmp/and/sel，末端用 `CAST_MODE_RINT`
-（round-to-nearest-even）回退到原 dtype。原因：
-1. 与 DSL `relu6_grad.py` 在 fp16 vcmpsel 不可用时 fallback 到 fp32 的行为一致；
-2. 上下界 0.0 和 6.0 在 fp16/bf16 中均能精确表达，但 cmp 走 fp32 路径更稳健，
-   且 dy 是 NaN/Inf 时 fp32 中间不会被半精度范围截断。
+把fp16/bf16整体提升到fp32做cmp/and/sel，末端用`CAST_MODE_RINT`
+（round-to-nearest-even）回退到原dtype。原因：
+1. 与DSL `relu6_grad.py`在fp16vcmpsel不可用时fallback到fp32的行为一致；
+2. 上下界0.0和6.0在fp16/bf16中均能精确表达，但cmp走fp32路径更稳健，
+   且dy是NaN/Inf时fp32中间不会被半精度范围截断。
 
 ## 调用说明
 

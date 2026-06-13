@@ -21,14 +21,14 @@
 
 - 计算公式：
   
-  给定输入张量 `input`，最后一维的长度为 `2d`，函数 `GeluMul` 进行以下计算：
+  给定输入张量`input`，最后一维的长度为`2d`，函数`GeluMul`进行以下计算：
 
-  1. 将 `input` 分割为两部分：
+  1. 将`input`分割为两部分：
 
      $$
      x_1 = \text{input}[..., :d], \quad x_2 = \text{input}[..., d:]
      $$
-  2. 对x1应用GELU激活函数，"tanh"模式公式如下：
+  2. 对x1应用GELU激活函数，“tanh”模式公式如下：
 
      $$
      \text{GELU}(x) = 0.5 \cdot x \cdot \left( 1 + \tanh\left( \sqrt{\frac{2}{\pi}} \cdot \left( x + 0.044715 x^3 \right) \right) \right)
@@ -96,7 +96,7 @@
 
 ## 约束说明
 
-典型场景尾轴为16的倍数，当尾轴为非32B对齐时，建议走小算子拼接逻辑。 
+典型场景尾轴为16的倍数，当尾轴为非32B对齐时，建议走小算子拼接逻辑。
 
 ## 调用说明
 

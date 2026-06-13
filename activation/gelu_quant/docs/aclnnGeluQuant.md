@@ -162,7 +162,7 @@ aclnnStatus aclnnGeluQuant(
       <td>quantMode（char*）</td>
       <td>输入</td>
       <td>公式中的quantMode，量化的模式。</td>
-      <td>quantMode仅支持{"static", "dynamic"}, 分别对应量化模式为静态量化和动态量化。</td>
+      <td>quantMode仅支持{"static", "dynamic"}，分别对应量化模式为静态量化和动态量化。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -257,7 +257,7 @@ aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/co
   <tr>
     <td>ACLNN_ERR_PARAM_INVALID</td>
     <td>161002</td>
-      <td><ul><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional 为空tensor。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional 的数据类型不在支持的范围之内。</li><li>approximate、quantMode、roundMode、dstType不在支持的范围之内。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional的shape不满足校验条件。</li></ul></td>
+      <td><ul><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional为空tensor。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional的数据类型不在支持的范围之内。</li><li>approximate、quantMode、roundMode、dstType不在支持的范围之内。</li><li>self、inputScaleOptional、inputOffsetOptional、y、outScaleOptional的shape不满足校验条件。</li></ul></td>
   </tr>
   <tr>
     <td rowspan="3">ACLNN_ERR_RUNTIME_ERROR</td>

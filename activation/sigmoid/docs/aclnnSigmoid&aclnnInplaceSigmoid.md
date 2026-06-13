@@ -28,7 +28,7 @@ $$
 - aclnnSigmoid和aclnnInplaceSigmoid实现相同的功能，使用区别如下，请根据自身实际场景选择合适的算子。
   - aclnnSigmoid：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceSigmoid：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 “aclnnSigmoidGetWorkspaceSize” 或者 “aclnnInplaceSigmoidGetWorkspaceSize” 接口获取入参并根据计算流程计算所需workspace大小，再调用 “aclnnSigmoid” 或者 “aclnnInplaceSigmoid” 接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnSigmoidGetWorkspaceSize”或者“aclnnInplaceSigmoidGetWorkspaceSize”接口获取入参并根据计算流程计算所需workspace大小，再调用“aclnnSigmoid”或者“aclnnInplaceSigmoid”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnSigmoidGetWorkspaceSize(

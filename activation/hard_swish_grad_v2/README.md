@@ -21,7 +21,7 @@
   out_{i} = gradOutput_{i} \times gradSelf_{i}
   $$
 
-  其中 gradSelf 的计算公式为
+  其中gradSelf的计算公式为
 
   $$
   gradSelf_{i} = \begin{cases}

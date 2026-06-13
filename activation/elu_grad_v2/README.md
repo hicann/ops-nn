@@ -61,14 +61,14 @@
       <td>grads</td>
       <td>输入</td>
       <td>公式中的gradOutput</td>
-      <td>FLOAT,FLOAT16,BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>activations</td>
       <td>输入</td>
       <td>公式中的x</td>
-      <td>FLOAT,FLOAT16,BFLOAT16</td>
+      <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -102,7 +102,7 @@
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>公式中的输出张量gradInput</td>
+      <td>公式中的输出张量gradInput。</td>
       <td>同grads</td>
       <td>ND</td>
     </tr>

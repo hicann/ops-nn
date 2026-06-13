@@ -33,7 +33,7 @@
   - aclnnHardswish：需新建一个输出张量对象存储计算结果。
   - aclnnInplaceHardswish：无需新建输出张量对象，直接在输入张量的内存中存储计算结果。
 
-- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnHardswishGetWorkspaceSize”或者“aclnnInplaceHardswishGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardswish”或者"aclnnInplaceHardswish"接口执行计算。
+- 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnHardswishGetWorkspaceSize”或者“aclnnInplaceHardswishGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnHardswish”或者“aclnnInplaceHardswish”接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnHardswishGetWorkspaceSize(

@@ -33,7 +33,7 @@
       P_i = cast\_to\_dst\_type(V_i/scale, round\_mode), \space i\space from\space 1\space to\space 32*32
       $$
 
-    - 同时将 scale（1\*1）广播为scale1（32\*1）和scale2（1\*32）作为输出scale1和scale2，​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出y。
+    - 同时将scale（1\*1）广播为scale1（32\*1）和scale2（1\*32）作为输出scale1和scale2，​量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y。
 
     - emax: 对应数据类型的最大正规数的指数位。
 
@@ -50,7 +50,7 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-    - 引入新的属性 dst_type_max。dst_type_max类型为float，默认值为0。默认输出时代表max_type为目标数据类型的最大值，如果传入其他数值，则需要按照传入的数值计算scale，有效值当前支持0.0、6.0和7.0，只支持在FLOAT4_E2M1场景设置该值。
+    - 引入新的属性dst_type_max。dst_type_max类型为float，默认值为0。默认输出时代表max_type为目标数据类型的最大值，如果传入其他数值，则需要按照传入的数值计算scale，有效值当前支持0.0、6.0和7.0，只支持在FLOAT4_E2M1场景设置该值。
     - 将FP32映射到目标数据类型FLOAT4_E2M1可表示的范围内。
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{dst\_type\_max}

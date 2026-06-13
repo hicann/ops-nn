@@ -76,4 +76,3 @@ $$
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
 | aclnn调用 | [test_aclnn_softshrink.cpp](./examples/test_aclnn_softshrink.cpp) | 通过[test_aclnn_softshrink](./docs/aclnnSoftshrink.md)接口方式调用Softshrink算子。 |
-

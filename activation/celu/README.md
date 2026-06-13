@@ -24,9 +24,9 @@
   $$
 
   其中：
-  - 当 `x >= 0` 时，输出为常数 `alpha3 * 3`
-  - 当 `x < 0` 时，输出为指数衰减形式 `alpha1 * (exp(x / alpha2) - 1)`
-- **精度保护**：针对 `exp` 操作的溢出风险，对负区输入执行 Mins 截断保护（FP16 截断阈值为 11.0，FP32 截断阈值为 87.0），防止指数运算溢出。
+  - 当`x >= 0`时，输出为常数`alpha3 * 3`
+  - 当`x < 0`时，输出为指数衰减形式`alpha1 * (exp(x / alpha2) - 1)`
+- **精度保护**：针对`exp`操作的溢出风险，对负区输入执行Mins截断保护（FP16截断阈值为11.0，FP32截断阈值为87.0），防止指数运算溢出。
 
 ## 参数说明
 
@@ -49,35 +49,35 @@
   <tr>
     <td>x</td>
     <td>输入</td>
-    <td>公式中的输入 x，任意形状的张量。</td>
+    <td>公式中的输入x，任意形状的张量。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
   <tr>
     <td>alpha1</td>
     <td>属性</td>
-    <td><ul><li>负区指数曲线的缩放系数，对应公式中的 alpha1。</li><li>默认值为 1.0。</li></ul></td>
+    <td><ul><li>负区指数曲线的缩放系数，对应公式中的alpha1。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha2</td>
     <td>属性</td>
-    <td><ul><li>负区指数曲线的斜率系数，对应公式中的 alpha2，必须大于 0。</li><li>默认值为 1.0。</li></ul></td>
+    <td><ul><li>负区指数曲线的斜率系数，对应公式中的alpha2，必须大于0。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>alpha3</td>
     <td>属性</td>
-    <td><ul><li>正区的固定输出值，对应公式中的 alpha3。</li><li>默认值为 1.0。</li></ul></td>
+    <td><ul><li>正区的固定输出值，对应公式中的alpha3。</li><li>默认值为1.0。</li></ul></td>
     <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>y</td>
     <td>输出</td>
-    <td>公式中的输出 y，与输入 x 形状相同的张量。</td>
+    <td>公式中的输出y，与输入x形状相同的张量。</td>
     <td>FLOAT16、FLOAT</td>
     <td>ND</td>
   </tr>
@@ -85,11 +85,11 @@
 
 ## 约束说明
 
-- 本算子仅支持 Ascend 950 芯片架构（DAV_3510 / arch35），不支持其他芯片。
-- 输入 tensor 支持的数据类型为 FLOAT16 和 FLOAT，输出与输入数据类型一致。
-- 输入 tensor 的格式必须为 ND。
-- alpha2 属性必须大于 0，否则可能导致除零或数值不稳定。
-- 输入支持任意 shape（包括 0 元素空 tensor），算子内部已处理空 tensor 边界情况。
+- 本算子仅支持Ascend 950 芯片架构（DAV_3510/arch35），不支持其他芯片。
+- 输入tensor支持的数据类型为FLOAT16和FLOAT，输出与输入数据类型一致。
+- 输入tensor的格式必须为ND。
+- alpha2属性必须大于0，否则可能导致除零或数值不稳定。
+- 输入支持任意shape（包括0元素空tensor），算子内部已处理空tensor边界情况。
 
 ## 调用说明
 

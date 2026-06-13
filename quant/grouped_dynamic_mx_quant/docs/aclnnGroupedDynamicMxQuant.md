@@ -18,14 +18,14 @@
 - 接口功能：根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。
 
 - 计算公式：
-  - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 $\{\{x_i\}_{i=1}^{k}\}$ 计算出这组数对应的量化尺度mxscale_pre, $\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$, 计算公式为下面公式(1)(2)。
+  - 将输入x在第0维上先按照groupIndex进行分组，每个group内按k = blocksize个数分组，一组k个数 $\{\{x_i\}_{i=1}^{k}\}$ 计算出这组数对应的量化尺度mxscale_pre, $\{mxscale\_pre, \{P_i\}_{i=1}^{k}\}$，计算公式为下面公式(1)(2)。
   $$
   shared\_exp = floor(log_2(max_i(|V_i|))) - emax  \tag{1}
   $$
   $$
   mxscale\_pre = 2^{shared\_exp}  \tag{2}
   $$
-  - 这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y, 计算公式为下面公式(3)。
+  - 这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y，计算公式为下面公式(3)。
   $$
   P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize \tag{3}
   $$

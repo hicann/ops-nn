@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：将调用 `aclnnDynamicMxQuant/aclnnDynamicMxQuantV2` 量化得到的 FLOAT4/FLOAT8 的 Tensor 反量化为 FLOAT16/BFLOAT16/FLOAT32 格式。
+- 接口功能：将调用`aclnnDynamicMxQuant/aclnnDynamicMxQuantV2`量化得到的FLOAT4/FLOAT8的Tensor反量化为FLOAT16/BFLOAT16/FLOAT32格式。
 
 - 计算公式：
 
@@ -23,11 +23,11 @@
   X_{dq} = X_q \times 2^{sf - bias}
   $$
 
-  - 其中 $sf$ 是缩放因子，由输入 mxscale 提供；$bias$ 是指数位的偏移，对于 FLOAT8_E8M0 格式，$bias=127$；$X_q$ 是量化得到的 FLOAT4/FLOAT8 张量；$X_{dq}$ 是反量化得到的 FLOAT16/BFLOAT16/FLOAT32 张量。
+  - 其中 $sf$ 是缩放因子，由输入mxscale提供；$bias$是指数位的偏移，对于FLOAT8_E8M0格式，$bias=127$；$X_q$是量化得到的FLOAT4/FLOAT8张量；$X_{dq}$ 是反量化得到的FLOAT16/BFLOAT16/FLOAT32张量。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 `aclnnAntiMxQuantGetWorkspaceSize` 接口获取计算所需 workspace 大小以及包含了算子计算流程的执行器，再调用 `aclnnAntiMxQuant` 接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAntiMxQuantGetWorkspaceSize`接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用`aclnnAntiMxQuant`接口执行计算。
 
 ```cpp
 aclnnStatus aclnnAntiMxQuantGetWorkspaceSize(
@@ -76,8 +76,8 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>x (aclTensor*)</td>
       <td>输入</td>
-      <td>表示算子输入的量化 Tensor。对应公式中的 Xq。</td>
-      <td>支持空 Tensor。</td>
+      <td>表示算子输入的量化Tensor。对应公式中的Xq。</td>
+      <td>支持空Tensor。</td>
       <td>FLOAT4_E2M1、FLOAT4_E1M2、FLOAT8_E4M3FN、FLOAT8_E5M2</td>
       <td>ND</td>
       <td>1-7，需要和DynamicMxQuant的输出保持一致</td>
@@ -86,8 +86,8 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>mxscale (aclTensor*)</td>
       <td>输入</td>
-      <td>调用 DynamicMxQuant 计算得到的量化尺度。对应公式中的 sf。</td>
-      <td><ul><li>支持空 Tensor。</li><li>shape 需满足约束说明中的公式。</li></ul></td>
+      <td>调用DynamicMxQuant计算得到的量化尺度。对应公式中的sf。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape需满足约束说明中的公式。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>2-8，需要和DynamicMxQuant的输出保持一致</td>
@@ -97,7 +97,7 @@ aclnnStatus aclnnAntiMxQuant(
       <td>axis (int64_t)</td>
       <td>输入</td>
       <td>指定反量化轴。</td>
-      <td>输入范围为[-D, D-1]，其中 D 为输入 x 的维度数。</td>
+      <td>输入范围为[-D, D-1]，其中D为输入x的维度数。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -106,8 +106,8 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>dstType (int64_t)</td>
       <td>输入</td>
-      <td>指定输出 y 的数据类型。</td>
-      <td>输入范围为{0, 1, 27}，分别对应输出 y 的数据类型为 {0: FLOAT32, 1: FLOAT16, 27: BFLOAT16}。</td>
+      <td>指定输出y的数据类型。</td>
+      <td>输入范围为{0, 1, 27}，分别对应输出y的数据类型为 {0: FLOAT32, 1: FLOAT16, 27: BFLOAT16}。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -116,8 +116,8 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>y (aclTensor*)</td>
       <td>输出</td>
-      <td>表示反量化后的输出 Tensor。对应公式中的 Xdq。</td>
-      <td><ul><li>支持空 Tensor。</li><li>shape 维度与 x 保持一致。</li><li>数据类型需与 dstType 对应。</li></ul></td>
+      <td>表示反量化后的输出Tensor。对应公式中的Xdq。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape维度与x保持一致。</li><li>数据类型需与dstType对应。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>1-7</td>
@@ -126,7 +126,7 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>workspaceSize</td>
       <td>输出</td>
-      <td>返回需要在 Device 侧申请的 workspace 大小。</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -136,7 +136,7 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>executor</td>
       <td>输出</td>
-      <td>返回 op 执行器，包含了算子计算流程。</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -173,19 +173,19 @@ aclnnStatus aclnnAntiMxQuant(
   <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
-      <td>x、mxscale、y 的数据类型不在支持的范围之内。</td>
+      <td>x、mxscale、y的数据类型不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td>x、mxscale、y 的 shape 不满足校验条件。</td>
+    <td>x、mxscale、y的shape不满足校验条件。</td>
   </tr>
   <tr>
-    <td>x、mxscale、y 的维度不在支持的范围之内。</td>
+    <td>x、mxscale、y的维度不在支持的范围之内。</td>
   </tr>
   <tr>
-    <td>axis、dstType 不符合当前支持的值。</td>
+    <td>axis、dstType不符合当前支持的值。</td>
   </tr>
   <tr>
-    <td>y 的数据类型和 dstType 不符合对应关系。</td>
+    <td>y的数据类型和dstType不符合对应关系。</td>
   </tr>
   <tr>
     <td rowspan="1">ACLNN_ERR_PARAM_NULLPTR</td>
@@ -213,22 +213,22 @@ aclnnStatus aclnnAntiMxQuant(
     <tr>
       <td>workspace</td>
       <td>输入</td>
-      <td>在 Device 侧申请的 workspace 内存地址。</td>
+      <td>在Device侧申请的workspace内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnAntiMxQuantGetWorkspaceSize 获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnAntiMxQuantGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>op 执行器，包含了算子计算流程。</td>
+      <td>op执行器，包含了算子计算流程。</td>
     </tr>
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的 Stream。</td>
+      <td>指定执行任务的Stream。</td>
     </tr>
   </tbody>
   </table>
@@ -240,14 +240,14 @@ aclnnStatus aclnnAntiMxQuant(
 ## 约束说明
 
 - 确定性计算：
-  - `aclnnAntiMxQuant` 默认确定性实现。
-- 关于 x、mxscale 的 shape 约束说明如下：
+  - `aclnnAntiMxQuant`默认确定性实现。
+- 关于x、mxscale的shape约束说明如下：
   - 如果输入x的数据类型是float4_e2m1或float4_e1m2，x.shape[-1]必须是偶数。
   - axis_change = axis if axis >= 0 else axis + rank(x)。
   - mxscale.shape[axis_change] = (ceil(x.shape[axis], 32) + 2 - 1) / 2。
   - mxscale.shape[-1] = 2。
   - rank(mxscale) = rank(x) + 1。
-  - 其它维度与输入 x 一致。
+  - 其它维度与输入x一致。
 
 ## 调用示例
 

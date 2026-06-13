@@ -15,33 +15,33 @@
 
 ## 功能说明
 
-- 接口功能：融合算子，实现 SwiGLU 激活函数与双轴动态块量化的组合计算。先对输入计算 SwiGLU 激活函数，然后对结果同时在 -1 轴和 -2 轴进行基于块的动态量化，输出低精度的 FP4/FP8 张量和对应的缩放因子。
+- 接口功能：融合算子，实现SwiGLU激活函数与双轴动态块量化的组合计算。先对输入计算SwiGLU激活函数，然后对结果同时在-1轴和-2轴进行基于块的动态量化，输出低精度的FP4/FP8张量和对应的缩放因子。
 
 - 计算公式：
 
-  **阶段 1：SwiGLU 激活函数**
+  **阶段1：SwiGLU激活函数**
 
-  - 当 `activateLeft=true` 时：
-    
+  - 当`activateLeft=true`时：
+
     $$
     A_i = x_i \text{的前半部分}, B_i = x_i \text{的后半部分}
     $$
 
-  - 当 `activateLeft=false` 时：
-    
+  - 当`activateLeft=false`时：
+
     $$
     A_i = x_i \text{的后半部分}, B_i = x_i \text{的前半部分}
     $$
 
-  - SwiGLU 计算：
-    
+  - SwiGLU计算：
+
     $$
     swigluOut_i = Swish(A_i) * B_i = \frac{A_i}{1 + e^{-A_i}} * B_i
     $$
 
-  **阶段 2：双轴动态块量化**
+  **阶段2：双轴动态块量化**
 
-  - **-1 轴量化（列方向）**：将 SwiGLU 结果在 -1 轴上按照 32 个数进行分组，一组 32 个数 $\{\{V_i\}_{i=1}^{32}\}$ 量化为 $\{mxscale1, \{P_i\}_{i=1}^{32}\}$
+  - **-1 轴量化（列方向）**：将SwiGLU结果在-1轴上按照32个数进行分组，一组32个数$\{\{V_i\}_{i=1}^{32}\}$量化为$\{mxscale1, \{P_i\}_{i=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_i(|V_i|))) - emax
@@ -55,7 +55,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale1, round\_mode), \space i\space from\space 1\space to\space 32
     $$
 
-  - **-2 轴量化（行方向）**：将 SwiGLU 结果在 -2 轴上按照 32 个数进行分组，一组 32 个数 $\{\{V_j\}_{j=1}^{32}\}$ 量化为 $\{mxscale2, \{P_j\}_{j=1}^{32}\}$
+  - **-2 轴量化（行方向）**：将SwiGLU结果在-2轴上按照32个数进行分组，一组32个数$\{\{V_j\}_{j=1}^{32}\}$量化为$\{mxscale2, \{P_j\}_{j=1}^{32}\}$
 
     $$
     shared\_exp = floor(log_2(max_j(|V_j|))) - emax
@@ -69,7 +69,7 @@
     P_j = cast\_to\_dst\_type(V_j/mxscale2, round\_mode), \space j\space from\space 1\space to\space 32
     $$
 
-  - -1 轴量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出 y1Out，mxscale1 按对应的 -1 轴维度上的分组组成输出 mxscale1Out。-2 轴量化后的 $P_{j}$ 按对应的 $V_{j}$ 的位置组成输出 y2Out，mxscale2 按对应的 -2 轴维度上的分组组成输出 mxscale2Out。
+  - -1轴量化后的$P_{i}$按对应的$V_{i}$的位置组成输出y1Out，mxscale1按对应的-1轴维度上的分组组成输出mxscale1Out。-2轴量化后的$P_{j}$按对应的$V_{j}$的位置组成输出y2Out，mxscale2按对应的-2轴维度上的分组组成输出mxscale2Out。
 
   - emax: 对应数据类型的最大正则数的指数位。
 
@@ -138,8 +138,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>x (aclTensor*)</td>
       <td>输入</td>
-      <td>输入张量，公式中的 x。</td>
-      <td><ul><li>shape 为 [M, 2N]，最后一维必须为偶数。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时，最后一维必须可被4整除。</li><li>不支持空 Tensor。</li></ul></td>
+      <td>输入张量，公式中的x。</td>
+      <td><ul><li>shape为[M, 2N]，最后一维必须为偶数。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时，最后一维必须可被4整除。</li><li>不支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>2</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
       <td>groupIndexOptional (aclTensor*)</td>
       <td>输入</td>
       <td>分组索引，用于控制分组量化边界。</td>
-      <td><ul><li>shape 为 [G]，采用 cumsum 模式，表示每个 group 的行数累积值。</li><li>当前不支持传入空Tensor</li></ul></td>
+      <td><ul><li>shape为[G]，采用cumsum模式，表示每个group的行数累积值。</li><li>当前不支持传入空Tensor。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -158,8 +158,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>activateLeft (bool)</td>
       <td>输入</td>
-      <td>SwiGLU 激活侧选择。</td>
-      <td><ul><li>True 表示左半部分为 hidden，右半部分为 gate。</li><li>False 表示右半部分为 hidden，左半部分为 gate。</li></ul></td>
+      <td>SwiGLU激活侧选择。</td>
+      <td><ul><li>True表示左半部分为hidden，右半部分为gate。</li><li>False表示右半部分为hidden，左半部分为gate。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -168,8 +168,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>roundModeOptional (char*)</td>
       <td>输入</td>
-      <td>表示数据转换的模式，对应公式中的 round_mode。</td>
-      <td><ul><li>当dstType为35/36，对应输出 y1Out 和 y2Out 数据类型为 FLOAT8_E5M2/FLOAT8_E4M3FN 时，仅支持 {"rint"}。</li><li>当dstType为40/41，对应输出 y1Out 和 y2Out 数据类型为 FLOAT4_E2M1/FLOAT4_E1M2时，支持 {"rint", "floor", "round"}。</li><li>传入空指针时，采用 "rint" 模式。</li></ul></td>
+      <td>表示数据转换的模式，对应公式中的round_mode。</td>
+      <td><ul><li>当dstType为35/36，对应输出y1Out和y2Out数据类型为FLOAT8_E5M2/FLOAT8_E4M3FN时，仅支持 {"rint"}。</li><li>当dstType为40/41，对应输出y1Out和y2Out数据类型为FLOAT4_E2M1/FLOAT4_E1M2时，支持{"rint", "floor", "round"}。</li><li>传入空指针时，采用"rint"模式。</li></ul></td>
       <td>STRING</td>
       <td>-</td>
       <td>-</td>
@@ -178,8 +178,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>scaleAlg (int64_t)</td>
       <td>输入</td>
-      <td>表示 mxscale1Out 和 mxscale2Out 的计算方法。</td>
-      <td><ul><li>取值范围：{1, 0}，1代表 cuBLAS 实现, 0代表OCP实现。</li><li>当dstType为40/41时仅支持scaleAlg为0。</li></ul></td>
+      <td>表示mxscale1Out和mxscale2Out的计算方法。</td>
+      <td><ul><li>取值范围：{1, 0}，1代表cuBLAS实现, 0代表OCP实现。</li><li>当dstType为40/41时仅支持scaleAlg为0。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -188,8 +188,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>dstType (int64_t)</td>
       <td>输入</td>
-      <td>表示指定数据转换后 y1Out 和 y2Out 的类型。</td>
-      <td><ul><li>输入范围为 {35, 36, 40, 41}，分别对应输出 y1Out 和 y2Out 的数据类型为 {35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}</li></ul></td>
+      <td>表示指定数据转换后y1Out和y2Out的类型。</td>
+      <td><ul><li>输入范围为 {35, 36, 40, 41}，分别对应输出y1Out和y2Out的数据类型为{35: FLOAT8_E5M2, 36: FLOAT8_E4M3FN, 40: FLOAT4_E2M1, 41: FLOAT4_E1M2}。</li></ul></td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -208,8 +208,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>y1Out (aclTensor*)</td>
       <td>输出</td>
-      <td>表示 SwiGLU 结果量化 -1 轴后的对应结果，对应公式中的 <i>P<sub>i</sub></i>。</td>
-      <td><ul><li>shape 为 [M, N]，即 SwiGLU 输出的一半。</li></ul></td>
+      <td>表示SwiGLU结果量化-1轴后的对应结果，对应公式中的<i>P<sub>i</sub></i>。</td>
+      <td><ul><li>shape为[M, N]，即SwiGLU输出的一半。</li></ul></td>
       <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, FLOAT4_E1M2</td>
       <td>ND</td>
       <td>2</td>
@@ -218,8 +218,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>mxscale1Out (aclTensor*)</td>
       <td>输出</td>
-      <td>表示 -1 轴每个分组对应的量化尺度，对应公式中的 mxscale1。</td>
-      <td><ul><li>shape 为 [M, ceil(N/64), 2]，需进行偶数 pad，pad 填充值为 0。</li></ul></td>
+      <td>表示-1轴每个分组对应的量化尺度，对应公式中的mxscale1。</td>
+      <td><ul><li>shape为[M, ceil(N/64), 2]，需进行偶数pad，pad填充值为0。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -228,9 +228,9 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>y2Out (aclTensor*)</td>
       <td>输出</td>
-      <td>表示 SwiGLU 结果量化 -2 轴后的对应结果，对应公式中的 <i>P<sub>j</sub></i>。</td>
-      <td><ul><li>shape 为 [M, N]。</li></ul></td>
-      <td>FLOAT8_E5M2, FLOAT8_E4M3FN, FLOAT4_E2M1, FLOAT4_E1M2</td>
+      <td>表示SwiGLU结果量化-2轴后的对应结果，对应公式中的<i>P<sub>j</sub></i>。</td>
+      <td><ul><li>shape为[M, N]。</li></ul></td>
+      <td>FLOAT8_E5M2、FLOAT8_E4M3FN、FLOAT4_E2M1、FLOAT4_E1M2</td>
       <td>ND</td>
       <td>2</td>
       <td>√</td>
@@ -238,8 +238,8 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>mxscale2Out (aclTensor*)</td>
       <td>输出</td>
-      <td>表示 -2 轴每个分组对应的量化尺度，对应公式中的 mxscale2。</td>
-      <td><ul><li>当 groupIndexOptional 存在时，shape 为 [floor(M/64)+G, N, 2]。</li><li>当groupIndexOptional不存在时，shape 为 [ceil(M/64), N, 2]。</li><li>需进行偶数 pad，pad 填充值为 0。</li><li>mxscale2Out 输出需要对每两行数据进行交织处理。</li></ul></td>
+      <td>表示-2轴每个分组对应的量化尺度，对应公式中的mxscale2。</td>
+      <td><ul><li>当groupIndexOptional存在时，shape为[floor(M/64)+G, N, 2]。</li><li>当groupIndexOptional不存在时，shape为[ceil(M/64), N, 2]。</li><li>需进行偶数pad，pad填充值为0。</li><li>mxscale2Out输出需要对每两行数据进行交织处理。</li></ul></td>
       <td>FLOAT8_E8M0</td>
       <td>ND</td>
       <td>3</td>
@@ -248,7 +248,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>workspaceSize (uint64_t*)</td>
       <td>输出</td>
-      <td>返回需要在 Device 侧申请的 workspace 大小。</td>
+      <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -258,7 +258,7 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>executor (aclOpExecutor**)</td>
       <td>输出</td>
-      <td>返回 op 执行器，包含了算子计算流程。</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -289,21 +289,21 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x、y1Out、mxscale1Out、y2Out 或 mxscale2Out 是空指针。</td>
+      <td>x、y1Out、mxscale1Out、y2Out或mxscale2Out是空指针。</td>
     </tr>
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="4">161002</td>
-      <td>x、roundModeOptional、dstType、scaleAlg、y1Out、mxscale1Out、y2Out、mxscale2Out 的数据类型和数据格式不在支持的范围之内。</td>
+      <td>x、roundModeOptional、dstType、scaleAlg、y1Out、mxscale1Out、y2Out、mxscale2Out的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>x、y1Out、y2Out、mxscale1Out 或 mxscale2Out 的 shape 不满足校验条件。</td>
+      <td>x、y1Out、y2Out、mxscale1Out或mxscale2Out的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>roundModeOptional、dstType、scaleAlg 不符合当前支持的值。</td>
+      <td>roundModeOptional、dstType、scaleAlg不符合当前支持的值。</td>
     </tr>
     <tr>
-      <td>x 的最后一维不能被2整除。</td>
+      <td>x的最后一维不能被2整除。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -331,22 +331,22 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
     <tr>
       <td>workspace</td>
       <td>输入</td>
-      <td>在 Device 侧申请的 workspace 内存地址。</td>
+      <td>在Device侧申请的workspace内存地址。</td>
     </tr>
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在 Device 侧申请的 workspace 大小，由第一段接口 aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize 获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnSwigluMxQuantWithDualAxisGetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
       <td>输入</td>
-      <td>op 执行器，包含了算子计算流程。</td>
+      <td>op执行器，包含了算子计算流程。</td>
     </tr>
     <tr>
       <td>stream</td>
       <td>输入</td>
-      <td>指定执行任务的 Stream。</td>
+      <td>指定执行任务的Stream。</td>
     </tr>
   </tbody></table>
 
@@ -356,18 +356,18 @@ aclnnStatus aclnnSwigluMxQuantWithDualAxis(
 
 ## 约束说明
 
-- 输入 x 必须为 2 维张量，最后一维必须能被 2 整除（shape 为 [M, 2N]）。
-- 当 dstType 为 FLOAT4_E2M1/FLOAT4_E1M2 时，x的最后一维必须可被4整除。
-- FP8 输出类型（FLOAT8_E4M3FN）仅支持 "rint" 舍入模式。
-- groupIndexOptional采用 cumsum 模式，每个值表示对应 group 的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
-- 关于 mxscale1Out、mxscale2Out 的 shape 约束说明：
+- 输入x必须为2维张量，最后一维必须能被2整除（shape为[M, 2N]）。
+- 当dstType为FLOAT4_E2M1/FLOAT4_E1M2时，x的最后一维必须可被4整除。
+- FP8输出类型（FLOAT8_E4M3FN）仅支持"rint"舍入模式。
+- groupIndexOptional采用cumsum模式，每个值表示对应group的行数累积值，groupIndexOptional的每个元素值需要大于0且最后一个元素值要等于M。
+- 关于mxscale1Out、mxscale2Out的shape约束说明：
   - mxscale1Out.shape[-2] = (ceil(N/32) + 2 - 1) / 2。
   - mxscale1Out.shape[-1] = 2。
   - mxscale2Out.shape[-1] = 2。
-  - 当 groupIndexOptional 存在时，mxscale2Out.shape[0] = floor(M/64) + G；当 groupIndexOptional 不存在时，mxscale2Out.shape[0] = ceil(M/64)。
-  - 其他维度与 SwiGLU 输出一致。
+  - 当groupIndexOptional存在时，mxscale2Out.shape[0] = floor(M/64) + G；当groupIndexOptional不存在时，mxscale2Out.shape[0] = ceil(M/64)。
+  - 其他维度与SwiGLU输出一致。
 - 默认支持饱和模式。
-- 确定性说明：aclnnSwigluMxQuantWithDualAxis 默认确定性实现。
+- 确定性说明：aclnnSwigluMxQuantWithDualAxis默认确定性实现。
 
 ## 调用示例
 

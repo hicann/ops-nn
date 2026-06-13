@@ -114,7 +114,7 @@ aclnnStatus aclnnAscendQuant(
       <td>sqrtMode（bool）</td>
       <td>输入</td>
       <td>指定scale参与计算的逻辑。对应公式中的`sqrtMode`。</td>
-      <td>当取值为true时，公式为 y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
+      <td>当取值为true时，公式为y = round((x * scale * scale) + offset)；当取值为false时，公式为y = round((x * scale) + offset)。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

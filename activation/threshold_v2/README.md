@@ -16,6 +16,7 @@
 - 算子功能：对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。
 
 - 计算公式：
+
 $$
 out(x) = \begin{cases} x, & x\gt threshold \\ value, & otherwise \end{cases}
 $$
