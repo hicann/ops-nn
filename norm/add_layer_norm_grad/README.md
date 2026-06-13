@@ -199,7 +199,7 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> ：输入参数`dy`、`x1`、`x2`和输出参数`dsum`、`dx`的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：输入参数`dy`、`x1`、`x2`和输出参数`dsum`、`dx`的数据类型不支持BFLOAT16。
 
 ## 约束说明
 

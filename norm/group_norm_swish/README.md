@@ -18,7 +18,8 @@
 - 算子功能：计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及Swish的输出。
 
 - 计算公式：
-  - **GroupNorm:**
+  - **GroupNorm：**
+
     记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
 
     $$
@@ -31,13 +32,13 @@
     \right.
     $$
 
-  - **Swish:**
+  - **Swish：**
 
     $$
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
 
-    当activateSwish为True时，会计算Swish， 此时Swish计算公式的x为GroupNorm公式得到的out。
+    当activateSwish为True时，会计算Swish，此时Swish计算公式的x为GroupNorm公式得到的out。
 
 ## 参数说明
 
@@ -67,14 +68,14 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>组归一化中的 gamma 参数，`yOut`计算公式中的gamma。</td>
+      <td>组归一化中的gamma参数，`yOut`计算公式中的gamma。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>输入</td>
-      <td>组归一化中的 beta 参数，`yOut`计算公式中的beta。</td>
+      <td>组归一化中的beta参数，`yOut`计算公式中的beta。</td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

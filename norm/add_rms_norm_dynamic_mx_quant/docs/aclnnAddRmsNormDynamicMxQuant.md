@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。 在输入尾轴axis上，根据每blocksize=32个数，计算出这组数对应的量化尺度mxscale，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。在dst_type为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scale_alg的取值来指定计算mxscale的不同算法。
+- 接口功能：RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。AddRmsNormDynamicMxQuant算子将RmsNorm前的Add算子和RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。在输入尾轴axis上，根据每blocksize=32个数，计算出这组数对应的量化尺度mxscale，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dst_type，得到量化结果y。在dst_type为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scale_alg的取值来指定计算mxscale的不同算法。
 - 计算公式：
 
   $$
@@ -51,17 +51,17 @@
 
   当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
-    - 找到该块中数值的最大绝对值:
+    - 找到该块中数值的最大绝对值：
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-    - 将FP32映射到目标数据类型FP8可表示的范围内:
+    - 将FP32映射到目标数据类型FP8可表示的范围内：
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
     - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
     - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
-    - 为保证量化时不溢出，对指数进行向上取整:
+    - 为保证量化时不溢出，对指数进行向上取整：
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
       $$
@@ -324,10 +324,10 @@ aclnnStatus aclnnAddRmsNormDynamicMxQuant(
       <td>scaleAlg不是0或1，roundMode不是 {rint, floor, round}。</td>
     </tr>
     <tr>
-      <td>dstType为 fp8 时，roundMode不是 rint。</td>
+      <td>dstType为fp8时，roundMode不是rint。</td>
     </tr>
     <tr>
-      <td>dstType为 fp4 时，scaleAlg不是0，或者输入x1的尾轴不能被2整除。</td>
+      <td>dstType为fp4时，scaleAlg不是0，或者输入x1的尾轴不能被2整除。</td>
     </tr>
     <tr>
       <td>mxscaleOut的维度数不等于输入x1的维度数+1，或轴长不符合约束说明。</td>

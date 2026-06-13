@@ -20,7 +20,7 @@
 - 计算公式：
   
   $$
-  foundInf = \begin{cases}1.0, & 当 Inf \in  scaledGrads 或 NaN \in scaledGrads,\\
+  foundInf = \begin{cases}1.0, & 当(Inf \in  scaledGrads)或(NaN \in scaledGrads),\\
     foundInf, &其他.
   \end{cases}
   $$

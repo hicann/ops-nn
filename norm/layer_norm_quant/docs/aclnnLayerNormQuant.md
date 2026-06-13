@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能 ：LayerNorm算子是大模型常用的归一化操作。LayerNormQuant算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。
+- 接口功能：LayerNorm算子是大模型常用的归一化操作。LayerNormQuant算子将LayerNorm归一化输出和下游的量化算子融合起来，减少搬入搬出操作。
 - 计算公式：
   - LayerNorm操作：
   

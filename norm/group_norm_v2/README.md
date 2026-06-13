@@ -16,7 +16,7 @@
 - 算子功能：计算输入x的组归一化结果out，均值meanOut，以及标准差的倒数rstdOut。
 
 - 计算公式：
-  - **GroupNorm:**
+  - **GroupNorm：**
   记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
 
   $$

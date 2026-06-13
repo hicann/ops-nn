@@ -17,21 +17,25 @@
 
 - 接口功能：计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。
 - 计算公式：
-  - **GroupNorm:**
-  记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-  $$
-  \left\{
-  \begin{array} {rcl}
-  groupnormOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
-  meanOut& &= E[x]\\
-  rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
-  \end{array}
-  \right.
-  $$
-  - **Silu:**
-  $$
-  out = \frac{groupnormOut}{1+e^{-groupnormOut}}
-  $$
+  - **GroupNorm：**
+
+    记$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
+
+    $$
+    \left\{
+    \begin{array} {rcl}
+    groupnormOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
+    meanOut& &= E[x]\\
+    rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
+    \end{array}
+    \right.
+    $$
+
+  - **Silu：**
+  
+    $$
+    out = \frac{groupnormOut}{1+e^{-groupnormOut}}
+    $$
 
 ## 函数原型
 

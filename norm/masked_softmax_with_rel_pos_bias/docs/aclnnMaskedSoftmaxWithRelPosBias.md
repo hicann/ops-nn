@@ -223,7 +223,7 @@ aclnnStatus aclnnMaskedSoftmaxWithRelPosBias(
 
 - <term>Atlas 推理系列产品</term>：不支持入参x的最后一个维度S2非32Byte对齐的场景。
 
-- 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize 表示S2对齐32Byte后的结果。
+- 需要保证传递给算子的shape所需要的ub空间小于AI处理器版本总ub的大小，该算子所需要的ub空间的总大小minComputeSize如下，其中s2AlignedSize表示S2对齐32Byte后的结果。
 
   - 对于attenMaskOptional存在的情况：
     

@@ -17,20 +17,26 @@
 
 - 接口功能：RmsNormGrad是用于计算RmsNorm的梯度，即在反向传播过程中计算输入张量的梯度的算子。RmsNormGradQuant算子将RmsNormGrad和Quantize两个算子融合，RmsNormGrad计算完dx后进行quant计算，减少搬入搬出操作。
 - 算子公式：
+
   $$
   dx_i= (dy_i * g_i - \frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * \operatorname{Mean}(\mathbf{y})) * \frac{1} {\operatorname{Rms}(\mathbf{x})},  \quad \text { where } \operatorname{Mean}(\mathbf{y}) = \frac{1}{n}\sum_{i=1}^n (dy_i * g_i * x_i * \frac{1}{\operatorname{Rms}(\mathbf{x})})
   $$
-  - divMode为True时:
-  $$
-  dx_i\_quant=round((dx_i/scales\_x)+offset\_x)
-  $$
+
+  - divMode为True时：
+
+    $$
+    dx_i\_quant=round((dx_i/scales\_x)+offset\_x)
+    $$
+
   - divMode为False时：
-  $$
-  dx_i\_quant=round((dx_i*scales\_x)+offset\_x)
-  $$
-  $$
-  dg_i = \frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * dy_i
-  $$
+
+    $$
+    dx_i\_quant=round((dx_i*scales\_x)+offset\_x)
+    $$
+
+    $$
+    dg_i = \frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * dy_i
+    $$
 
 ## 函数原型
 
@@ -584,5 +590,4 @@ int main()
 
     return 0;
 }
-
 ```

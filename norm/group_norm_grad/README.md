@@ -58,14 +58,14 @@
     <tr>
       <td>mean</td>
       <td>输入</td>
-      <td>正向计算的第二个输出，表示`x`分组后每个组的均值，对应公式中的`mean`。 必须是2D（N, num_groups）。</td>
+      <td>正向计算的第二个输出，表示`x`分组后每个组的均值，对应公式中的`mean`。必须是2D（N, num_groups）。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>rstd</td>
       <td>输入</td>
-      <td>正向计算的第三个输出，表示`x`分组后每个组的标准差倒数，对应公式中的`rstd`。数据类型与`mean`相同。 必须是2D（N, num_groups）。</td>
+      <td>正向计算的第三个输出，表示`x`分组后每个组的标准差倒数，对应公式中的`rstd`。数据类型与`mean`相同。必须是2D（N, num_groups）。</td>
       <td>FLOAT16、FLOAT32、BFLOAT16</td>
       <td>ND</td>
     </tr>

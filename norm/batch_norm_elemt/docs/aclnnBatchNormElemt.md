@@ -215,7 +215,7 @@ aclnnStatus aclnnBatchNormElemt(
       <td>不支持input C轴为0的空Tensor。</td>
     </tr>
     <tr>
-      <td>weight/bias/mean/invstd 维度不为一维，或者shape不等于input C轴的长度。</td>
+      <td>weight/bias/mean/invstd维度不为一维，或者shape不等于input C轴的长度。</td>
     </tr>
     <tr>
       <td>input和output的数据格式不一致。</td>

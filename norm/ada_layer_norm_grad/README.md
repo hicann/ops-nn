@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：[AdaLayerNormV2](../ada_layer_norm_v2/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 
+- 算子功能：[AdaLayerNormV2](../ada_layer_norm_v2/README.md)的反向传播。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。
 - 计算公式：
   
   正向：

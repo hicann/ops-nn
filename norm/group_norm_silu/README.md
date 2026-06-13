@@ -18,23 +18,28 @@
 - 算子功能：计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及silu的输出。
 
 - 计算公式：
-  - **GroupNorm:**
-  记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-  $$
-  \left\{
-  \begin{array} {rcl}
-  out& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
-  meanOut& &= E[x]\\
-  rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
-  \end{array}
-  \right.
-  $$
-  - **Silu:**
-  $$
-  out = \frac{x}{1+e^{-x}}
-  $$
-    当activateSilu为True时，会计算Silu， 此时Silu计算公式的x为GroupNorm公式得到的out。
-      
+  - **GroupNorm：**
+
+    记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
+  
+    $$
+    \left\{
+    \begin{array} {rcl}
+    out& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
+    meanOut& &= E[x]\\
+    rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
+    \end{array}
+    \right.
+    $$
+
+  - **Silu：**
+  
+    $$
+    out = \frac{x}{1+e^{-x}}
+    $$
+
+    当activateSilu为True时，会计算Silu，此时Silu计算公式的x为GroupNorm公式得到的out。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1005px"><colgroup>

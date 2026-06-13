@@ -233,7 +233,7 @@ aclnnStatus aclnnGroupNormSwishGrad(
       <tr>
           <td>dbetaOut (aclTensor*)</td>
           <td>输出</td>
-          <td>beta 的输出梯度，公式中的<code>dBeta</code>。</td>
+          <td>beta的输出梯度，公式中的<code>dBeta</code>。</td>
           <td>数据类型和shape与gamma相同。</td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>

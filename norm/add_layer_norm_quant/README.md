@@ -172,7 +172,7 @@
     <tr>
       <td>quant_mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或 "dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
+      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是"static"或"dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
       <td>String</td>
       <td>-</td>
     </tr>

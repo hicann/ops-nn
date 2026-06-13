@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能 ：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致，当前仅支持下游有1个AscendQuantV2量化算子。
+- 接口功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致，当前仅支持下游有1个AscendQuantV2量化算子。
 - 计算公式：
   
   $$
@@ -172,7 +172,7 @@
     <tr>
       <td>quant_mode</td>
       <td>可选属性</td>
-      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是 "static"或 "dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
+      <td><ul><li>用于确定融合算子融合的是静态还是动态量化算子，对应公式中的`quantMode`。取值可以是"static"或"dynamic"。</li><li>默认值为"dynamic"。</li></ul></td>
       <td>String</td>
       <td>-</td>
     </tr>

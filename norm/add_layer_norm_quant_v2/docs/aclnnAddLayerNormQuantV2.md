@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能 ：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。本接口相较于[aclnnAddLayerNormQuant](../../add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md)，增加了LayerNorm的输出，请根据实际情况选择合适的接口。
+- 接口功能：LayerNorm算子是大模型常用的归一化操作。AddLayerNormQuantV2算子将LayerNorm前的Add算子和LayerNorm归一化输出给1个或2个下游的量化算子融合起来，减少搬入搬出操作。LayerNorm下游的量化算子可以是Quantize、AscendQuantV2或DynamicQuant算子，具体的量化算子类型由attr入参divMode和quantMode决定。当下游有2个量化算子时，2个量化算子的算子类型、输入输出dtype组合和可选输入的组合需要完全一致。本接口相较于[aclnnAddLayerNormQuant](../../add_layer_norm_quant/docs/aclnnAddLayerNormQuant.md)，增加了LayerNorm的输出，请根据实际情况选择合适的接口。
 
 - 计算公式：
   
@@ -247,7 +247,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>quantMode（char*）</td>
       <td>输入</td>
-      <td>量化模式，用于确定融合算子融合的是静态还是动态量化算子。对应公式描述中的`quantMode`。取值可以是 "static"或 "dynamic"。</td>
+      <td>量化模式，用于确定融合算子融合的是静态还是动态量化算子。对应公式描述中的`quantMode`。取值可以是"static"或"dynamic"。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -366,7 +366,6 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     </tr>
   </tbody>
   </table>
-
 
 - **返回值**
   
@@ -515,18 +514,17 @@ aclnnStatus aclnnAddLayerNormQuantV2(
   
   - 当`quantMode`为"static"时：
     
-    | x1 数据类型 | x2 数据类型 | gamma 数据类型 | beta 数据类型 | bias 数据类型 | scale1 数据类型 | scale2 数据类型 | zeroPoints1 数据类型 | zeroPoints2 数据类型  | y1 数据类型 | y2 数据类型 | x 数据类型 | layernormRes 数据类型 | outScale1 数据类型 | outScale2 数据类型 |
+    | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型  | y1数据类型 | y2数据类型 | x数据类型 | layernormRes数据类型 | outScale1数据类型 | outScale2数据类型 |
 | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | -------------------| ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
 | FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT16        | FLOAT16        | FLOAT16            | FLOAT16         | INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
 | BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | BFLOAT16       | BFLOAT16       | BFLOAT16           | BFLOAT16         | INT8      | INT8       | BFLOAT16    | BFLOAT16      | FLOAT32           | FLOAT32          |
 | FLOAT32    | FLOAT32   | FLOAT32    | FLOAT32    | FLOAT32    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | FLOAT32     | FLOAT32       | FLOAT32           | FLOAT32          |
 | FLOAT16    | FLOAT16   | FLOAT16    | FLOAT16    | FLOAT16    | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | FLOAT16     | FLOAT16       | FLOAT32           | FLOAT32          |
 | BFLOAT16   | BFLOAT16  | BFLOAT16   | BFLOAT16   | BFLOAT16   | FLOAT32        | FLOAT32        | FLOAT32            | FLOAT32          | INT8      | INT8       | BFLOAT16    | BFLOAT16       | FLOAT32           | FLOAT32          |
-    
-    
+
   - 当`quantMode`为"dynamic"时：
-    
-    | x1 数据类型 | x2 数据类型 | gamma 数据类型 | beta 数据类型 | bias 数据类型 | scale1 数据类型 | scale2 数据类型 | zeroPoints1 数据类型 | zeroPoints2 数据类型 | y1 数据类型 | y2 数据类型 | x 数据类型 | layernormRes 数据类型 | outScale1 数据类型 | outScale2 数据类型 |
+
+    | x1数据类型 | x2数据类型 | gamma数据类型 | beta数据类型 | bias数据类型 | scale1数据类型 | scale2数据类型 | zeroPoints1数据类型 | zeroPoints2数据类型 | y1数据类型 | y2数据类型 | x数据类型 | layernormRes数据类型 | outScale1数据类型 | outScale2数据类型 |
 | ---------- | --------- | ------------- | ----------- | ------------ | -------------- | -------------- | ------------------ | ------------------- | ------------------- | --------- | ---------- | --------- | ----------------- | :--------------- |
 | FLOAT16    | FLOAT16   | FLOAT16       | FLOAT16     | FLOAT16      | FLOAT16        | FLOAT16      | FLOAT16         | FLOAT16           | INT8      | INT8       | FLOAT16     | FLOAT16           | FLOAT32           | FLOAT32          |
 | BFLOAT16   | BFLOAT16  | BFLOAT16      | BFLOAT16    | BFLOAT16     | BFLOAT16       | BFLOAT16     | BFLOAT16        | BFLOAT16          | INT8      | INT8       | BFLOAT16    | BFLOAT16          | FLOAT32           | FLOAT32          |

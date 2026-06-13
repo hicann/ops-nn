@@ -46,20 +46,26 @@
 
   场景2，当scaleAlg为1时，只涉及FP8类型：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。
-    - 找到该块中数值的最大绝对值:
+    - 找到该块中数值的最大绝对值：
+      
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
-    - 将FP32映射到目标数据类型FP8可表示的范围内:
+      
+    - 将FP32映射到目标数据类型FP8可表示的范围内：
+      
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
       $$
+
     - 转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$
     - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$
-    - 为保证量化时不溢出，对指数进行向上取整:
+    - 为保证量化时不溢出，对指数进行向上取整：
+      
       $$
       E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为非正规数，且} M_{fixp}^b > 0.5 \\ E_{int}^b, & \text{否则} \end{cases}
       $$
+      
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤：$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$
@@ -297,10 +303,10 @@ aclnnStatus aclnnRmsNormDynamicMxQuant(
       <td>scaleAlg不是0或1，roundMode不是 {rint, floor, round}。</td>
     </tr>
     <tr>
-      <td>dstType为 fp8 时，roundMode不是 rint。</td>
+      <td>dstType为fp8时，roundMode不是rint。</td>
     </tr>
     <tr>
-      <td>dstType为 fp4 时，scaleAlg不是0，或者输入x的尾轴不能被2整除。</td>
+      <td>dstType为fp4时，scaleAlg不是0，或者输入x的尾轴不能被2整除。</td>
     </tr>
     <tr>
       <td>mxscaleOut的维度数不等于输入x的维度数+1，或轴长不符合约束说明。</td>

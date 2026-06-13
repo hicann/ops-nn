@@ -423,7 +423,7 @@ aclnnStatus aclnnAdaLayerNormBackward(
 
   - 上述两类数据类型固定搭配类型为（左侧和右侧数据类型严格对应）：
 
-    | 第一类参数 (Group A) | 第二类参数 (Group B) |
+    | 第一类参数（Group A）| 第二类参数（Group B）|
     | --------| --------|
     | FLOAT32 | FLOAT32 |
     | FLOAT16 | FLOAT16 |

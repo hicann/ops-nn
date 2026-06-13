@@ -20,23 +20,23 @@
   将输入Tensor执行一个反量化的计算，再根据输入的weight、bias、epsilon执行归一化，最后根据输出的outputScale以及outputZeroPoint执行量化。
 - 计算公式：
   
-  1.反量化计算：
+  1. 反量化计算：
   
-  $$
-  x' = (x - inputZeroPoint) * inputScale
-  $$
+     $$
+     x' = (x - inputZeroPoint) * inputScale
+     $$
+
+  2. 归一化计算：
   
-  2.归一化计算：
+     $$
+     y =\frac{x' - mean}{\sqrt{var + epsilon}} * weight + bias
+     $$
+
+  3. 量化计算：
   
-  $$
-  y =\frac{x' - mean}{\sqrt{var + epsilon}} * weight + bias
-  $$
-  
-  3.量化计算：
-  
-  $$
-  output = round(\frac{y}{outputScale} + outputZeroPoint)
-  $$
+     $$
+     output = round(\frac{y}{outputScale} + outputZeroPoint)
+     $$
 
 ## 函数原型
 

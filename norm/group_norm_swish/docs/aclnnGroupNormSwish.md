@@ -19,7 +19,8 @@
 
 - 接口功能：计算输入x的组归一化结果out，均值meanOut，标准差的倒数rstdOut，以及swish的输出。
 - 计算公式：
-  - **GroupNorm:**
+  - **GroupNorm：**
+
     记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
 
     $$
@@ -32,13 +33,13 @@
     \right.
     $$
 
-  - **Swish:**
+  - **Swish：**
 
     $$
     yOut = \frac{x}{1+e^{-scale * x}}
     $$
 
-    当activateSwish为True时，会计算Swish， 此时swish计算公式的x为GroupNorm公式得到的out。
+    当activateSwish为True时，会计算Swish，此时swish计算公式的x为GroupNorm公式得到的out。
 
 ## 函数原型
 
@@ -117,7 +118,7 @@ aclnnStatus aclnnGroupNormSwish(
       <tr>
           <td>beta（aclTensor*）</td>
           <td>输入</td>
-          <td>组归一化中的 beta 参数，yOut计算公式中的β。</td>
+          <td>组归一化中的beta参数，yOut计算公式中的β。</td>
           <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
           <td>FLOAT16、FLOAT、BFLOAT16</td>
           <td>ND</td>

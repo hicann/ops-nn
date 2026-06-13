@@ -138,7 +138,7 @@
     <tr>
       <td>reserve_space_2</td>
       <td>输出</td>
-      <td><ul><li>为梯度计算预留。训练模式：保存 inv_var：(1/sqrt(epsilon + variance))，用于反向梯度计算中重用，推理模式：等于输入variance。</li><li>一个1D张量，shape与入参scale保持一致。</li></ul></td>
+      <td><ul><li>为梯度计算预留。训练模式：保存inv_var：(1/sqrt(epsilon + variance))，用于反向梯度计算中重用，推理模式：等于输入variance。</li><li>一个1D张量，shape与入参scale保持一致。</li></ul></td>
       <td>FLOAT32</td>
       <td>ND</td>
     </tr>

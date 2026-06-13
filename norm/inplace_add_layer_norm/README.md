@@ -127,7 +127,7 @@
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term> ：
+  - <term>Atlas 推理系列产品</term>、<term>Atlas 训练系列产品</term>：
     - 所有的输入参数和输出参数`x1`、`x2`的数据类型不支持BFLOAT16。
     - x1、x2、beta、gamma、bias五个输入的尾轴长度必须大于等于32Bytes。
 

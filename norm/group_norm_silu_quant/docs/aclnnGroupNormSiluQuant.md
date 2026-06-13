@@ -15,30 +15,31 @@
 
 - 接口功能：计算输入self的组归一化，输出均值meanOut，标准差的倒数rstdOut，以及对silu的输出结果进行量化的结果out。
 - 计算公式：
-  - **GroupNorm:**
-  记 $E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
-  
-  $$
-  \left\{
-  \begin{array} {rcl}
-  groupNormOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
-  meanOut& &= E[x]\\
-  rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
-  \end{array}
-  \right.
-  $$
+  - **GroupNorm：**
 
-  - **Silu:**
+    记$E[x] = \bar{x}$代表$x$的均值，$Var[x] = \frac{1}{n} * \sum_{i=1}^n(x_i - E[x])^2$代表$x$的方差，则
 
-  $$
-  siluOut = \frac{groupNormOut}{1+e^{-groupNormOut}}
-  $$
+    $$
+    \left\{
+    \begin{array} {rcl}
+    groupNormOut& &= \frac{x - E[x]}{\sqrt{Var[x] + eps}} * \gamma + \beta \\
+    meanOut& &= E[x]\\
+    rstdOut& &= \frac{1}{\sqrt{Var[x] + eps}}\\
+    \end{array}
+    \right.
+    $$
 
-  - **Quant:**
+  - **Silu：**
 
-  $$
-  out = round(siluOut / quantScale)
-  $$
+    $$
+    siluOut = \frac{groupNormOut}{1+e^{-groupNormOut}}
+    $$
+
+  - **Quant：**
+
+    $$
+    out = round(siluOut / quantScale)
+    $$
 
 ## 函数原型
 
