@@ -2486,6 +2486,7 @@ VC8@ops-nn:
         - ops/ops-nn/pooling/avg_pool/avg_pool_infershape.cpp
         - ops/ops-nn/pooling/avg_pool/avg_pool_infershape_common.h
         - ops/ops-nn/pooling/avg_pool/op_host/arch35/avg_pool_tiling_arch35.cpp
+        - ops/ops-nn/pooling/avg_pool/CMakeLists.txt
       opensource_style: null
       kernel_style: null
     unrelease:
