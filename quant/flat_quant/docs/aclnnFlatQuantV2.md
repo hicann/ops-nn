@@ -28,91 +28,91 @@
 
 - 矩阵乘计算公式：
 
-  1.输入x右乘kroneckerP2：
+  1. 输入x右乘kroneckerP2：
   
-    $$
-    x' = x @ kroneckerP2
-    $$
+     $$
+     x' = x @ kroneckerP2
+     $$
 
-  2.kroneckerP1左乘x'：
+  2. kroneckerP1左乘x'：
 
-    $$
-    x'' = kroneckerP1@x'
-    $$
+     $$
+     x'' = kroneckerP1@x'
+     $$
 
 - 量化计算方式：
 
   pertoken量化方式：
 
-  1.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
+  1. 沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
 
-    $$
-    quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
-    $$
+     $$
+     quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
+     $$
   
-  2.计算输出的out：
+  2. 计算输出的out：
   
-    $$
-    out = x'' / quantScale
-    $$
+     $$
+     out = x'' / quantScale
+     $$
 
   pergroup量化方式：
   - 当dstTypeMax = 0.0时：
-    1.矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
+    1. 矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
 
-    2.在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
+    2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
 
-    $$
-    emax = max(e0,e1....e31)
-    $$
+       $$
+       emax = max(e0,e1....e31)
+       $$
 
-    3.计算出reduceMaxValue和sharedExp
+    3. 计算出reduceMaxValue和sharedExp
 
-    $$
-    reduceMaxValue = log2(reduceMax(x2),groupSize=32)
-    $$
+       $$
+       reduceMaxValue = log2(reduceMax(x2),groupSize=32)
+       $$
 
-    $$
-    sharedExp[K,M*N/32] = reduceMaxValue -emax
-    $$
+       $$
+       sharedExp[K,M*N/32] = reduceMaxValue -emax
+       $$
 
-    4.计算quantScale
+    4. 计算quantScale
 
-    $$
-    quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
-    $$
+       $$
+       quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
+       $$
 
-    5.每groupsize共享一个quantScale，计算out
+    5. 每groupsize共享一个quantScale，计算out
 
-    $$
-    out = x2 / quantScale
-    $$
+       $$
+       out = x2 / quantScale
+       $$
 
   - 当dstTypeMax = 6.0/7.0时：
     - 将输入x在axis维度上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
 
-    $$
-    shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其他} \end{cases} \\
-    $$
+      $$
+      shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其他} \end{cases} \\
+      $$
 
-    $$
-    P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
-    $$
+      $$
+      P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
+      $$
 
     - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
   - 当dstTypeMax != 0.0/6.0/7.0时：
     - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型FP8。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
     - 找到该块中数值的最大绝对值:
 
-    $$
-    Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
-    $$
+      $$
+      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+      $$
 
     - 将FP32映射到目标数据类型FP8可表示的范围内，其中当dst_max_value=0时，$Amax(DType)$是目标精度能表示的最大值；当dst_max_value!=0时，$Amax(DType)$是dst_max_value传入值。
 
-    $$
-    S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
-    $$
+      $$
+      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+      $$
 
     - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
     - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
@@ -126,7 +126,6 @@
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
     - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
-
 
 ## 函数原型
 

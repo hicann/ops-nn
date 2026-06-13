@@ -19,35 +19,35 @@
 
 - 计算公式：
   
-  1.先对输入x进行LayerNorm归一化处理：
+  1. 先对输入x进行LayerNorm归一化处理：
   
-    $$
-    LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weightOptional + biasOptional
-    $$
+     $$
+     LayerNorm(x) = {{x-E(x)}\over\sqrt {Var(x)+epsilon}} * weightOptional + biasOptional
+     $$
 
-  2.再通过自适应参数scale和shift来调整归一化结果：
+  2. 再通过自适应参数scale和shift来调整归一化结果：
   
-    $$
-    y = LayerNorm(x) * (1 + scale) + shift
-    $$
+     $$
+     y = LayerNorm(x) * (1 + scale) + shift
+     $$
 
-  3.若smoothScalesOptional不为空，则：
+  3. 若smoothScalesOptional不为空，则：
   
-    $$
-    y = y \cdot smoothScalesOptional
-    $$
+     $$
+     y = y \cdot smoothScalesOptional
+     $$
 
-  4.然后对y计算最大绝对值并除以$(FP8\_MAX / HIF8\_MAX / INT8\_MAX)$以计算需量化为FLOAT8/HIF8/INT8格式的量化因子：
+  4. 然后对y计算最大绝对值并除以$(FP8\_MAX / HIF8\_MAX / INT8\_MAX)$以计算需量化为FLOAT8/HIF8/INT8格式的量化因子：
   
-    $$
-    quantScale = row\_max(abs(y)) / (FP8\_MAX / HIF8\_MAX / INT8\_MAX)
-    $$
+     $$
+     quantScale = row\_max(abs(y)) / (FP8\_MAX / HIF8\_MAX / INT8\_MAX)
+     $$
 
-  5.最后y除以量化因子再四舍五入得到量化输出：
+  5. 最后y除以量化因子再四舍五入得到量化输出：
   
-    $$
-    out = round(y / quantScale)
-    $$
+     $$
+     out = round(y / quantScale)
+     $$
 
   其中，E(x)表示输入的均值，Var(x)表示输入的方差，row_max代表每行求最大值。
 

@@ -17,65 +17,65 @@
 
 - 矩阵乘计算公式：
 
-  1.输入x右乘kroneckerP2：
+  1. 输入x右乘kroneckerP2：
 
-    $$
-    x' = x @ kroneckerP2
-    $$
+     $$
+     x' = x @ kroneckerP2
+     $$
 
-  2.kroneckerP1左乘x'：
+  2. kroneckerP1左乘x'：
 
-    $$
-    x'' = kroneckerP1@x'
-    $$
+     $$
+     x'' = kroneckerP1@x'
+     $$
 
 - 量化计算方式：
 
   pertoken量化方式：
 
-  1.沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
+  1. 沿着x''的0维计算最大绝对值并除以(7 / clipRatio)以计算需量化为INT4格式的量化因子：
 
-    $$
-    quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
-    $$
+     $$
+     quantScale = [max(abs(x''[0,:,:])),max(abs(x''[1,:,:])),...,max(abs(x''[K,:,:]))]/(7 / clipRatio)
+     $$
 
-  2.计算输出的out：
+  2. 计算输出的out：
 
-    $$
-    out = x'' / quantScale
-    $$
+     $$
+     out = x'' / quantScale
+     $$
 
   pergroup量化方式
 
-  1.矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
+  1. 矩阵乘后x''的shape为[K,M,N],在计算pergroup量化方式其中的mx_quantize时，需reshape为[K,M*N],记为x2
 
-  2.在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
+  2. 在x2第二维上按照groupsize进行分组，包含元素e0,e1...e31。计算出emax
 
-  $$
-  emax = max(e0,e1....e31)
-  $$
+     $$
+     emax = max(e0,e1....e31)
+     $$
 
-  3.计算出reduceMaxValue和sharedExp
+  3. 计算出reduceMaxValue和sharedExp
 
-  $$
-  reduceMaxValue = log2(reduceMax(x2),groupSize=32)
-  $$
+     $$
+     reduceMaxValue = log2(reduceMax(x2),groupSize=32)
+     $$
 
-  $$
-  sharedExp[K,M*N/32] = reduceMaxValue -emax
-  $$
+     $$
+     sharedExp[K,M*N/32] = reduceMaxValue -emax
+     $$
 
-  4.计算quantScale
+  4. 计算quantScale
 
-  $$
-  quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
-  $$
+     $$
+     quantScale[K,M*N/32] = 2 ^ {sharedExp[K,M*N/32]}
+     $$
 
-  5.每groupsize共享一个quantScale，计算out
+  5. 每groupsize共享一个quantScale，计算out
 
-  $$
-  out = x2 / quantScale
-  $$
+     $$
+     out = x2 / quantScale
+     $$
 
 ## 参数说明
 
