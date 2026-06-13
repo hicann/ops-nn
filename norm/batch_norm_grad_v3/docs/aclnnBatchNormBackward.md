@@ -198,7 +198,7 @@ aclnnStatus aclnnBatchNormBackward(
       <td>outputMask（aclBoolArray*）</td>
       <td>输入</td>
       <td>表示输出的掩码。</td>
-      <td>size为3。分别表示是否输出`gradInput`、`gradWeight`、 `gradBias`，若为true则输出，否则输出对应位置返回空。</td>
+      <td>size为3。分别表示是否输出`gradInput`、`gradWeight`、`gradBias`，若为true则输出，否则输出对应位置返回空。</td>
       <td>BoolArray</td>
       <td>-</td>
       <td>-</td>

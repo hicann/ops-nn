@@ -418,8 +418,8 @@ aclnnStatus aclnnAdaLayerNormBackward(
 
     | 分组 | 包含的具体参数名 |
     | --------| --------|
-    | **Group A** | `gradOut`, `input`, `rstd`, `mean`, `scale`, `shift`, `gradInputOut`, `gradScaleOut`, `gradShiftOut` |
-    | **Group B** | `weightOptional`, `biasOptional`, `gradWeightOut`, `gradBiasOut` |
+    | **Group A** | `gradOut`、`input`、`rstd`、`mean`、`scale`、`shift`、`gradInputOut`、`gradScaleOut`、`gradShiftOut` |
+    | **Group B** | `weightOptional`、`biasOptional`、`gradWeightOut`、`gradBiasOut` |
 
   - 上述两类数据类型固定搭配类型为（左侧和右侧数据类型严格对应）：
 

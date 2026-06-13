@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 算子功能：计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch `batch_norm_backward(..., training=false, ...)` 中 `grad_input` 的子计算。
+- 算子功能：计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch“`batch_norm_backward(..., training=false, ...)`”中`grad_input`的子计算。
 
 - 计算公式：
 

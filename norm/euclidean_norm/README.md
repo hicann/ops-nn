@@ -15,7 +15,7 @@
 
 - 算子功能：
 
-  沿给定的若干轴对输入张量计算欧几里得范数（L2范数），即先逐元素平方，再沿指定轴求和，最后开平方。等价于TensorFlow中的 `tf.math.reduce_euclidean_norm`。
+  沿给定的若干轴对输入张量计算欧几里得范数（L2范数），即先逐元素平方，再沿指定轴求和，最后开平方。等价于TensorFlow中的`tf.math.reduce_euclidean_norm`。
 
 - 计算公式：
 
@@ -23,7 +23,7 @@
   y = \sqrt{ \sum_{i \in axes} x_i^{2} }
   $$
 
-  其中 $axes$ 为待reduce的维度集合；当属性 `keep_dims = true` 时，被reduce的维度在输出中保留为长度1，否则从输出shape中删除。
+  其中 $axes$ 为待reduce的维度集合；当属性`keep_dims = true`时，被reduce的维度在输出中保留为长度1，否则从输出shape中删除。
 
 ## 参数说明
 
@@ -75,7 +75,7 @@
 
 ## 约束说明
 
-- axes为值依赖输入，图模式调用时需以 `op::Const` 注入；运行时通过placeholder Data注入将导致编译期无法推导输出shape与tiling。
+- axes为值依赖输入，图模式调用时需以`op::Const`注入；运行时通过placeholder Data注入将导致编译期无法推导输出shape与tiling。
 - axes元素必须落在[-rank(x), rank(x))范围内，且不允许重复。
 - y的数据类型与x保持一致；当x为INT32时，输出仍为INT32（不做隐式类型提升），调用方需自行确保中间累加不溢出。
 
