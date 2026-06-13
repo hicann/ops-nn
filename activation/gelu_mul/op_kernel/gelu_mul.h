@@ -361,12 +361,12 @@ __aicore__ inline void GeluMulND<T>::SmallTailProcess() {
     if (remain > 0 && blockIdx < remain) {
         eachCoreNum++;
     }
-    int32_t loopNum = eachCoreNum / n;
+    int32_t loopNum_0 = eachCoreNum / n;
     int32_t loopRemain = eachCoreNum % n;
 
 
     if (loopRemain > 0) {
-        loopNum++;
+        loopNum_0++;
     }
 
     int32_t totalOffset = eachCoreNum * blockIdx * lastDimSize;
@@ -380,9 +380,9 @@ __aicore__ inline void GeluMulND<T>::SmallTailProcess() {
     pingPongFlag = 0;
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID1);
-    for (int32_t i = 0; i < loopNum; i++) {
+    for (int32_t i = 0; i < loopNum_0; i++) {
         uint16_t tmpCalNum = n;
-        if (loopRemain > 0 && i == loopNum - 1) {
+        if (loopRemain > 0 && i == loopNum_0 - 1) {
             tmpCalNum = loopRemain;
         }
 

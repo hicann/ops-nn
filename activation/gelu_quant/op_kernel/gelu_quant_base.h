@@ -24,14 +24,14 @@ constexpr float SCALAR_ONE = 1.0;
 constexpr float BETA = 0.044715;
 constexpr float ALPHA = -1.5957691f;
 
-constexpr float ERF_PARAM1 = -0.3512339572e-8f;
-constexpr float ERF_PARAM2 = 0.2645266170e-6;
-constexpr float ERF_PARAM3 = -0.7929488134e-5f;
-constexpr float ERF_PARAM4 = 0.1106123840e-3;
-constexpr float ERF_PARAM5 = 0.6518995814e-4;
-constexpr float ERF_PARAM6 = -0.7266616915e-1f;
-constexpr float ERF_PARAM7 = -0.1595769883e1f;
-constexpr float ERF_MIN = 5.75;
+constexpr float ERF_PARAM11 = -0.3512339572e-8f;
+constexpr float ERF_PARAM12 = 0.2645266170e-6;
+constexpr float ERF_PARAM13 = -0.7929488134e-5f;
+constexpr float ERF_PARAM14 = 0.1106123840e-3;
+constexpr float ERF_PARAM15 = 0.6518995814e-4;
+constexpr float ERF_PARAM16 = -0.7266616915e-1f;
+constexpr float ERF_PARAM17 = -0.1595769883e1f;
+constexpr float ERF_MIN_0 = 5.75;
 constexpr float ERF_MAX = -13.15f;
 constexpr float MAX_INT8 = 127.0;
 
@@ -104,43 +104,43 @@ __aicore__ inline void GeluQuantBase::ComputeGeluErf(
     // res = x/(1+exp(((((((a1*x^2+a2)*x^2+a3)*x^2+a4)*x^2+a5)*x^2+a6)*x^2+a7)*x))
     Maxs(castFp32, castFp32, ERF_MAX, calCount);
     PipeBarrier<PIPE_V>();
-    Mins(tempRes, castFp32, ERF_MIN, calCount);
+    Mins(tempRes, castFp32, ERF_MIN_0, calCount);
     PipeBarrier<PIPE_V>();
 
     Mul(xSquared, tempRes, tempRes, calCount);
     PipeBarrier<PIPE_V>();
 
-    Muls(tempRes, xSquared, ERF_PARAM1, calCount);
+    Muls(tempRes, xSquared, ERF_PARAM11, calCount);
     PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM2, calCount);
-    PipeBarrier<PIPE_V>();
-
-    Mul(tempRes, tempRes, xSquared, calCount);
-    PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM3, calCount);
+    Adds(tempRes, tempRes, ERF_PARAM12, calCount);
     PipeBarrier<PIPE_V>();
 
     Mul(tempRes, tempRes, xSquared, calCount);
     PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM4, calCount);
+    Adds(tempRes, tempRes, ERF_PARAM13, calCount);
     PipeBarrier<PIPE_V>();
 
     Mul(tempRes, tempRes, xSquared, calCount);
     PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM5, calCount);
+    Adds(tempRes, tempRes, ERF_PARAM14, calCount);
     PipeBarrier<PIPE_V>();
 
     Mul(tempRes, tempRes, xSquared, calCount);
     PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM6, calCount);
+    Adds(tempRes, tempRes, ERF_PARAM15, calCount);
     PipeBarrier<PIPE_V>();
 
     Mul(tempRes, tempRes, xSquared, calCount);
     PipeBarrier<PIPE_V>();
-    Adds(tempRes, tempRes, ERF_PARAM7, calCount);
+    Adds(tempRes, tempRes, ERF_PARAM16, calCount);
     PipeBarrier<PIPE_V>();
 
-    Mins(xSquared, castFp32, ERF_MIN, calCount);
+    Mul(tempRes, tempRes, xSquared, calCount);
+    PipeBarrier<PIPE_V>();
+    Adds(tempRes, tempRes, ERF_PARAM17, calCount);
+    PipeBarrier<PIPE_V>();
+
+    Mins(xSquared, castFp32, ERF_MIN_0, calCount);
     PipeBarrier<PIPE_V>();
     Mul(tempRes, tempRes, xSquared, calCount);
     PipeBarrier<PIPE_V>();

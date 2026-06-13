@@ -56,6 +56,8 @@ public:
     __aicore__ inline GeGluGradV2ErfBase(
         GM_ADDR dy, GM_ADDR x, GM_ADDR gelu, GM_ADDR dx, const GeGluGradV2TilingData* tilingDataPtr)
     {
+        tailUbLoopNum = tilingDataPtr->tailUbLoopNum;
+        groupNum = tilingDataPtr->groupNum;
         approximate = tilingDataPtr->approximate;
         activateLeft = static_cast<bool>(tilingDataPtr->activateLeft);
         maxProcCount = tilingDataPtr->maxProcCount;
@@ -63,8 +65,6 @@ public:
         needCoreNum = tilingDataPtr->needCoreNum;
         loopNumPerCore = tilingDataPtr->loopNumPerCore;
         tailCoreIndex = tilingDataPtr->tailCoreIndex;
-        tailUbLoopNum = tilingDataPtr->tailUbLoopNum;
-        groupNum = tilingDataPtr->groupNum;
 
         dyGm.SetGlobalBuffer((__gm__ T*)dy);
         xGm.SetGlobalBuffer((__gm__ T*)x);
@@ -77,19 +77,23 @@ protected:
     template <typename T1, typename T2>
     __aicore__ inline T1 CeilDiv(T1 a, T2 b)
     {
-        a = int64_t(a);
         b = int64_t(b);
+        a = int64_t(a);
         return T1(b == 0 ? a : (a + b - 1) / b);
     };
 
     template <typename T1, typename T2>
     __aicore__ inline T1 CeilAlignA2B(T1 a, T2 b)
     {
-        a = int64_t(a);
         b = int64_t(b);
+        a = int64_t(a);
         return T1(b == 0 ? a : CeilDiv(a, b) * b);
     };
 
+    template <
+        typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
+        void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
+    __aicore__ inline void ProcessPerf(CLS_NAME* objPtr);
     template <
         typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
         void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
@@ -98,10 +102,6 @@ protected:
         typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
         void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
     __aicore__ inline void ProcessGreater(CLS_NAME* objPtr);
-    template <
-        typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
-        void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>
-    __aicore__ inline void ProcessPerf(CLS_NAME* objPtr);
 
     __aicore__ inline void ComputeCDF(LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount);
     __aicore__ inline void ComputePDF(LocalTensor<float>& y, LocalTensor<float>& x, const int64_t& realProcCount);
@@ -143,7 +143,6 @@ protected:
     __aicore__ inline LocalTensor<T2> GetTempBuf(const int32_t index);
     template <typename T2>
     __aicore__ inline void TransposeDXBack(LocalTensor<T2>& dst, LocalTensor<T2>& src, const int64_t& nBatch);
-
 
 private:
     __aicore__ inline void BaseInit();
@@ -274,22 +273,22 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::ProcessPerf(CLS_NAME* objPtr)
     }
     int64_t idx = 0;
     for (; idx < loopNum; idx++) {
-        int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
+        int64_t tempOffset_0 = (needCoreNum * idx + blockIdx) * groupNum * valueM;
         int64_t realProcCount = CeilAlignA2B(groupNum * valueM, perBlockCount);
-        CopyInDyAndGelu(tempOffset, valueM * groupNum, 1);
-        CopyInXPerf(2 * tempOffset, 2 * valueM * groupNum);
+        CopyInDyAndGelu(tempOffset_0, valueM * groupNum, 1);
+        CopyInXPerf(2 * tempOffset_0, 2 * valueM * groupNum);
         (objPtr->*funComputeLeftHalf)(realProcCount);
         (objPtr->*funComputeRightHalf)(realProcCount);
-        CopyOutDXPerf(2 * tempOffset, 2 * valueM * groupNum);
+        CopyOutDXPerf(2 * tempOffset_0, 2 * valueM * groupNum);
     }
     if (blockIdx == tailCoreIndex && tailUbLoopNum > 0) {
-        int64_t tempOffset = (needCoreNum * idx + blockIdx) * groupNum * valueM;
+        int64_t tempOffset_0 = (needCoreNum * idx + blockIdx) * groupNum * valueM;
         int64_t realProcCount = CeilAlignA2B(tailUbLoopNum * valueM, perBlockCount);
-        CopyInDyAndGelu(tempOffset, valueM * tailUbLoopNum, 1);
-        CopyInXPerf(2 * tempOffset, 2 * valueM * tailUbLoopNum);
+        CopyInDyAndGelu(tempOffset_0, valueM * tailUbLoopNum, 1);
+        CopyInXPerf(2 * tempOffset_0, 2 * valueM * tailUbLoopNum);
         (objPtr->*funComputeLeftHalf)(realProcCount);
         (objPtr->*funComputeRightHalf)(realProcCount);
-        CopyOutDXPerf(2 * tempOffset, 2 * valueM * tailUbLoopNum);
+        CopyOutDXPerf(2 * tempOffset_0, 2 * valueM * tailUbLoopNum);
     }
 }
 
@@ -361,11 +360,11 @@ template <typename T>
 __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInDyAndGelu(
     const int64_t& gmOffset, const int64_t& dataCount, const int64_t& blockCount)
 {
-    int64_t ubOffset = 0;
+    int64_t ubOffset_0 = 0;
 #if defined(ORIG_DTYPE_DY) && ORIG_DTYPE_DY == DT_BF16
     LocalTensor<T> ubGelu = inQueueGelu.AllocTensor<float>().ReinterpretCast<T>();
     LocalTensor<T> ubDY = inQueueDY.AllocTensor<float>().ReinterpretCast<T>();
-    ubOffset = maxProcCount;
+    ubOffset_0 = maxProcCount;
 #else
     LocalTensor<T> ubGelu = inQueueGelu.AllocTensor<T>();
     LocalTensor<T> ubDY = inQueueDY.AllocTensor<T>();
@@ -374,14 +373,14 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInDyAndGelu(
     struct DataCopyParams copyInParams(blockCount, 0, 0, 0);
     if (dataCount % perBlockCount == 0) {
         copyInParams.blockLen = dataCount / perBlockCount;
-        DataCopy(ubGelu[ubOffset], geluGm[gmOffset], copyInParams);
-        DataCopy(ubDY[ubOffset], dyGm[gmOffset], copyInParams);
+        DataCopy(ubGelu[ubOffset_0], geluGm[gmOffset], copyInParams);
+        DataCopy(ubDY[ubOffset_0], dyGm[gmOffset], copyInParams);
     } else {
         copyInParams.blockLen = dataCount * dtypeSize;
         struct DataCopyPadParams padParams = {true, 0, 0, 0};
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
-        DataCopyPad(ubGelu[ubOffset], geluGm[gmOffset], copyInParams, padParams);
-        DataCopyPad(ubDY[ubOffset], dyGm[gmOffset], copyInParams, padParams);
+        DataCopyPad(ubGelu[ubOffset_0], geluGm[gmOffset], copyInParams, padParams);
+        DataCopyPad(ubDY[ubOffset_0], dyGm[gmOffset], copyInParams, padParams);
     }
     inQueueGelu.EnQue(ubGelu);
     inQueueDY.EnQue(ubDY);
@@ -394,19 +393,19 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::CopyInX(
     LocalTensor<T> ubX1 = inQueueX1.AllocTensor<T>();
     LocalTensor<T> ubX2 = inQueueX2.AllocTensor<T>();
     struct DataCopyParams copyInParams(blockCount, 0, 0, 0);
-    int64_t x1GmOffset = activateLeft ? gmOffset + valueM : gmOffset;
+    int64_t x1GmOffset_0 = activateLeft ? gmOffset + valueM : gmOffset;
     int64_t x2GmOffset = activateLeft ? gmOffset : gmOffset + valueM;
     if (dataCount % perBlockCount == 0) {
         copyInParams.blockLen = dataCount / perBlockCount;
         copyInParams.srcStride = copyInParams.blockLen;
-        DataCopy(ubX1, xGm[x1GmOffset], copyInParams);
+        DataCopy(ubX1, xGm[x1GmOffset_0], copyInParams);
         DataCopy(ubX2, xGm[x2GmOffset], copyInParams);
     } else {
         copyInParams.blockLen = dataCount * dtypeSize;
         copyInParams.srcStride = copyInParams.blockLen;
         struct DataCopyPadParams padParams = {true, 0, 0, 0};
         padParams.rightPadding = CeilAlignA2B(dataCount, perBlockCount) - dataCount;
-        DataCopyPad(ubX1, xGm[x1GmOffset], copyInParams, padParams);
+        DataCopyPad(ubX1, xGm[x1GmOffset_0], copyInParams, padParams);
         DataCopyPad(ubX2, xGm[x2GmOffset], copyInParams, padParams);
     }
 
@@ -522,27 +521,27 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeXBack(
     __ubuf__ T2 *dstList1[16], *dstList2[16];
     int64_t coefficient1 = tpsWidth * nBatch * valueM;
     if (tpsWidth == 8) {
-        for (int32_t i = 0; i < 8; i++) {
-            srcList1[i] = src1Addr + 16 * i;
-            srcList1[i + 8] = src1Addr + 16 * i + 8;
-            srcList2[i] = src2Addr + 16 * i;
-            srcList2[i + 8] = src2Addr + 16 * i + 8;
+        for (int32_t j = 0; j < 8; j++) {
+            srcList1[j] = src1Addr + 16 * j;
+            srcList1[j + 8] = src1Addr + 16 * j + 8;
+            srcList2[j] = src2Addr + 16 * j;
+            srcList2[j + 8] = src2Addr + 16 * j + 8;
         }
         int64_t coefficient2 = 64 * nBatch * valueM;
-        for (int32_t i = 0; i < 8; i++) {
-            dstList1[2 * i] = dst1Addr + coefficient1 * i;
-            dstList1[2 * i + 1] = dst1Addr + coefficient1 * i + coefficient2;
-            dstList2[2 * i] = dst2Addr + coefficient1 * i;
-            dstList2[2 * i + 1] = dst2Addr + coefficient1 * i + coefficient2;
+        for (int32_t j = 0; j < 8; j++) {
+            dstList1[2 * j] = dst1Addr + coefficient1 * j;
+            dstList1[2 * j + 1] = dst1Addr + coefficient1 * j + coefficient2;
+            dstList2[2 * j] = dst2Addr + coefficient1 * j;
+            dstList2[2 * j + 1] = dst2Addr + coefficient1 * j + coefficient2;
         }
     } else {
-        for (int32_t i = 0; i < 16; i++) {
-            srcList1[i] = src1Addr + 16 * i;
-            srcList2[i] = src2Addr + 16 * i;
+        for (int32_t j = 0; j < 16; j++) {
+            srcList1[j] = src1Addr + 16 * j;
+            srcList2[j] = src2Addr + 16 * j;
         }
-        for (int32_t i = 0; i < 16; i++) {
-            dstList1[i] = dst1Addr + coefficient1 * i;
-            dstList2[i] = dst2Addr + coefficient1 * i;
+        for (int32_t j = 0; j < 16; j++) {
+            dstList1[j] = dst1Addr + coefficient1 * j;
+            dstList2[j] = dst2Addr + coefficient1 * j;
         }
     }
 
@@ -651,18 +650,18 @@ __aicore__ inline void GeGluGradV2ErfBase<T>::TransposeDX(
     __ubuf__ T2* dst2Addr = (__ubuf__ T2*)dst2.GetPhyAddr();
     __ubuf__ T2 *srcList1[16], *srcList2[16];
     int64_t coefficient = tpsWidth * nBatch * valueM;
-    for (int32_t i = 0; i < 16; i++) {
-        srcList1[i] = src1Addr + coefficient * i;
-        srcList2[i] = src2Addr + coefficient * i;
+    for (int32_t j = 0; j < 16; j++) {
+        srcList1[j] = src1Addr + coefficient * j;
+        srcList2[j] = src2Addr + coefficient * j;
     }
     __ubuf__ T2 *dstList1[16], *dstList2[16];
-    for (int32_t i = 0; i < 16; i++) {
-        dstList1[i] = dst1Addr + tpsWidth * i;
-        dstList2[i] = dst2Addr + tpsWidth * i;
+    for (int32_t j = 0; j < 16; j++) {
+        dstList1[j] = dst1Addr + tpsWidth * j;
+        dstList2[j] = dst2Addr + tpsWidth * j;
     }
 
     struct TransDataTo5HDParams transDataParams;
-    transDataParams.repeatTimes = nBatch * valueM;
+    transDataParams.repeatTimes = valueM * nBatch;
     transDataParams.srcRepStride = transDataParams.repeatTimes == 1 ? 0 : 1;
     transDataParams.dstRepStride = transDataParams.repeatTimes == 1 ? 0 : 16;
 

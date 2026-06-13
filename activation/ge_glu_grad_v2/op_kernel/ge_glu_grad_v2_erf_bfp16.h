@@ -68,9 +68,9 @@ __aicore__ inline void GeGluGradV2ErfBFP16::Init()
 
 __aicore__ inline void GeGluGradV2ErfBFP16::ComputeLeftHalf(const int64_t& realProcCount)
 {
-    LocalTensor<float> ubDY = inQueueDY.DeQue<float>();
-    LocalTensor<bfloat16_t> ubDYbf16 = ubDY.ReinterpretCast<bfloat16_t>()[maxProcCount];
-    Cast(ubDY, ubDYbf16, RoundMode::CAST_NONE, realProcCount);
+    LocalTensor<float> ubDY_0 = inQueueDY.DeQue<float>();
+    LocalTensor<bfloat16_t> ubDYbf16 = ubDY_0.ReinterpretCast<bfloat16_t>()[maxProcCount];
+    Cast(ubDY_0, ubDYbf16, RoundMode::CAST_NONE, realProcCount);
 
     LocalTensor<float> ubGelu = inQueueGelu.DeQue<float>();
     LocalTensor<bfloat16_t> ubGelubf16 = ubGelu.ReinterpretCast<bfloat16_t>()[maxProcCount];
@@ -78,7 +78,7 @@ __aicore__ inline void GeGluGradV2ErfBFP16::ComputeLeftHalf(const int64_t& realP
 
     LocalTensor<bfloat16_t> outLocalLeft = outQueueDX1.AllocTensor<bfloat16_t>();
 
-    Mul(ubGelu, ubGelu, ubDY, realProcCount); // dx1 = gelu * dy
+    Mul(ubGelu, ubGelu, ubDY_0, realProcCount); // dx1 = gelu * dy
     Cast(outLocalLeft, ubGelu, RoundMode::CAST_RINT, realProcCount);
     outQueueDX1.EnQue(outLocalLeft);
     inQueueGelu.FreeTensor(ubGelu);
@@ -87,8 +87,8 @@ __aicore__ inline void GeGluGradV2ErfBFP16::ComputeLeftHalf(const int64_t& realP
     LocalTensor<float> xBufLeft = GetTempBuf<float>(0);
     Cast(xBufLeft, ubX1, RoundMode::CAST_NONE, realProcCount);
     inQueueX1.FreeTensor(ubX1);
-    Mul(xBufLeft, xBufLeft, ubDY, realProcCount); // x1 = x1 * dy
-    inQueueDY.FreeTensor(ubDY);
+    Mul(xBufLeft, xBufLeft, ubDY_0, realProcCount); // x1 = x1 * dy
+    inQueueDY.FreeTensor(ubDY_0);
 }
 
 __aicore__ inline void GeGluGradV2ErfBFP16::ComputeRightHalf(const int64_t& realProcCount)

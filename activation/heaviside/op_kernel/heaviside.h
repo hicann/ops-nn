@@ -101,25 +101,25 @@ __aicore__ inline void HeavisideND<T>::Process()
     }
 
     int64_t totalTimes = elementNum / PP_ELEMENT_NUM;
-    int64_t remain = elementNum % PP_ELEMENT_NUM;
-    if (remain > 0) {
+    int64_t remain_0 = elementNum % PP_ELEMENT_NUM;
+    if (remain_0 > 0) {
         totalTimes++;
     }
     int64_t loopNum = totalTimes / needCoreNumber;
-    int64_t loopRemain = totalTimes % needCoreNumber;
+    int64_t loopRemain_0 = totalTimes % needCoreNumber;
 
-    if (loopRemain > 0 && blockIdx < loopRemain) {
+    if (loopRemain_0 > 0 && blockIdx < loopRemain_0) {
         loopNum++;
     }
     int64_t eachCoreStartOffset = loopNum * blockIdx * PP_ELEMENT_NUM;
-    if (loopRemain > 0) {
-        if (blockIdx >= loopRemain) {
+    if (loopRemain_0 > 0) {
+        if (blockIdx >= loopRemain_0) {
             eachCoreStartOffset += elementNum % (PP_ELEMENT_NUM * needCoreNumber);
         }
     }
 
     int32_t calNum = PP_ELEMENT_NUM;
-    int64_t lastCoreNum = loopRemain == 0 ? needCoreNumber - 1 : loopRemain - 1;
+    int64_t lastCoreNum = loopRemain_0 == 0 ? needCoreNumber - 1 : loopRemain_0 - 1;
     pingPongFlag = 0;
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID0);
     SetFlag<HardEvent::MTE3_MTE2>(EVENT_ID1);
@@ -127,8 +127,8 @@ __aicore__ inline void HeavisideND<T>::Process()
         int64_t localOffset = i * PP_ELEMENT_NUM;
 
         // 最后一轮的最后一个核处理余数
-        if (remain > 0 && i == loopNum - 1 && blockIdx == lastCoreNum) {
-            calNum = remain;
+        if (remain_0 > 0 && i == loopNum - 1 && blockIdx == lastCoreNum) {
+            calNum = remain_0;
         }
         eventId = pingPongFlag ? EVENT_ID1 : EVENT_ID0;
         CopyInAndCast(eachCoreStartOffset + localOffset, calNum);

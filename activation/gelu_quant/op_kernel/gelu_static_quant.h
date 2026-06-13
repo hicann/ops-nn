@@ -205,12 +205,12 @@ template <typename T1, typename T2>
 __aicore__ inline void GeluQuant<T1, T2>::ComputeGelu(LocalTensor<float>& geluRes, int32_t calCount)
 {
     LocalTensor<T1> xLocal = inQueue_.DeQue<T1>();
-    LocalTensor<float> castFp32 = castQueue_.AllocTensor<float>();
+    LocalTensor<float> castFp32_0 = castQueue_.AllocTensor<float>();
 
     if constexpr (IsSameType<T1, float>::value) {
-        Muls(castFp32, xLocal, 1.0f, calCount);
+        Muls(castFp32_0, xLocal, 1.0f, calCount);
     } else {
-        Cast(castFp32, xLocal, RoundMode::CAST_NONE, calCount);
+        Cast(castFp32_0, xLocal, RoundMode::CAST_NONE, calCount);
     }
 
     PipeBarrier<PIPE_V>();
@@ -218,13 +218,13 @@ __aicore__ inline void GeluQuant<T1, T2>::ComputeGelu(LocalTensor<float>& geluRe
 
     if (approximate_ == APPROXIMATE_NONE) {
         LocalTensor<float> xSquared = inQueue_.AllocTensor<float>();
-        ComputeGeluErf(castFp32, geluRes, xSquared, calCount);
+        ComputeGeluErf(castFp32_0, geluRes, xSquared, calCount);
         inQueue_.FreeTensor(xSquared);
     } else {
-        ComputeGeluTanh(castFp32, geluRes, calCount);
+        ComputeGeluTanh(castFp32_0, geluRes, calCount);
     }
 
-    castQueue_.FreeTensor(castFp32);
+    castQueue_.FreeTensor(castFp32_0);
 }
 
 template <typename T1, typename T2>

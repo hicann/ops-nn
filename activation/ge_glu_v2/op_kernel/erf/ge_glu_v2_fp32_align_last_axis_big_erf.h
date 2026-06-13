@@ -90,17 +90,17 @@ __aicore__ inline void GeGluV2Fp32AlignLastAxisBigErf<T>::ProcessPerCore()
                 return;
             }
         }
-        int64_t z = this->m_tilingData.realCoreNum * idx + this->blockIdx;
+        int64_t c = this->m_tilingData.realCoreNum * idx + this->blockIdx;
         int64_t idx_x = 0;
         int64_t idx_y = 0;
         int64_t length = 0;
         if (this->m_tilingData.tailLoopNum != 0) {
-            idx_x = z / (this->m_tilingData.group + 1);
-            idx_y = z % (this->m_tilingData.group + 1);
+            idx_x = c / (this->m_tilingData.group + 1);
+            idx_y = c % (this->m_tilingData.group + 1);
             length = idx_y == this->m_tilingData.group ? this->m_tilingData.tailLoopNum : this->m_tilingData.splitSize;
         } else {
-            idx_x = z / this->m_tilingData.group;
-            idx_y = z % this->m_tilingData.group;
+            idx_x = c / this->m_tilingData.group;
+            idx_y = c % this->m_tilingData.group;
             length = this->m_tilingData.splitSize;
         }
 

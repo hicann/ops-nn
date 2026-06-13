@@ -83,11 +83,11 @@ template <typename T>
 __aicore__ inline void GeGluV2Bf16AlignErf<T>::ProcessPerCore()
 {
     // process core
-    for (int64_t idx = 0; idx < this->m_tilingData.loopNum; idx++) {
-        CopyInX(idx, this->m_tilingData.group);
+    for (int64_t idx_1 = 0; idx_1 < this->m_tilingData.loopNum; idx_1++) {
+        CopyInX(idx_1, this->m_tilingData.group);
         ComputeGeluAndMul(this->group_ub_num);
-        CopyOutGelu(idx, this->group_ub_num, this->m_tilingData.group);
-        CopyOutMul(idx, this->group_ub_num, this->m_tilingData.group);
+        CopyOutGelu(idx_1, this->group_ub_num, this->m_tilingData.group);
+        CopyOutMul(idx_1, this->group_ub_num, this->m_tilingData.group);
     }
 
     if (this->m_tilingData.nLastTailGroup > 0) {
@@ -101,11 +101,11 @@ __aicore__ inline void GeGluV2Bf16AlignErf<T>::ProcessPerCore()
 template <typename T>
 __aicore__ inline void GeGluV2Bf16AlignErf<T>::ProcessLastCore()
 {
-    for (int64_t idx = 0; idx < this->m_tilingData.tailLoopNum; idx++) {
-        CopyInX(idx, this->m_tilingData.group);
+    for (int64_t idx_1 = 0; idx_1 < this->m_tilingData.tailLoopNum; idx_1++) {
+        CopyInX(idx_1, this->m_tilingData.group);
         ComputeGeluAndMul(this->group_ub_num);
-        CopyOutGelu(idx, this->group_ub_num, this->m_tilingData.group);
-        CopyOutMul(idx, this->group_ub_num, this->m_tilingData.group);
+        CopyOutGelu(idx_1, this->group_ub_num, this->m_tilingData.group);
+        CopyOutMul(idx_1, this->group_ub_num, this->m_tilingData.group);
     }
     if (this->m_tilingData.lastTailGroup > 0) {
         CopyInX(this->m_tilingData.tailLoopNum, this->m_tilingData.lastTailGroup);

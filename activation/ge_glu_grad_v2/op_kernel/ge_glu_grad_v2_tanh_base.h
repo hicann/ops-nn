@@ -63,21 +63,19 @@ public:
 
 protected:
     template <typename T1, typename T2>
-    __aicore__ inline T1 CeilDiv(T1 a, T2 b)
-    {
-        a = int64_t(a);
-        b = int64_t(b);
-        return T1(b == 0 ? a : (a + b - 1) / b);
-    };
-
-    template <typename T1, typename T2>
     __aicore__ inline T1 CeilAlignA2B(T1 a, T2 b)
     {
         a = int64_t(a);
         b = int64_t(b);
         return T1(b == 0 ? a : CeilDiv(a, b) * b);
     };
-
+    template <typename T1, typename T2>
+    __aicore__ inline T1 CeilDiv(T1 a, T2 b)
+    {
+        a = int64_t(a);
+        b = int64_t(b);
+        return T1(b == 0 ? a : (a + b - 1) / b);
+    };
     template <
         typename CLS_NAME, void (CLS_NAME::*funComputeLeftHalf)(const int64_t&),
         void (CLS_NAME::*funComputeRightHalf)(const int64_t&)>

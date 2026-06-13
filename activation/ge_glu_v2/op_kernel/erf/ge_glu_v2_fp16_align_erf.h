@@ -34,13 +34,13 @@ public:
     constexpr static int64_t bufferSize = 6144;
 
 private:
+    __aicore__ inline void ProcessPerCore();
+    __aicore__ inline void ProcessLastCore();
     __aicore__ inline void CopyInX(const int64_t& index, const int64_t& blockCount);
     __aicore__ inline void ComputeGelu(const int64_t& ub_num);
     __aicore__ inline void CopyOutGelu(const int64_t& index, const int64_t& ub_num, const int64_t& group);
     __aicore__ inline void ComputeMul(const int64_t& ub_num);
     __aicore__ inline void CopyOutMul(const int64_t& index, const int64_t& ub_num, const int64_t& group);
-    __aicore__ inline void ProcessPerCore();
-    __aicore__ inline void ProcessLastCore();
 
 private:
     TPipe pipe;
@@ -96,7 +96,6 @@ __aicore__ inline void GeGluV2Fp16AlignErf<T>::ProcessPerCore()
         ComputeMul(this->group_ub_num);
         CopyOutMul(idx, this->group_ub_num, this->m_tilingData.group);
     }
-
     if (this->m_tilingData.nLastTailGroup > 0) {
         CopyInX(this->m_tilingData.loopNum, this->m_tilingData.nLastTailGroup);
         ComputeGelu(this->nlast_tail_ub_num);
@@ -161,10 +160,10 @@ __aicore__ inline void GeGluV2Fp16AlignErf<T>::ComputeMul(const int64_t& ub_num)
 {
     LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
     LocalTensor<T> gelu_out = outQueueGelu.DeQue<T>();
-    LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
+    LocalTensor<T> mul_out_5 = outQueueMul.AllocTensor<T>();
     PipeBarrier<PIPE_V>();
-    Mul(mul_out, gelu_out, ubX1, ub_num);
-    outQueueMul.EnQue(mul_out);
+    Mul(mul_out_5, gelu_out, ubX1, ub_num);
+    outQueueMul.EnQue(mul_out_5);
 
     outQueueGelu.FreeTensor(gelu_out);
     inQueueX1.FreeTensor(ubX1);

@@ -34,13 +34,13 @@ public:
     constexpr static uint8_t ODD = 2;
     constexpr static uint8_t EVEN = 1;
 
-    constexpr static float ERF_PARAM1 = -0.3512339572e-8f;
-    constexpr static float ERF_PARAM2 = 0.2645266170e-6f;
-    constexpr static float ERF_PARAM3 = -0.7929488134e-5f;
-    constexpr static float ERF_PARAM4 = 0.1106123840e-3f;
-    constexpr static float ERF_PARAM5 = 0.6518995814e-4f;
-    constexpr static float ERF_PARAM6 = -0.7266616915e-1f;
-    constexpr static float ERF_PARAM7 = -0.1595769883e1f;
+    constexpr static float ERF_PARAM21 = -0.3512339572e-8f;
+    constexpr static float ERF_PARAM22 = 0.2645266170e-6f;
+    constexpr static float ERF_PARAM23 = -0.7929488134e-5f;
+    constexpr static float ERF_PARAM24 = 0.1106123840e-3f;
+    constexpr static float ERF_PARAM25 = 0.6518995814e-4f;
+    constexpr static float ERF_PARAM26 = -0.7266616915e-1f;
+    constexpr static float ERF_PARAM27 = -0.1595769883e1f;
     constexpr static float ERF_THRESHOLD = 5.75;
 
 protected:
@@ -269,24 +269,24 @@ __aicore__ inline void GeGluV2Base<T>::ComputeGeluErf(
     Mins(x1, ubx2_fp32, ERF_THRESHOLD, length);
 
     Mul(xPow, x1, x1, length);
-    Muls(computeOut, xPow, ERF_PARAM1, length);
+    Muls(computeOut, xPow, ERF_PARAM21, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM2, length);
+    Adds(computeOut, computeOut, ERF_PARAM22, length);
     Mul(computeOut, computeOut, xPow, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM3, length);
+    Adds(computeOut, computeOut, ERF_PARAM23, length);
     Mul(computeOut, computeOut, xPow, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM4, length);
+    Adds(computeOut, computeOut, ERF_PARAM24, length);
     Mul(computeOut, computeOut, xPow, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM5, length);
+    Adds(computeOut, computeOut, ERF_PARAM25, length);
     Mul(computeOut, computeOut, xPow, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM6, length);
+    Adds(computeOut, computeOut, ERF_PARAM26, length);
     Mul(computeOut, computeOut, xPow, length);
 
-    Adds(computeOut, computeOut, ERF_PARAM7, length);
+    Adds(computeOut, computeOut, ERF_PARAM27, length);
     Mul(computeOut, computeOut, x1, length);
 
     Exp(computeOut, computeOut, length);

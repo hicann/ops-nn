@@ -157,10 +157,10 @@ __aicore__ inline void GeGluV2Fp32AlignLastAxisBigWithoutPad<T>::ComputeMul(cons
 {
     LocalTensor<T> ubX1 = inQueueX1.DeQue<T>();
     LocalTensor<T> gelu_out = outQueueGelu.DeQue<T>();
-    LocalTensor<T> mul_out = outQueueMul.AllocTensor<T>();
+    LocalTensor<T> mul_out_1 = outQueueMul.AllocTensor<T>();
     PipeBarrier<PIPE_V>();
-    Mul(mul_out, gelu_out, ubX1, ub_num);
-    outQueueMul.EnQue(mul_out);
+    Mul(mul_out_1, gelu_out, ubX1, ub_num);
+    outQueueMul.EnQue(mul_out_1);
 
     outQueueGelu.FreeTensor(gelu_out);
     inQueueX1.FreeTensor(ubX1);
