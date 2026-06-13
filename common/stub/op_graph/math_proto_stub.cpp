@@ -107,4 +107,10 @@ REG_OP(Sort)
     .ATTR(stable, Bool, false)
     .ATTR(y2_dtype, Type, DT_INT32)
     .OP_END_FACTORY_REG(Sort)
+
+REG_OP(BroadcastTo)
+    .INPUT(x, TensorType({BasicType(), DT_BOOL, DT_STRING, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .INPUT(shape, TensorType({DT_INT32, DT_INT64}))
+    .OUTPUT(y, TensorType({BasicType(), DT_BOOL, DT_STRING, DT_HIFLOAT8, DT_FLOAT8_E5M2, DT_FLOAT8_E4M3FN}))
+    .OP_END_FACTORY_REG(BroadcastTo)
 } // namespace ge
