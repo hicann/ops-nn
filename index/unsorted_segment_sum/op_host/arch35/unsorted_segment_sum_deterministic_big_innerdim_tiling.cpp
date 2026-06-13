@@ -29,6 +29,7 @@ static constexpr uint32_t DCACHE_SIZE = 32 * 1024;
 static constexpr uint64_t DEFAULT_HANDLE_ROWS = 20UL;
 static constexpr uint32_t NUMBER_THREE = 3;
 static constexpr uint32_t DOUBLE = 2;
+static constexpr uint32_t BIG_INNERDIM_THRESHOLD = 30;
 static constexpr uint32_t HALF_UB_ALIGN = 16;;
 
 static const std::set<ge::DataType> determinsiticSupportType = {ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16};
@@ -37,7 +38,7 @@ bool UnsortedSegmentSumDeterministicBigInnerDimTiling::IsCapable()
 {
     OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] GetDeterministic state: %u", context_->GetDeterministic());
     if (context_->GetDeterministic() == 1 && dataShapeSize_ != 0 &&
-        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end()) {
+        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() && innerDim_ > BIG_INNERDIM_THRESHOLD) {
         return true;
     }
     return false;
@@ -46,16 +47,16 @@ bool UnsortedSegmentSumDeterministicBigInnerDimTiling::IsCapable()
 int64_t UnsortedSegmentSumDeterministicBigInnerDimTiling::FindMaxColsInUb()
 {
     ubSize_ -= NUMBER_THREE * ubBlockSize_;
-    uint64_t oneColOccupyBytes = sizeof(float) * baseS_        // x
-                                + idTypeBytes_ * baseS_* DOUBLE  // segmentId、sortedId
-                                + sizeof(uint32_t) * baseS_      // sortedIdx
-                                + sizeof(float) * DOUBLE;      // y double buffer                     
+    uint64_t oneColOccupyBytes = sizeof(float) * baseS_           // x
+                                 + idTypeBytes_ * baseS_ * DOUBLE // segmentId、sortedId
+                                 + sizeof(uint32_t) * baseS_      // sortedIdx
+                                 + sizeof(float) * DOUBLE;        // y double buffer
     int64_t left = 0;
     int64_t right = ubSize_ / oneColOccupyBytes;
     int64_t maxCols = -1;
     int64_t sortTmpSize = GetSortTmpSize(baseS_);
     while (left <= right) {
-        int64_t mid = left + (right-left) / DOUBLE;        
+        int64_t mid = left + (right - left) / DOUBLE;
         int64_t occupyBytes = mid * oneColOccupyBytes + sortTmpSize;
         if (occupyBytes <= static_cast<int64_t>(ubSize_)) {
             maxCols = mid;
@@ -102,11 +103,10 @@ ge::graphStatus UnsortedSegmentSumDeterministicBigInnerDimTiling::DoOpTiling()
     usedCoreNum_ = Ops::Base::CeilDiv(innerDim_, normalCoreProcessCols_);
     tailCoreProcessCols_ = innerDim_ - (usedCoreNum_ - 1UL) * normalCoreProcessCols_;
 
-    baseS_ = std::min(DEFAULT_HANDLE_ROWS, inputOuterDim_);    
-    int64_t colsNumInUB = FindMaxColsInUb(); 
+    baseS_ = std::min(DEFAULT_HANDLE_ROWS, inputOuterDim_);
+    int64_t colsNumInUB = FindMaxColsInUb();
     if (colsNumInUB <= 0) {
-        OP_LOGE(
-            context_->GetNodeName(), "One column data size is too large, current module does not support !!!");
+        OP_LOGE(context_->GetNodeName(), "One column data size is too large, current module does not support !!!");
         return ge::GRAPH_PARAM_INVALID;
     }
     baseA_ = colsNumInUB / HALF_UB_ALIGN * HALF_UB_ALIGN;

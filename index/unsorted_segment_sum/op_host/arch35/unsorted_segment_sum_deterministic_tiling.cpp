@@ -28,6 +28,8 @@ static constexpr uint32_t FLOAT_BYTES = 4;
 static constexpr uint32_t DOUBLE = 2;
 static constexpr uint32_t NUMBER_THREE = 3;
 static constexpr uint32_t NUMBER_KB = 1024;
+static constexpr uint32_t BIG_INNERDIM_THRESHOLD = 30;
+static constexpr uint32_t SMALL_INNERDIM_THRESHOLD = 10000;
 
 static const std::map<ge::DataType, uint32_t> dataTypeMap = {{ge::DT_FLOAT, 0}, {ge::DT_FLOAT16, 1}, {ge::DT_BF16, 2},
                                                              {ge::DT_INT32, 3}, {ge::DT_INT64, 4},   {ge::DT_UINT32, 5},
@@ -44,7 +46,8 @@ bool UnsortedSegmentSumDetermTiling::IsCapable()
 {
     OP_LOGI(context_->GetNodeName(), "[UnsortedSegmentSum] GetDeterministic state: %u", context_->GetDeterministic());
     if (context_->GetDeterministic() == 1 && dataShapeSize_ != 0 &&
-        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end()) {
+        determinsiticSupportType.find(dataType_) != determinsiticSupportType.end() && !(innerDim_ > BIG_INNERDIM_THRESHOLD) &&
+        !(innerDim_ == 1 && inputOuterDim_ < SMALL_INNERDIM_THRESHOLD)) {
         return true;
     }
     return false;
@@ -66,23 +69,23 @@ void UnsortedSegmentSumDetermTiling::SetTilingData()
     tilingData_.set_normalCoreProcessNum(normalCoreProcessNum_);
     tilingData_.set_tailCoreProcessNum(tailCoreProcessNum_);
     tilingData_.set_usedCoreNum(usedCoreNum_);
+    tilingData_.set_dequantCoreNum(dequantCoreNum_);
 }
-
 
 int64_t UnsortedSegmentSumDetermTiling::FindMaxRowsInUb()
 {
     uint32_t alignNum = ubBlockSize_ / sizeof(float);
     row32BAlign_ = (innerDim_ + alignNum - 1) / alignNum * alignNum;
-    ubSize_ -= NUMBER_THREE * ubBlockSize_;   
-    uint64_t oneRowOccupyBytes = valueTypeBytes_ * row32BAlign_         //x输入
-                                + idTypeBytes_ * DOUBLE             //segmentId输入、sortedId
-                                + sizeof(uint32_t);                  //sortedIdx
+    ubSize_ -= NUMBER_THREE * ubBlockSize_;
+    uint64_t oneRowOccupyBytes = valueTypeBytes_ * row32BAlign_ // x输入
+                                 + idTypeBytes_ * DOUBLE        // segmentId输入、sortedId
+                                 + sizeof(uint32_t);            // sortedIdx
     int64_t left = 0;
     int64_t right = ubSize_ / oneRowOccupyBytes;
     int64_t maxRows = -1;
 
     while (left <= right) {
-        int64_t mid = left + (right-left) / 2;        
+        int64_t mid = left + (right - left) / 2;
         int64_t occupyBytes = mid * oneRowOccupyBytes + GetSortTmpSize(mid);
         if (occupyBytes <= static_cast<int64_t>(ubSize_)) {
             maxRows = mid;
@@ -113,10 +116,9 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
 {
     OP_LOGI(context_->GetNodeName(), "Deterministic Mode tiling is begin");
     ubSize_ -= DCACHE_SIZE;
-    int64_t rowsNumInUB = FindMaxRowsInUb(); 
+    int64_t rowsNumInUB = FindMaxRowsInUb();
     if (rowsNumInUB <= 0) {
-        OP_LOGW(
-            context_->GetNodeName(), "InnerDim is too large, current module does not support !!!");
+        OP_LOGW(context_->GetNodeName(), "InnerDim is too large, current module does not support !!!");
         return ge::GRAPH_PARAM_INVALID;
     }
 
@@ -125,11 +127,16 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
         normalCoreProcessNum_ = inputOuterDim_;
         tailCoreProcessNum_ = inputOuterDim_;
     } else {
-        normalCoreProcessNum_  = Ops::Base::CeilDiv(inputOuterDim_, totalCoreNum_);
+        normalCoreProcessNum_ = Ops::Base::CeilDiv(inputOuterDim_, totalCoreNum_);
         usedCoreNum_ = Ops::Base::CeilDiv(inputOuterDim_, normalCoreProcessNum_);
         tailCoreProcessNum_ = inputOuterDim_ - (usedCoreNum_ - 1) * normalCoreProcessNum_;
     }
-    usrWorkspaceSize_ = outputOuterDim_ * innerDim_ * sizeof(int32_t) * DOUBLE + outputOuterDim_ * sizeof(int64_t) + DOUBLE * NUMBER_KB;
+    dequantCoreNum_ = static_cast<uint32_t>(totalCoreNum_);
+    uint64_t perCoreSortedIdBytes = (normalCoreProcessNum_ * idTypeBytes_ + 31) / 32 * 32;
+    uint64_t perCoreSortedIndexBytes = (normalCoreProcessNum_ * sizeof(uint32_t) + 31) / 32 * 32;
+    usrWorkspaceSize_ = outputOuterDim_ * innerDim_ * sizeof(int32_t) * DOUBLE + outputOuterDim_ * sizeof(int64_t) +
+                        DOUBLE * NUMBER_KB + NUMBER_KB + usedCoreNum_ * perCoreSortedIdBytes + NUMBER_KB +
+                        usedCoreNum_ * perCoreSortedIndexBytes;
     sortSharedBufSize_ = GetSortTmpSize(rowsNumInUB);
     rowsNumInUB_ = rowsNumInUB;
     SetTilingData();
@@ -138,13 +145,12 @@ ge::graphStatus UnsortedSegmentSumDetermTiling::DoOpTiling()
 
 ge::graphStatus UnsortedSegmentSumDetermTiling::PostTiling()
 {
-    context_->SetBlockDim(usedCoreNum_);
+    context_->SetBlockDim(dequantCoreNum_);
     context_->SetScheduleMode(1);
     auto res = context_->SetLocalMemorySize(ubSize_);
     OP_CHECK_IF(
         (res != ge::GRAPH_SUCCESS),
-        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_),
-        return ge::GRAPH_FAILED);
+        OP_LOGE(context_->GetNodeName(), "SetLocalMemorySize ubSize = %ld failed.", ubSize_), return ge::GRAPH_FAILED);
     if (tilingData_.GetDataSize() > context_->GetRawTilingData()->GetCapacity()) {
         return ge::GRAPH_FAILED;
     }
@@ -159,6 +165,7 @@ void UnsortedSegmentSumDetermTiling::DumpTilingInfo()
     std::ostringstream info;
     info << "tilingKey: " << GetTilingKey();
     info << ", usedCoreNum: " << usedCoreNum_;
+    info << ", dequantCoreNum: " << dequantCoreNum_;
     info << ", inputOuterDim: " << tilingData_.get_inputOuterDim();
     info << ", outputOuterDim: " << tilingData_.get_outputOuterDim();
     info << ", innerDim: " << tilingData_.get_innerDim();

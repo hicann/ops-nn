@@ -18,6 +18,7 @@
  * \file uss_deterministic.h
  * \brief uss_deterministic
  */
+#pragma once
 #ifndef USS_DETERMINISTIC_H_
 #define USS_DETERMINISTIC_H_
 
@@ -44,6 +45,24 @@ static constexpr SortConfig sortConfig = {SortType::RADIX_SORT, false};
 template <typename P>
 __aicore__ inline P MIN(P x, P y) {
     return x < y ? x : y;
+}
+
+template <typename DT>
+__aicore__ inline void ParallelInitGlobalMemory(__gm__ DT* baseAddr, uint64_t totalNum, DT value)
+{
+    uint32_t totalCoreNum = GetBlockNum();
+    uint64_t perCore = Ops::Base::CeilDiv(totalNum, static_cast<uint64_t>(totalCoreNum));
+    perCore = Ops::Base::CeilAlign(perCore, static_cast<uint64_t>(GM_ALIGN / sizeof(DT)));
+    uint64_t minPerCore = MIN_FACTOR / sizeof(DT);
+    perCore = perCore > minPerCore ? perCore : minPerCore;
+    uint64_t activeCoreNum = Ops::Base::CeilDiv(totalNum, perCore);
+    uint64_t tailNum = totalNum - (activeCoreNum - 1) * perCore;
+    uint64_t myNum = (GetBlockIdx() == activeCoreNum - 1) ? tailNum : perCore;
+    GlobalTensor<DT> initTensor;
+    initTensor.SetGlobalBuffer(baseAddr + GetBlockIdx() * perCore);
+    if (GetBlockIdx() < static_cast<uint32_t>(activeCoreNum)) {
+        InitGlobalMemory(initTensor, myNum, value);
+    }
 }
 
 template <typename T, typename U>
@@ -79,6 +98,7 @@ private:
     uint32_t normalCoreProcessNum_{0};
     uint32_t tailCoreProcessNum_{0};
     uint32_t usedCoreNum_{1};
+    uint32_t dequantCoreNum_{1};
     uint64_t segmentNum_{1};
     uint32_t tmpBufferSize_{0};
     uint64_t curCoreProcessNum_{0};
@@ -159,6 +179,7 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR seg
     normalCoreProcessNum_ = tilingData_.normalCoreProcessNum;
     tailCoreProcessNum_ = tilingData_.tailCoreProcessNum;
     usedCoreNum_ = tilingData_.usedCoreNum;
+    dequantCoreNum_ = tilingData_.dequantCoreNum;
     tmpBufferSize_ = tilingData_.tmpBufferSize;
     rowsNumInUb_ = tilingData_.rowsNumInUB;
     segmentNum_ = tilingData_.outputOuterDim;      
@@ -171,12 +192,10 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR seg
     yGm_.SetGlobalBuffer((__gm__ T*)output);
     segmentIds_.SetGlobalBuffer((__gm__ U*)segmentIds + blockId_ * normalCoreProcessNum_);
     
-    if (blockId_ == 0) {
-        InitGlobalMemory(workspaceNValue_, segmentNum_, (uint64_t)(0));
-        InitGlobalMemory(workspaceMValue_, segmentNum_ * innerDim_, (float)(0));
-        InitGlobalMemory(yGm_, segmentNum_ * innerDim_, (T)0);
-        InitGlobalMemory(workspaceOutput_, segmentNum_ * innerDim_, (int32_t)0);
-    }
+    ParallelInitGlobalMemory((__gm__ uint64_t*)workSpace, segmentNum_, (uint64_t)0);
+    ParallelInitGlobalMemory((__gm__ float*)workSpace + segmentNum_ * 2 + KB_SIZE / sizeof(float), segmentNum_ * innerDim_, (float)0);
+    ParallelInitGlobalMemory((__gm__ T*)output, segmentNum_ * innerDim_, (T)0);
+    ParallelInitGlobalMemory((__gm__ int32_t*)workSpace + segmentNum_ * 2 + segmentNum_ * innerDim_ + KB_SIZE * 2 / sizeof(int32_t), segmentNum_ * innerDim_, (int32_t)0);
 
     PipeBarrier<PIPE_ALL>();
     SyncAll();
@@ -197,26 +216,25 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR seg
 template <typename T, typename U>
 __aicore__ inline void KernelUSSDeterministic<T, U>::Process()
 {
-    if (blockId_ >= tilingData_.usedCoreNum) {
-        return;
+    if (blockId_ < usedCoreNum_) {
+        uint32_t loopCnt = Ops::Base::CeilDiv(curCoreProcessNum_, rowsNumInUb_);
+        for (uint32_t loop = 0; loop < loopCnt; ++loop) {
+            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
+            uint64_t segmentIdOffset = loop * rowsNumInUb_;
+            FirstUbProcess(curProcessRowsNum, segmentIdOffset);
+        }
+        PipeBarrier<PIPE_ALL>();
     }
-    uint32_t loopCnt = Ops::Base::CeilDiv(curCoreProcessNum_, rowsNumInUb_);
-
-    for (uint32_t loop = 0; loop < loopCnt; ++loop) {
-        uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
-        uint64_t segmentIdOffset = loop * rowsNumInUb_;
-        FirstUbProcess(curProcessRowsNum, segmentIdOffset);
-    }
-    
-    PipeBarrier<PIPE_ALL>();
     SyncAll();
-    for (uint32_t loop = 0; loop < loopCnt; ++loop) {
-        uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
-        uint64_t segmentIdOffset = loop * rowsNumInUb_;
-        SecondUbProcess(curProcessRowsNum, segmentIdOffset);  
+    if (blockId_ < usedCoreNum_) {
+        uint32_t loopCnt = Ops::Base::CeilDiv(curCoreProcessNum_, rowsNumInUb_);
+        for (uint32_t loop = 0; loop < loopCnt; ++loop) {
+            uint64_t curProcessRowsNum = loop == loopCnt - 1 ? curCoreProcessNum_ - (loopCnt - 1) * rowsNumInUb_ : rowsNumInUb_;
+            uint64_t segmentIdOffset = loop * rowsNumInUb_;
+            SecondUbProcess(curProcessRowsNum, segmentIdOffset);  
+        } 
+        PipeBarrier<PIPE_ALL>();
     }
-
-    PipeBarrier<PIPE_ALL>();
     SyncAll();
     ThirdUbProcess();
     PipeBarrier<PIPE_ALL>();
@@ -365,12 +383,12 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::SecondUbProcess(uint64_t cu
 template <typename T, typename U>
 __simt_vf__ __aicore__ LAUNCH_BOUND(USED_THREAD_NUMS) inline void Dequantize(
     __gm__ float* mValueWorkSpace, __gm__ uint64_t* nValueWorkSpace, __gm__ int32_t* workspaceOutput, __gm__ T* yGm, 
-    uint32_t segmentNum, uint32_t innerDim, uint32_t blockId, uint32_t blockNum)
+    uint32_t segmentNum, uint32_t innerDim, uint32_t blockId, uint32_t dequantCoreNum)
 {
     float scaling = static_cast<float>(1L << 30);
     
     for (uint32_t i = blockId * blockDim.x + threadIdx.x; i < segmentNum * innerDim; 
-        i += blockNum * blockDim.x) {  
+        i += dequantCoreNum * blockDim.x) {  
         uint32_t row = i / innerDim;
         uint32_t col = i % innerDim;
 
@@ -389,7 +407,7 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::ThirdUbProcess()
 {
     asc_vf_call<Dequantize<T,U>>(dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()), 
         (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
-        (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, usedCoreNum_);
+        (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, dequantCoreNum_);
 }
 
 } // namespace UnsortedSegmentSum
