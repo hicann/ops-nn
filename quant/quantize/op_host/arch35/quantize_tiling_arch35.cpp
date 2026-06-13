@@ -103,8 +103,9 @@ ge::graphStatus Quantize::GetCompileInfo()
 
     OP_CHECK_IF(
         (coreNum_ <= 0 || ubSize_ <= 0),
-        OP_LOGE(context_->GetNodeName(),
-                                        "Quantize GetCompileInfo Failed, coreNum:%ld, ubSize:%ld.", coreNum_, ubSize_),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(),"coreNum,ubSize",
+		                        std::to_string(coreNum_)+","+std::to_string(ubSize_),
+                                        "The values of coreNum and ubSize must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     cacheLine_ = CACHE_SIZE_910D;

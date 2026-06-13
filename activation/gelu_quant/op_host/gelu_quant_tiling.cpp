@@ -35,12 +35,12 @@ ge::graphStatus GeluQuantTiling::GetPlatformInfo()
     baseInfoOp.vectorCoreNum = compileInfo->vectorCoreNum;
     OP_CHECK_IF(
         (baseInfoOp.vectorCoreNum <= 0),
-        OP_LOGE(nodeName_, "GeluQuantTiling get num of vector core is less than or equal to 0."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"vectorCoreNum",std::to_string(baseInfoOp.vectorCoreNum), "The value of vectorCoreNum must be greate than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
-        (baseInfoOp.ubSize <= 0), OP_LOGE(nodeName_, "GeluQuantTiling get ub size is less than or equal to 0."),
+        (baseInfoOp.ubSize <= 0), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"ubSize",std::to_string(baseInfoOp.ubSize), "The value of ubSize must be greate than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize -= RESERVED_UB_SIZE; // 可用UB空间
@@ -592,9 +592,8 @@ ge::graphStatus TilingPrepareForGeluQuant(gert::TilingParseContext* context)
 
     OP_CHECK_IF(
         (compileInfo->vectorCoreNum <= 0 || compileInfo->ubSize <= 0),
-        OP_LOGE(
-            context->GetNodeName(), "GeluQuant GetHardwareInfo Failed, vectorCoreNum:%d, ubSize:%lu.",
-            compileInfo->vectorCoreNum, compileInfo->ubSize),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            context->GetNodeName(), "vectorCoreNum,ubSize",std::to_string(compileInfo->vectorCoreNum)+","+std::to_string(compileInfo->ubSize),"The value of vectorCoreNum,ubSize must be greater than 0"),
         return ge::GRAPH_FAILED);
     OP_LOGD(context, "GetCoreNum:%d, ubSize:%lu", compileInfo->vectorCoreNum, compileInfo->ubSize);
     return ge::GRAPH_SUCCESS;

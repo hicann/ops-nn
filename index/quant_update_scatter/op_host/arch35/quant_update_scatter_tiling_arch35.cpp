@@ -506,8 +506,8 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::VerifyTilingQuantParams()
     if (it != ROUND_MODE_TPL_MAP.end()) {
         castRoundMode_ = it->second;
     } else {
-        OP_LOGE(context_->GetNodeName(), "round_mode illegal.");
-        return ge::GRAPH_FAILED;
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "round_mode", roundMode, "The value of round_mode must be [rint, round, hybrid]");
+	return ge::GRAPH_FAILED;
     }
     int64_t quantScalesNum = quantScalesElements_;
     int64_t quantZeroPointsElements = quantZeroPointsElements_;
@@ -663,7 +663,7 @@ ge::graphStatus QuantUpdateScatterRegbaseTiling::DoTiling()
     auto rawTilingData = context_->GetRawTilingData();
     OP_CHECK_NULL_WITH_CONTEXT(context_, rawTilingData);
     if (tilingData_.GetDataSize() > rawTilingData->GetCapacity()) {
-        OP_LOGE(context_->GetNodeName(), "Tiling data size larger than capacity!");
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(),"TilingDataSize,Capacity",std::to_string(tilingData_.GetDataSize())+","+std::to_string(rawTilingData->GetCapacity()), "The value of TilingDataSize must be greater than that of Capacity");
         return ge::GRAPH_FAILED;
     }
     tilingData_.SaveToBuffer(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity());

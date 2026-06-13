@@ -217,17 +217,17 @@ static ge::graphStatus GetPlatInfo(const gert::TilingContext *context, GroupedDy
 
     tilingParam.totalCoreNum = ascendcPlatform.GetCoreNumAiv();
     OP_CHECK_IF((tilingParam.totalCoreNum <= 0),
-        OP_LOGE(context, "Failed to get core num."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "totalCoreNum",std::to_string(tilingParam.totalCoreNum),"The value of totalCoreNum must be greater than 0"), return ge::GRAPH_FAILED);
 
     uint64_t ubSize;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     tilingParam.ubSize = static_cast<int64_t>(ubSize);
     OP_CHECK_IF((tilingParam.ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "ubSize",std::to_string(tilingParam.ubSize),"The value of ubsize must be greater than 0"), return ge::GRAPH_FAILED);
 
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
-    OP_CHECK_IF((tilingParam.ubSize <= 0),
-        OP_LOGE(context, "Failed to get ub size."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF((tilingParam.vfLen <= 0),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "vfLen",std::to_string(tilingParam.vfLen),"The value of vfLen must be greater than 0"), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

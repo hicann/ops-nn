@@ -35,12 +35,12 @@ ge::graphStatus GeluQuantRegbaseTiling::GetPlatformInfo()
     baseInfoOp.vectorCoreNum = compileInfo->vectorCoreNum;
     OP_CHECK_IF(
         (baseInfoOp.vectorCoreNum <= 0),
-        OP_LOGE(nodeName_, "GeluQuantRegbaseTiling get num of vector core is less than or equal to 0."),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"vectorCoreNum",std::to_string(baseInfoOp.vectorCoreNum), "The value of vectorCoreNum must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize = compileInfo->ubSize;
     OP_CHECK_IF(
-        (baseInfoOp.ubSize <= 0), OP_LOGE(nodeName_, "GeluQuantRegbaseTiling get ub size is less than or equal to 0."),
+        (baseInfoOp.ubSize <= 0), OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(nodeName_,"ubSize",std::to_string(baseInfoOp.ubSize), "The value of ubSize must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     baseInfoOp.ubSize -= RESERVED_UB_SIZE; // 可用UB空间
