@@ -89,6 +89,13 @@ protected:
         DataCopyPad(selfLocal, selfGm[offset], copyParams, padParams);
     }
 
+    template <typename T>
+    __aicore__ inline void CommonCopyOut(GlobalTensor<T>& selfGm, uint32_t offset, LocalTensor<T>& selfLocal, uint16_t blockCount, uint32_t blockLen)
+    {
+        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+        DataCopyPad(selfGm[offset], selfLocal, copyParams);
+    }
+
     __aicore__ inline uint32_t ComputeMaskTrueCount(LocalTensor<bool>& maskLocalTensor, uint32_t calCount)
     {
         LocalTensor<float> maskFp32Temp = maskFp32Buf.Get<float>();
@@ -147,6 +154,7 @@ protected:
         alignedMaskLengthFp32, alignedMaskLengthHf, circleNum, loopNum, remainNum, alignedPreMaskTileLength, totalUpdatesNum,
         preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum, totalPreMaskLength, updatesNum, remainUpdates;
     uint32_t updatesIndex = 0;
+    uint32_t aviUpdates = 0;
 };
 
 } // namespace MaskedScatterNS

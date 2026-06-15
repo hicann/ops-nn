@@ -45,9 +45,7 @@ public:
         pipe.InitBuffer(calInt32Buf, BUFFER_NUM * alignedMaskLengthFp32 * sizeof(int32_t));
         pipe.InitBuffer(maskLocalHfBuf, BUFFER_NUM * alignedMaskLengthHf * sizeof(half));
         pipe.InitBuffer(maskLocalFp32Buf, BUFFER_NUM * alignedMaskLengthFp32 * sizeof(float));
-        if (updatesLineNum == 1) {
-            pipe.InitBuffer(outQueueX, BUFFER_NUM, alignedTotalUpdatesNum * sizeof(DTYPE_X));
-        }
+        pipe.InitBuffer(outQueueX, BUFFER_NUM, alignedTotalUpdatesNum * sizeof(DTYPE_X));
     }
 
     __aicore__ inline void Process()
@@ -55,9 +53,7 @@ public:
         maskLocal = inQueueMask.AllocTensor<bool>();
         preMaskLocal = inQueuePreMask.AllocTensor<bool>();
         updatesLocal = outQueueY.AllocTensor<DTYPE_X>();
-        if (updatesLineNum == 1) {
-            xLocal = outQueueX.AllocTensor<DTYPE_X>();
-        }
+        xLocal = outQueueX.AllocTensor<DTYPE_X>();
         PreparePreMaskIndex();
         uint32_t tempMaskOffset = 0;
         uint32_t updateOffset = updatesIndex * updatesLineNum;
@@ -67,11 +63,7 @@ public:
             if (i == circleNum - 1 && tailMaskTileLength != 0) {
                 tempMaskTileLength = tailMaskTileLength;
             }
-            CommonCopyIn<bool>(maskLocal, maskGm, tempMaskOffset, 1, tempMaskTileLength);
-            if (updatesLineNum == 1) { 
-                PipeBarrier<PIPE_ALL>();
-                CommonCopyIn<DTYPE_X>(xLocal, xGm, tempMaskOffset, 1, tempMaskTileLength);
-            }
+            CopyIn(tempMaskOffset, tempMaskTileLength);
             PipeBarrier<PIPE_ALL>();
             Compute(updateOffset, tempMaskTileLength);
             PipeBarrier<PIPE_ALL>();
@@ -82,9 +74,7 @@ public:
         inQueueMask.FreeTensor(maskLocal);
         inQueuePreMask.FreeTensor(preMaskLocal);
         outQueueY.FreeTensor(updatesLocal);
-        if (updatesLineNum == 1) {
-            outQueueX.FreeTensor(xLocal);
-        }
+        outQueueX.FreeTensor(xLocal);
     }
 
 private:
@@ -115,8 +105,16 @@ private:
         alignedTotalUpdatesNum = CeilAlign(maskTileLength * updatesLineNum, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(DTYPE_X)));
     }
 
+    __aicore__ inline void CopyIn(uint32_t maskOffset, uint32_t maskCount)
+    {
+        CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskCount);
+        PipeBarrier<PIPE_ALL>();
+        CommonCopyIn<DTYPE_X>(xLocal, xGm,  maskOffset * updatesLineNum, 1, maskCount * updatesLineNum);
+    }
+
     __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t maskCount)
     {
+        aviUpdates = 0;
         if (updatesIndex >= updatesNum) {
             return;
         }
@@ -176,14 +174,18 @@ private:
 
     __aicore__ inline void CopyOut(uint32_t maskOffset, uint32_t maskCount)
     {
-        if (aviUpdates == 0) {
-            return;
-        }
         if (updatesLineNum == 1) {
             CopyOutWithUpdatesOne(maskOffset, maskCount);
             return;
         }
 
+        // Copy x to y as default values for all positions in this tile
+        CommonCopyOut<DTYPE_X>(yGm, maskOffset * updatesLineNum, xLocal, 1, maskCount * updatesLineNum);
+        PipeBarrier<PIPE_ALL>();
+
+        if (aviUpdates == 0) {
+            return;
+        }
         DataCopyExtParams outCopyOutParams;
         outCopyOutParams.blockCount = 1;
         outCopyOutParams.blockLen = updatesLineNum * sizeof(DTYPE_X);
@@ -204,7 +206,6 @@ private:
 
 private:
     uint32_t maskTileLength, alignedTotalUpdatesNum;
-    uint32_t aviUpdates = 0;
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueX;
     LocalTensor<DTYPE_X> xLocal;
 };
