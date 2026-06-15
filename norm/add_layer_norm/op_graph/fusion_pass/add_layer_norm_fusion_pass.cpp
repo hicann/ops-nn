@@ -13,7 +13,6 @@
 #include "es_math_ops.h"
 #include "platform/platform_info.h"
 #include "add_layer_norm_utils.h"
-
 using namespace ge;
 using namespace fe;
 using namespace fusion;
@@ -364,8 +363,7 @@ GraphUniqPtr AddLayerNormFusionPass::Replacement(const std::unique_ptr<MatchResu
         replace_outputs.emplace_back(es::Cast(addlayernorm.x, DT_FLOAT));
     }
     GraphUniqPtr replaceGraph = replace_graph_builder.BuildAndReset(replace_outputs);
-    //infershape
-    if (InferShape(replaceGraph, subgraph_inputs) != SUCCESS) {
+    if (InferShapeForReplacement(replaceGraph, match_result, subgraph_inputs) != SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "Infershape for replacement failed.");
         return nullptr;
     }

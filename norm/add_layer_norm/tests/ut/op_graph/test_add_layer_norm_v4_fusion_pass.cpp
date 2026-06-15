@@ -1682,14 +1682,14 @@ TEST_F(AddLayerNormV4FusionPassTest, add_layer_normV4_fusion_ReverseAddOrder_95_
 
     auto graph_builder = es::EsGraphBuilder("add_layer_norm_v4_fusion_test23_graph");
     auto x1 = graph_builder.CreateInput(0, "x1", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
-    auto x2 = graph_builder.CreateInput(1, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
-    auto bias = graph_builder.CreateInput(2, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto bias = graph_builder.CreateInput(1, "bias", DT_FLOAT16, FORMAT_ND, shape_bias.GetDims());
+    auto x2 = graph_builder.CreateInput(2, "x2", DT_FLOAT16, FORMAT_ND, shape_x.GetDims());
     auto normalized_shape = graph_builder.CreateInput(
         3, "normalized_shape", DT_INT32, FORMAT_ND, shape_normalized_shape.GetDims());
     auto gamma = graph_builder.CreateInput(4, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
     auto beta = graph_builder.CreateInput(5, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
 
-    auto add1 = bias + x2;
+    auto add1 = x2 + bias;
     auto add2 = add1 + x1;
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto layernorm = es::LayerNormV4(cast1, normalized_shape, gamma, beta);

@@ -11,6 +11,15 @@
 #ifndef NN_ADD_LAYER_NORM_FUSION_UTILS_H
 #define NN_ADD_LAYER_NORM_FUSION_UTILS_H
 #include "ge/ge_utils.h"
+#include "version/ge-compiler_version.h"
+// 90100000U 对应 ge-compiler 版本号 9.1.0，由以下公式计算得出：
+//   version_num = major * 10000000 + minor * 100000 + patch * 1000
+//               = 9     * 10000000 + 1     * 100000  + 0     * 1000
+//               = 90100000
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+#include "acl/acl_rt.h"
+#include "fusion_pass_compat_weak_symbols.h"
+#endif
 
 namespace ops {
 static bool IsScaler(const Shape& shape)
@@ -39,7 +48,8 @@ static void GetInputsInfo(
     }
 }
 
-static Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs)
+static Status InferShapeByGeUtils(
+    const GraphUniqPtr& replace_graph, const std::vector<SubgraphInput>& subgraph_inputs)
 {
     std::vector<Shape> input_shapes;
     for (const auto& subgraph_input : subgraph_inputs) {
@@ -49,6 +59,37 @@ static Status InferShape(const GraphUniqPtr& replace_graph, const std::vector<Su
         input_shapes.emplace_back(tensor_desc.GetShape());
     }
     return GeUtils::InferShape(*replace_graph, input_shapes);
+}
+
+// 90100000U 对应 ge-compiler 版本号 9.1.0，由以下公式计算得出：
+//   version_num = major * 10000000 + minor * 100000 + patch * 1000
+//               = 9     * 10000000 + 1     * 100000  + 0     * 1000
+//               = 90100000
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+constexpr int32_t kInferShapeUtilMinRuntimeVersion = 90100000;
+
+static bool IsInferShapeUtilAvailable()
+{
+    int32_t version = 0;
+    auto _ = aclsysGetVersionNum("ge-compiler", &version);
+    return version >= kInferShapeUtilMinRuntimeVersion;
+}
+#endif
+
+static Status InferShapeForReplacement(
+    const GraphUniqPtr& replace_graph, const std::unique_ptr<MatchResult>& match_result,
+    const std::vector<SubgraphInput>& subgraph_inputs)
+{
+// 90100000U 对应 ge-compiler 版本号 9.1.0，由以下公式计算得出：
+//   version_num = major * 10000000 + minor * 100000 + patch * 1000
+//               = 9     * 10000000 + 1     * 100000  + 0     * 1000
+//               = 90100000
+#if GE_COMPILER_VERSION_NUM >= 90100000U
+    if (IsInferShapeUtilAvailable()) {
+        return ge::fusion::InferShapeUtil::InferShape(*replace_graph, *match_result);
+    }
+#endif
+    return InferShapeByGeUtils(replace_graph, subgraph_inputs);
 }
 
 static bool IsAdd2InputValid(

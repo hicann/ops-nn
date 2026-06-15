@@ -823,11 +823,11 @@ TEST_F(AddLayerNormFusionPassTest, for2_add_layer_normV3_fusion_ReverseAddOrder_
 
     auto graph_builder = es::EsGraphBuilder("add_layer_norm_fusion_third_patten");
     auto x1 = graph_builder.CreateInput(0, "x1", DT_BF16, FORMAT_ND, shape_x.GetDims());
-    auto x2 = graph_builder.CreateInput(1, "x2", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto bias = graph_builder.CreateInput(1, "bias", DT_BF16, FORMAT_ND, shape_bias.GetDims());
     auto gamma = graph_builder.CreateInput(2, "gamma", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
     auto beta = graph_builder.CreateInput(3, "beta", DT_FLOAT, FORMAT_ND, shape_gamma.GetDims());
-    auto bias = graph_builder.CreateInput(4, "bias", DT_BF16, FORMAT_ND, shape_bias.GetDims());
-    auto add1 = es::Add(bias, x2);
+    auto x2 = graph_builder.CreateInput(4, "x2", DT_BF16, FORMAT_ND, shape_x.GetDims());
+    auto add1 = es::Add(x2, bias);
     auto add2 = es::Add(add1, x1);
     auto cast1 = es::Cast(add2, DT_FLOAT);
     auto add3 = es::Add(cast1, cast1);

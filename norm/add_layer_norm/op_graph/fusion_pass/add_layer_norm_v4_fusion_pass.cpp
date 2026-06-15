@@ -15,7 +15,6 @@
 #include "es_nn_ops.h"
 #include "es_math_ops.h"
 #include "add_layer_norm_utils.h"
-
 namespace ops {
 namespace {
 const std::string kPassName = "AddLayerNormV4FusionPass";
@@ -315,8 +314,8 @@ bool NormalizeShapeEqualXLastDim(const std::unique_ptr<MatchResult>& match_resul
     auto norm_shape = norm_shape_io.node;
     AscendString type;
     norm_shape.GetType(type);
-    if (type != "Const") {
-        OPS_LOG_D(kPassName, "Normlize shape is not const, can not judge");
+    if (type != "Const" && type != "Constant") {
+        OPS_LOG_D(kPassName, "Normlize shape is %s not const, can not judge", type.GetString());
         return false;
     }
     Tensor const_tensor;
@@ -491,7 +490,7 @@ std::unique_ptr<Graph> AddLayerNormV4FusionPass::Replacement(const std::unique_p
         replaceGraph->AddControlEdge(*r_normalize_shape.GetProducer(),*addlayernorm.y.GetProducer()) != SUCCESS,
         kPassName.c_str(), "Add control edge failed.");
     OPS_LOG_I(kPassName.c_str(), "Add control edge from normalize_shape to addlayernorm.");
-    if (InferShape(replaceGraph, subgraph_inputs) != SUCCESS) {
+    if (InferShapeForReplacement(replaceGraph, match_result, subgraph_inputs) != SUCCESS) {
         OPS_LOG_E(kPassName.c_str(), "Infershape for replacement failed.");
         return nullptr;
     }
