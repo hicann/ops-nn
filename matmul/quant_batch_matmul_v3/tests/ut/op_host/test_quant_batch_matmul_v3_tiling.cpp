@@ -11,6 +11,8 @@
 #include <gtest/gtest.h>
 #include <stdlib.h>
 
+#include <cstddef>
+#include <cstring>
 #include <mutex>
 #include <iostream>
 #include <fstream>
@@ -101,6 +103,16 @@ static string TilingData2Str(const void *tilingData, size_t tilingSize)
         result += " ";
     }
     return result;
+}
+
+template <typename T>
+static void SetExpectedTilingFieldIfPresent(std::vector<int32_t> &tilingDataInt, size_t fieldOffset, const T &value)
+{
+    size_t tilingDataSize = tilingDataInt.size() * sizeof(int32_t);
+    if (fieldOffset + sizeof(T) > tilingDataSize) {
+        return;
+    }
+    std::memcpy(reinterpret_cast<char *>(tilingDataInt.data()) + fieldOffset, &value, sizeof(T));
 }
 
 static gert::Shape TransNd2Nz(const gert::Shape &inShape) {
@@ -698,18 +710,16 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
-        bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) && (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
-        bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
-        // weightNz + Blaze 走 BasicAPITilingData；非 weightNz 时仍按 quantMode 等条件判断
-        bool isUseBasicApiTilingData = (quantMode == 3 || quantMode == 4 || isMxfp8 || isMxfp4 ||
-            (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) &&
-            (!weightNz || IsTensorapiCapable);
+        bool isUseBasicApiTilingData =
+            tilingContext->GetRawTilingData()->GetDataSize() == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
         if (isUseBasicApiTilingData) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
-            DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
             if (biasFlag == false) {
-                expectTilingData.params.biasDtype = actualTilingData.params.biasDtype;
+                SetExpectedTilingFieldIfPresent(tilingDataInt,
+                    offsetof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, params) +
+                        offsetof(DequantBmm::QuantBatchMatmulV3BasicAPIDataParams, biasDtype),
+                    actualTilingData.params.biasDtype);
             }
             string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
                                                         tilingContext->GetRawTilingData()->GetDataSize());
