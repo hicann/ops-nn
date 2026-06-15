@@ -3240,6 +3240,16 @@
     <td>对模型中的一个参数（如权重），完成Adam优化算法的单步计算和更新。</td>
   </tr>
   <tr>
+    <td>math</td>
+    <td><a href="../../optim/adam_apply_one_assign/README.md">adam_apply_one_assign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行Adam优化器的一次参数更新，10输入3输出，支持broadcast。</td>
+  </tr>
+  <tr>
     <td>optim</td>
     <td><a href="../../optim/adam_apply_one_with_decay/README.md">adam_apply_one_with_decay</a></td>
     <td>✓</td>
