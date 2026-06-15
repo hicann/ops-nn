@@ -54,7 +54,7 @@ struct OpShapeInfo {
   int64_t kDim;
   int64_t nDim;
 
-  // input tranpose flag
+  // input transpose flag
   bool transposeX1;
 
   // mat2 transpose flag
