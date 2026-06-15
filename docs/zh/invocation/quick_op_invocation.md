@@ -73,7 +73,7 @@
 
         ops-nn静态库依赖于ops-legacy静态库和ops-math静态库，将上述静态库准备好，解压并将所有lib64、include目录移动至统一目录\$\{static_lib_path\}下。
 
-        > 说明：ops-legacy静态库```cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz```可通过单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/software/master)获取，ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
+        > 说明：ops-legacy静态库```cann-${soc_name}-ops-legacy-static_${cann_version}_linux-${arch}.tar.gz```可通过单击[下载链接](https://ascend.devcloud.huaweicloud.com/artifactory/cann-run-release/dependency/master/)获取，ops-nn静态库、ops-math静态库暂未提供软件包，请通过本地编译生成。
 
     2. **创建run.sh**
 
