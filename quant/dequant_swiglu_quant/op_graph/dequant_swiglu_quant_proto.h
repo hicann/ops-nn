@@ -44,7 +44,7 @@ namespace ge {
 * @li round_mode: Type is String. The round mode to use: 'rint', 'round, 'floor', 'ceil', 'trunc', defalut is 'rint', only used for Ascend 950 AI Processors.
 * @li activate_dim: Type is Int32. Describing the split dimension in Glu algorithm: value in [-xDim, xDim-1], defalut is -1, only used for Ascend 950 AI Processors.
 * @li swiglu_mode: Type is int. Optional parameter, default is 0. The SWIGLU computation mode to use:
-*     '0' (default) for standard SWIGLU, '1' for a variant using odd-even blocking, which requires support for clamp_limit, activation coefficient, and bias. This attribute is not supported in Ascend 950 AI Processors.
+*     '0' (default) for standard SWIGLU, '1' for a variant using odd-even blocking, '2' for the same variant as '1' but using contiguous front/back-half blocking (the same split as mode '0'). Modes '1' and '2' require clamp_limit, activation coefficient (glu_alpha), and bias (glu_bias). This attribute is not supported in Ascend 950 AI Processors.
 * @li clamp_limit: Type is float. Optional parameter, default is 7.0. The threshold limit for SWIGLU input. This attribute is not supported in Ascend 950 AI Processors.
 * @li glu_alpha: Type is float. Optional parameter, default is 1.702. The activation coefficient for the GLU activation function. This attribute is not supported in Ascend 950 AI Processors.
 * @li glu_bias: Type is float. Optional parameter, default is 1.0. The bias applied during SWIGLU linear computation. This attribute is not supported in Ascend 950 AI Processors.

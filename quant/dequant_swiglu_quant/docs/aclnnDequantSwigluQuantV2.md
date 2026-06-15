@@ -62,6 +62,36 @@
 
   其中，x\_glu表示dequantOut<sub>i</sub>的偶数索引部分，x\_linear表示dequantOut<sub>i</sub>的奇数索引部分。
 
+- swigluMode为2时的计算公式：
+
+  计算逻辑与swigluMode为1时相同（同为GPT-OSS变体SwiGLU，使用clampLimit、gluAlpha和gluBias）：
+
+  $$
+  dequantOut_i = Dequant(x_i)
+  $$
+
+  $$
+  x\_glu = x\_glu.clamp(min=None, max=clampLimit)
+  $$
+
+  $$
+  x\_linear = x\_linear.clamp(min=-clampLimit, max=clampLimit)
+  $$
+
+  $$
+  out\_glu = x\_glu * sigmoid(gluAlpha * x\_glu)
+  $$
+
+  $$
+  swigluOut_i = out\_glu * (x\_linear + gluBias)
+  $$
+
+  $$
+  out_i = Quant(swigluOut_i)
+  $$
+
+  与swigluMode为1的区别在于x\_glu与x\_linear的切分方式：swigluMode为2时，x\_glu表示dequantOut<sub>i</sub>的前半部分，x\_linear表示dequantOut<sub>i</sub>的后半部分（与swigluMode为0的切分方式一致）；swigluMode为1时为奇偶索引交错切分。
+
 ## 函数原型
 
 每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDequantSwigluQuantV2GetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDequantSwigluQuantV2”接口执行计算。
@@ -248,7 +278,7 @@ aclnnStatus aclnnDequantSwigluQuantV2(
       <td>swigluMode（int64_t）</td>
       <td>输入</td>
       <td>表示swiglu的计算模式。</td>
-      <td><ul><li>取值范围为：[0, 1]。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种，使用奇偶分块方式，并支持clamp_limit、激活系数以及偏差，0表示不使用，1表示使用，默认是0。</li></ul></td>
+      <td><ul><li>取值范围为：[0, 1, 2]，默认是0。</li><li>0：表示传统swiglu计算方式。</li><li>1：表示swiglu的变种（GPT-OSS变体），使用奇偶分块方式，并支持clampLimit、gluAlpha激活系数以及gluBias偏差。</li><li>2：计算方式与1相同（同为变体swiglu，支持clampLimit、gluAlpha、gluBias），区别在于使用连续前后半分块方式（与0的切分方式一致），而非奇偶分块。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>

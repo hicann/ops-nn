@@ -381,10 +381,10 @@ ge::graphStatus DequantSwigluQuantDskTiling::GetAttr() {
   gluAlpha_ = gluAlpha == nullptr ? GLU_ALPHA_DEFAULT : *gluAlpha;
   gluBias_ = gluBias == nullptr ? GLU_BIAS_DEFAULT : *gluBias;
 
-  OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1,
+  OP_CHECK_IF(swigluMode_ != 0 && swigluMode_ != 1 && swigluMode_ != 2,
                   OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                       context_->GetNodeName(), "swigluMode",
-                      std::to_string(swigluMode_).c_str(), "swigluMode only support 0 or 1"),
+                      std::to_string(swigluMode_).c_str(), "swigluMode only support 0, 1 or 2"),
                   return ge::GRAPH_FAILED);
 
   return ge::GRAPH_SUCCESS;
@@ -612,8 +612,8 @@ ge::graphStatus DequantSwigluQuantDskTiling::CountMaxDim(int64_t& ubFactorDimx) 
   int64_t biasBufferY = hasBias_ == false ? 0 : static_cast<int64_t>(SWI_FACTOR * sizeof(float));
   int64_t biasBufferX = hasBias_ == false ? 0 : outDimy_ * SWI_FACTOR * static_cast<int64_t>(sizeof(float));
 
-  int64_t SweiGLUBufferY = swigluMode_ == 0 ? 0 : static_cast<int64_t>(sizeof(int8_t) + sizeof(int32_t));
-  int64_t SweiGLUBufferX = swigluMode_ == 0 ? 0 : outDimy_ * static_cast<int64_t>(sizeof(int8_t)) + outDimy_ * static_cast<int64_t>(sizeof(int32_t));
+  int64_t SweiGLUBufferY = swigluMode_ == 1 ? static_cast<int64_t>(sizeof(int8_t) + sizeof(int32_t)) : 0;
+  int64_t SweiGLUBufferX = swigluMode_ == 1 ? outDimy_ * static_cast<int64_t>(sizeof(int8_t)) + outDimy_ * static_cast<int64_t>(sizeof(int32_t)) : 0;
 
   int64_t quantOffsetSpace = quantMode_ == QUANT_MODE_DYNAMIC ? 0 : static_cast<int64_t>(sizeof(float));
 
@@ -642,7 +642,7 @@ ge::graphStatus DequantSwigluQuantDskTiling::CountMaxDim(int64_t& ubFactorDimx) 
   OP_LOGI(context_->GetNodeName(), "Get ubFactorDimx[%ld]", ubFactorDimx);
 
   // special ub cut for 2048 4096
-  if (swigluMode_ == 0 && hasBias_ == false) {
+  if ((swigluMode_ == 0 || swigluMode_ == 2) && hasBias_ == false) {
       ubFactorDimx =
       (inDimy_ == PERFORMANCE_H_2048 || inDimy_ == PERFORMANCE_H_4096) ? PERFORMANCE_UB_FACTOR / inDimy_ : ubFactorDimx;
   }

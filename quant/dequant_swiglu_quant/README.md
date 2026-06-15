@@ -60,6 +60,36 @@
 
   其中，x\_glu表示dequantOut<sub>i</sub>的偶数索引部分，x\_linear表示dequantOut<sub>i</sub>的奇数索引部分。
 
+- swiglu_mode为2时的计算公式：
+
+  计算逻辑与swiglu_mode为1时相同（同为GPT-OSS变体SwiGLU，使用clamp_limit、glu_alpha和glu_bias）：
+
+  $$
+  dequantOut_i = Dequant(x_i)
+  $$
+
+  $$
+  x\_glu = x\_glu.clamp(min=None, max=clamp\_limit)
+  $$
+
+  $$
+  x\_linear = x\_linear.clamp(min=-clamp\_limit, max=clamp\_limit)
+  $$
+
+  $$
+  out\_glu = x\_glu * sigmoid(glu\_alpha * x\_glu)
+  $$
+
+  $$
+  swigluOut_i = out\_glu * (x\_linear + glu\_bias)
+  $$
+
+  $$
+  out_i = Quant(swigluOut_i)
+  $$
+
+  与swiglu_mode为1的区别在于x\_glu与x\_linear的切分方式：swiglu_mode为2时，x\_glu表示dequantOut<sub>i</sub>的前半部分，x\_linear表示dequantOut<sub>i</sub>的后半部分（与swiglu_mode为0的切分方式一致）；swiglu_mode为1时为奇偶索引交错切分。
+
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 951px"><colgroup>
@@ -165,7 +195,7 @@
        <tr>
       <td>swiglu_mode</td>
       <td>属性</td>
-      <td>表示swiglu的计算模式。</td>
+      <td>表示swiglu的计算模式，取值0/1/2：0为传统swiglu；1为变体swiglu（奇偶分块）；2为变体swiglu（连续前后半分块）。</td>
       <td>INT64</td>
       <td>-</td>
     </tr>
