@@ -3801,6 +3801,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在SwiGlu激活函数后执行分组低比特量化，实现输入x的SwigluGroupQuant计算，支持FP8和FP4量化输出。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/swiglu_mx_quant_with_dual_axis/README.md">swiglu_mx_quant_with_dual_axis</a></td>
     <td>✓</td>
     <td>✓</td>
