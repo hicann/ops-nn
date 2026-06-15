@@ -55,6 +55,20 @@ static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_
     op::DataType::DT_INT64, op::DataType::DT_DOUBLE, op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16,
     op::DataType::DT_BF16};
 
+static int64_t GetTensorElementsNum(const aclTensor* tensor) {
+    int64_t num = 1;
+    auto shape = tensor->GetViewShape();
+    for (size_t i = 0; i < shape.GetDimNum(); i++) {
+        num *= shape.GetDim(i);
+    }
+    return num;
+}
+
+static const aclIntArray* GetFlattenShape(const aclTensor* self, aclOpExecutor* executor) {
+    int64_t valuePerm[1] = {GetTensorElementsNum(self)};
+    return executor->AllocIntArray(valuePerm, 1);
+}
+
 static bool CheckDtypeValid(const aclTensor* self, const aclTensor* inverseOut, const aclTensor* countsOut) {
   if (Ops::NN::AclnnUtil::IsRegbase()) {
     OP_CHECK_DTYPE_NOT_SUPPORT(self, ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST, return false);  
@@ -113,10 +127,6 @@ static const std::initializer_list<op::DataType> XY_DTYPE_SUPPORT_LIST_ASCEND_RE
 bool SupportAicore4Unique2(const aclTensor* self) {
     OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(), OP_LOGW("Aicore Unique2 only support ARCH 3510."),
              return false);
-
-    size_t dimNums = self->GetStorageShape().GetDimNum();
-    OP_LOGW("DimNums of self is %zu", dimNums);
-    OP_CHECK(dimNums == 1, OP_LOGW("Aicore Unique only support 1D input."), return false);
     OP_CHECK(CheckType(self->GetDataType(), XY_DTYPE_SUPPORT_LIST_ASCEND_REGBASE),
              OP_LOGW("Unsupport input dtype for aicore UniqueConsecutive."), return false);
     return true;
@@ -126,9 +136,13 @@ aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool return
     constexpr int64_t NONE_N = 1000;
     constexpr bool RET_INV_UC = false;
 
+    // 将多维输入flatten成一维
+    auto selfFlatten = l0op::Reshape(selfContiguous, GetFlattenShape(selfContiguous, executor), executor);
+    OP_CHECK_NULL(selfFlatten, return ACLNN_ERR_INNER_NULLPTR);
+
     // sort
     auto indicesType = inverseOut->GetDataType();
-    auto sortRes = l0op::Sort(selfContiguous, 0, false, true, indicesType, executor);
+    auto sortRes = l0op::Sort(selfFlatten, 0, false, true, indicesType, executor);
 
     auto sortedValues = std::get<0>(sortRes);
     OP_CHECK_NULL(sortedValues, return ACLNN_ERR_INNER_NULLPTR);
@@ -165,12 +179,17 @@ aclnnStatus ComputeUnique2ViaAicore(const aclTensor* selfContiguous, bool return
         auto newData = executor->AllocTensor(sumIdx->GetViewShape(), sumIdx->GetDataType(), sumIdx->GetViewFormat());
         CHECK_RET(newData != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto inverseIdx = l0op::ScatterElements(newData, sortedIndices, sumIdx, 0, "none", executor);
+        
+        // 将一维inverse indices reshape回原始多维shape
+        auto inverseIdxReshape = l0op::Reshape(inverseIdx, selfContiguous->GetViewShape(), executor);
+        OP_CHECK_NULL(inverseIdxReshape, return ACLNN_ERR_INNER_NULLPTR);
+        
         const aclTensor* viewCopyInverseIdx = nullptr;
         if (Ops::NN::AclnnUtil::IsRegbase()) {
-            viewCopyInverseIdx = l0op::ViewCopy(inverseIdx, inverseOut, executor);
+            viewCopyInverseIdx = l0op::ViewCopy(inverseIdxReshape, inverseOut, executor);
             CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
         } else {
-            auto inverseIdxInt64 = l0op::Cast(inverseIdx, DataType::DT_INT64, executor);
+            auto inverseIdxInt64 = l0op::Cast(inverseIdxReshape, DataType::DT_INT64, executor);
             viewCopyInverseIdx = l0op::ViewCopy(inverseIdxInt64, inverseOut, executor);
             CHECK_RET(viewCopyInverseIdx != nullptr, ACLNN_ERR_INNER_NULLPTR);
         }
