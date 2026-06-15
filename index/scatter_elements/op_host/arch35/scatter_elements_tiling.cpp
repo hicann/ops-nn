@@ -176,12 +176,18 @@ ge::graphStatus CheckList(gert::TilingContext* context, ScatterElementsTilingPar
    auto attrs = context->GetAttrs(); 
    OP_CHECK_NULL_WITH_CONTEXT(context, attrs); 
    const auto axis = attrs->GetAttrPointer<int32_t>(INDEX_AXIS); 
-   if (*axis >= param->dims_data) { 
-     OP_LOGE(context->GetNodeName(), "axis(%d) >= dims_data(%d)", *axis, param->dims_data); 
+   if (*axis >= param->dims_data) {
+     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis, dims_data", 
+                                           (std::to_string(*axis) + ", " +
+                                                 std::to_string(param->dims_data)).c_str(),
+                                               "axis must be larger than or equal to dims_data"); 
      return ge::GRAPH_FAILED;	 
    }	 
-   if (*axis < -1 * param->dims_data) { 
-     OP_LOGE(context->GetNodeName(), "axis(%d) < -dims_data(%d)", *axis, param->dims_data); 
+   if (*axis < -1 * param->dims_data) {
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "axis, dims_data", 
+                                           (std::to_string(*axis) + ", " +
+                                                 std::to_string(param->dims_data)).c_str(),
+                                               "axis must be smaller than or equal to dims_data");
      return ge::GRAPH_FAILED; 
    } 
    if (*axis < 0) { 
@@ -213,7 +219,7 @@ static ge::graphStatus CalParam(gert::TilingContext* context, const ScatterEleme
   }
   data_block = (data_block + block - 1) / block * block;
   if (data_block == 0) {
-      OP_LOGE(opName_, "data_block = 0");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "data_block", std::to_string(data_block).c_str(), "data_block should not equal zero");
       return ge::GRAPH_FAILED;
   }
   int32_t repeat = data_block / block;
@@ -246,7 +252,7 @@ static ge::graphStatus CalParam(gert::TilingContext* context, const ScatterEleme
                                   block / (block + block_indices);
   int32_t indices_block = ub_size_bytes_indices / BYTES_PER_BLOCK * block_indices;
   if (indices_block == 0) {
-      OP_LOGE(opName_, "indices_block = 0");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "indices_block", std::to_string(indices_block).c_str(), "indices_block should not equal zero");
       return ge::GRAPH_FAILED;
   }
   int32_t indices_repeat = indices_block / block_indices;
@@ -378,7 +384,7 @@ static int32_t CheckModeLastAxis(gert::TilingContext* context, const ScatterElem
   const char* opName_ = "ScatterElements";
   auto data_desc = context->GetInputDesc(INDEX_DATA);
   if (data_desc == nullptr) {
-      OP_LOGE(opName_, "data_desc is null");
+      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "data_desc", "null", "data_desc should not be null");
       return -1;
   }
   const ge::DataType data_dtype = data_desc->GetDataType();
