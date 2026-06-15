@@ -232,11 +232,11 @@ aclnnStatus aclnnExpandIntoJaggedPermute(
 - 确定性计算：
   - aclnnExpandIntoJaggedPermute默认确定性实现。
 
-1.inputOffset、outputOffset的shape要相同。
+1. inputOffset、outputOffset的shape要相同。
 
-2.permute、inputOffset、outputOffset、outputPermuteOut的数据类型需要相同。
+2. permute、inputOffset、outputOffset、outputPermuteOut的数据类型需要相同。
 
-3.outputOffset的值要求严格单调递增且最后一个值等于outputSize。
+3. outputOffset的值要求严格单调递增且最后一个值等于outputSize。
 
 ## 调用示例
 

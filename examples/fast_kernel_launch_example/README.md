@@ -43,7 +43,7 @@
     python3 -m pip install dist/*.whl --force-reinstall --no-deps
     ```
 
-5.（可选）再次构建前建议先执行以下命令清理编译缓存
+5. （可选）再次构建前建议先执行以下命令清理编译缓存
 
    ```sh
     python setup.py clean
