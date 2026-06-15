@@ -34,7 +34,8 @@ static std::tuple<aclTensor*, aclTensor*> FlatQuantAICore(
 {
     L0_DFX(FlatQuantAICore, x, kroneckerP1, kroneckerP2, clipRatio, dst_dtype, dstTypeMax, out, quantScale);
     auto retAicore = ADD_TO_LAUNCHER_LIST_AICORE(
-        FlatQuant, OP_INPUT(x, kroneckerP1, kroneckerP2), OP_OUTPUT(out, quantScale), OP_ATTR(clipRatio, dst_dtype, dstTypeMax));
+        FlatQuant, OP_INPUT(x, kroneckerP1, kroneckerP2), OP_OUTPUT(out, quantScale),
+        OP_ATTR(clipRatio, dst_dtype, dstTypeMax));
     OP_CHECK_ADD_TO_LAUNCHER_LIST_AICORE(
         retAicore != ACLNN_SUCCESS, return std::tuple(nullptr, nullptr), "FlatQuant add to aicore launch list failed.");
     return std::tie(out, quantScale);
@@ -46,9 +47,11 @@ const std::tuple<aclTensor*, aclTensor*> FlatQuant(
 {
     if (dst_dtype != DataType::DT_FLOAT4_E2M1) {
         out = executor->AllocTensor(x->GetViewShape(), DataType::DT_INT4, x->GetViewFormat());
+        OP_CHECK_NULL(out, return std::tuple(nullptr, nullptr));
         int64_t K = x->GetViewShape().GetDim(0);
         dst_dtype = DataType::DT_INT32;
         quantScale = executor->AllocTensor(op::Shape({K}), op::DataType::DT_FLOAT, op::Format::FORMAT_ND);
+        OP_CHECK_NULL(quantScale, return std::tuple(nullptr, nullptr));
     }
     return FlatQuantAICore(x, kroneckerP1, kroneckerP2, clipRatio, dst_dtype, dstTypeMax, out, quantScale, executor);
 }

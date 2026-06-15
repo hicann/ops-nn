@@ -69,11 +69,14 @@ public:
     ge::graphStatus RunBigKernelTiling();
 
 private:
-    bool CheckShapes();
+    bool ValidateAll() const;
+    bool CheckShapes() const;
     bool CheckClipRatio() const;
-    bool CheckDstTypeMax() const;
-    bool CheckDstDtype() const;
+    bool CheckDstDtype(ge::DataType outDtype) const;
+    bool CheckDstTypeMax(ge::DataType outDtype) const;
     void GetKernelMode(int64_t aivNum);
+    uint8_t DetermineMmMode(ge::DataType outDtype) const;
+    void CalculateWorkspace(int64_t aivNum, ge::DataType outDtype);
     ge::graphStatus GetTCubeTiling();
     ge::graphStatus InitializeInputsAndAttributes();
     ge::graphStatus SetBasicTilingData();
@@ -117,6 +120,7 @@ ge::graphStatus FlatQuantTiling::InitializeInputsAndAttributes()
     // 获取输入的数据类型，输入Tensor的数据类型保持一致
     for (uint64_t i = 0; i < INPUT_TENSOR_NUM; i++) {
         auto temp = tilingContext_->GetInputDesc(i);
+        OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, temp);
         if (dataType_ == ge::DT_UNDEFINED) {
             dataType_ = temp->GetDataType();
         } else if (dataType_ != temp->GetDataType()) {
@@ -124,9 +128,15 @@ ge::graphStatus FlatQuantTiling::InitializeInputsAndAttributes()
         }
     }
     // 获取输入的shape和属性
-    xShape_ = tilingContext_->GetInputShape(INDEX_ZERO)->GetOriginShape();
-    p1Shape_ = tilingContext_->GetInputShape(INDEX_ONE)->GetOriginShape();
-    p2Shape_ = tilingContext_->GetInputShape(INDEX_TWO)->GetOriginShape();
+    auto xShape = tilingContext_->GetInputShape(INDEX_ZERO);
+    auto p1Shape = tilingContext_->GetInputShape(INDEX_ONE);
+    auto p2Shape = tilingContext_->GetInputShape(INDEX_TWO);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, xShape);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, p1Shape);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, p2Shape);
+    xShape_ = xShape->GetOriginShape();
+    p1Shape_ = p1Shape->GetOriginShape();
+    p2Shape_ = p2Shape->GetOriginShape();
     hasP2_ = (p2Shape_.GetDim(INDEX_ZERO) > 0 && p2Shape_.GetDim(INDEX_ONE) > 0);
     clipRatio_ = attrs->GetAttrPointer<float>(INDEX_ZERO);
     dstDtype_ = attrs->GetAttrPointer<int64_t>(INDEX_ONE);
@@ -141,7 +151,7 @@ ge::graphStatus FlatQuantTiling::SetBasicTilingData()
     int64_t N = xShape_.GetDim(INDEX_TWO);
     nAlign_ = CeilA2B(N, CEIL_SIZE) * CEIL_SIZE;
     mAlign_ = CeilA2B(M, CEIL_SIZE) * CEIL_SIZE;
-    if (!CheckShapes() || !CheckClipRatio() || !CheckDstDtype() || (dstTypeMax_ != nullptr && !CheckDstTypeMax())) {
+    if (!ValidateAll()) {
         return ge::GRAPH_FAILED;
     }
     // 设置基本的tiling数据
@@ -217,57 +227,75 @@ ge::graphStatus FlatQuantTiling::RunBigKernelTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-void FlatQuantTiling::GetKernelMode(int64_t aivNum)
+uint8_t FlatQuantTiling::DetermineMmMode(ge::DataType outDtype) const
 {
     int64_t N = xShape_.GetDim(INDEX_TWO);
     int64_t M = xShape_.GetDim(INDEX_ONE);
     int64_t K = xShape_.GetDim(INDEX_ZERO);
 
-    auto outDtype = tilingContext_->GetOutputDesc(INDEX_ZERO)->GetDataType();
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext_->GetPlatformInfo());
-    // 使用soc和out_dtype区分 mxfp4和int的tiling
+    if (outDtype == ge::DT_FLOAT4_E2M1) {
+        if ((N % CEIL_SIZE == 0) && (M % CEIL_SIZE == 0)) {
+            return MM_HIGH_MODE_ALIGN;
+        }
+        return MM_HIGH_MODE;
+    }
+
+    if (M == 1 && N % NUM_EIGHT == 0) {
+        return MM_ONE_MODE;
+    }
+    if (mAlign_ <= BASE_SIZE / FACTOR_TWO && nAlign_ <= BASE_SIZE && K > 1) {
+        return MM_DOUBLE_MODE;
+    }
+    if (mAlign_ * mAlign_ + nAlign_ * nAlign_ + FACTOR_TWO * FACTOR_TWO * mAlign_ * nAlign_ > L1_SIZE / BYTE_LEN_2) {
+        return MM_HIGH_MODE;
+    }
+    if (mAlign_ > BASE_SIZE || nAlign_ > BASE_SIZE) {
+        return MM_SPLIT_MODE;
+    }
+    return MM_BASE_MODE;
+}
+
+void FlatQuantTiling::CalculateWorkspace(int64_t aivNum, ge::DataType outDtype)
+{
+    int64_t N = xShape_.GetDim(INDEX_TWO);
+    int64_t M = xShape_.GetDim(INDEX_ONE);
+    int64_t K = xShape_.GetDim(INDEX_ZERO);
+
+    size_t* workspaces = tilingContext_->GetWorkspaceSizes(WORKSPACE_NUM);
+
     if (outDtype == ge::DT_FLOAT4_E2M1) {
         if (IsRegbaseSocVersion(tilingContext_)) {
-            mmMode_ = MM_HIGH_MODE;
-            if ((N % CEIL_SIZE == 0) && (M % CEIL_SIZE == 0)) {
-                mmMode_ = MM_HIGH_MODE_ALIGN;
-            }
-            size_t* workspaces = tilingContext_->GetWorkspaceSizes(WORKSPACE_NUM);
             int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
             workspaces[0] =
                 useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
                 WORK_SPACE_SIZE_APT;
         }
-    } else {
-        if (M == 1 && N % NUM_EIGHT == 0) {
-            mmMode_ = MM_ONE_MODE;
-        } else if (mAlign_ <= BASE_SIZE / FACTOR_TWO && nAlign_ <= BASE_SIZE && K > 1) {
-            mmMode_ = MM_DOUBLE_MODE;
-        } else if (
-            mAlign_ * mAlign_ + nAlign_ * nAlign_ + FACTOR_TWO * FACTOR_TWO * mAlign_ * nAlign_ >
-            L1_SIZE / BYTE_LEN_2) {
-            mmMode_ = MM_HIGH_MODE;
-        } else if (mAlign_ > BASE_SIZE || nAlign_ > BASE_SIZE) {
-            mmMode_ = MM_SPLIT_MODE;
-        } else {
-            mmMode_ = MM_BASE_MODE;
-        }
-
-        size_t* workspaces = tilingContext_->GetWorkspaceSizes(WORKSPACE_NUM);
-        if (mmMode_ == MM_HIGH_MODE) {
-            int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
-            workspaces[0] =
-                useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
-                WORK_SPACE_SIZE;
-        } else if (mmMode_ == MM_DOUBLE_MODE) {
-            K += (K % FACTOR_TWO);
-            workspaces[0] = (K * mAlign_ * N + mAlign_ * mAlign_) * BYTE_LEN_2 + WORK_SPACE_SIZE;
-        } else if (mmMode_ == MM_ONE_MODE) {
-            workspaces[0] = K * mAlign_ * nAlign_ * BYTE_LEN_2 + WORK_SPACE_SIZE;
-        } else {
-            workspaces[0] = (K * mAlign_ * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
-        }
+        return;
     }
+
+    int64_t alignedK = K;
+    if (mmMode_ == MM_HIGH_MODE) {
+        int64_t useAivNum = CeilA2B(K, K_PER_VEC) <= aivNum ? CeilA2B(K, K_PER_VEC) : aivNum;
+        workspaces[0] =
+            useAivNum * (K_PER_VEC * M * N * BYTE_LEN_2 + FACTOR_TWO * K_PER_VEC * mAlign_ * N * BYTE_LEN_4) +
+            WORK_SPACE_SIZE;
+    } else if (mmMode_ == MM_DOUBLE_MODE) {
+        alignedK += (alignedK % FACTOR_TWO);
+        workspaces[0] = (alignedK * mAlign_ * N + mAlign_ * mAlign_) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+    } else if (mmMode_ == MM_ONE_MODE) {
+        workspaces[0] = alignedK * mAlign_ * nAlign_ * BYTE_LEN_2 + WORK_SPACE_SIZE;
+    } else {
+        workspaces[0] = (alignedK * mAlign_ * N) * BYTE_LEN_2 + WORK_SPACE_SIZE;
+    }
+}
+
+void FlatQuantTiling::GetKernelMode(int64_t aivNum)
+{
+    auto outDesc = tilingContext_->GetOutputDesc(INDEX_ZERO);
+    auto outDtype = outDesc->GetDataType();
+
+    mmMode_ = DetermineMmMode(outDtype);
+    CalculateWorkspace(aivNum, outDtype);
 }
 
 ge::graphStatus FlatQuantTiling::GetTCubeTiling()
@@ -299,56 +327,87 @@ ge::graphStatus FlatQuantTiling::GetTCubeTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-bool FlatQuantTiling::CheckShapes()
+bool FlatQuantTiling::CheckShapes() const
 {
-    if (xShape_.GetDimNum() != DIM_THREE || p1Shape_.GetDimNum() != DIM_TWO ||
-        (hasP2_ && p2Shape_.GetDimNum() != DIM_TWO)) {
-        return false;
-    }
+    OP_CHECK_IF(xShape_.GetDimNum() != DIM_THREE,
+        OP_LOGE(tilingContext_->GetNodeName(), "x shape dims must be 3, got %zu.", xShape_.GetDimNum()),
+        return false);
+    OP_CHECK_IF(p1Shape_.GetDimNum() != DIM_TWO,
+        OP_LOGE(tilingContext_->GetNodeName(), "p1 shape dims must be 2, got %zu.", p1Shape_.GetDimNum()),
+        return false);
+    OP_CHECK_IF(hasP2_ && p2Shape_.GetDimNum() != DIM_TWO,
+        OP_LOGE(tilingContext_->GetNodeName(), "p2 shape dims must be 2, got %zu.", p2Shape_.GetDimNum()),
+        return false);
+
     int64_t K = xShape_.GetDim(INDEX_ZERO);
     int64_t M = xShape_.GetDim(INDEX_ONE);
     int64_t N = xShape_.GetDim(INDEX_TWO);
-    if (K > MAX_K_SIZE || M > MAX_MN_SIZE || N > MAX_MN_SIZE) {
-        return false;
-    }
-    if (p1Shape_.GetDim(INDEX_ZERO) != M || p1Shape_.GetDim(INDEX_ONE) != M) {
-        return false;
-    }
+    OP_CHECK_IF(K > MAX_K_SIZE || M > MAX_MN_SIZE || N > MAX_MN_SIZE,
+        OP_LOGE(tilingContext_->GetNodeName(), "K[%ld]/M[%ld]/N[%ld] exceeds limit %d/%d/%d.",
+                K, M, N, MAX_K_SIZE, MAX_MN_SIZE, MAX_MN_SIZE),
+        return false);
+    OP_CHECK_IF(p1Shape_.GetDim(INDEX_ZERO) != M || p1Shape_.GetDim(INDEX_ONE) != M,
+        OP_LOGE(tilingContext_->GetNodeName(), "p1 shape must be [%ld,%ld], got [%ld,%ld].",
+                M, M, p1Shape_.GetDim(INDEX_ZERO), p1Shape_.GetDim(INDEX_ONE)),
+        return false);
     bool isP2ZeroShape = (p2Shape_.GetDim(INDEX_ZERO) == 0 && p2Shape_.GetDim(INDEX_ONE) == 0);
     bool isP2NormalShape = (p2Shape_.GetDim(INDEX_ZERO) == N && p2Shape_.GetDim(INDEX_ONE) == N);
-    if (!isP2ZeroShape && !isP2NormalShape) {
-        return false;
-    }
+    OP_CHECK_IF(!isP2ZeroShape && !isP2NormalShape,
+        OP_LOGE(tilingContext_->GetNodeName(), "p2 shape must be [0,0] or [%ld,%ld], got [%ld,%ld].",
+                N, N, p2Shape_.GetDim(INDEX_ZERO), p2Shape_.GetDim(INDEX_ONE)),
+        return false);
+
     return true;
 }
 
 bool FlatQuantTiling::CheckClipRatio() const
 {
-    return clipRatio_ != nullptr && *clipRatio_ > ZERO_FLOAT && *clipRatio_ <= ONE_FLOAT;
+    OP_CHECK_IF(clipRatio_ == nullptr,
+        OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio attribute is null."),
+        return false);
+    OP_CHECK_IF(*clipRatio_ <= ZERO_FLOAT || *clipRatio_ > ONE_FLOAT,
+        OP_LOGE(tilingContext_->GetNodeName(), "clip_ratio must be in (0, 1], got %f.", *clipRatio_),
+        return false);
+    return true;
 }
 
-bool FlatQuantTiling::CheckDstDtype() const
+bool FlatQuantTiling::CheckDstDtype(ge::DataType outDtype) const
 {
-    auto outDtype = tilingContext_->GetOutputDesc(INDEX_ZERO)->GetDataType();
-    if (dstDtype_ != nullptr) {
-        if (outDtype == ge::DT_FLOAT4_E2M1) {
-            return *dstDtype_ == ge::DT_FLOAT4_E2M1;
-        }
+    if (dstDtype_ != nullptr && outDtype == ge::DT_FLOAT4_E2M1) {
+        OP_CHECK_IF(*dstDtype_ != ge::DT_FLOAT4_E2M1,
+            OP_LOGE(tilingContext_->GetNodeName(), "dst_dtype mismatch for FLOAT4 output."),
+            return false);
     }
     return true;
 }
 
-bool FlatQuantTiling::CheckDstTypeMax() const
+bool FlatQuantTiling::CheckDstTypeMax(ge::DataType outDtype) const
 {
-    auto outDtype = tilingContext_->GetOutputDesc(0)->GetDataType();
-    if (outDtype == ge::DT_FLOAT4_E2M1) {
+    if (dstTypeMax_ != nullptr && outDtype == ge::DT_FLOAT4_E2M1) {
         float localDstTypeMax = *dstTypeMax_;
-        if ((localDstTypeMax != ZERO_FLOAT) && (localDstTypeMax < SIX_FLOAT || localDstTypeMax > TWELVE_FLOAT)) {
-            OP_LOGE(
-                tilingContext_->GetNodeName(), "The dst_type_max[%f] must be 0 or in range [6, 12], please check.",
-                localDstTypeMax);
-            return false;
-        }
+        OP_CHECK_IF(localDstTypeMax != ZERO_FLOAT && (localDstTypeMax < SIX_FLOAT || localDstTypeMax > TWELVE_FLOAT),
+            OP_LOGE(tilingContext_->GetNodeName(), "dst_type_max[%f] must be 0 or in range [6, 12].", localDstTypeMax),
+            return false);
+    }
+    return true;
+}
+
+bool FlatQuantTiling::ValidateAll() const
+{
+    if (!CheckShapes()) {
+        return false;
+    }
+    if (!CheckClipRatio()) {
+        return false;
+    }
+    auto outDesc = tilingContext_->GetOutputDesc(INDEX_ZERO);
+    OP_CHECK_NULL_WITH_CONTEXT(tilingContext_, outDesc);
+    auto outDtype = outDesc->GetDataType();
+    if (!CheckDstDtype(outDtype)) {
+        return false;
+    }
+    if (!CheckDstTypeMax(outDtype)) {
+        return false;
     }
     return true;
 }
@@ -365,6 +424,7 @@ inline auto FlatQuantTiling::CeilA2B(T1 a, T2 b) const -> T1
 
 static ge::graphStatus Tiling4FlatQuantTiling(gert::TilingContext* context)
 {
+    OP_TILING_CHECK(context == nullptr, "FlatQuant context is null", return ge::GRAPH_FAILED);
     FlatQuantTiling tilingObject(context);
     return tilingObject.RunBigKernelTiling();
 }
@@ -386,7 +446,7 @@ static ge::graphStatus TilingPrepareTiling(gert::TilingParseContext* context)
     bool IsArch3510 = npuArch == NpuArch::DAV_3510;
 
     OP_LOGI(
-        "FlatQuant", "parse compile info success soc:%d, aicNum:%lu, aivNum:%lu",
+        "FlatQuant", "parse compile info success soc:%d, aicNum:%ld, aivNum:%ld",
         static_cast<int>(compileInfo->socVersion), compileInfo->coreNum, compileInfo->aivNum);
     OP_CHECK_IF(
         compileInfo->coreNum <= 0, OP_LOGE(context->GetNodeName(), "FlatQuant is not supported for aicNum <=0 "),
