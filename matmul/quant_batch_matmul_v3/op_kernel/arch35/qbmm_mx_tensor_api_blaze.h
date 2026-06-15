@@ -21,7 +21,7 @@
 using namespace Blaze::Gemm;
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout, uint64_t FULL_LOAD_MODE = 0>
-__aicore__ inline void QbmmMxBasicApiKernel(
+__aicore__ inline void QbmmMxTensorApiKernel(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
 {
     // 定义矩阵的类型和布局
