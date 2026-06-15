@@ -140,8 +140,8 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
         <td>传入的gradOutput或self是空指针。</td>
       </tr>
       <tr>
-        <td rowspan="7">ACLNN_ERR_PARAM_INVALID</td>
-        <td rowspan="7">161002</td>
+        <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+        <td rowspan="6">161002</td>
         <td>gradOutput或self的数据类型和数据格式不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -152,9 +152,6 @@ aclnnStatus aclnnAdaptiveAvgPool2dBackward(
       </tr>
       <tr>
         <td>gradOutput或self的维度不等于3或4。</td>
-      </tr>
-      <tr>
-        <td>gradOutput或self为空tensor。</td>
       </tr>
       <tr>
         <td>NC维度不一致。</td>
