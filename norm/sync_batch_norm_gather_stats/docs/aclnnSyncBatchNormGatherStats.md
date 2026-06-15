@@ -108,7 +108,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>totalSquareSum（aclTensor*）</td>
       <td>输入</td>
       <td>表示各设备的通道特征平方，对应公式中的totalSquareSum。</td>
-      <td><ul><li>第一维必须大于0。</li><li>shape与totalSum相同。</li></ul></td>
+      <td><ul><li>第一维必须大于0。</li><li>shape和数据类型与totalSum的shape和数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>2</td>
@@ -128,7 +128,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>mean（aclTensor*）</td>
       <td>输入</td>
       <td>表示计算过程中的均值，对应公式中的runningMean。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li><li>数据类型与totalSum的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -138,7 +138,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>variance（aclTensor*）</td>
       <td>输入</td>
       <td>表示计算过程中的方差，对应公式中的runningVar。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与totalSum的第二维一致。</li><li>数据类型与totalSum的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -168,7 +168,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>batchMean（aclTensor*）</td>
       <td>输出</td>
       <td>表示全局批均值，对应公式中的batchMean。</td>
-      <td><ul><li>第一维必须大于0。</li></ul></td>
+      <td><ul><li>第一维必须大于0。</li><li>数据类型与batchInvstd的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -178,7 +178,7 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>batchInvstd（aclTensor*）</td>
       <td>输出</td>
       <td>表示标准差倒数，对应公式中的batchInvstd。</td>
-      <td><ul><li>第一维必须大于0。</li></ul></td>
+      <td><ul><li>第一维必须大于0。</li><li>数据类型与batchMean的数据类型保持一致。</li></ul></td>
       <td>BFLOAT16、FLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1</td>
@@ -234,12 +234,12 @@ aclnnStatus aclnnSyncBatchNormGatherStats(
       <td>传入的totalSum，totalSquareSum，sampleCount，mean，variance，batchMean，batchInvstd是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="8">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="8">161002</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
       <td>输入totalSum，totalSquareSum，sampleCount，mean，variance，batchMean，batchInvstd的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td>输入totalSum，totalSquareSum，sampleCount，mean，variance的数据格式不在支持的范围之内。</td>
+      <td>输入totalSum，totalSquareSum，mean，variance，batchMean，batchInvstd的数据类型不满足约束。</td>
     </tr>
     <tr>
       <td>输入totalSum，totalSquareSum，sampleCount，mean，variance，batchMean，batchInvstd的shape不在支持的范围之内。</td>

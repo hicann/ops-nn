@@ -28,67 +28,67 @@
   $$
   
   - 当quantMode输入为"static"时，输出outScales1Out和outScales2Out无实际意义。取决于divMode的输入，融合的量化算子可能是Quantize或AscendQuantV2：
-    
+
     - 当divMode输入为true时，融合的量化算子为Quantize，计算公式如下所示：
-      
+
       $$
       y1Out = round(y / scales1Optional + zeroPoints1Optional)
       $$
-      
+
       $$
       y2Out = round(y / scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
       $$
 
     - 当divMode输入为false时，融合的量化算子为AscendQuantV2，计算公式如下所示：
-      
+
       $$
       y1Out = round(y * scales1Optional + zeroPoints1Optional)
       $$
-      
+
       $$
       y2Out = round(y * scales2Optional + zeroPoints2Optional), \quad \text{当且仅当scales2Optional存在}
       $$
 
   - 当quantMode输入为"dynamic"时，输入zeroPoints1Optional和zeroPoints2Optional无实际意义。融合的量化算子是DynamicQuant，此时divMode无效：
-    
+
     - 若scales1Optional和scales2Optional均无输入，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-      
+
       $$
       outScales1Out = row\_max(abs(y))/127
       $$
-      
+
       $$
       y1Out = round(y / outScales1Out)
       $$
 
     - 若仅输入scales1Optional，则y2Out和scale2Out输出无实际意义，可忽略。计算公式如下所示：
-      
+
       $$
       tmp1 = y * scales1Optional
       $$
-      
+
       $$
       outScales1Out = row\_max(abs(tmp1))/127
       $$
-      
+
       $$
       y1Out = round(tmp1 / outScales1Out)
       $$
 
     - 若scales1Optional和scales2Optional均存在，则y2Out和scale2Out输出有效。计算公式如下所示：
-      
+
       $$
       tmp1 = y * scales1Optional, \quad tmp2 = y * scales2Optional
       $$
-      
+
       $$
       outScales1Out = row\_max(abs(tmp1))/127, \quad outScales2Out = row\_max(abs(tmp2))/127
       $$
-      
+
       $$
       y1Out = round(tmp1 / outScales1Out),\quad y2Out = round(tmp2 / outScales2Out)
       $$
-      
+
       其中row\_max代表对每行求最大值。
 
 ## 函数原型
@@ -394,8 +394,6 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="5">161002</td>
-    </tr>
-    <tr>
       <td>quantMode的值不是"static"或"dynamic"。</td>
     </tr>
     <tr>
@@ -411,7 +409,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
     <tr>
       <td>全部输入tensor的shape满足以下任一等量关系：
       <ol>
-      <li>1. x1、x2、xOut、layernormRes、y1的shape不相同；当scales2Optional可选输入存在时，该条件严格化为x1、x2、xOut、layernormRes、y1、y2的shape不相同。</li>
+      <li>x1、x2、xOut、layernormRes、y1的shape不相同；当scales2Optional可选输入存在时，该条件严格化为x1、x2、xOut、layernormRes、y1、y2的shape不相同。</li>
       <li>gamma、beta的shape不相同；当可选输入scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional存在时，它们的shape和gamma相异。</li>
       <li>当biasOptional存在时，它的shape既和gamma相异，也和x1相异。</li>
       <li>当量化模式为动态，即输入quantMode的值为"dynamic"，且在此同时scales2Optional可选输入存在时，outScales1Out的shape和outScales2Out的shape相异。</li>
