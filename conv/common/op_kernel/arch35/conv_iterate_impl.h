@@ -909,10 +909,10 @@ __aicore__ void Iterate<Intf, ImplType>::IterateK(Intf *self)
     // reduceK priority: 1.KL0FullLoad 2.L1DB Preload 3. ordinary reduceK
     if constexpr (Intf::groupOptPreloadFlag) {
         ReduceGroupOptFmapPreload(self, mmadParams);
-    } else if constexpr (Intf::kl0FullLoadFlag) {
-        ReduceOneK(self, mmadParams);
     } else if constexpr (Intf::isMPreLoad) {
         ReduceKPreloadWithWeightFullloadL0(self, mmadParams);
+    } else if constexpr (Intf::kl0FullLoadFlag) {
+        ReduceOneK(self, mmadParams);
     } else if constexpr (Intf::kPreLoadFlag) {
         if constexpr (Intf::weightUbTrans) {
             ReduceKFmapPreload(self, mmadParams);

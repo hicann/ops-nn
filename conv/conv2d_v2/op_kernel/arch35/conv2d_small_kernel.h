@@ -450,6 +450,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     fp.params.srcNzC0Stride = 1;
 
     fp.reluEn = tiling_->reluMode0 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     fp.preReluMode = static_cast<ReluMode>(tiling_->reluMode0);
     if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
         float m2 = reluWeight0Gm_.GetValue(0);
@@ -459,7 +460,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         fp.vectorRelu = reluWeight0L1.GetPhyAddr();
     }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         LocalTensor<uint64_t> scale0L1(TPosition::A1, scale0L1OffBytes_, tiling_->singleCoreCo);
         Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, scale0L1, fp);
@@ -501,6 +501,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     fp.params.srcNzC0Stride = 1;
  
     fp.reluEn = tiling_->reluMode1 != 0;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     fp.preReluMode = static_cast<ReluMode>(tiling_->reluMode1);
     if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
         float m2 = reluWeight1Gm_.GetValue(0);
@@ -510,7 +511,6 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         fp.vectorRelu = reluWeight1L1.GetPhyAddr();
     }
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         LocalTensor<uint64_t> scale1L1(TPosition::A1, scale1L1OffBytes_, tiling_->singleCoreCo);
         Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, scale1L1, fp);
