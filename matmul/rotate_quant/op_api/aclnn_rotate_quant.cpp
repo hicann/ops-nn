@@ -13,6 +13,7 @@
 #include "acl/acl.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
+#include "matmul/common/op_host/log_format_util.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -20,18 +21,21 @@
 #include "opdev/op_executor.h"
 #include "opdev/op_log.h"
 #include "opdev/platform.h"
+#include "log/log.h"
 #include "opdev/shape_utils.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/make_op_executor.h"
 #include "aclnn_kernels/contiguous.h"
 
 using namespace op;
+using namespace Ops::NN;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 namespace {
+static const char* const kOpName = "aclnnRotateQuantGetWorkspaceSize";
 static constexpr int64_t INT4_NUMS_IN_INT32_SPACE = 8;
 static constexpr int64_t DIM_MIN = 2;
 static constexpr int64_t N_DIM_ALIGNMENT = 8;
@@ -42,7 +46,6 @@ constexpr uint32_t MAX_X_DIM_NUM = 7;
 constexpr uint32_t MIN_ROT_DIM_NUM = 2;
 constexpr uint32_t MAX_ROT_DIM_NUM = 3;
 constexpr int64_t MX_SCALE_CEIL_NUM = 64;
-constexpr int64_t MX_SCALE_LAST_SIZE = 2;
 
 static const std::initializer_list<op::DataType> EMPTY_LIST = {};
 
@@ -83,39 +86,78 @@ static const std::initializer_list<op::DataType>& GetDtypeSupportList(
 static bool CheckNotNull(
     const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut, const aclTensor* scaleOut)
 {
-    OP_CHECK_NULL(x, return false);
-    OP_CHECK_NULL(rotation, return false);
-    OP_CHECK_NULL(yOut, return false);
-    OP_CHECK_NULL(scaleOut, return false);
+    OP_CHECK(
+        x != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "x", "nullptr", FormatString("The value of %s cannot be %s", "x", "null").c_str()),
+        return false);
+    OP_CHECK(
+        rotation != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "rotation", "nullptr", FormatString("The value of %s cannot be %s", "rotation", "null").c_str()),
+        return false);
+    OP_CHECK(
+        yOut != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "yOut", "nullptr", FormatString("The value of %s cannot be %s", "yOut", "null").c_str()),
+        return false);
+    OP_CHECK(
+        scaleOut != nullptr,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "scaleOut", "nullptr", FormatString("The value of %s cannot be %s", "scaleOut", "null").c_str()),
+        return false);
     return true;
 }
 
 static bool CheckDtypeValid(
     const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut, const aclTensor* scaleOut)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(x, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(rotation, GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES), return false);
-    OP_CHECK_DTYPE_NOT_SAME(x, rotation, return false);
+    OP_CHECK(
+        CheckType(x->GetDataType(), GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "x", op::ToString(x->GetDataType()).GetString(),
+            FormatString(
+                "The dtype of %s must be in %s", "x",
+                op::ToString(GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)).GetString())
+                .c_str()),
+        return false);
+    OP_CHECK(
+        CheckType(rotation->GetDataType(), GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "rotation", op::ToString(rotation->GetDataType()).GetString(),
+            FormatString(
+                "The dtype of %s must be in %s", "rotation",
+                op::ToString(GetDtypeSupportList(SOC_IN_SUPPORT_DTYPES)).GetString())
+                .c_str()),
+        return false);
+    OP_CHECK(
+        x->GetDataType() == rotation->GetDataType(),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            kOpName, "x, rotation",
+            FormatString(
+                "%s, %s", op::ToString(x->GetDataType()).GetString(), op::ToString(rotation->GetDataType()).GetString())
+                .c_str(),
+            FormatString("The dtypes of %s must be the same", "x and rotation").c_str()),
+        return false);
 
     auto outList = GetDtypeSupportList(SOC_OUT_SUPPORT_DTYPES);
     auto scaleList = GetDtypeSupportList(SOC_SCALE_SUPPORT_DTYPES);
     OP_CHECK(
         std::find(outList.begin(), outList.end(), yOut->GetDataType()) != outList.end(),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Tensor yOut should be in dtype support list %s",
-            op::ToString(outList).GetString()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "yOut", op::ToString(yOut->GetDataType()).GetString(),
+            FormatString("The dtype of %s must be in %s", "yOut", op::ToString(outList).GetString()).c_str()),
         return false);
     OP_CHECK(
         std::find(scaleList.begin(), scaleList.end(), scaleOut->GetDataType()) != scaleList.end(),
-        OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "Tensor scaleOut should be in dtype support list %s",
-            op::ToString(scaleList).GetString()),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            kOpName, "scaleOut", op::ToString(scaleOut->GetDataType()).GetString(),
+            FormatString("The dtype of %s must be in %s", "scaleOut", op::ToString(scaleList).GetString()).c_str()),
         return false);
     return true;
 }
 
-static bool CheckMxShape(
-    const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut, const aclTensor* scaleOut)
+static bool CheckMxRotationShape(const aclTensor* x, const aclTensor* rotation)
 {
     auto xShape = x->GetViewShape();
     auto rotShape = rotation->GetViewShape();
@@ -124,34 +166,176 @@ static bool CheckMxShape(
     int64_t K = rotShape.GetDim(rotShape.GetDimNum() - 1);
     OP_CHECK(
         K == 32 || K == 64 || K == 128,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation last dim size must be in [32, 64, 128]."), return false);
-    OP_CHECK(N % K == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "N must be divisible by K."), return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "rotation last dim", FormatString("%ld", K).c_str(),
+            FormatString("The value of %s must be in %s", "rotation last dim", "[32, 64, 128]").c_str()),
+        return false);
+    OP_CHECK(
+        N % K == 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "N", FormatString("%ld", N).c_str(),
+            FormatString("The value of %s must be divisible by %s", "N", "K").c_str()),
+        return false);
 
     auto xDimNum = xShape.GetDimNum();
     OP_CHECK(
         xDimNum >= 1 && xDimNum <= MAX_X_DIM_NUM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x tensor dim num should be in range [1, 7]."), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "x", FormatString("%zu", xDimNum).c_str(),
+            FormatString("The shape dim of %s must be in range [%d, %d]", "x", 1, MAX_X_DIM_NUM).c_str()),
+        return false);
     auto rotDimNum = rotShape.GetDimNum();
     OP_CHECK(
         rotDimNum >= MIN_ROT_DIM_NUM && rotDimNum <= MAX_ROT_DIM_NUM,
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation tensor dim num should be in range [2, 3]."), return false);
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "rotation", FormatString("%zu", rotDimNum).c_str(),
+            FormatString("The shape dim of %s must be in range [%d, %d]", "rotation", MIN_ROT_DIM_NUM, MAX_ROT_DIM_NUM)
+                .c_str()),
+        return false);
     if (rotDimNum == MIN_ROT_DIM_NUM) {
         OP_CHECK(
             rotShape.GetDim(0) == K,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation matrix shape should be (%d, %d).", K, K), return false);
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                kOpName, "rotation", op::ToString(rotShape).GetString(),
+                FormatString("The shape of %s must be (%ld, %ld)", "rotation", K, K).c_str()),
+            return false);
     } else {
         int64_t nKRatio = (K != 0) ? (N / K) : N;
         OP_CHECK(
             rotShape.GetDim(0) == nKRatio && rotShape.GetDim(1) == K,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation matrix shape should be (%d, %d, %d).", nKRatio, K, K),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                kOpName, "rotation", op::ToString(rotShape).GetString(),
+                FormatString("The shape of %s must be (%ld, %ld, %ld)", "rotation", nKRatio, K, K).c_str()),
             return false);
     }
+    return true;
+}
 
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(yOut, xShape, return false);
+static bool CheckMxOutputShape(const aclTensor* x, const aclTensor* yOut, const aclTensor* scaleOut)
+{
+    auto xShape = x->GetViewShape();
+    int64_t N = xShape.GetDim(xShape.GetDimNum() - 1);
+
+    if (yOut->GetViewShape() != xShape) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            kOpName, "yOut", op::ToString(yOut->GetViewShape()).GetString(),
+            FormatString("The shape of %s must be %s", "yOut", op::ToString(xShape).GetString()).c_str());
+        return false;
+    }
     op::Shape expectScaleShape = xShape;
     expectScaleShape.SetDim(expectScaleShape.GetDimNum() - 1, (N + MX_SCALE_CEIL_NUM - 1) / MX_SCALE_CEIL_NUM);
     expectScaleShape.AppendDim(2);
-    OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(scaleOut, expectScaleShape, return false);
+    if (scaleOut->GetViewShape() != expectScaleShape) {
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            kOpName, "scaleOut", op::ToString(scaleOut->GetViewShape()).GetString(),
+            FormatString("The shape of %s must be %s", "scaleOut", op::ToString(expectScaleShape).GetString()).c_str());
+        return false;
+    }
+    return true;
+}
+
+static bool CheckMxShape(
+    const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut, const aclTensor* scaleOut)
+{
+    return CheckMxRotationShape(x, rotation) && CheckMxOutputShape(x, yOut, scaleOut);
+}
+
+static bool CheckIntRotationShape(const aclTensor* x, const aclTensor* rotation)
+{
+    auto xShape = x->GetViewShape();
+    auto rotShape = rotation->GetViewShape();
+    OP_CHECK(
+        xShape.GetDimNum() == DIM_MIN,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "x", FormatString("%zu", xShape.GetDimNum()).c_str(),
+            FormatString("The shape dim of %s must be %d", "x", DIM_MIN).c_str()),
+        return false);
+    OP_CHECK(
+        rotShape.GetDimNum() == DIM_MIN,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "rotation", FormatString("%zu", rotShape.GetDimNum()).c_str(),
+            FormatString("The shape dim of %s must be %d", "rotation", DIM_MIN).c_str()),
+        return false);
+    int64_t M = xShape.GetDim(0);
+    int64_t N = xShape.GetDim(1);
+    int64_t K = rotShape.GetDim(1);
+    OP_CHECK(
+        N % N_DIM_ALIGNMENT == 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "N", FormatString("%ld", N).c_str(),
+            FormatString("The value of %s must be divisible by %ld", "N", N_DIM_ALIGNMENT).c_str()),
+        return false);
+    OP_CHECK(
+        K != 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "rotK", "0", FormatString("The value of %s cannot be %s", "rotK", "0").c_str()),
+        return false);
+    OP_CHECK(
+        N % K == 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "N", FormatString("%ld", N).c_str(),
+            FormatString("The value of %s must be divisible by %s", "N", "K").c_str()),
+        return false);
+    OP_CHECK(
+        rotShape.GetDim(0) == K,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+            kOpName, "rotation", op::ToString(rotShape).GetString(),
+            FormatString("The shape of %s must be a square matrix", "rotation").c_str()),
+        return false);
+    return true;
+}
+
+static bool CheckIntOutputShape(const aclTensor* x, const aclTensor* yOut, const aclTensor* scaleOut)
+{
+    auto xShape = x->GetViewShape();
+    int64_t M = xShape.GetDim(0);
+    int64_t N = xShape.GetDim(1);
+
+    auto yShape = yOut->GetViewShape();
+    auto yDtype = yOut->GetDataType();
+    OP_CHECK(
+        yShape.GetDimNum() == DIM_MIN,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "yOut", FormatString("%zu", yShape.GetDimNum()).c_str(),
+            FormatString("The shape dim of %s must be %d", "yOut", DIM_MIN).c_str()),
+        return false);
+    OP_CHECK(
+        yShape.GetDim(0) == M,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "yOut dim0", FormatString("%ld", yShape.GetDim(0)).c_str(),
+            FormatString("The value of %s must equal %ld", "yOut dim0", M).c_str()),
+        return false);
+    if (yDtype == op::DataType::DT_INT8) {
+        OP_CHECK(
+            yShape.GetDim(1) == N,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "yOut dim1", FormatString("%ld", yShape.GetDim(1)).c_str(),
+                FormatString("The value of %s must equal %ld for INT8 output", "yOut dim1", N).c_str()),
+            return false);
+    } else if (yDtype == op::DataType::DT_INT32) {
+        OP_CHECK(
+            yShape.GetDim(1) == N / INT4_NUMS_IN_INT32_SPACE,
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "yOut dim1", FormatString("%ld", yShape.GetDim(1)).c_str(),
+                FormatString(
+                    "The value of %s must equal %ld for INT32 output", "yOut dim1", N / INT4_NUMS_IN_INT32_SPACE)
+                    .c_str()),
+            return false);
+    }
+
+    auto scaleShape = scaleOut->GetViewShape();
+    OP_CHECK(
+        scaleShape.GetDimNum() == 1,
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            kOpName, "scaleOut", FormatString("%zu", scaleShape.GetDimNum()).c_str(),
+            FormatString("The shape dim of %s must be %d", "scaleOut", 1).c_str()),
+        return false);
+    OP_CHECK(
+        scaleShape.GetDim(0) == M,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "scaleOut dim0", FormatString("%ld", scaleShape.GetDim(0)).c_str(),
+            FormatString("The value of %s must equal %ld", "scaleOut dim0", M).c_str()),
+        return false);
     return true;
 }
 
@@ -160,46 +344,7 @@ static bool CheckShape(const aclTensor* x, const aclTensor* rotation, const aclT
     if (scaleOut->GetDataType() == op::DataType::DT_FLOAT8_E8M0) {
         return CheckMxShape(x, rotation, yOut, scaleOut);
     }
-
-    auto xShape = x->GetViewShape();
-    auto rotShape = rotation->GetViewShape();
-    OP_CHECK(xShape.GetDimNum() == DIM_MIN, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x tensor should be 2D."), return false);
-    OP_CHECK(
-        rotShape.GetDimNum() == DIM_MIN, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation tensor should be 2D."),
-        return false);
-    int64_t M = xShape.GetDim(0);
-    int64_t N = xShape.GetDim(1);
-    int64_t K = rotShape.GetDim(1);
-    OP_CHECK(
-        N % N_DIM_ALIGNMENT == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "N must be divisible by alignment size."),
-        return false);
-    OP_CHECK(K != 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotK cannot be zero."), return false);
-    OP_CHECK(N % K == 0, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "N must be divisible by K."), return false);
-    OP_CHECK(
-        rotShape.GetDim(0) == K, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "rotation matrix must be a square matrix."),
-        return false);
-
-    auto yShape = yOut->GetViewShape();
-    auto yDtype = yOut->GetDataType();
-    OP_CHECK(
-        yShape.GetDimNum() == DIM_MIN, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOut tensor should be 2D."), return false);
-    OP_CHECK(yShape.GetDim(0) == M, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOut dim0 should equal M."), return false);
-    if (yDtype == op::DataType::DT_INT8) {
-        OP_CHECK(
-            yShape.GetDim(1) == N, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOut dim1 should equal N for INT8 output."),
-            return false);
-    } else if (yDtype == op::DataType::DT_INT32) {
-        OP_CHECK(
-            yShape.GetDim(1) == N / INT4_NUMS_IN_INT32_SPACE,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "yOut dim1 should equal N/8 for INT32 output."), return false);
-    }
-
-    auto scaleShape = scaleOut->GetViewShape();
-    OP_CHECK(
-        scaleShape.GetDimNum() == 1, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleOut tensor should be 1D."), return false);
-    OP_CHECK(
-        scaleShape.GetDim(0) == M, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleOut dim0 should equal M."), return false);
-    return true;
+    return CheckIntRotationShape(x, rotation) && CheckIntOutputShape(x, yOut, scaleOut);
 }
 
 static bool CheckFormat(const aclTensor* x, const aclTensor* rotation, const aclTensor* yOut, const aclTensor* scaleOut)
@@ -212,7 +357,13 @@ static bool CheckFormat(const aclTensor* x, const aclTensor* rotation, const acl
         ((xFormat == Format::FORMAT_FRACTAL_NZ) || (rotFormat == Format::FORMAT_FRACTAL_NZ) ||
          (yFormat == Format::FORMAT_FRACTAL_NZ) || (scaleFormat == Format::FORMAT_FRACTAL_NZ));
     if (noSupportFormat) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "RotateQuant currently only supports ND format.");
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            kOpName, "x, rotation, yOut, scaleOut",
+            FormatString(
+                "%s, %s, %s, %s", op::ToString(xFormat).GetString(), op::ToString(rotFormat).GetString(),
+                op::ToString(yFormat).GetString(), op::ToString(scaleFormat).GetString())
+                .c_str(),
+            FormatString("The formats of %s cannot be %s", "x, rotation, yOut, scaleOut", "FRACTAL_NZ").c_str());
         return false;
     }
     return true;
@@ -223,17 +374,31 @@ static bool CheckAlphaDtype(const aclTensor* alpha, const aclTensor* scaleOut)
     if (scaleOut->GetDataType() != op::DataType::DT_FLOAT8_E8M0) {
         OP_CHECK(
             alpha == nullptr,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha tensor should be nullptr."), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "alpha", "not null",
+                FormatString("The value of %s must be null when scaleAlg is not 2", "alpha").c_str()),
+            return false);
         return true;
     }
     if (alpha != nullptr) {
         OP_CHECK(
             alpha->GetDataType() == op::DataType::DT_BF16,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha tensor should be bf16 type."), return false);
+            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                kOpName, "alpha", op::ToString(alpha->GetDataType()).GetString(),
+                FormatString("The dtype of %s must be %s", "alpha", "BF16").c_str()),
+            return false);
         auto alphaShape = alpha->GetViewShape();
-        OP_CHECK(alphaShape.GetDimNum() == 1, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha tensor should be 1D."), return false);
         OP_CHECK(
-            alphaShape.GetDim(0) == 1, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "alpha tensor shape should be (1,)."),
+            alphaShape.GetDimNum() == 1,
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+                kOpName, "alpha", FormatString("%zu", alphaShape.GetDimNum()).c_str(),
+                FormatString("The shape dim of %s must be %d", "alpha", 1).c_str()),
+            return false);
+        OP_CHECK(
+            alphaShape.GetDim(0) == 1,
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
+                kOpName, "alpha", op::ToString(alphaShape).GetString(),
+                FormatString("The shape of %s must be (%d,)", "alpha", 1).c_str()),
             return false);
     }
     return true;
@@ -244,7 +409,10 @@ static bool CheckAxisValid(int64_t axis, const aclTensor* x)
     auto xShape = x->GetViewShape();
     int64_t lastDim = xShape.GetDimNum() - 1;
     OP_CHECK(
-        axis == -1 || axis == lastDim, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "axis must be in -1 or %ld.", lastDim),
+        axis == -1 || axis == lastDim,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "axis", FormatString("%ld", axis).c_str(),
+            FormatString("The value of %s must be in -1 or %ld", "axis", lastDim).c_str()),
         return false);
     return true;
 }
@@ -254,13 +422,16 @@ static bool CheckRoundModeValid(const char* roundModeValue, const aclTensor* yOu
     const std::string roundMode = std::string(roundModeValue);
     OP_CHECK(
         roundMode == "rint" || roundMode == "floor" || roundMode == "round",
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "round_mode should be one of {rint, floor, round}."), return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "round_mode", roundMode.c_str(),
+            FormatString("The value of %s must be one of %s", "round_mode", "{rint, floor, round}").c_str()),
+        return false);
     if (yOut->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN || yOut->GetDataType() == op::DataType::DT_FLOAT8_E5M2) {
         OP_CHECK(
             roundMode == "rint",
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID,
-                "When yOut's data type is FLOAT8_E4M3/FLOAT8_E5M2, round_mode only support rint."),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "round_mode", roundMode.c_str(),
+                FormatString("When yOut dtype is FLOAT8_E4M3/FLOAT8_E5M2, %s only support rint", "round_mode").c_str()),
             return false);
     }
     return true;
@@ -272,15 +443,24 @@ static bool CheckScaleAlgValid(int64_t scaleAlg, const aclTensor* yOut)
     if (yDtype == op::DataType::DT_INT32 || yDtype == op::DataType::DT_INT8) {
         OP_CHECK(
             scaleAlg == 0,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg must be 0 for int8/int4 output."), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "scaleAlg", FormatString("%ld", scaleAlg).c_str(),
+                FormatString("The value of %s must be %ld for %s output", "scaleAlg", 0, "int8/int4").c_str()),
+            return false);
     } else if (yDtype == op::DataType::DT_FLOAT4_E2M1) {
         OP_CHECK(
             scaleAlg == 0 || scaleAlg == 2,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg must be 0 or 2 for MXFP4 output."), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "scaleAlg", FormatString("%ld", scaleAlg).c_str(),
+                FormatString("The value of %s must be in %s for %s output", "scaleAlg", "{0, 2}", "MXFP4").c_str()),
+            return false);
     } else {
         OP_CHECK(
             scaleAlg == 0 || scaleAlg == 1,
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleAlg must be 0 or 1 for MXFP8 output."), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "scaleAlg", FormatString("%ld", scaleAlg).c_str(),
+                FormatString("The value of %s must be in %s for %s output", "scaleAlg", "{0, 1}", "MXFP8").c_str()),
+            return false);
     }
     return true;
 }
@@ -291,16 +471,18 @@ static bool CheckDstTypeMaxValid(double dstTypeMax, int64_t scaleAlg, const aclT
     if (yDtype == op::DataType::DT_FLOAT4_E2M1 && scaleAlg == 2) {
         OP_CHECK(
             dstTypeMax >= SIX && dstTypeMax <= TWELVE,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be in range [6.0, 12.0] when scaleAlg is 2, dstTypeMax [%f].",
-                dstTypeMax),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "dstTypeMax", FormatString("%.17g", dstTypeMax).c_str(),
+                FormatString(
+                    "The value of %s must be in range [%.1f, %.1f] when scaleAlg is 2", "dstTypeMax", SIX, TWELVE)
+                    .c_str()),
             return false);
     } else {
         OP_CHECK(
             dstTypeMax == ZERO,
-            OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be 0.0 when scaleAlg is not 2, dstTypeMax [%f].",
-                dstTypeMax),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                kOpName, "dstTypeMax", FormatString("%.17g", dstTypeMax).c_str(),
+                FormatString("The value of %s must be %.1f when scaleAlg is not 2", "dstTypeMax", ZERO).c_str()),
             return false);
     }
 
@@ -309,7 +491,12 @@ static bool CheckDstTypeMaxValid(double dstTypeMax, int64_t scaleAlg, const aclT
 
 static bool CheckTransValid(bool trans)
 {
-    OP_CHECK(trans == false, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "trans must be false."), return false);
+    OP_CHECK(
+        trans == false,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "trans", BoolToString(trans),
+            FormatString("The value of %s must be %s", "trans", "false").c_str()),
+        return false);
     return true;
 }
 

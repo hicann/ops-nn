@@ -20,12 +20,12 @@
 namespace ge {
 /**
 * @brief Performs rotation transformation on the input tensor x using a rotation matrix,
-* followed by per-token symmetric dynamic quantization. \n
+* followed by per-token symmetric dynamic quantization or per-group dynamic MX quantization. \n
 *
 * @par Inputs:
-* @li x: A tensor. Input data for rotation and quantization. 2-D with shape [M, N].
+* @li x: A tensor. Input data for rotation and quantization. 
 * Must be one of the following types: float16, bfloat16. The format supports ND.
-* @li rot: A tensor. Rotation matrix. 2-D with shape [K, K]. Must be a square matrix.
+* @li rot: A tensor. Rotation matrix. 
 * Must be one of the following types: float16, bfloat16. Has the same type as input "x".
 * The format supports ND.
 * @li alpha: A tensor. Optional scaling coefficient for clamp range limitation.
@@ -36,7 +36,7 @@ namespace ge {
 * @li y: When the output data type is int4 or int8, the shape is [M, N].
 * When the output data type is float4_e2m1, float8_e4m3fn, or float8_e5m2, the shape is [M, N]. \n
 * @li scale: When the output data type is float32, the shape is [M].
-* When the output data type is float8_e8m0, the shape is [M]. \n
+* When the output data type is float8_e8m0, the shape is [M, ceilDiv(N,64), 2]. \n
 *
 * @par Attributes:
 * @li y_dtype: An optional int. Specifies the output data type of y. Defaults to DT_INT8. \n
@@ -47,12 +47,20 @@ namespace ge {
 * @li trans: An optional bool. Specifies whether to transpose. Defaults to false. \n
 
 * @par Constraints:
+* Atlas A3 supports per-token dynamic quantization.Atlas A5 supports per-group dynamic MX quantization.
 * Atlas A3 Training Series Products/Atlas A3 Inference Series Products, Atlas A2 Training Series Products/Atlas A2 Inference Series Products, Atlas 950 Series Products: \n
 * - x shape is [M, N], rot shape is [K, K]. rot must be a square matrix.
 * - N must be a multiple of K, and N must be divisible by 8.
 * - x and rot must have the same data type.
 * - scale output shape must be [M].
 * - N range: [128, 16000], K range: [16, 1024]. \n
+
+* Atlas A5 Series Products:
+* - x is 1-D to 7-D, with the last dimension being N.
+* - rot shape is [K, K] or [blockNum, K, K], where blockNum = K/N, and N must divide K.
+* - x and rot must have the same data type.
+* - scale output shape is [*, ceilDiv(N,64), 2].
+* - K must be one of {32, 64, 128}. \n
 
 * | x        | rot      | alpha | y              | scale       |
 * |----------|----------|-------|----------------|-------------|

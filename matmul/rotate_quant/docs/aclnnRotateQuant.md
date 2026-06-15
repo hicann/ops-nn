@@ -226,7 +226,7 @@ aclnnStatus aclnnRotateQuant(
       <td>axis(int64_t)</td>
       <td>输入</td>
       <td>表示量化发生的轴（reduce轴）</td>
-      <td>目前只支持-1。</td>
+      <td>目前只支持-1或最后一维的正索引。</td>
       <td>INT64</td>
       <td>-</td>
       <td>-</td>
@@ -336,80 +336,13 @@ aclnnStatus aclnnRotateQuant(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>x、rotation、yOut或scaleOut是空指针。</td>
-    </tr>
-     <tr>
-      <td rowspan="20">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="20">161002</td>
-      <td>x或rotation的数据类型不在支持列表{BFLOAT16, FLOAT16}中。</td>
+      <td>入参存在空指针。</td>
     </tr>
     <tr>
-      <td>x和rotation的数据类型不一致。</td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td>入参的数据类型、维度、shape或参数取值不符合约束。</td>
     </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，yOut的数据类型不在支持列表{FLOAT4_E2M1, FLOAT8_E4M3FN, FLOAT8_E5M2}中。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT时，yOut的数据类型不在支持列表{INT32, INT8}中。</td>
-    </tr>
-    <tr>
-      <td>alpha不为空时，数据类型不为BFLOAT16，或shape不为(1,)。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，x的维度不在范围[1, 7]内。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，rotation的维度不在范围[2, 3]内。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT时，x或rotation的维度不为2。</td>
-    </tr>
-    <tr>
-      <td>rotation的最后两维长度不相等。</td>
-    </tr>
-    <tr>
-      <td>x最后一维的长度N不是rotation最后一维的长度K的整数倍。</td>
-    </tr>
-    <tr>
-      <td>yOut的shape与x的shape不一致。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，scaleOut的shape不为(*, CeilDiv(N,64), 2)。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT时，scaleOut的shape不为(M,)，M表示x的第一维大小。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT时，x的最后一维的长度N不能被8整除。</td>
-    </tr>
-    <tr>
-      <td>axis不为-1或D-1，D为x的shape的维数。</td>
-    </tr>
-    <tr>
-      <td>scaleAlg不在范围[0, 2]内。</td>
-    </tr>
-    <tr>
-      <td>yOut为FLOAT4_E2M1时，scaleAlg不为0或2。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，当scaleAlg=0或1时dstTypeMax不为0.0。</td>
-    </tr>
-    <tr>
-      <td>scaleOut为FLOAT8_E8M0时，当scaleAlg=2时dstTypeMax不在范围[6.0, 12.0]内。</td>
-    </tr>
-    <tr>
-      <td>trans不为false。</td>
-    </tr>
-    <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561001</td>
-      <td>内部创建OpExecutor执行器失败。</td>
-    </tr>
-    <tr>
-      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
-      <td>561003</td>
-      <td>内部算子调用或数据拷贝操作失败。</td>
-    </tr>  
   </tbody>
   </table>
 
@@ -462,8 +395,10 @@ aclnnStatus aclnnRotateQuant(
   - x的shape为(*, N)，维度范围[1, 7]；rotation的shape为(K, K)或(N/K, K, K)，维度范围[2, 3], K当前版本仅支持取32，64，128。
   - x最后一维的长度(N)必须是K的整数倍。
   - yOut的输出类型为FLOAT4_E2M1、FLOAT8_E4M3FN或FLOAT8_E5M2，shape与x相同。
-  - x和rotation的数据类型必须相同。
+  - x和rotation的数据类型必须相同，必须同时为BFLOAT16或FLOAT16。
+  - rotation最后两维的长度必须一致。
   - scaleOut的shape必须是(*, CeilDiv(N,64), 2)，shape的维度支持2-8，数据类型为FLOAT8_E8M0。
+  - yOut的数据类型必须在[FLOAT4_E2M1,FLOAT8_E4M3FN,FLOAT8_E5M2],yOut的shape必须和x的shape保持一致。
   - alpha为可选输入，不为空指针时，shape为(1,)，数据类型为BFLOAT16，有效取值范围(0.0, 1.0)。传入空指针或者不在有效取值范围内不做clamp处理。
   - axis目前只支持-1或者D-1，D为x的shape的维数。
   - roundMode支持"rint"、"round"、"floor"，传入空指针时，采用"rint"模式。当yOut的数据类型为FLOAT8_E4M3FN或FLOAT8_E5M2时，roundMode仅支持"rint"。
@@ -503,7 +438,7 @@ aclnnStatus aclnnRotateQuant(
 #include <random>
 
 #include "acl/acl.h"
-#include "../op_api/aclnn_rotate_quant.h"
+#include "aclnnop/aclnn_rotate_quant.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
