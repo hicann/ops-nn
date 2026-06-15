@@ -405,12 +405,9 @@ static void GetInputShapeAndDtype(
             // indices input (shared across all Scatters, port 1)
             input_shapes[1] = tensor_desc.GetShape();
             input_dtypes[1] = tensor_desc.GetDataType();
-        } else if (node_type == "Scatter" && input_node.index == 0) {
-            // var input directly to Scatter (no Identity case)
-            input_shapes[2] = tensor_desc.GetShape();
-            input_dtypes[2] = tensor_desc.GetDataType();
-        } else if (node_type == "Identity") {
-            // Identity before Scatter var input (inplace scatter case)
+        } else if (node_type == "Identity" || node_type == "Scatter" && input_node.index == 0) {
+            // var | var_scale | var_offset input directly to Scatter (no Identity case)
+            // or Identity before Scatter var input (inplace scatter case)
             // These carry the var/var_scale/var_offset shapes
             if (input_shapes[2].GetDims().empty()) {
                 input_shapes[2] = tensor_desc.GetShape();

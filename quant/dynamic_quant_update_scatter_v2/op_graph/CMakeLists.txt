@@ -9,6 +9,4 @@
 # ----------------------------------------------------------------------------
 
 message(STATUS "=== Debug:start ops.quant.dynamic_quant_update_scatter_v2.op_graph.CMakeLists.txt")
-if(BUILD_OPEN_PROJECT)
-    add_graph_plugin_sources()
-endif()
+add_graph_plugin_sources()
