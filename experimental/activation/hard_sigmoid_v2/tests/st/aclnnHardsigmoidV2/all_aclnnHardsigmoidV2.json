@@ -1,0 +1,144 @@
+[
+  {
+    "id": 1,
+    "name": "torch.nn.functional.hardsigmoid",
+    "aclnn_name": "aclnnHardsigmoidV2",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_hardsigmoid_v2",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp16",
+        "shape": [
+          128
+        ],
+        "range_values": [
+          -10,
+          10
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  },
+  {
+    "id": 2,
+    "name": "torch.nn.functional.hardsigmoid",
+    "aclnn_name": "aclnnHardsigmoidV2",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_hardsigmoid_v2",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "bf16",
+        "shape": [
+          64,
+          768
+        ],
+        "range_values": [
+          -10,
+          10
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  },
+  {
+    "id": 3,
+    "name": "torch.nn.functional.hardsigmoid",
+    "aclnn_name": "aclnnHardsigmoidV2",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_hardsigmoid_v2",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": [
+          -2.5
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  },
+  {
+    "id": 4,
+    "name": "custom hard_sigmoid_v2 int32 semantics",
+    "aclnn_name": "aclnnHardsigmoidV2",
+    "version": "v1.0",
+    "expected_error_msg": null,
+    "api": "pytorch",
+    "api_type": "aclnn_hardsigmoid_v2",
+    "aclnn_api_type": "aclnn_function",
+    "backward": false,
+    "standard": {
+      "acc": "cv_fused_double_benchmark",
+      "perf": "not_key"
+    },
+    "outputs": null,
+    "inputs": [
+      {
+        "name": "x",
+        "type": "tensor",
+        "required": true,
+        "dtype": "int32",
+        "shape": [
+          1024
+        ],
+        "range_values": [
+          -20,
+          20
+        ],
+        "backward": false,
+        "align_32B": null
+      }
+    ],
+    "acl_json": "",
+    "method_inputs": null,
+    "tensor_input": null
+  }
+]
