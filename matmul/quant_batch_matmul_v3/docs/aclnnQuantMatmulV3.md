@@ -229,7 +229,7 @@ aclnnStatus aclnnQuantMatmulV3(
     - scale数据类型支持UINT64、INT64、FLOAT32、BFLOAT16
     - scale支持INT32、BFLOAT16、FLOAT32
     - out支持FLOAT16、INT8、BFLOAT16、INT32
-    - x2仅支持ND格式，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor
+    - x2仅支持ND格式，全量化场景下，当输入x1为m=0的空tensor或x2为n=0的空tensor时，输出为空tensor
 
 - **返回值：**
 
