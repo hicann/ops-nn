@@ -29,10 +29,14 @@ def leaky_relu_golden(x, *, negative_slope=0, **kwargs):
     Returns:
         Output tensor
     '''
-    x_dtype = x.dtype
-    if "float16" in x_dtype.name:
-        x = x.astype("float32")
-    x0_r = np.where(x >= 0, 1, 0).astype(x.dtype)
-    return (
-        x * (np.abs(x0_r - 1) * np.array([negative_slope], dtype=x.dtype) + x0_r)
-    ).astype(x_dtype, copy=False)
+    import torch
+
+    if "bfloat16" in x.dtype.name:
+        x_torch = torch.from_numpy(x.view(np.int16)).view(torch.bfloat16)
+    else:
+        x_torch = torch.from_numpy(x)
+
+    result = torch.ops.aten.leaky_relu(x_torch, negative_slope)
+    if "bfloat16" in x.dtype.name:
+        return result.view(torch.int16).numpy().view(x.dtype)
+    return result.numpy()
