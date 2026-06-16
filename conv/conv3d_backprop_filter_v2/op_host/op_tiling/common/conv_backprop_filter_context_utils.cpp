@@ -513,7 +513,8 @@ static bool ValidateFilterShapeC(const char* op_name, const Conv3dBpFilterV2RunI
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "filter_shape_c", std::to_string(filter_shape_ci), "filter_shape_c must be a positive number"),
         return false);
     OP_CHECK_IF(runInfoV2.ci % filter_shape_ci != 0,
-        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(op_name, "filter_shape_c", std::to_string(runInfoV2.ci), FormatString("x_channel(%d) %% filter_channel(%d) != 0", runInfoV2.ci, filter_shape_ci).c_str()),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(op_name, "x_channel and filter_shape_c", (std::to_string(runInfoV2.ci) + " and " + std::to_string(filter_shape_ci)).c_str(), 
+        FormatString("x_channel(%d) %% filter_channel(%d) != 0", runInfoV2.ci, filter_shape_ci).c_str()),
         return false);
     return true;
 }
