@@ -1,0 +1,10 @@
+case_name,pass_name,x1_shape,x1_dtype,x2_shape,x2_dtype,scale_shape,scale_dtype,x1_scale_shape,x1_scale_dtype,out_shape,out_dtype,transpose_x1,transpose_x2,bitcast_x1,bitcast_x2,reshape_scale,reshape_scale_shape,reshape_scale_from,attr_dtype,group_size,expected_status,expected_transpose_count,expected_reshape_count,expected_transpose_x1,expected_transpose_x2
+quant_bmm_v3_with_x1_transpose,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,1,0,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,1,0
+quant_bmm_v3_with_x2_transpose,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,0,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_with_both_transpose,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,1,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,1,1
+quant_bmm_v3_with_x2_transpose_cst_changed,QuantBatchMatmulV3TransposeLimitFusionPass,4 4096,DT_INT8,128256 4096,DT_INT8,128256,DT_UINT64,,,4 128256,DT_INT8,0,1,0,0,0,,,DT_INT8,-1,SUCCESS,0,0,0,1
+quant_bmm_v3_with_dynamic_transpose_no_changed,QuantBatchMatmulV3TransposeLimitFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,1,1,0,0,0,,,DT_INT8,-1,GRAPH_NOT_CHANGED,2,0,0,0
+quant_bmm_v3_with_reshape_transpose,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT16,0,1,0,0,1,1 128,x2,DT_FLOAT16,549764202624,SUCCESS,0,0,0,1
+quant_bmm_v3_with_dynamic_unknown_reshape_fusion,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT8_E5M2,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT,-1 -1,DT_FLOAT16,0,1,0,0,1,-1 -1,scale,DT_FLOAT16,549764202624,SUCCESS,0,0,0,1
+quant_bmm_v3_with_both_transpose_bitcast,QuantBatchMatmulV3TransposeFusionPass,-1 -1,DT_INT8,-1 -1,DT_INT8,-1,DT_UINT64,,, -1 -1,DT_INT8,1,1,1,1,0,,,DT_INT8,-1,SUCCESS,0,0,1,1
+quant_bmm_v3_with_reshape_transpose_mx,QuantBatchMatmulV3TransposeFusionPass,12 16,DT_FLOAT8_E5M2,120 16,DT_FLOAT8_E5M2,120 1 2,DT_FLOAT8_E8M0,12 1 2,DT_FLOAT8_E8M0,12 120,DT_FLOAT16,0,1,0,0,1,1 120 2,scale,DT_FLOAT16,32,SUCCESS,0,0,0,1
