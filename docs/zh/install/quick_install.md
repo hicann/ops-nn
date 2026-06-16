@@ -42,11 +42,11 @@
 > - 镜像文件比较大，下载需要一定时间，请您耐心等待。关于docker命令的选项介绍可通过`docker --help`查询。
 > - 环境默认安装最新商发版CANN包，源码下载时注意与软件配套。
 
-1.**安装驱动与固件（运行态依赖）**
+1. **安装驱动与固件（运行态依赖）**
 
 驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-sim info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
 
-2.**下载镜像**
+2. **下载镜像**
 
 - 步骤1：以root用户登录宿主机。确保宿主机已安装Docker引擎（版本1.11.2及以上），使用`docker --version`检查Docker版本，若没有，请参考[Docker官方安装指南](https://docs.docker.com/engine/install/)。
 - 步骤2：从[昇腾镜像仓库](https://www.hiascend.com/developer/ascendhub/detail/17da20d1c2b6493cb38765adeba85884)拉取已预集成CANN软件包及`ops-nn`所需依赖的镜像。
@@ -58,7 +58,7 @@
     docker pull swr.cn-south-1.myhuaweicloud.com/ascendhub/cann:9.1.0-beta.1-910b-openeuler24.03-py3.12-devel
     ```
 
-3.**运行Docker**
+3. **运行Docker**
 
 拉取镜像后，需要以特定参数启动容器，以便容器内能访问宿主的昇腾设备。
 
