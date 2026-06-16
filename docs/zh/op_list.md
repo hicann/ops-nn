@@ -3129,6 +3129,16 @@
     <td>AI Core</td>
     <td>SyncBatchNormGatherStats算子用于收集所有device的均值和方差，更新全局的均值和方差。</td>
   </tr>
+    <tr>
+    <td>norm</td>
+    <td><a href="../../norm/sync_batch_norm_gather_stats_fused/README.md">sync_batch_norm_gather_stats_fused</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>SyncBatchNormGatherStatsFused算子用于计算在BatchNormTraining过程中的全局的均值和全局标准差倒数，以及更新全局方差。</td>
+  </tr>
   <tr>
     <td>norm</td>
     <td><a href="../../norm/sync_batch_norm_gather_stats_with_counts/README.md">sync_batch_norm_gather_stats_with_counts</a></td>
