@@ -422,12 +422,39 @@ static __aicore__ inline void DataCopyPadBaseNUndivided(Intf *self, const Global
 }
 
 template <class Intf>
+static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(
+    Intf* self, const GlobalTensor<typename Intf::DstT>& output, const uint32_t srcStride,
+    const CutDeterMinisticMNSize& cutMNSize)
+{
+    uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
+    uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
+                         ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
+                         self->ctx.hwK_;
+    LoopModeParams loopParams;
+    DataCopyExtParams ub2GmParams;
+    uint64_t shiftBaseN = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE);
+    loopParams.loop2Size = 1;
+    loopParams.loop1Size = cutMNSize.curMSize;
+    loopParams.loop1SrcStride = BLOCK_CUBE * srcStride * DST_DTYPE_BYTES;
+    loopParams.loop1DstStride = self->ctx.tiling_->cin1G * self->ctx.dhwK_ * DST_DTYPE_BYTES;
+    ub2GmParams.blockLen = self->ctx.singleShapeCin_ * DST_DTYPE_BYTES;
+    ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES;
+    ub2GmParams.srcStride = (BLOCK_CUBE - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES >> 5;
+    ub2GmParams.blockCount = srcStride;
+    uint64_t coutIdx = static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+                       static_cast<uint64_t>(cutMNSize.usedMSize);
+    uint64_t dstOffset = coutIdx * self->ctx.hwK_ * self->ctx.tiling_->cin1G +
+                         wkCnt * self->ctx.tiling_->cin1G * self->ctx.curNL0Idx_ +
+                         static_cast<uint64_t>(cutMNSize.usedNSize) * self->ctx.tiling_->dk;
+    SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
+    DataCopyPad(output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
+    ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+}
+
+template <class Intf>
 static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
     const CutDeterMinisticMNSize &cutMNSize, const uint64_t baseCin)
 {
-    // 在ub做完重排后，需将数据搬到output中
-    // 对于主块和尾块，数据在UB中按32Bytes对齐，根据数据排布特点给blockLen和dstStride即可，按Normal模式搬出
-    // 对于Cin<16的场景，数据在UB中紧凑存没有气泡，按Compact模式搬出
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     DataCopyExtParams ub2GmParams;
     uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
@@ -450,7 +477,71 @@ static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<
 }
 
 template <class Intf>
-static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf *self, const uint32_t srcStride)
+static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const GlobalTensor<typename Intf::DstT> &output,
+    const CutDeterMinisticMNSize &cutMNSize, const uint64_t srcStride)
+{
+    uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
+    uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
+                         ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
+                         self->ctx.hwK_;
+    DataCopyExtParams ub2GmParams;
+    uint64_t dstOffset =
+        (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+         static_cast<uint64_t>(cutMNSize.usedMSize)) +
+        static_cast<uint64_t>(self->ctx.curNL0Idx_) * wkCnt * self->ctx.tiling_->cin1G * self->ctx.tiling_->cout +
+        static_cast<uint64_t>(cutMNSize.usedNSize) / srcStride * self->ctx.tiling_->cout;
+    LoopModeParams loopParams;
+    loopParams.loop2Size = 1;
+    loopParams.loop1Size = srcStride;
+    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, srcStride); // Cin1*Cin0
+    loopParams.loop1SrcStride = baseCin * cutMNSize.curMSize * DST_DTYPE_BYTES;
+    loopParams.loop1DstStride = self->ctx.tiling_->cin1G * self->ctx.tiling_->cout * DST_DTYPE_BYTES;
+
+    uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ? self->ctx.singleShapeCin_ : baseCin;
+    uint64_t tailNSize = cutMNSize.curMSize;
+    ub2GmParams.srcStride = 0;
+    ub2GmParams.blockLen = tailNSize * DST_DTYPE_BYTES;
+    ub2GmParams.dstStride = (self->ctx.tiling_->cout - tailNSize) * DST_DTYPE_BYTES;
+    uint64_t tailN = shapeCin;
+    if (cutMNSize.isNTail) {
+        tailN = (self->ctx.singleShapeCin_ * srcStride - cutMNSize.usedNSize) / srcStride;
+    }
+    ub2GmParams.blockCount = tailN;
+    SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
+    DataCopyPad<typename Intf::DstT, PaddingMode::Compact>(
+        output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
+    ResetLoopModePara(DataCopyMVType::UB_TO_OUT);
+}
+
+template <class Intf>
+static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(
+    Intf* self, const GlobalTensor<typename Intf::DstT>& output, const CutDeterMinisticMNSize& cutMNSize,
+    const uint64_t baseCin)
+{
+    uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
+    DataCopyExtParams ub2GmParams;
+    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+                          static_cast<uint64_t>(cutMNSize.usedMSize)) *
+                             self->ctx.hwK_ * self->ctx.tiling_->cin1G +
+                         static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN +
+                         static_cast<uint64_t>(cutMNSize.usedNSize) / self->ctx.hwK_;
+    uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ? self->ctx.singleShapeCin_ : baseCin;
+    uint64_t tailN = shapeCin;
+    if (cutMNSize.isNTail) {
+        tailN = (self->ctx.singleShapeCin_ * self->ctx.hwK_ - cutMNSize.usedNSize) / self->ctx.hwK_;
+    }
+    // Cin
+    uint64_t tailNSize = tailN;
+    ub2GmParams.srcStride = ((baseCin - tailNSize) * DST_DTYPE_BYTES) >> ONE_BLK_SHIFT_SIZE;
+    ub2GmParams.blockLen = tailNSize * DST_DTYPE_BYTES;
+    ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - tailNSize) * DST_DTYPE_BYTES;
+    ub2GmParams.blockCount = cutMNSize.curMSize * self->ctx.hwK_;
+    DataCopyPad(output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
+}
+
+template <class Intf>
+static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf *self, const uint32_t srcStride,
+    const uint64_t baseCin)
 {
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
@@ -459,7 +550,7 @@ static __aicore__ inline void CreateIndexBuf4BaseNUndivided(Intf *self, const ui
     for (uint64_t i = 0; i < C0_PER_REG; i++) {
         CreateVecIndex(indexBuf[dstAddr], (int32_t)0, BLOCK_CUBE); // 从0依次递增
         PipeBarrier<PIPE_V>();
-        Adds(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(srcStride * BLOCK_CUBE * i), BLOCK_CUBE); // srcStride * 16
+        Adds(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(srcStride * baseCin * i), BLOCK_CUBE); // srcStride * 16
         PipeBarrier<PIPE_V>();
         dstAddr += BLOCK_CUBE;
     }
@@ -482,7 +573,7 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf *self, cons
     uint32_t tailNum = coutNum % C0_PER_REG;
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
 
-    CreateIndexBuf4BaseNUndivided(self, srcStride);
+    CreateIndexBuf4BaseNUndivided(self, srcStride, BLOCK_CUBE);
     uint16_t iterWk = ShiftCeilM0(cutMNSize.curNSize, BLOCK_CUBE);
     uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
     uint16_t wkSrcStride = coutNum * BLOCK_CUBE;
@@ -514,12 +605,16 @@ static __aicore__ inline void Rearrange2GmScatterBaseNUndivided(Intf *self, cons
     event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
     SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
     WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
-    DataCopyPadBaseNUndivided(self, output, srcStride, cutMNSize);
+    if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
+        DataCopyPadBaseNUndivided(self, output, srcStride, cutMNSize);
+    } else  {
+        DataCopyPadBaseNUndividedForNDHWC(self, output, srcStride, cutMNSize);
+    }
 }
 
 template <class Intf>
-static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf *self, const uint32_t srcStride,
-    const uint64_t baseCin)
+static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf *self, const uint32_t mulStride,
+    const uint64_t addStride)
 {
     auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
         AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
@@ -528,14 +623,131 @@ static __aicore__ inline void CreateIndexBuf4BaseNDivided(Intf *self, const uint
     for (uint64_t i = 0; i < C0_PER_REG; i++) {
         CreateVecIndex(indexBuf[dstAddr], (int32_t)0, BLOCK_CUBE); // 从0依次递增
         PipeBarrier<PIPE_V>();
-        Muls(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(srcStride), BLOCK_CUBE);
+        Muls(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(mulStride), BLOCK_CUBE);
         PipeBarrier<PIPE_V>();
-        Adds(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(srcStride * baseCin * i), BLOCK_CUBE); // srcStride * 16
+        Adds(indexBuf[dstAddr], indexBuf[dstAddr], (int32_t)(addStride * i), BLOCK_CUBE); // srcStride * 16
         PipeBarrier<PIPE_V>();
         dstAddr += BLOCK_CUBE;
     }
 }
 
+template <class Intf>
+static __aicore__ inline void Rearrange2GmScatterDeterForNDHWC(
+    Intf* self, const uint32_t srcStride, const GlobalTensor<typename Intf::DstT>& output,
+    const CutDeterMinisticMNSize& cutMNSize)
+{
+    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, self->ctx.hwK_); // Cin1*Cin0
+    uint64_t coutNum = cutMNSize.curMSize;
+    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
+        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    uint64_t srcSize = cutMNSize.curNSize * coutNum;
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
+    uint32_t sreg = 64;
+    constexpr uint8_t SREG_PROC_NUM = 64;
+    uint32_t tailNum = coutNum % C0_PER_REG;
+    uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
+
+    CreateIndexBuf4BaseNUndivided(self, self->ctx.hwK_, baseCin);
+    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);  
+    uint16_t iterCout = Ceil(coutNum, C0_PER_REG); 
+    uint16_t iterHkWk = static_cast<uint16_t>(self->ctx.hwK_);
+    uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
+    uint16_t cinSrcStride = hkWkSrcStride * self->ctx.hwK_;                         
+    uint16_t coutDstStride = C0_PER_REG * cutMNSize.curNSize;
+    uint16_t hkWkDstStride = baseCin;
+
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
+        MicroAPI::RegTensor<uint32_t> vIndexReg;
+        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
+        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
+        MicroAPI::DataCopy(vIndexReg, indexPtr);
+
+        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+            for (uint16_t hkWkIndex = 0; hkWkIndex < iterHkWk; hkWkIndex++) {
+                uint16_t coutIndex = 0;
+                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                    uint32_t dstOffset = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
+                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
+                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+                }
+                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                uint32_t dstOffsetTail = coutIndex * coutDstStride + cinIndex * BLOCK_CUBE + hkWkIndex * hkWkDstStride;
+                MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
+                MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+            }
+        }
+    }
+
+    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    DataCopyPadDkEqOneForNDHWC(self, output, cutMNSize, baseCin);
+}
+
+template <class Intf>
+static __aicore__ inline void Rearrange2GmScatterDeterForDHWCN(
+    Intf* self, const uint32_t srcStride, const GlobalTensor<typename Intf::DstT>& output,
+    const CutDeterMinisticMNSize& cutMNSize)
+{
+    uint64_t coutNum = cutMNSize.curMSize;
+    auto indexBuf = self->ctx.vecBuf_.template GetWithOffset<int32_t>(
+        AscendC::VECTOR_REG_WIDTH >> FLOAT_SHIFT_SIZE, AscendC::TOTAL_UB_SIZE - AscendC::VECTOR_REG_WIDTH);
+    auto indexPtr = (__ubuf__ uint32_t*)indexBuf[0].GetPhyAddr();
+    auto srcPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[0].GetPhyAddr();
+    uint64_t srcSize = cutMNSize.curNSize * coutNum;
+    auto dstPtr = (__ubuf__ typename Intf::DstT*)self->ctx.vecOutBuf_[srcSize].GetPhyAddr();
+    uint64_t baseCin = CeilHkWk(cutMNSize.curNSize, srcStride); // Cin1*Cin0
+
+    // 日志里是4 ，每个分型需要转换4次
+    uint32_t C0_PER_REG = AscendC::VECTOR_REG_WIDTH / (sizeof(typename Intf::DstT) * self->ctx.tiling_->n0);
+    uint32_t sreg = 64; // 64: reg处理的数目
+    constexpr uint8_t SREG_PROC_NUM = 64;
+    uint32_t tailNum = coutNum % C0_PER_REG;
+    uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
+
+    CreateIndexBuf4BaseNDivided(self, coutNum, 1);
+    uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE); 
+    uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
+    uint16_t hkWkSrcStride = coutNum * BLOCK_CUBE;
+    uint16_t cinSrcStride = hkWkSrcStride * srcStride;
+
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<typename Intf::DstT> srcReg;
+        MicroAPI::RegTensor<uint32_t> vIndexReg;
+        MicroAPI::MaskReg preg = MicroAPI::UpdateMask<typename Intf::DstT>(sreg);
+        MicroAPI::MaskReg pregTail = MicroAPI::UpdateMask<typename Intf::DstT>(tailSreg);
+        MicroAPI::DataCopy(vIndexReg, indexPtr);
+
+        for (uint16_t cinIndex = 0; cinIndex < iterCin; cinIndex++) {
+            for (uint16_t hkWkIndex = 0; hkWkIndex < static_cast<uint16_t>(srcStride); hkWkIndex++) {
+                uint16_t coutIndex = 0;
+                for (coutIndex = 0; coutIndex < static_cast<uint16_t>(iterCout - 1); coutIndex++) {
+                    uint32_t srcOffset = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                    uint32_t dstOffset = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) + coutIndex * C0_PER_REG;
+                    MicroAPI::DataCopy(srcReg, srcPtr + srcOffset);
+                    MicroAPI::DataCopyScatter(dstPtr + dstOffset, srcReg, vIndexReg, preg);
+                }
+                uint32_t srcOffsetTail = coutIndex * SREG_PROC_NUM + hkWkIndex * hkWkSrcStride + cinIndex * cinSrcStride;
+                uint32_t dstOffsetTail = hkWkIndex * (baseCin * coutNum) + (cinIndex * BLOCK_CUBE * coutNum) + coutIndex * C0_PER_REG;
+                MicroAPI::DataCopy(srcReg, srcPtr + srcOffsetTail);
+                MicroAPI::DataCopyScatter(dstPtr + dstOffsetTail, srcReg, vIndexReg, pregTail);
+            }
+        }
+    }
+
+    event_t eventIdVecToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    WaitFlag<HardEvent::V_MTE3>(eventIdVecToMte3);
+    DataCopyPadDkEqOneForDHWCN(self, output, cutMNSize, srcStride);
+}
+                
 template <class Intf>
 static __aicore__ inline void Rearrange2GmScatterDeter(Intf *self, const uint32_t srcStride,
     const GlobalTensor<typename Intf::DstT> &output, const CutDeterMinisticMNSize &cutMNSize)
@@ -554,7 +766,7 @@ static __aicore__ inline void Rearrange2GmScatterDeter(Intf *self, const uint32_
     uint32_t tailNum = coutNum % C0_PER_REG;
     uint32_t tailSreg = (tailNum == 0) ? SREG_PROC_NUM : tailNum * BLOCK_CUBE;
 
-    CreateIndexBuf4BaseNDivided(self, srcStride, baseCin);
+    CreateIndexBuf4BaseNDivided(self, srcStride, baseCin * srcStride);
     // BaseN整除hwk场景，其值较小，均在uint16_t范围内
     uint16_t iterCin = ShiftDivM0(baseCin, BLOCK_CUBE);
     uint16_t iterCout = Ceil(coutNum, C0_PER_REG);
@@ -616,10 +828,20 @@ static __aicore__ inline void UBRearrange2Gm(Intf *self, const GlobalTensor<type
         Rearrange2Gm(self, output, 1, 0);
     } else if ((self->ctx.tiling_->dk == 1 && hwNum < self->ctx.hwK_) || (self->ctx.tiling_->dk != 1)) {
         uint32_t srcStride = hwNum;
-        Rearrange2GmScatterBaseNUndivided(self, srcStride, output, cutMNSize);
+        if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::DHWCN) {
+            Rearrange2GmScatterDeterForDHWCN(self, srcStride, output, cutMNSize);
+        } else {//NCDHW or NDHWC
+            Rearrange2GmScatterBaseNUndivided(self, srcStride, output, cutMNSize);
+        } 
     } else {
         uint32_t srcStride = self->ctx.hwK_;
-        Rearrange2GmScatterDeter(self, srcStride, output, cutMNSize);
+        if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
+            Rearrange2GmScatterDeter(self, srcStride, output, cutMNSize);
+        } else if constexpr (Intf::Config::dType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
+            Rearrange2GmScatterDeterForNDHWC(self, srcStride, output, cutMNSize);
+        } else { // DHWCN
+            Rearrange2GmScatterDeterForDHWCN(self, srcStride, output, cutMNSize);
+        }
     }
     event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
     SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);

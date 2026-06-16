@@ -160,7 +160,7 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::GetShapeAttrsInfo()
 void Conv3DDWV2BasicBlockTilingArch35::CalcRealGroup()
 {
     int32_t groups = static_cast<int32_t>(tilingData_.dwTiling.group);
-    if (groups <= 1 || deterNotSupportFormat_) {
+    if (groups <= 1 || (deterNotSupportFormat_ || format_.filterFormat != ge::FORMAT_NCDHW)) {
         disableGroupEnlarge();
         return;
     }
@@ -1101,9 +1101,14 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
     OP_TILING_CHECK(filterDesc == nullptr, CUBE_INNER_ERR_REPORT("Conv3DBackpropFilterV2", "filterDesc is null"), return false);
     format_.filterFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
 
+    //NDHWC/DHWCN格式下D维度大于1，进行拦截
+    bool isDaxisGreaterOne = (format_.filterFormat == ge::FORMAT_NDHWC || format_.filterFormat == ge::FORMAT_DHWCN) && 
+            (runInfo_.kd != 1 || runInfo_.di != 1 || runInfo_.dout != 1);
+    if (isDaxisGreaterOne){
+        OP_LOGD(opName_, "When filterFormat is NDHWC or DHWCN , Daxis  Greater 1, no support streamK");
+    }
     deterNotSupportFormat_ = (format_.fmapFormat != ge::FORMAT_NCDHW && format_.fmapFormat != ge::FORMAT_NDHWC) ||
-                             (format_.dedyFormat != ge::FORMAT_NCDHW && format_.dedyFormat != ge::FORMAT_NDHWC) ||
-                             (format_.filterFormat != ge::FORMAT_NCDHW);
+                             (format_.dedyFormat != ge::FORMAT_NCDHW && format_.dedyFormat != ge::FORMAT_NDHWC) || isDaxisGreaterOne;
 
     enableSplitW = (format_.fmapFormat == ge::FORMAT_NCDHW && format_.dedyFormat == ge::FORMAT_NCDHW) ||
                    (format_.fmapFormat == ge::FORMAT_NDHWC && format_.dedyFormat == ge::FORMAT_NDHWC);

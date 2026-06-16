@@ -51,6 +51,8 @@ static __aicore__ inline void LoadL0c2GmForTransFormatNDHWC(
         } else {
             LoadL0c2GmNormalNz2Nd(self, output, l0c);
         }
+    } else {
+        MovOutL0cForDeterministicRefactor(self, l0c, output);
     }
 }
 
@@ -67,6 +69,8 @@ static __aicore__ inline void LoadL0c2GmForTransFormatDHWCN(
         } else {
             LoadL0c2GmNormalNz2DHWCN(self, output, l0c);
         }
+    } else {
+        MovOutL0cForDeterministicRefactor(self, l0c, output);
     }
 }
 
