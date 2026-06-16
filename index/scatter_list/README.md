@@ -91,3 +91,9 @@
 ## 约束说明
 
 无
+
+## 调用说明
+
+| 调用方式 | 样例代码 | 说明 |
+| --- | --- | --- |
+| aclnn接口 | [aclnnScatterList](docs/aclnnScatterList.md) | 通过[aclnnScatterList](docs/aclnnScatterList.md)接口方式调用ScatterList算子，调用示例见接口文档。 |

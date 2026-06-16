@@ -69,7 +69,7 @@
     <tr>
       <td>scalars</td>
       <td>输入</td>
-      <td>表示混合运算中乘法的第一个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。在<term>Ascend 950PR/Ascend 950DT</term>上，scalars数据类型为FLOAT32（`x1`为FLOAT16/FLOAT32/BFLOAT16时）或INT64（`x1`为INT32时）。</td>
+      <td>表示混合运算中乘法的第一个输入张量，对应公式中的`scalars`。元素个数与`x1`中Tensor的个数相等。数据类型和数据格式与入参`x1`的数据类型和数据格式一致。</td>
       <td>FLOAT32、FLOAT16、INT32、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -83,6 +83,7 @@
   </tbody></table>
 
 - Kirin X90/Kirin 9030处理器系列产品：不支持BFLOAT16。
+- Ascend 950PR/Ascend 950DT：scalars数据类型为FLOAT32（`x1`为FLOAT16/FLOAT32/BFLOAT16时）或INT64（`x1`为INT32时）。
 
 ## 约束说明
 
@@ -93,4 +94,3 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_foreach_addcmul_list](examples/test_aclnn_foreach_addcmul_list.cpp) | 通过[aclnnForeachAddcmulList](docs/aclnnForeachAddcmulList.md)接口方式调用ForeachAddcmulList算子。 |
-| 图模式 | -  | 通过[算子IR](op_graph/foreach_addcmul_list_proto.h)构图方式调用ForeachAddcmulList算子。         |

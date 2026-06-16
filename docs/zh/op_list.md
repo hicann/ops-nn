@@ -879,6 +879,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_a_cos_inplace/README.md">foreach_a_cos_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素求反余弦，结果原地更新。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_add_list/README.md">foreach_add_list</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -886,6 +896,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>两个Tensor列表中的元素逐个相加，并可以通过alpha参数调整相加系数。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_add_list_inplace/README.md">foreach_add_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素计算x1+alpha*x2，结果原地写回第一个列表。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1029,6 +1049,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_div_list_inplace/README.md">foreach_div_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素相除，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_div_scalar/README.md">foreach_div_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1116,6 +1146,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对张量列表执行逐元素自然对数运算（ln(x)）。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_log_inplace/README.md">foreach_log_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素求自然对数，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1219,6 +1259,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_mul_list_inplace/README.md">foreach_mul_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素相乘，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_mul_scalar/README.md">foreach_mul_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1226,6 +1276,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相乘运算。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_mul_scalar_inplace/README.md">foreach_mul_scalar_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素乘以同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1389,6 +1449,16 @@
   </tr>
   <tr>
     <td>foreach</td>
+    <td><a href="../../foreach/foreach_sub_list_inplace/README.md">foreach_sub_list_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对两个张量列表逐元素计算x1-alpha*x2，结果原地写回第一个列表。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
     <td><a href="../../foreach/foreach_sub_scalar/README.md">foreach_sub_scalar</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1396,6 +1466,16 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>对输入张量列表的每个张量与张量scalar执行相减运算。</td>
+  </tr>
+  <tr>
+    <td>foreach</td>
+    <td><a href="../../foreach/foreach_sub_scalar_inplace/README.md">foreach_sub_scalar_inplace</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量列表中的每个张量逐元素减去同一标量，结果原地更新。</td>
   </tr>
   <tr>
     <td>foreach</td>
@@ -1819,6 +1899,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/scatter_div/README.md">scatter_div</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现兼容tf.scatter_div的功能，按索引将updates逐切片除到var上。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/scatter_elements/README.md">scatter_elements</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -1846,6 +1936,36 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>将稀疏矩阵更新应用到变量引用中。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_max/README.md">scatter_max</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_min/README.md">scatter_min</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/scatter_mul/README.md">scatter_mul</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。</td>
   </tr>
   <tr>
     <td>index</td>
@@ -3198,6 +3318,76 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>执行Adadelta优化器的单步参数更新，根据当前梯度、梯度平方累积accum和更新量平方累积accum_update，原地更新权重参数var以及accum、accum_update。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_apply_optimizer_assign/README.md">lamb_apply_optimizer_assign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LAMB优化器：完成参数的Adam矩更新与偏差校正后的update计算。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_apply_weight_assign/README.md">lamb_apply_weight_assign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>LAMB优化器：完成信任比(trust ratio)权重更新。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_next_m_v/README.md">lamb_next_m_v</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BERT LAMB优化器图融合算子：完成Adam矩更新与偏差校正后的update计算。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_next_m_v_with_decay/README.md">lamb_next_m_v_with_decay</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BERT LAMB优化器图融合算子（含权重衰减）：完成Adam矩更新与偏差校正后的update计算。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_next_right/README.md">lamb_next_right</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BERT LAMB优化器图融合算子：计算二阶矩next_v及update分母。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_update_with_lr/README.md">lamb_update_with_lr</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BERT LAMB优化器图融合算子：计算信任比并裁剪后更新参数。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/lamb_update_with_lr_v2/README.md">lamb_update_with_lr_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>BERT LAMB优化器图融合算子（信任比权重更新，含裁剪）：计算信任比并裁剪后更新参数。</td>
   </tr>
   <tr>
     <td>optim</td>

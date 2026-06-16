@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 # ----------------------------------------------------------------------------
-# Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+# Copyright (c) 2026 Huawei Technologies Co., Ltd.
 # CANN Open Software License Agreement Version 2.0. See LICENSE for details.
 # ----------------------------------------------------------------------------
 

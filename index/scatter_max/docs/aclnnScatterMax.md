@@ -72,7 +72,7 @@ aclnnStatus aclnnScatterMax(
       <td>输入/输出</td>
       <td>公式中的输入varRef，要进行更新的初始张量，原地更新。</td>
       <td>-</td>
-      <td>FLOAT16，FLOAT32，INT32，INT8，UINT8</td>
+      <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -92,7 +92,7 @@ aclnnStatus aclnnScatterMax(
       <td>输入</td>
       <td>公式中的输入updates，要与varRef逐元素取最大值的更新值。</td>
       <td>-</td>
-      <td>FLOAT16，FLOAT32，INT32，INT8，UINT8</td>
+      <td>FLOAT16、FLOAT32、INT32、INT8、UINT8</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnScatterMax(
     <tr>
       <td>useLocking</td>
       <td>输入</td>
-      <td>是否对更新加锁，默认false。</td>
+      <td>是否对更新加锁，该参数不生效。</td>
       <td>-</td>
       <td>BOOL</td>
       <td>-</td>
@@ -213,6 +213,8 @@ aclnnStatus aclnnScatterMax(
 
 - varRef与updates的数据类型需一致。
 - 需满足shape约束：updates.shape = indices.shape + varRef.shape[1:]。
+- 确定性计算：
+  - aclnnScatterMax默认确定性实现。
 
 ## 调用示例
 
