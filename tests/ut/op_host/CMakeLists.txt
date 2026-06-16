@@ -87,6 +87,7 @@ if(UT_TEST_ALL OR OP_HOST_UT OR OP_GRAPH_UT)
         tiling_api
         dlog
         unified_dlog
+        acl_rt
         dl
     )
 

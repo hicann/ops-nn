@@ -14,13 +14,14 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
+#include "acl/acl_rt.h"
 #include "tiling/platform/platform_ascendc.h"
 
 #include "../quant_batch_matmul_v3_tiling_base.h"
 #include "matmul/quant_batch_matmul_v3/op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
-#include "version/asc_devkit_version.h"
 
 namespace optiling {
 
@@ -53,17 +54,19 @@ enum class BiasMode : uint32_t {
     CUBE_BIAS_FP16_TEMPLATE = 2
 };
 
-// Blaze Tensor API kernel gate; must stay aligned with IS_BLAZE in quant_batch_matmul_v3.cpp.
-#if defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR)
-inline constexpr bool IsTensorapiCapable = (ASC_DEVKIT_MAJOR >= 9) && (ASC_DEVKIT_MINOR > 0);
-#else
-inline constexpr bool IsTensorapiCapable = false;
-#endif
+inline bool IsTensorapiCapable()
+{
+    char pkgName[] = "asc-devkit";
+    int32_t versionNum = 0;
+    // asc-devkit 9.1.0版本引入tensor api
+    constexpr int32_t MinTensorApiRuntimeVersion = 90100000;
+    return aclsysGetVersionNum(pkgName, &versionNum) == ACL_SUCCESS && versionNum >= MinTensorApiRuntimeVersion;
+}
 
 // WeightNz + Blaze: use low-order BasicAPITilingData; otherwise fall back to Cube ASW high-order tiling.
 inline bool IsWeightNzCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable;
+    return inputParams.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
 }
 
 enum class QMMKernelType : uint32_t {
