@@ -138,9 +138,9 @@ function(add_ops_impl_target)
   #此处调用ascendc_impl_build.py目的是为了生成experimental算子的py文件
   add_custom_command(OUTPUT ${OPIMPL_OUT_DIR}/.impl_timestamp
     COMMAND mkdir -m 700 -p ${OPIMPL_OUT_DIR}/dynamic
-    COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_impl_build.py 
-             \"\" \"${OPIMPL_OPS_BATCH}\" \"${OPIMPL_OPS_ITERATE}\" 
-             ${OPIMPL_IMPL_DIR} ${OPIMPL_OUT_DIR}/dynamic ${ASCEND_AUTOGEN_PATH} 
+    COMMAND ${ASCEND_PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/util/ascendc_impl_build.py
+             \"\" \"${OPIMPL_OPS_BATCH}\" \"${OPIMPL_OPS_ITERATE}\"
+             ${OPIMPL_IMPL_DIR} ${OPIMPL_OUT_DIR}/dynamic ${ASCEND_AUTOGEN_PATH}
              --opsinfo-dir ${OPIMPL_OPS_INFO_DIR} ${OPIMPL_OPS_INFO_DIR}/inner ${OPIMPL_OPS_INFO_DIR}/exc
     COMMAND rm -rf ${OPIMPL_OUT_DIR}/.impl_timestamp
     COMMAND touch ${OPIMPL_OUT_DIR}/.impl_timestamp
@@ -349,7 +349,7 @@ function(prepare_compile_from_config)
   if(CCACHE_PROGRAM)
     list(APPEND _ASCENDC_ENV_VAR export ASCENDC_CCACHE_EXECUTABLE=${CCACHE_PROGRAM} &&)
   endif()
-
+  message(STATUS "_ASCENDC_ENV_VAR: ${_ASCENDC_ENV_VAR}")
   if(EXISTS ${CONFCMP_BINARY_JSON})
     # copy binary config file to tbe/config
     binary_config_copy(

@@ -27,7 +27,7 @@ SUPPORTED_LONG_OPTS=(
   "help" "ops=" "soc=" "vendor_name=" "build-type=" "cov" "noexec" "noaicpu" "opkernel" "opkernel_aicpu" "opkernel_aicpu_test" "static"
    "jit" "pkg" "asan" "make_clean_all" "make_clean" "no_force"
   "ophost" "opgraph" "opapi" "run_example" "example_name=" "genop=" "genop_aicpu=" "experimental" "cann_3rd_lib_path=" "oom" "onnxplugin" "tfplugin" "dump_cce"
-  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch="
+  "simulator" "bisheng_flags=" "kernel_template_input=" "module_extension=" "noaclnn" "mssanitizer" "rule_launch=" "ccache="
 )
 
 source "./install_deps.sh"
@@ -156,6 +156,7 @@ usage() {
         echo "    -j[n]                  Compile thread nums, default is 8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3]"
         echo "    --asan                 Enable ASAN (Address Sanitizer) on the host side"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
         echo "    --experimental         Build experimental version"
         echo "    --cann_3rd_lib_path=<PATH>"
@@ -184,6 +185,7 @@ usage() {
         echo "    --soc=soc_version      Compile for specified Ascend SoC (comma-separated for multiple)"
         echo "    --ops=op1,op2,...      Compile specified operators (comma-separated for multiple)"
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo "    --mssanitizer          Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo "    --dump_cce             Dump kernel precompiled files (.i) for debugging"
@@ -207,6 +209,7 @@ usage() {
         echo "    --soc=soc_version      Compile for specified Ascend SoC (comma-separated for multiple)"
         echo "    --ops=op1,op2,...      Compile specified operators (comma-separated for multiple)"
         echo "    --build-type=<Type>    Specify build-type (Type options: Release/Debug), Default:Release"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo "    --mssanitizer          Build with mssanitizer mode on the kernel side, with options: '-g --cce-enable-sanitizer'"
         echo "    --oom                  Build with oom mode on the kernel side, with options: '-g --cce-enable-oom'"
         echo $dotted_line
@@ -222,6 +225,7 @@ usage() {
         echo "    -u                     Build and run all unit tests"
         echo "    --noexec               Only compile ut, do not execute"
         echo "    --asan                 Enable ASAN (Address Sanitizer) on the host side"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo "    --ophost -u            Same as ophost test"
         echo "    --opgraph -u           Same as opgraph test"
         echo "    --opapi -u             Same as opapi test"
@@ -247,6 +251,7 @@ usage() {
         echo "    -j[n]                  Compile thread nums, default is 8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3]"
         echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --ophost -j16 -O3"
@@ -260,6 +265,7 @@ usage() {
         echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
         echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --onnxplugin -j16 -O3"
@@ -273,6 +279,7 @@ usage() {
         echo "    -j[n]                  Compile thread nums, default is 8, eg: -j8"
         echo "    -O[n]                  Compile optimization options, support [O0 O1 O2 O3], eg:-O3"
         echo "    --build-type=<TYPE>    Specify build type (TYPE options: Release/Debug), Default: Release"
+        echo "    --ccache=<VALUE>       Enable or disable ccache (VALUE: on/off/true/false/disable), Default: on"
         echo $dotted_line
         echo "Examples:"
         echo "    bash build.sh --tfplugin -j16 -O3"
@@ -365,7 +372,9 @@ usage() {
   echo "    --make_clean make clean"
   echo "    --make_clean_all make clean and delete related file"
   echo "    --asan enable asan on the host side"
-  echo ""
+  echo "    --ccache=<VALUE> Enable or disable ccache compilation acceleration"
+  echo "                     VALUE options: on/off/true/false/disable, Default: on"
+  echo "                     Example: --ccache=off to disable ccache"
   echo "    --ops Compile specified operator, use snake name, like: --ops=add,add_lora, use ',' to separate different operator"
   echo "    --soc Compile binary with specified Ascend SoC, like: --soc=ascend910b,ascend910_93,ascend950 use ',' to separate different SoC"
  	echo "    --soc supported parameters must only in [ascend910b ascend910_93 ascend950 ascend310p kirinx90 kirin9030 mc62], A3(--soc=ascedn910_93)"
@@ -693,6 +702,7 @@ checkopts() {
   GENOP_BASE=${BASE_PATH}
   MODULE_EXT=""
   NO_ACLNN=FALSE
+  ENABLE_CCACHE=TRUE
 
   if [ $# -eq 0 ]; then
     usage "$SHOW_HELP"
@@ -873,6 +883,12 @@ checkopts() {
         kernel_template_input=*)
           KERNEL_TEMPLATE_INPUT=${OPTARG#*=}
           ;;
+        ccache=*)
+          local ccache_val=${OPTARG#*=}
+          if [[ "$ccache_val" == "off" || "$ccache_val" == "false" || "$ccache_val" == "disable" ]]; then
+            ENABLE_CCACHE=FALSE
+          fi
+          ;;
         *)
           ## 如果不在RELEASE_TARGETS，不做处理
           if ! in_array "$OPTARG" "${RELEASE_TARGETS[@]}"; then
@@ -997,6 +1013,7 @@ assemble_cmake_args() {
   CMAKE_ARGS="$CMAKE_ARGS -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL}"
   CMAKE_ARGS="$CMAKE_ARGS -DNO_FORCE=${NO_FORCE}"
   CMAKE_ARGS="$CMAKE_ARGS -DBUILD_MODE=${BUILD_MODE}"
+  CMAKE_ARGS="$CMAKE_ARGS -DENABLE_CCACHE=${ENABLE_CCACHE}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_HOST_UT=${OP_HOST_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_GRAPH_UT=${OP_GRAPH_UT}"
   CMAKE_ARGS="$CMAKE_ARGS -DOP_API_UT=${OP_API_UT}"
@@ -1051,7 +1068,7 @@ cmake_init() {
 
   [ -f "${BUILD_PATH}/CMakeCache.txt" ] && rm -f ${BUILD_PATH}/CMakeCache.txt
 
-  cd "${BUILD_PATH}" && cmake -DENABLE_ASAN=${ENABLE_ASAN} -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DPREPROCESS_ONLY=ON ..
+  cd "${BUILD_PATH}" && cmake -DENABLE_ASAN=${ENABLE_ASAN} -DCANN_3RD_LIB_PATH=${CANN_3RD_LIB_PATH} -DENABLE_EXPERIMENTAL=${ENABLE_EXPERIMENTAL} -DENABLE_CCACHE=${ENABLE_CCACHE} -DPREPROCESS_ONLY=ON ..
 }
 
 clean_build() {
