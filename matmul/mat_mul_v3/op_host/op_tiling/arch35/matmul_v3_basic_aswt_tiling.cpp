@@ -196,7 +196,9 @@ void MatMulV3BasicAswtTiling::DoAL1FullLoad()
     runInfo_.singleCoreN = runInfo_.baseN;
     uint64_t bL14BufferSize =
         runInfo_.baseK * runInfo_.stepKb * runInfo_.baseN * args_.bDtypeSize * BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum = bL14BufferSize + aL1Size + biasSize > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
+    uint64_t bias4BufferSize = biasSize / DB_SIZE * BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum = bL14BufferSize + aL1Size + bias4BufferSize > compileInfo_.l1Size ?
+        DB_SIZE : BASIC_L1_BUFFER_NUM;
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     uint64_t nCore = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
     uint64_t batchNum = args_.batchInfo == nullptr ? 1 : args_.batchInfo->batchC;
@@ -264,7 +266,9 @@ void MatMulV3BasicAswtTiling::DoBL1FullLoad()
     runInfo_.singleCoreN = args_.nValue;
     uint64_t aL14BufferSize =
         runInfo_.baseK * runInfo_.stepKa * runInfo_.baseM * args_.aDtypeSize * BASIC_L1_BUFFER_NUM;
-    runInfo_.l1BufferNum = aL14BufferSize + bL1Size + biasSize > compileInfo_.l1Size ? DB_SIZE : BASIC_L1_BUFFER_NUM;
+    uint64_t bias4BufferSize = biasSize / DB_SIZE * BASIC_L1_BUFFER_NUM;
+    runInfo_.l1BufferNum = aL14BufferSize + bL1Size + bias4BufferSize > compileInfo_.l1Size ?
+        DB_SIZE : BASIC_L1_BUFFER_NUM;
     runInfo_.dbL0C = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 * DB_SIZE <= compileInfo_.l0CSize ? DB_SIZE : 1UL;
     runInfo_.mixInfo.ubDB = runInfo_.baseM * runInfo_.baseN * DATA_SIZE_FP32 <= compileInfo_.ubSize ? DB_SIZE : 1UL;
     uint64_t mCore = MathUtil::CeilDivision(args_.mValue, runInfo_.baseM);
