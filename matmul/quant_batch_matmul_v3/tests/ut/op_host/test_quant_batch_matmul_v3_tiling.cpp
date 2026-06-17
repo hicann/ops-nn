@@ -31,23 +31,16 @@
 #include "test_cube_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_basic_tiling.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_v3_tiling.h"
+#include "../../../op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_tiling_data.h"
 #include "platform/platform_infos_def.h"
 #include "ut_string_utils.h"
-#include "version/asc_devkit_version.h"
 
 using namespace ut_str;
 using namespace std;
 using namespace ge;
 using namespace ut_util;
 using namespace optiling;
-
-// Blaze Tensor API kernel gate; must stay aligned with IS_BLAZE in quant_batch_matmul_v3.cpp.
-#if defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR)
-inline constexpr bool IsTensorapiCapable = (ASC_DEVKIT_MAJOR >= 9) && (ASC_DEVKIT_MINOR > 0);
-#else
-inline constexpr bool IsTensorapiCapable = false;
-#endif
 
 class QuantBatchMatmulV3TilingTestParam {
 public:
@@ -682,7 +675,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
         //  非 Blaze 不支持 weightNz BasicAPI 路径，跳过出参校验
-        if (tilingStub || (weightNz && !IsTensorapiCapable)) {
+        if (tilingStub || (weightNz && !IsTensorapiCapable())) {
             return;
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)
@@ -703,7 +696,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
         // weightNz + Blaze 走 BasicAPITilingData；非 weightNz 时仍按 quantMode 等条件判断
         bool isUseBasicApiTilingData = (quantMode == 3 || quantMode == 4 || isMxfp8 || isMxfp4 ||
             (quantMode == 0 && !pertokenFlag) || (quantMode == 1 && (scaleDtype == ge::DT_UINT64 || yDtype == ge::DT_INT32))) &&
-            (!weightNz || IsTensorapiCapable);
+            (!weightNz || IsTensorapiCapable());
         if (isUseBasicApiTilingData) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& expectTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingDataInt.data());
