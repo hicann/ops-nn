@@ -41,19 +41,46 @@ __simt_callee__ __aicore__ inline int SimtCompareTotalOrder(T lhs, T rhs, U sign
     return 0;
 }
 
+// NaN detection via bit pattern: exponent all-ones && mantissa non-zero
+template <typename T>
+__simt_callee__ __aicore__ inline bool SimtIsNan(T val)
+{
+    if constexpr (IsSameType<T, bfloat16_t>::value) {
+        uint16_t u = *reinterpret_cast<const uint16_t *>(&val);
+        return (u & 0x7F80U) == 0x7F80U && (u & 0x007FU) != 0;
+    } else if constexpr (IsSameType<T, half>::value) {
+        uint16_t u = *reinterpret_cast<const uint16_t *>(&val);
+        return (u & 0x7C00U) == 0x7C00U && (u & 0x03FFU) != 0;
+    } else if constexpr (IsSameType<T, float>::value) {
+        uint32_t u = *reinterpret_cast<const uint32_t *>(&val);
+        return (u & 0x7F800000U) == 0x7F800000U && (u & 0x007FFFFFU) != 0;
+    } else if constexpr (IsSameType<T, double>::value) {
+        uint64_t u = *reinterpret_cast<const uint64_t *>(&val);
+        return (u & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL && (u & 0x000FFFFFFFFFFFFFULL) != 0;
+    } else {
+        return false;
+    }
+}
+
 // Version for simt context (called from __simt_callee__/__simt_vf__)
 template <typename T>
 __simt_callee__ __aicore__ inline int SimtScalarCompare(T lhs, T rhs)
 {
+    int cmp;
     if constexpr (IsSameType<T, bfloat16_t>::value) {
-        return SimtCompareTotalOrder<T, uint16_t>(lhs, rhs, 0x8000U);
+        cmp = SimtCompareTotalOrder<T, uint16_t>(lhs, rhs, 0x8000U);
     } else if constexpr (IsSameType<T, double>::value) {
-        return SimtCompareTotalOrder<T, uint64_t>(lhs, rhs, 0x8000000000000000ULL);
+        cmp = SimtCompareTotalOrder<T, uint64_t>(lhs, rhs, 0x8000000000000000ULL);
     } else {
         if (lhs < rhs) return -1;
         if (lhs > rhs) return 1;
-        return 0;
+        cmp = 0;
     }
+    // Only check NaN when values appear equal (NaN < x and NaN > x are both false)
+    if (cmp == 0 && (SimtIsNan<T>(lhs) || SimtIsNan<T>(rhs))) {
+        return 1;
+    }
+    return cmp;
 }
 
 // ============================================================

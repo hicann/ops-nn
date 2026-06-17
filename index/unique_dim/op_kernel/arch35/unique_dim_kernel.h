@@ -526,22 +526,11 @@ private:
         Duplicate(shapeTensor, (uint64_t)1, SHAPE_LEN);
         SyncEvent<HardEvent::V_S>();
 
-        // Shape0: valueOut — preserve original ndim, replace dim_k with numOut
-        if (dim_ == 0) {
-            if (inputDimNum_ >= 2) {
-                shapeTensor.SetValue(SHAPE0_SIZE_IDX, UINT64_SHAPE_DIM_TWO);
-                shapeTensor.SetValue(SHAPE0_DIM0_IDX, numOut);
-                shapeTensor.SetValue(SHAPE0_DIM1_IDX, rowLen_);
-            } else {
-                shapeTensor.SetValue(SHAPE0_SIZE_IDX, UINT64_SHAPE_DIM_ONE);
-                shapeTensor.SetValue(SHAPE0_DIM0_IDX, numOut);
-            }
-        } else {
-            shapeTensor.SetValue(SHAPE0_SIZE_IDX, 0x80000000 | inputDimNum_);
-            for (int64_t i = 0; i < inputDimNum_; i++) {
-                int64_t dimVal = (i == dim_) ? numOut : inputDims_[i];
-                shapeTensor.SetValue(SHAPE0_DIM0_IDX + i, dimVal);
-            }
+        // Shape0: valueOut — always preserve original ndim, replace dim_k with numOut
+        shapeTensor.SetValue(SHAPE0_SIZE_IDX, 0x80000000 | inputDimNum_);
+        for (int64_t i = 0; i < inputDimNum_; i++) {
+            int64_t dimVal = (i == dim_) ? numOut : inputDims_[i];
+            shapeTensor.SetValue(SHAPE0_DIM0_IDX + i, dimVal);
         }
 
         shapeTensor.SetValue(SHAPE1_SIZE_IDX, UINT64_SHAPE_DIM_ONE);
