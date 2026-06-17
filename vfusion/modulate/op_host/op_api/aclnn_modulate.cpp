@@ -90,6 +90,10 @@ static bool CheckShape(
 {
     op::Shape selfShape = self->GetViewShape();
     size_t selfDimNum = selfShape.GetDimNum();
+    if (scaleOptional == nullptr || shiftOptional == nullptr) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "scaleOptional and shiftOptional can not be nullptr");
+        return false;
+    }
     // 对非ND数据格式增加warning
     if (self->GetStorageFormat() != op::Format::FORMAT_ND || scaleOptional->GetStorageFormat() != op::Format::FORMAT_ND 
                                                     || shiftOptional->GetStorageFormat() != op::Format::FORMAT_ND) {
