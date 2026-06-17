@@ -47,7 +47,8 @@ private:
     TQue<TPosition::VECOUT, 1> gradScaleLocalQueue_;
 
     // 分块参数
-    uint32_t B_, L_, D_, has_scale_, has_shift_;
+    uint64_t B_, L_, D_;
+    uint32_t has_scale_, has_shift_;
     uint32_t splitByD_, coresPerB_, formerNum_, formerLength_;
     uint32_t tailNum_, tailLength_, maxRowsPerTile_;
 
@@ -84,7 +85,8 @@ public:
 
     __aicore__ inline void CopyIn(uint32_t tileLIndex){
         PipeBarrier<PIPE_ALL>();
-        uint32_t allOffset, scaleOffset, LenD, lenD;
+        uint64_t allOffset, scaleOffset;
+        uint32_t LenD, lenD;
         CalculateOffsets(tileLIndex, allOffset, scaleOffset, LenD, lenD);
         PipeBarrier<PIPE_ALL>();
         CopyInInput(allOffset, LenD, lenD);
@@ -109,7 +111,8 @@ public:
         PipeBarrier<PIPE_ALL>();
     }
     __aicore__ inline void CopyOut(uint32_t tileIndex){
-        uint32_t allOffset, scaleOffset, LenD, lenD;
+        uint64_t allOffset, scaleOffset;
+        uint32_t LenD, lenD;
         CalculateOffsets(tileLIndex, allOffset, scaleOffset, LenD, lenD);
         PipeBarrier<PIPE_ALL>();
         CopyOutGradInput(allOffset, LenD, lenD);
@@ -260,9 +263,9 @@ private:
         pipe.InitBuffer(currenttileGradScaleQueue_, 1, alignedRowBytes);
     }
 
-    __aicore__ inline void CalculateOffsets(uint32_t tileLIndex, uint32_t& allOffset,uint32_t& scaleOffset,
+    __aicore__ inline void CalculateOffsets(uint32_t tileLIndex, uint64_t& allOffset,uint64_t& scaleOffset,
                                                 uint32_t& LenD, uint32_t& lenD){
-        LenD = D_;                   
+        LenD = D_;
         if (isDOverflow){
             lenD = (tileDIndex == tileNumD_ - 1) ? lastTileLengthD_ : MAX_TILE_LENGTH;
             uint32_t d_block_offset;
@@ -274,12 +277,12 @@ private:
                     d_block_offset = totalD_ - lenD;
                 }
             }
-            uint32_t offset = tileLIndex;
+            uint64_t offset = tileLIndex;
             allOffset = (b_index_ + tileBIndex) * L_ * D_ + offset * D_ + d_start_ + d_block_offset;
             scaleOffset = (b_index_ + tileBIndex) * D_ + d_start_ + d_block_offset;
         }else{
             lenD = totalD_;
-            uint32_t offset;
+            uint64_t offset;
             if(tileLIndex == tileNumL_ - 1)
             {
                 currentL_ = lastTileLengthL_;
@@ -290,10 +293,10 @@ private:
             }
             allOffset = (b_index_ + tileBIndex) * L_ * D_ + offset * D_ + d_start_;
             scaleOffset = (b_index_ + tileBIndex) * D_ + d_start_;
-        }    
+        }
     }
 
-    __aicore__ inline void CopyInInput(uint32_t allOffset, uint32_t LenD,uint32_t lenD){
+    __aicore__ inline void CopyInInput(uint64_t allOffset, uint32_t LenD,uint32_t lenD){
         LocalTensor<T> inputLocal = inputQueue_.AllocTensor<T>();
 
         DataCopyExtParams inputCopyParams{
@@ -309,7 +312,7 @@ private:
         inputQueue_.EnQue(inputLocal);
         PipeBarrier<PIPE_ALL>();
     }
-    __aicore__ inline void CopyInGradOutput(uint32_t allOffset, uint32_t LenD,uint32_t lenD){
+    __aicore__ inline void CopyInGradOutput(uint64_t allOffset, uint32_t LenD,uint32_t lenD){
         LocalTensor<T> gradOutputLocal = gradOutputQueue_.AllocTensor<T>();
 
         DataCopyExtParams gradOutputCopyParams{
@@ -326,7 +329,7 @@ private:
         PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void CopyInScale(uint32_t scaleOffset, uint32_t lenD){
+    __aicore__ inline void CopyInScale(uint64_t scaleOffset, uint32_t lenD){
         LocalTensor<T> scaleLocal = scaleQueue_.AllocTensor<T>();
         DataCopyExtParams scaleParams{
             static_cast <uint16_t>(1),
@@ -403,7 +406,7 @@ private:
         PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void CopyOutGradInput(uint32_t allOffset,uint32_t LenD,uint32_t lenD){
+    __aicore__ inline void CopyOutGradInput(uint64_t allOffset,uint32_t LenD,uint32_t lenD){
         LocalTensor<T> gradInputLocalout = gradInputQueue_.DeQue<float>();
 
         DataCopyExtParams inputParams{
@@ -418,7 +421,7 @@ private:
         PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void CopyOutScaleShift(uint32_t ssOffset, uint32_t lenD){
+    __aicore__ inline void CopyOutScaleShift(uint64_t ssOffset, uint32_t lenD){
         if (has_scale_) {
                 LocalTensor<T> gradScaleLocalout = gradScaleLocalQueue_.DeQue<float>();
                 DataCopyExtParams scaleParams{1, static_cast<uint32_t>(rowBytes), 0, 0, 0};

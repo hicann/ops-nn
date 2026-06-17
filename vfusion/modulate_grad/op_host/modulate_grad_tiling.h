@@ -16,12 +16,12 @@
 #define MODULATE_GRAD_TILING_H
 #include "register/tilingdata_base.h"
 #include "tiling/tiling_api.h"
-
+#pragma pack(push, 8)
 namespace optiling{
     BEGIN_TILING_DATA_DEF(ModulateGradTiling)
-        TILING_DATA_FIELD_DEF(uint32_t,B);
-        TILING_DATA_FIELD_DEF(uint32_t,L);
-        TILING_DATA_FIELD_DEF(uint32_t,D);
+        TILING_DATA_FIELD_DEF(uint64_t,B);
+        TILING_DATA_FIELD_DEF(uint64_t,L);
+        TILING_DATA_FIELD_DEF(uint64_t,D);
         TILING_DATA_FIELD_DEF(uint32_t,dataType);
         TILING_DATA_FIELD_DEF(uint32_t,block_dim);
         TILING_DATA_FIELD_DEF(uint32_t,dataTypeSize);
