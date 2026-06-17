@@ -252,6 +252,9 @@ public:
         }
         int64_t splitBlkM = CeilDiv(blkM, mTailCnt_);
         int64_t splitBlkN = CeilDiv(blkN, nTailCnt_);
+        if (isSlice_) {
+            splitBlkM = CeilAlign(splitBlkM, sliceM_);
+        }
         int64_t mSplitIdx = (blockIdx_ % tailCnt_) % mTailCnt_;
         int64_t nSplitIdx = (blockIdx_ % tailCnt_) / mTailCnt_;
         mSplitOffset_ = mSplitIdx * splitBlkM;
@@ -297,6 +300,9 @@ public:
         // SplitM and SplitN
         int64_t splitBlkM = CeilDiv(blkM, mTailCnt_);
         int64_t splitBlkN = CeilDiv(blkN, nTailCnt_);
+        if (isSlice_) {
+            splitBlkM = CeilAlign(splitBlkM, sliceM_);
+        }
         if constexpr (LayoutB == CubeFormat::NZ) {
             splitBlkN = Align(splitBlkN, nAlignSize);
             nTailCnt_ = CeilDiv(blkN, splitBlkN);
@@ -326,6 +332,9 @@ public:
         int64_t nOffset = nTileIdx_ * nL1_ + nSplitOffset_;
         int64_t ndNum = mL1_ > sliceM_ ? mL1_ / sliceM_ : 1;
         int64_t mOffsetNonContiguous = mTileIdx_ * (ndNum * (srcNdStride_ / k_)) + mSplitOffset_;
+        if (isSlice_) {
+            mOffsetNonContiguous += mSplitOffset_ / sliceM_ * (srcNdStride_ / k_ - sliceM_);
+        }
         if (mTileIdx_ > mL1NormCnt_) {
             mOffset = mL1NormCnt_ * mL1_ + (mTileIdx_ - mL1NormCnt_) * mL1TailMain_ + mSplitOffset_;
         }
