@@ -418,7 +418,7 @@
 | [aclnnTfScatterAdd](../../index/tf_scatter_add/docs/aclnnTfScatterAdd.md) | 实现兼容tf.scatter\_add和tf.scatter\_nd\_add的功能，将updates中的值按指定的索引加到varRef的切片上。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnThnnFusedLstmCell](../../rnn/thnn_fused_lstm_cell/docs/aclnnThnnFusedLstmCell.md) | 完成LSTM单元前向计算中，矩阵乘法后的后续计算。 | 默认确定性实现 | - |
 | [aclnnThnnFusedLstmCellBackward](../../rnn/thnn_fused_lstm_cell_grad/docs/aclnnThnnFusedLstmCellBackward.md) | 完成单个时间步LSTM反向的计算。 | 默认确定性实现 | - |
-| [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | - |
+| [aclnnThreshold&aclnnInplaceThreshold](../../activation/threshold/docs/aclnnThreshold&aclnnInplaceThreshold.md) | 对输入x进行阈值操作。当x中的elements大于threshold时，返回elements；否则，返回value。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnThresholdBackward](../../activation/threshold_grad_v2_d/docs/aclnnThresholdBackward.md) | 完成aclnnThreshold的反向。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnTransSparse4to2Para](../../matmul/sparse4to2quant_matmul/docs/aclnnTransSparse4to2Para.md) | 对结构化稀疏的weight矩阵进行压缩预处理，输出压缩后的稀疏矩阵以及对应的索引矩阵。 | 默认确定性实现 | - |
 | [aclnnTransposeBatchMatMul](../../matmul/transpose_batch_mat_mul/docs/aclnnTransposeBatchMatMul.md) | 完成张量x1与张量x2的矩阵乘计算。 | 默认确定性实现 | 默认确定性实现 |
