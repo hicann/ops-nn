@@ -36,8 +36,9 @@ string get_map_string(const std::map<string, string>& map, const string& key) {
 }
 bool IsDisplayTilingdata(const string& case_name, size_t index, uint64_t tilingKey)
 {
-    // 0-18 22-27 30-32 48之后 表示bmm实际用到的tilingdata
-    if (index < 18 || (index >= 22 && index <= 27) || (index >= 30 && index <= 32) || index >= 48) {
+    // 0-18 22-27 30-32 48-91 表示bmm实际用到的tilingdata(不含VectorTilingInfo)
+    // VectorTilingInfo从index 92开始(sizeof(MatmulTilingData)+sizeof(MultiBatchInfo)=368字节=92个int32)
+    if (index < 18 || (index >= 22 && index <= 27) || (index >= 30 && index <= 32) || (index >= 48 && index < 92)) {
         return true;
     }
     // 基础API校验全部的tilingdata
@@ -379,7 +380,7 @@ static TilingTestParam ascend910B_cases_params[] = {
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "vector_core_cnt": 48, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {1500, 1, 512}, {1500, 512, 128}, {1500, 1, 128}, false, 0, 0, 24, 65537,
-    "24 1 128 512 512 1 128 512 16 128 64 64 8 1 1 0 0 0 0 65536 1024 0 1 1 1 1 32 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 7 1 "
+    "24 1 128 512 512 1 128 512 16 128 64 64 8 1 1 0 0 0 0 65536 1024 0 1 1 1 1 32 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 7 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
   },
   {"BatchMatMulV3_MultiBatch_AL1FullLoad_general_test_02",
      "BatchMatMulV3",
@@ -389,7 +390,7 @@ static TilingTestParam ascend910B_cases_params[] = {
       "hardware_info": {"BT_SIZE": 1024, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 196608, "L2_SIZE": 201326592, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 131072, "CORE_NUM": 24, "vector_core_cnt": 48, "socVersion": "Ascend910B" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
     ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, true, 0, false, {1500, 1, 128}, {1500, 512, 128}, {1500, 1, 512}, false, 0, 0, 24, 65537,
-    "24 1 512 128 128 1 512 128 16 64 128 16 8 1 1 0 0 0 0 24576 2048 0 1 1 1 1 8 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 16 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 31 1 "
+    "24 1 512 128 128 1 512 128 16 64 128 16 8 1 1 0 0 0 0 24576 2048 0 1 1 1 1 8 4 0 0 2 2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 1 1 16 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 24 1500 1500 1500 1 1 1 1 1 1 1 1 1 1500 1500 1500 0 0 1 1500 31 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
   }
 };
 

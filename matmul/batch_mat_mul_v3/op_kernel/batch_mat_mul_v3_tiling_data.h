@@ -54,10 +54,30 @@ struct alignas(8) MultiBatchInfo{
 #pragma pack(pop)
 
 #pragma pack(push, 8)
+struct alignas(8) VectorTilingInfo {
+  uint64_t coreNumber;
+  uint64_t coreData;
+  uint64_t copyLoop;
+  uint64_t copyTail;
+  uint64_t lastCopyLoop;
+  uint64_t lastCopyTail;
+  uint64_t rowsPerCore;
+  uint64_t aTotalSize;
+  uint64_t bTotalSize;
+  uint64_t cTotalSize;
+  uint64_t dimSizeSecondLast;
+  uint64_t dimSizeLast;
+  uint64_t alignedDimSizeLast;
+  uint64_t bRowsPerBatch;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 8)
 // 8 means 8 bytes aligned
 struct alignas(8) BatchMatmulTilingData{
   MatmulTilingData matmulTiling;
   MultiBatchInfo multiBatchInfo;
+  VectorTilingInfo vectorTilingInfo;
 };
 #pragma pack(pop)
 

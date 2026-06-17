@@ -23,6 +23,7 @@
 #include "matmul/common/op_host/math_util.h"
 #include "matmul/common/op_host/op_tiling/debug_tiling.h"
 #include "platform/platform_infos_def.h"
+#include "tiling/platform/platform_ascendc.h"
 
 using namespace optiling::batch_mat_mul_v3;
 using Ops::NN::MathUtil;
@@ -57,6 +58,9 @@ constexpr uint64_t L2_SIZE_2 = 192UL * 1024UL * 1024UL;
 constexpr uint64_t MAX_TRANS_CONFLICT = 6;
 constexpr double TAIL_CONFLICT_RATIO = 0.5;
 constexpr uint64_t MAX_INT32_VALUE = 2147483647uL;
+constexpr uint64_t VECTOR_DIM_THRESHOLD = 3;
+constexpr uint64_t VECTOR_ALIGN_NUM = 64;
+constexpr uint64_t VECTOR_BUFFER_MULTIPLIER = 24 * 4;
 
 static inline uint64_t LastPower2(uint64_t n)
 {
@@ -289,9 +293,8 @@ void BatchMatmulV3BaseTiling::DoL2CacheAndCalOrderTiling()
     }
 }
 
-ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
+void BatchMatmulV3BaseTiling::SetBatchDimInfo()
 {
-    auto ret = MatmulV3BaseTiling::DoLibApiTiling();
     bmmTilingData_.multiBatchInfo.batchUsedCoreNum = bmmTilingData_.matmulTiling.matmulTiling.usedCoreNum;
     bmmTilingData_.multiBatchInfo.aBatchDim3 = static_cast<uint32_t>(batchInfo_.batchA3);
     bmmTilingData_.multiBatchInfo.aBatchDim2 = static_cast<uint32_t>(batchInfo_.batchA2);
@@ -305,7 +308,10 @@ ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
     bmmTilingData_.multiBatchInfo.cBatchDim2 = static_cast<uint32_t>(batchInfo_.batchC2);
     bmmTilingData_.multiBatchInfo.cBatchDim1 = static_cast<uint32_t>(batchInfo_.batchC1);
     bmmTilingData_.multiBatchInfo.cBatchDim0 = static_cast<uint32_t>(batchInfo_.batchC0);
+}
 
+void BatchMatmulV3BaseTiling::CalcBatchDimAll()
+{
     aBatchDimAll_ = batchInfo_.batchA0 * batchInfo_.batchA1 * batchInfo_.batchA2 * batchInfo_.batchA3;
     bBatchDimAll_ = batchInfo_.batchB0 * batchInfo_.batchB1 * batchInfo_.batchB2 * batchInfo_.batchB3;
     cBatchDimAll_ = batchInfo_.batchC0 * batchInfo_.batchC1 * batchInfo_.batchC2 * batchInfo_.batchC3;
@@ -313,31 +319,56 @@ ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
     bmmTilingData_.multiBatchInfo.bBatchDimAll = static_cast<uint32_t>(bBatchDimAll_);
     bmmTilingData_.multiBatchInfo.cBatchDimAll = static_cast<uint32_t>(cBatchDimAll_);
     bmmTilingData_.multiBatchInfo.batchTileBlock = static_cast<uint32_t>(cBatchDimAll_);
+}
+
+bool BatchMatmulV3BaseTiling::CheckNd2NzOnTheFlyLimit()
+{
+    uint64_t innerSizeA = args_.isATrans ? args_.mValue : args_.kValue;
+    uint64_t innerSizeB = args_.isBTrans ? args_.kValue : args_.nValue;
+    return innerSizeA > ND2NZ_ON_THE_FLY_LIMIT || innerSizeB > ND2NZ_ON_THE_FLY_LIMIT;
+}
+
+void BatchMatmulV3BaseTiling::DoMultiBatchAndL1FullLoadTiling()
+{
+    if (compileInfo_.supportL0c2out && tilingSelect_ != TilingCalcSelect::COMMON &&
+        std::string(context_->GetNodeType()) != "TransposeBatchMatMul" &&
+        args_.bFormat != ge::FORMAT_FRACTAL_NZ) {
+        OP_LOGD("Enter DoMultiBatchTiling");
+        DoMultiBatchTiling();
+        if (IsMultiBatchAL1FullLoad()) {
+            OP_LOGD("Enter DoMultiBatchL1FullLoadTiling");
+            DoMultiBatchL1FullLoadTiling();
+        }
+    }
+}
+
+ge::graphStatus BatchMatmulV3BaseTiling::DoLibApiTiling()
+{
+    auto ret = MatmulV3BaseTiling::DoLibApiTiling();
+    SetBatchDimInfo();
+    CalcBatchDimAll();
     if (CheckBMMTilingDataIsVaild()) {
         return ge::GRAPH_FAILED;
     }
     bmmTilingData_.multiBatchInfo.biasWithBatch = static_cast<uint32_t>(batchInfo_.biasWithBatch);
     bmmTilingData_.multiBatchInfo.mOri = static_cast<uint32_t>(args_.mOriValue);
 
-    uint64_t innerSizeA = args_.isATrans ? args_.mValue : args_.kValue;
-    uint64_t innerSizeB = args_.isBTrans ? args_.kValue : args_.nValue;
-    if (innerSizeA > ND2NZ_ON_THE_FLY_LIMIT || innerSizeB > ND2NZ_ON_THE_FLY_LIMIT) {
+    if (CheckNd2NzOnTheFlyLimit()) {
         DoUnAlignCommonTiling();
         DoTilingKeyCustom();
         return ret;
     }
 
     DoCommonTiling();
+    if (CheckVectorComputationCondition()) {
+        DoVectorTiling();
+        DoTilingKeyCustom();
+        return ret;
+    }
+    
     DoL1FullLoadTiling();
     DoL2CacheAndCalOrderTiling();
-    if (compileInfo_.supportL0c2out && tilingSelect_ != TilingCalcSelect::COMMON &&
-        std::string(context_->GetNodeType()) != "TransposeBatchMatMul" &&
-        args_.bFormat != ge::FORMAT_FRACTAL_NZ) {
-        DoMultiBatchTiling();
-        if (IsMultiBatchAL1FullLoad()) { // 多batch AL1全载
-            DoMultiBatchL1FullLoadTiling();
-        }
-    }
+    DoMultiBatchAndL1FullLoadTiling();
     DoTilingKeyCustom();
     return ret;
 }
@@ -994,6 +1025,200 @@ void BatchMatmulV3BaseTiling::DoL1FullLoadTiling()
     }
 }
 
+bool BatchMatmulV3BaseTiling::CalcVectorShapeInfo(VectorShapeInfo &shapeInfo)
+{
+    auto platformInfoptr = context_->GetPlatformInfo();
+    if (platformInfoptr == nullptr) { return false; }
+    auto ascendplatformInfo = platform_ascendc::PlatformAscendC(platformInfoptr);
+    shapeInfo.coreNumber = ascendplatformInfo.GetCoreNumAiv();
+
+    auto aStorageShape = context_->GetInputShape(0)->GetStorageShape();
+    auto bStorageShape = context_->GetInputShape(1)->GetStorageShape();
+    const auto dimNum = aStorageShape.GetDimNum();
+    if (dimNum < VECTOR_DIM_THRESHOLD) { return false; }
+
+    shapeInfo.aTotalSize = 1;
+    for (size_t i = 0; i < aStorageShape.GetDimNum(); i++) {
+        shapeInfo.aTotalSize *= aStorageShape.GetDim(i);
+    }
+    shapeInfo.dimSizeSecondLast = aStorageShape.GetDim(dimNum - 2);
+    shapeInfo.dimSizeLast = aStorageShape.GetDim(dimNum - 1);
+
+    shapeInfo.bTotalSize = 1;
+    for (size_t i = 0; i < bStorageShape.GetDimNum(); i++) {
+        shapeInfo.bTotalSize *= bStorageShape.GetDim(i);
+    }
+    if (shapeInfo.dimSizeLast == 0) { return false; }
+
+    shapeInfo.batchSize = shapeInfo.aTotalSize / shapeInfo.dimSizeLast;
+    const uint64_t bDimNum = bStorageShape.GetDimNum();
+    shapeInfo.bRowsPerBatch = bStorageShape.GetDim(bDimNum - 1);
+    return true;
+}
+
+bool BatchMatmulV3BaseTiling::CalcVectorCoreParams(const VectorShapeInfo &shapeInfo, VectorCoreParams &coreParams)
+{
+    auto platformInfoptr = context_->GetPlatformInfo();
+    auto ascendplatformInfo = platform_ascendc::PlatformAscendC(platformInfoptr);
+
+    coreParams.coreData = ops::CeilDiv(shapeInfo.batchSize, shapeInfo.coreNumber);
+    coreParams.coreData = ops::CeilAlign(coreParams.coreData, VECTOR_ALIGN_NUM);
+
+    uint64_t totalUbBytes;
+    ascendplatformInfo.GetCoreMemSize(platform_ascendc::CoreMemType::UB, totalUbBytes);
+    coreParams.alignedDimSizeLast = ops::CeilAlign(shapeInfo.dimSizeLast * aDtypeSize_, (uint64_t)32) / aDtypeSize_;
+    const uint64_t perRowUbCost = 4 * coreParams.alignedDimSizeLast * aDtypeSize_ + aDtypeSize_;
+    coreParams.rowsPerCore = totalUbBytes / perRowUbCost;
+    coreParams.rowsPerCore = ops::FloorAlign(coreParams.rowsPerCore, VECTOR_ALIGN_NUM);
+
+    if (coreParams.coreData == 0 || coreParams.rowsPerCore == 0) { return false; }
+    return true;
+}
+
+void BatchMatmulV3BaseTiling::SetVectorTilingParams(const VectorShapeInfo &shapeInfo,
+                                                     const VectorCoreParams &coreParams)
+{
+    uint64_t usedCoreNum = ops::CeilDiv(shapeInfo.batchSize, coreParams.coreData);
+    usedCoreNum = std::min(usedCoreNum, shapeInfo.coreNumber);
+
+    bmmTilingData_.vectorTilingInfo.coreNumber = usedCoreNum;
+    bmmTilingData_.vectorTilingInfo.coreData = coreParams.coreData;
+    bmmTilingData_.vectorTilingInfo.rowsPerCore = coreParams.rowsPerCore;
+    bmmTilingData_.vectorTilingInfo.aTotalSize = shapeInfo.aTotalSize;
+    bmmTilingData_.vectorTilingInfo.bTotalSize = shapeInfo.bTotalSize;
+    bmmTilingData_.vectorTilingInfo.dimSizeSecondLast = shapeInfo.dimSizeSecondLast;
+    bmmTilingData_.vectorTilingInfo.dimSizeLast = shapeInfo.dimSizeLast;
+    bmmTilingData_.vectorTilingInfo.alignedDimSizeLast = coreParams.alignedDimSizeLast;
+    bmmTilingData_.vectorTilingInfo.bRowsPerBatch = shapeInfo.bRowsPerBatch;
+    bmmTilingData_.vectorTilingInfo.cTotalSize = shapeInfo.batchSize;
+
+    isVectorMode_ = true;
+    // 注意：vector kernel被实现为特殊的VECTOR_FULL_LOAD模式，这是为了架构一致性
+    // vector计算不使用L1全载，而是使用UB全载进行数据处理
+    tilingEnable_.tilingEnableMultiBatchL1FullLoad = TilingEnableMultiBatchL1FullLoad::IS_FALSE;
+    tilingEnable_.tilingEnableMultiBatch = TilingEnableMultiBatch::IS_TRUE;
+    tilingEnable_.tilingEnableLoadMode = TilingEnableLoadMode::VECTOR_FULL_LOAD;
+    tilingEnable_.tilingEnableMultiBatchOut = TilingEnableMultiBatchOut::IS_FALSE;
+    tilingEnable_.tilingEnableMixNd2Nz = TilingEnableMixNd2Nz::IS_FALSE;
+}
+
+void BatchMatmulV3BaseTiling::DoVectorTiling()
+{
+    VectorShapeInfo shapeInfo{};
+    if (!CalcVectorShapeInfo(shapeInfo)) { return; }
+
+    VectorCoreParams coreParams{};
+    if (!CalcVectorCoreParams(shapeInfo, coreParams)) { return; }
+
+    SetVectorTilingParams(shapeInfo, coreParams);
+}
+
+bool BatchMatmulV3BaseTiling::CheckVectorNpuArch()
+{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
+    auto npuArch = ascendcPlatform.GetCurNpuArch();
+    if (npuArch != NpuArch::DAV_2201) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A2/A3 is required. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+    return true;
+}
+
+bool BatchMatmulV3BaseTiling::CheckVectorShapeDims()
+{
+    auto aShape = context_->GetInputShape(0)->GetOriginShape();
+    auto bShape = context_->GetInputShape(1)->GetOriginShape();
+    size_t aDims = aShape.GetDimNum();
+    size_t bDims = bShape.GetDimNum();
+
+    // 检查是否都为3-6维
+    const size_t MIN_DIM = 3;
+    const size_t MAX_DIM = 6;
+    if (aDims < MIN_DIM || aDims > MAX_DIM || bDims < MIN_DIM || bDims > MAX_DIM) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have between %d and %d dimensions. "
+             "Bmm vector opt version not supported.", MIN_DIM, MAX_DIM);
+        return false;
+    }
+
+    // 检查B的最后一维是否为1（内轴，因为当n=1时B默认转置）
+    if (bShape.GetDim(bDims - 2) != 1) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: shape does not meet requirements. "
+            "Bmm vector opt version not supported.");
+        return false;
+    }
+
+    // 检查m和k是否至多为8
+    int64_t MAX_MK_DIM = 8;
+    if (aShape.GetDim(aDims - 1) > MAX_MK_DIM || aShape.GetDim(aDims - 2) > MAX_MK_DIM) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have at most 8 on M and K axis. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+
+    // 检查两个输入张量的维数是否相同
+    if (aDims != bDims) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have the same number of dimensions. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+    return true;
+}
+
+bool BatchMatmulV3BaseTiling::CheckVectorDtypeAndKAxis()
+{
+    if (!(args_.aType == ge::DT_FLOAT && args_.bType == ge::DT_FLOAT && args_.cType == ge::DT_FLOAT)) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: input A, B, and output C must be fp32 data type. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+
+    if (args_.aFormat != ge::FORMAT_ND || args_.bFormat != ge::FORMAT_ND) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: input A and B must be ND format. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+
+    // 检查A矩阵的K轴与B矩阵的K轴长度是否相同
+    auto aShape = context_->GetInputShape(0)->GetOriginShape();
+    auto bShape = context_->GetInputShape(1)->GetOriginShape();
+    size_t aDims = aShape.GetDimNum();
+    size_t bDims = bShape.GetDimNum();
+    if (aShape.GetDim(aDims - 1) != bShape.GetDim(bDims - 1)) {
+        OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have the same length on K axis. "
+             "Bmm vector opt version not supported.");
+        return false;
+    }
+    return true;
+}
+
+bool BatchMatmulV3BaseTiling::CheckVectorBatchBroadcast()
+{
+    auto aShape = context_->GetInputShape(0)->GetOriginShape();
+    auto bShape = context_->GetInputShape(1)->GetOriginShape();
+    size_t aDims = aShape.GetDimNum();
+    for (size_t i = 0; i < aDims - 2; i++) {
+        if (aShape.GetDim(i) != bShape.GetDim(i)) {
+            OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: A and B must have the same batch size. "
+                 "Bmm vector opt version not supported.");
+            return false;
+        }
+    }
+    return true;
+}
+
+bool BatchMatmulV3BaseTiling::CheckVectorComputationCondition()
+{
+    if (!CheckVectorNpuArch()) { return false; }
+    if (!CheckVectorShapeDims()) { return false; }
+    if (!CheckVectorDtypeAndKAxis()) { return false; }
+    if (!CheckVectorBatchBroadcast()) { return false; }
+
+    OP_LOGD(args_.opName, "BatchMatmulV3BaseTiling: vector tiling condition check passed, "
+                          "enter bmm vector opt version");
+    return true;
+}
+
 ge::graphStatus BatchMatmulV3BaseTiling::PostTiling()
 {
     size_t tilingDataSize = sizeof(BatchMatmulTilingData);
@@ -1006,7 +1231,11 @@ ge::graphStatus BatchMatmulV3BaseTiling::PostTiling()
         return ge::GRAPH_FAILED;
     }
     context_->GetRawTilingData()->SetDataSize(tilingDataSize);
-    context_->SetBlockDim(compileInfo_.aicNum);
+    if (isVectorMode_) {
+        context_->SetBlockDim(bmmTilingData_.vectorTilingInfo.coreNumber);
+    } else {
+        context_->SetBlockDim(compileInfo_.aicNum);
+    }
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
     if (( (npuArch == NpuArch::DAV_2201) || (npuArch == NpuArch::DAV_3003) ) &&
