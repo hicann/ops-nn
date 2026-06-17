@@ -119,8 +119,8 @@ private:
 
     // ─── tilingdata 镜像 ───
     int32_t axisNum_ = 0;
-    int64_t axisShape_[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};
-    int64_t axisStride_[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};
+    int64_t axisShape_[MAX_PATTERN_RANK] = {0};
+    int64_t axisStride_[MAX_PATTERN_RANK] = {0};
     int32_t aSplit_ = 0;
     int32_t rSplit_ = 0;
     // 多核（fused aLoop）
@@ -148,7 +148,7 @@ private:
     int64_t cacheBufElems_ = 0; // = cacheBufUbSize / sizeof(float)，用于 ClearCacheTreeVf
 
     // 输出端 stride（A 轴 dense 排列）
-    int64_t outStride_[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};
+    int64_t outStride_[MAX_PATTERN_RANK] = {0};
 
     // ─── GM + UB ───
     GlobalTensor<D_T> xGm_;
@@ -281,7 +281,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::Init(
     GM_ADDR x, GM_ADDR y, const EuclideanNormTilingData* td)
 {
     axisNum_ = td->axisNum;
-    for (int32_t i = 0; i < EUCLIDEAN_NORM_MAX_AXIS_NUM; ++i) {
+    for (int32_t i = 0; i < MAX_PATTERN_RANK; ++i) {
         axisShape_[i] = td->axisShape[i];
         axisStride_[i] = td->axisStride[i];
     }
@@ -589,7 +589,7 @@ template <typename DType, bool isTailR>
 __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(
     int64_t baseGmOff, int64_t aLen, int64_t rLen, AscendC::LocalTensor<D_T>& preInLocal)
 {
-    UBAxisDesc ubAxes[EUCLIDEAN_NORM_MAX_AXIS_NUM];
+    UBAxisDesc ubAxes[MAX_PATTERN_RANK];
     const int32_t K = BuildUBAxes(aLen, rLen, ubAxes);
 
     // ─── 准备 DataCopyPad + LoopMode 参数（仅基于 ubAxes[0..min(K,4))）───
@@ -630,7 +630,7 @@ __aicore__ inline void EuclideanNormKernel<DType, isTailR>::DoCopyInTile(
 
     // 每层 ubAxes[i] 在 UB 上的字节步长 = ∏ paddedSize[0..i-1] × sizeof(D_T)
     //   stride[0] = sizeof(D_T)（元素步长）；stride[k] (k≥1) = stride[k-1] × paddedSize[k-1]
-    int64_t ubStride[EUCLIDEAN_NORM_MAX_AXIS_NUM];
+    int64_t ubStride[MAX_PATTERN_RANK];
     ubStride[0] = dtBytes;
     for (int32_t i = 1; i < K; ++i) {
         ubStride[i] = ubStride[i - 1] * ubAxes[i - 1].paddedSize;

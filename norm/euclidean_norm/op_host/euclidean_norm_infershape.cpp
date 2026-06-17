@@ -106,6 +106,35 @@ static bool LoadAxesFromTensor(
     return true;
 }
 
+static ge::graphStatus HandleScalarInput(gert::InferShapeContext* context,
+                                         const gert::Shape* xShape, gert::Shape* yShape)
+{
+    if (xShape->GetDimNum() != 0) {
+        return GRAPH_SUCCESS;
+    }
+
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+    const bool* attrKeepDims = attrs->GetAttrPointer<bool>(kAttrKeepDimsIdx);
+    const bool keepDims = (attrKeepDims == nullptr) ? kKeepDimsDefault : (*attrKeepDims);
+
+    const gert::Tensor* axesTensor = context->GetInputTensor(kInputAxesIdx);
+    if (axesTensor != nullptr && axesTensor->GetShapeSize() > 0) {
+        OP_LOGE(context->GetNodeName(), "scalar input: axes must be empty, got %ld axes",
+                axesTensor->GetShapeSize());
+        return GRAPH_FAILED;
+    }
+
+    if (keepDims) {
+        *yShape = gert::Shape({1});
+    } else {
+        *yShape = gert::Shape();
+    }
+    OP_LOGD(context->GetNodeName(), "scalar input: keepDims=%d, yShape dims=%zu",
+            static_cast<int>(keepDims), yShape->GetDimNum());
+    return GRAPH_SUCCESS;
+}
+
 static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context)
 {
     OP_LOGD(context->GetNodeName(), "Begin InferShape4EuclideanNorm");
@@ -123,7 +152,12 @@ static ge::graphStatus InferShape4EuclideanNorm(gert::InferShapeContext* context
     }
     const int64_t xRank = static_cast<int64_t>(xShape->GetDimNum());
 
-    // 2) keep_dims 是 OPTIONAL attr：GetAttrPointer 可能返回 nullptr，按 op_def 默认值 false 兜底
+    // 2) scalar (0-D) input
+    if (xRank == 0) {
+        return HandleScalarInput(context, xShape, yShape);
+    }
+
+    // 3) keep_dims 是 OPTIONAL attr：GetAttrPointer 可能返回 nullptr，按 op_def 默认值 false 兜底
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     const bool* attrKeepDims = attrs->GetAttrPointer<bool>(kAttrKeepDimsIdx);

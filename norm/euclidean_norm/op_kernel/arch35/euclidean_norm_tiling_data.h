@@ -16,7 +16,7 @@
  * 无 EuclideanNorm 专属字段（sqrt 是 in-register、不需要传系数；与 mean 需要 invRTotal 不同）。
  *
  * 字段分 5 组：
- *   - pattern 描述：axisNum / axisShape[9] / axisStride[9]（去 1 / 合轴 / 补 ARA 后的 pattern）
+ *   - pattern 描述：axisNum / axisShape[MAX_PATTERN_RANK] / axisStride[MAX_PATTERN_RANK]（去 1 / 合轴 / 补 R 增广后的 pattern）
  *   - 多核切分（fused aLoop）：aLoopCntTotal / aSplitChunkCnt / aBigCoreLoopCnt /
  *              aSmallCoreLoopCnt / aBigCoreCnt / usedCoreNum
  *   - UB 切分：aSplitAxisIdx / rSplitAxisIdx / aUbFactor / aUbFactorAlign /
@@ -29,13 +29,13 @@
 
 #include <cstdint>
 
-constexpr int32_t EUCLIDEAN_NORM_MAX_AXIS_NUM = 9;
+constexpr int32_t MAX_PATTERN_RANK = 9;
 
 struct EuclideanNormTilingData {
-    // ─── pattern 描述（去 1 / 合轴 / 补 leading A / 补 ARA 之后）───
-    int32_t axisNum = 0;                                       // 2~9
-    int64_t axisShape[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};      // 合轴后每根轴的 size，未用位置填 1
-    int64_t axisStride[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};     // 每根轴的 GM stride（按 element）
+    // ─── pattern 描述（去 1 / 合轴 / 补 leading A / 补 R 增广之后）───
+    int32_t axisNum = 0;                                       // 2~MAX_PATTERN_RANK
+    int64_t axisShape[MAX_PATTERN_RANK] = {0};      // 合轴后每根轴的 size，未用位置填 1
+    int64_t axisStride[MAX_PATTERN_RANK] = {0};     // 每根轴的 GM stride（按 element）
     // axisType[i] 由位置 i 的奇偶决定：i 偶→A，i 奇→R（A 起头 + 严格交替），不入 tilingdata
 
     // ─── 多核切分（normal 模板：外层 A loop 全部 fuse 成线性计数，按 coreNum 均衡分核） ───

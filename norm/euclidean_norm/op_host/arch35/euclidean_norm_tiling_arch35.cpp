@@ -14,7 +14,7 @@
  *
  * 完全套用 normal 模板：
  *   1) 读 axes 张量 + keep_dims attr  → 建 A/R 类型表
- *   2) 标准 4 步 pattern 预处理：去 1 / 合轴 / 补 leading A / 补 ARA
+ *   2) 标准 4 步 pattern 预处理：去 1 / 合轴 / 补 leading A / 补 R 增广
  *   3) 双切分：先定 aSplit + aUbFactor，再用剩余 UB 反解 rSplit + rUbFactor；R 全载时回头扩 A
  *   4) 多核切分（fused aLoop）：aLoopCntTotal = ∏(outer A) × aSplitChunkCnt，
  *      按 coreNum 均衡分大小核
@@ -48,7 +48,7 @@ static constexpr size_t kAttrKeepDimsIdx = 0;
 
 // pattern 上限
 static constexpr int32_t kMinAxisNum = 2;
-static constexpr int32_t kMaxAxisNum = EUCLIDEAN_NORM_MAX_AXIS_NUM;
+static constexpr int32_t kMaxAxisNum = MAX_PATTERN_RANK;
 
 // UB 分配预算常量（与设计文档对应）
 static constexpr int64_t kCacheBufBytes = 16 * 1024; // cacheBuf 固定 16 KB
@@ -85,7 +85,7 @@ struct EuclideanNormCtx {
     EuclideanNormEmptyKind emptyKind = EuclideanNormEmptyKind::NORMAL;
     int64_t aTotalEmpty = 0; // EMPTY_R 下 ∏(非 reduce 轴 size)；空集时 = 1
 
-    // pattern 描述（合轴 / 去 1 / 补 ARA 后）
+    // pattern 描述（合轴 / 去 1 / 补 R 增广后）
     std::vector<int64_t> axisShape;
     std::vector<bool> isReduceAxis; // axisShape[i] 对应是否 R 轴
     int32_t axisNum = 0;            // 等于 axisShape.size()
@@ -156,15 +156,18 @@ static ge::graphStatus GetShapeAndDtype(gert::TilingContext* context, EuclideanN
     OP_CHECK_NULL_WITH_CONTEXT(context, xShapePtr);
     const gert::Shape& xS = xShapePtr->GetStorageShape();
     const size_t rank = xS.GetDimNum();
-    OP_CHECK_IF(rank == 0, OP_LOGE(context, "x rank is 0; scalar input not supported"), return ge::GRAPH_FAILED);
-    ctx.xShape.assign(rank, 0);
-    for (size_t i = 0; i < rank; ++i) {
-        ctx.xShape[i] = xS.GetDim(i);
-        // 允许 == 0（空 tensor 模板）；负数仍非法（dynamic shape 已在更外层处理）
-        OP_CHECK_IF(
-            ctx.xShape[i] < 0,
-            OP_LOGE(context, "x dim[%zu]=%ld is negative (dynamic shape not allowed at tiling)", i, ctx.xShape[i]),
-            return ge::GRAPH_FAILED);
+    ctx.xShape.clear();
+    if (rank == 0) {
+        // Scalar (0-D) normalized to 1-element 1-D tensor for tiling.
+        ctx.xShape.push_back(1);
+    } else {
+        for (size_t i = 0; i < rank; ++i) {
+            OP_CHECK_IF(
+                xS.GetDim(i) < 0,
+                OP_LOGE(context, "x dim[%zu]=%ld is negative (dynamic shape not allowed at tiling)", i, xS.GetDim(i)),
+                return ge::GRAPH_FAILED);
+            ctx.xShape.push_back(xS.GetDim(i));
+        }
     }
 
     auto xDesc = context->GetInputDesc(kInputXIdx);
@@ -298,8 +301,10 @@ static void PadLeadingOneA(EuclideanNormCtx& ctx)
     }
 }
 
-// 3.4 补 ARA 增广：若仍无 R 轴（纯 A 退化），前置 [A=1, R=1]
-static void PadAraIfPureA(EuclideanNormCtx& ctx)
+// 3.4 补 R 增广：若仍无 R 轴（纯 A 退化）
+//   A=1（全 1 退化）：末尾补 R=1 → AR（tail-R），避免不必要的 TailA 路径
+//   A>1（纯 A 非全 1）：前置 [A=1, R=1] → ARA（tail-A），禁止末尾补 R=1
+static void PadRIfPureA(EuclideanNormCtx& ctx)
 {
     bool hasR = false;
     for (bool b : ctx.isReduceAxis) {
@@ -309,8 +314,13 @@ static void PadAraIfPureA(EuclideanNormCtx& ctx)
         }
     }
     if (!hasR) {
-        ctx.axisShape.insert(ctx.axisShape.begin(), {1, 1});
-        ctx.isReduceAxis.insert(ctx.isReduceAxis.begin(), {false, true});
+        if (ctx.axisShape.size() == 1 && ctx.axisShape[0] == 1) {
+            ctx.axisShape.push_back(1);
+            ctx.isReduceAxis.push_back(true);
+        } else {
+            ctx.axisShape.insert(ctx.axisShape.begin(), {1, 1});
+            ctx.isReduceAxis.insert(ctx.isReduceAxis.begin(), {false, true});
+        }
     }
 }
 
@@ -360,7 +370,7 @@ static ge::graphStatus PreprocessPattern(gert::TilingContext* context, Euclidean
     DropSizeOneAxes(ctx);
     FuseAxis(ctx);
     PadLeadingOneA(ctx);
-    PadAraIfPureA(ctx);
+    PadRIfPureA(ctx);
 
     ctx.axisNum = static_cast<int32_t>(ctx.axisShape.size());
     OP_CHECK_IF(
@@ -800,12 +810,12 @@ static ge::graphStatus FillAndLogTilingData(gert::TilingContext* context, const 
         memset_s(td, sizeof(EuclideanNormTilingData), 0, sizeof(EuclideanNormTilingData)) != EOK,
         OP_LOGE(context, "memset tilingdata error"), return ge::GRAPH_FAILED);
 
-    int64_t axisStride[EUCLIDEAN_NORM_MAX_AXIS_NUM] = {0};
+    int64_t axisStride[MAX_PATTERN_RANK] = {0};
     EuclideanNormCtx tmpForStride = ctx;
     ComputeAxisStrides(tmpForStride, axisStride);
 
     td->axisNum = ctx.axisNum;
-    for (int32_t i = 0; i < EUCLIDEAN_NORM_MAX_AXIS_NUM; ++i) {
+    for (int32_t i = 0; i < MAX_PATTERN_RANK; ++i) {
         td->axisShape[i] = (i < ctx.axisNum) ? ctx.axisShape[static_cast<size_t>(i)] : 1;
         td->axisStride[i] = (i < ctx.axisNum) ? axisStride[i] : 0;
     }
