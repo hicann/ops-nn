@@ -20,15 +20,16 @@
  *   - Empty tensor (0 elements): early return in Process/Init
  *   - Scalar input (0-dim): handled by Host Tiling EnsureNotScalar -> {1}
  *   - Non-aligned data: DataCopyPad handles non-32B alignment
- *   - beta=0: invBeta = +inf, output = inf for all elements (aligned with PyTorch)
- *   - NaN input: propagated through Exp/Log/Select (IEEE 754 behavior, same as PyTorch)
+ *   - beta=0: invBeta = +inf, NaN propagated via GT mask (aligned with TBE)
+ *   - NaN input: propagated through GT mask -> Select (aligned with TBE)
  *
  * TilingKey_0 (FP32 direct):
- *   - 5 buffers + cmpMask
- *   - Compute chain: Muls(beta*x) -> Duplicate+Compare(<=threshold) -> Exp -> Adds(+1) -> Log -> Muls(invBeta) -> Select
+ *   - 4 buffers + cmpMask
+ *   - Compute chain: Muls(beta*x) -> Duplicate+Compare(>threshold) -> Duplicate(0)+Select(mask) -> Exp -> Adds(+1) -> Log -> Muls(invBeta) -> Select
  *
  * TilingKey_1 (FP16 cast to FP32) / TilingKey_2 (BF16 cast to FP32):
  *   - 4 buffers (in/out depth=2 at sizeof(T)=2) + castBuf(fp32) + tmpBuf(fp32) + cmpMask
+ *   - Compute chain: Cast->Muls(beta*x)->Duplicate+Compare(>threshold)->Duplicate(0)+Select(mask)->Exp->Adds(+1)->Log->Muls(invBeta)->reCast->Select->Cast
  *   - Key probe findings applied:
  *     1. Compare does not support scalar; use Duplicate + two-tensor Compare
  *     2. Select<bfloat16_t> not available on dav_c220; Select performed in fp32 space
@@ -174,27 +175,30 @@ __aicore__ inline void SoftplusV2<T>::ComputeFp32(AscendC::LocalTensor<float>& x
     // Step 1: tmp = beta * x
     AscendC::Muls<float>(tmp, xLocal, beta_, computeCount);
 
-    // Step 2: Compare(cmpMask, tmp, thresholdTensor, LE) -- beta*x <= threshold
-    // Probe finding: Compare does not support scalar; use Duplicate + two-tensor Compare
+    // Step 2: cmpMask = (beta*x > threshold)  -- aligned with TBE GT compare
     AscendC::Duplicate<float>(yLocal, threshold_, computeCount);
-    AscendC::Compare<float>(cmpMask, tmp, yLocal, AscendC::CMPMODE::LE, computeCount);
+    AscendC::Compare<float>(cmpMask, tmp, yLocal, AscendC::CMPMODE::GT, computeCount);
 
-    // Step 3: tmp = exp(beta * x)
+    // Step 3: safe_bx = Select(cmpMask, 0.0, tmp)  -- overflow->0, safe->tmp, NaN->NaN
+    AscendC::Duplicate<float>(yLocal, 0.0f, computeCount);
+    AscendC::Select<float>(tmp, cmpMask, yLocal, tmp,
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                           computeCount);
+
+    // Step 4: tmp = exp(safe_bx)
     AscendC::Exp<float>(tmp, tmp, computeCount);
 
-    // Step 4: tmp = 1 + exp(beta * x)
+    // Step 5: tmp = 1 + exp(safe_bx)
     AscendC::Adds<float>(tmp, tmp, 1.0f, computeCount);
 
-    // Step 5: tmp = ln(1 + exp(beta * x))
+    // Step 6: tmp = ln(1 + exp(safe_bx))
     AscendC::Log<float>(tmp, tmp, computeCount);
 
-    // Step 6: tmp = (1/beta) * ln(1 + exp(beta * x))
+    // Step 7: tmp = (1/beta) * ln(1 + exp(safe_bx))
     AscendC::Muls<float>(tmp, tmp, invBeta_, computeCount);
 
-    // Step 7: y = Select(cmpMask ? tmp : x)
-    // Compare LE: bit=1 when beta*x <= threshold -> select softplus (src0=tmp)
-    //             bit=0 when beta*x >  threshold -> select x (src1=xLocal)
-    AscendC::Select<float>(yLocal, cmpMask, tmp, xLocal,
+    // Step 8: y = Select(cmpMask, x, tmp)  -- bit=1->x, bit=0->softplus
+    AscendC::Select<float>(yLocal, cmpMask, xLocal, tmp,
                            AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
                            computeCount);
 }
@@ -205,7 +209,7 @@ __aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLoca
                                                    int64_t currentNum)
 {
     // FP16/BF16 path: Cast to fp32, compute in fp32, Cast back
-    // Validated by fp16_cast_probe and bf16_cast_probe (both successful)
+    // Formula aligned with TBE: GT compare + mask before Exp + swapped Select
     //
     // Key probe findings applied:
     //   1. Compare requires two tensors -- use Duplicate to fill threshold into castLocal
@@ -229,36 +233,38 @@ __aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLoca
     AscendC::Muls<float>(tmp, castLocal, beta_, computeCount);
 
     // Step 3: Duplicate threshold into castLocal (temporarily overwrites fp32 x)
-    // Probe finding: Compare does not support scalar parameter
     AscendC::Duplicate<float>(castLocal, threshold_, computeCount);
 
-    // Step 4: Compare: beta*x <= threshold (two-tensor version)
-    AscendC::Compare<float>(cmpMask, tmp, castLocal, AscendC::CMPMODE::LE, computeCount);
+    // Step 4: cmpMask = (beta*x > threshold)  -- aligned with TBE GT compare
+    AscendC::Compare<float>(cmpMask, tmp, castLocal, AscendC::CMPMODE::GT, computeCount);
 
-    // Step 5: Exp(beta*x)
-    AscendC::Exp<float>(tmp, tmp, computeCount);
-
-    // Step 6: 1 + exp(beta*x)
-    AscendC::Adds<float>(tmp, tmp, 1.0f, computeCount);
-
-    // Step 7: ln(1 + exp(beta*x))
-    AscendC::Log<float>(tmp, tmp, computeCount);
-
-    // Step 8: (1/beta) * ln(...)
-    AscendC::Muls<float>(tmp, tmp, invBeta_, computeCount);
-
-    // Step 9: Re-Cast T -> fp32 to recover original x (castLocal was overwritten by Duplicate)
-    // Probe finding: two-pass Cast approach -- second Cast restores fp32 x for Select
-    AscendC::Cast<float, T>(castLocal, xLocal, AscendC::RoundMode::CAST_NONE, computeCount);
-
-    // Step 10: Select in fp32 space
-    // Probe finding: Select<bfloat16_t> not available on dav_c220, must do Select in fp32
-    // bit=1 -> src0(tmp, softplus result), bit=0 -> src1(castLocal, original x)
-    AscendC::Select<float>(castLocal, cmpMask, tmp, castLocal,
+    // Step 5: safe_bx = Select(cmpMask, 0.0, tmp)  -- overflow->0, safe->tmp, NaN->NaN
+    AscendC::Duplicate<float>(castLocal, 0.0f, computeCount);
+    AscendC::Select<float>(tmp, cmpMask, castLocal, tmp,
                            AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
                            computeCount);
 
-    // Step 11: Cast fp32 -> T (output)
+    // Step 6: Exp(safe_bx)
+    AscendC::Exp<float>(tmp, tmp, computeCount);
+
+    // Step 7: 1 + exp(safe_bx)
+    AscendC::Adds<float>(tmp, tmp, 1.0f, computeCount);
+
+    // Step 8: ln(1 + exp(safe_bx))
+    AscendC::Log<float>(tmp, tmp, computeCount);
+
+    // Step 9: (1/beta) * ln(...)
+    AscendC::Muls<float>(tmp, tmp, invBeta_, computeCount);
+
+    // Step 10: Re-Cast T -> fp32 to recover original x (castLocal was overwritten)
+    AscendC::Cast<float, T>(castLocal, xLocal, AscendC::RoundMode::CAST_NONE, computeCount);
+
+    // Step 11: Select in fp32 space  -- bit=1->x, bit=0->softplus
+    AscendC::Select<float>(castLocal, cmpMask, castLocal, tmp,
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+                           computeCount);
+
+    // Step 12: Cast fp32 -> T (output)
     AscendC::Cast<T, float>(yLocal, castLocal, AscendC::RoundMode::CAST_ROUND, computeCount);
 }
 
