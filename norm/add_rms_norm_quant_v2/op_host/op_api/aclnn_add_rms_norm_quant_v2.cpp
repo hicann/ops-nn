@@ -629,8 +629,10 @@ aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(
 
     // 参数检查
     AddRmsNormQuantV2ACLNN::AddRmsNormQuantV2InputTensor inputTensorOri = {x1, x2, gamma, betaOptional, scales1, scales2Optional, zeroPoints1Optional, zeroPoints2Optional};
-    AddRmsNormQuantV2ACLNN::SpecialTransform(inputTensorOri, uniqueExecutorForV2.get());
     AddRmsNormQuantV2ACLNN::AddRmsNormQuantV2OutputTensor outputTensor = {y1Out, y2Out, rmsNormOut, xOut};
+    CHECK_RET(AddRmsNormQuantV2ACLNN::SimpleCheckNotNull(inputTensorOri, outputTensor),
+        ACLNN_ERR_PARAM_NULLPTR);
+    AddRmsNormQuantV2ACLNN::SpecialTransform(inputTensorOri, uniqueExecutorForV2.get());
    
     // 支持空tensor
     bool anyEmptyTensor = x1->IsEmpty() || gamma->IsEmpty() || y2Out->IsEmpty();
