@@ -58,8 +58,6 @@ struct TConv3DDwTiling {
     uint32_t m0 = 1;
     uint32_t k0 = 1;
     uint32_t n0 = 1;
-    uint32_t stepM = 1;
-    uint32_t stepN = 1;
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
     uint32_t iterateOrder = 1;

@@ -25,8 +25,7 @@
 namespace ConvolutionBackpropFunc {
 template <class Intf>
 __aicore__ inline void updateParasForSplitKernelHW(
-    Intf *self, Out2L1ScalarParams& out2L1Params, uint32_t startWo,
- 	uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
+    Intf* self, Out2L1ScalarParams& out2L1Params, uint32_t startWo, uint64_t out2B1SrcAddrStart, uint32_t wkIdx)
 {
     int64_t padLeft = 0;
     int64_t padRight = 0;
@@ -36,8 +35,7 @@ __aicore__ inline void updateParasForSplitKernelHW(
     if (b1SrcWiLeftOffGm < 0) {
         padLeft = -b1SrcWiLeftOffGm;
     }
-    leftValidAddrOffset =
-        Ceil(padLeft, self->ctx.tiling_->strideW) * self->ctx.tiling_->strideW + b1SrcWiLeftOffGm;
+    leftValidAddrOffset = Ceil(padLeft, self->ctx.tiling_->strideW) * self->ctx.tiling_->strideW + b1SrcWiLeftOffGm;
 
     int64_t b1SrcWiRightOffGm = static_cast<int64_t>(startWo + self->ctx.singleShapeWo_) * self->ctx.tiling_->strideW +
                                 self->ctx.strideKernelDilationW - (self->ctx.tiling_->padLeft + self->ctx.tiling_->wi);
@@ -45,7 +43,7 @@ __aicore__ inline void updateParasForSplitKernelHW(
         padRight = b1SrcWiRightOffGm;
     }
     padRight = padRight - (self->ctx.tiling_->wk - wkIdx - 1) * self->ctx.tiling_->dilationW;
-    
+
     padLeft = padLeft < 0 ? (0) : Ceil(padLeft, self->ctx.tiling_->strideW);
     padRight = padRight < 0 ? (0) : Ceil(padRight, self->ctx.tiling_->strideW);
 
@@ -65,8 +63,7 @@ __aicore__ inline void updateParasForSplitKernelHW(
 
     out2L1Params.singleShapeWi = self->ctx.singleShapeWo_;
     if (out2L1Params.singleShapeWi > (padLeft + padRight)) {
-        self->ctx.load3d_.l1W = out2L1Params.singleShapeWi -
-                                padLeft - padRight;
+        self->ctx.load3d_.l1W = out2L1Params.singleShapeWi - padLeft - padRight;
     } else {
         self->ctx.load3d_.l1W = 0;
     }
@@ -79,15 +76,15 @@ __aicore__ inline void updateParasForSplitKernelHW(
 template <class Intf>
 __aicore__ inline void initParasSplitKernelHW(Intf* self)
 {
-    //矩阵计算的值，默认为baseUseN_，baseUseN_可能等于baseN或TailN，但都一定是n0对齐的,splitkernel场景，
-    // 每次只循环一个hkwk=1,因此一定是n0
+    // 矩阵计算的值，默认为baseUseN_，baseUseN_可能等于baseN或TailN，但都一定是n0对齐的,splitkernel场景，
+    //  每次只循环一个hkwk=1,因此一定是n0
     self->ctx.mmad_.n = self->ctx.tiling_->n0;
 
-    //kExtension是N轴，由于切了Kernel，不管是fp16和32(两个C0的Wk连续)场景均为16,正好一个n0单元;
+    // kExtension是N轴，由于切了Kernel，不管是fp16和32(两个C0的Wk连续)场景均为16,正好一个n0单元;
     self->ctx.load3d_.kExtension = self->ctx.tiling_->n0;
-    self->ctx.load3d_.kStartPt = 0; //stepM=stepN=1，每次N都是从0开始读取
+    self->ctx.load3d_.kStartPt = 0; // stepM=stepN=1，每次N都是从0开始读取
 
-    self->ctx.load3d_.channelSize = 16; //cin等于16，避免循环cin1
+    self->ctx.load3d_.channelSize = 16; // cin等于16，避免循环cin1
     self->ctx.load3d_.filterW = 1;
     self->ctx.load3d_.filterH = 1;
 
@@ -103,271 +100,10 @@ __aicore__ inline void initParasSplitKernelHW(Intf* self)
 }
 
 template <class Intf>
-__aicore__ inline void ClearBaseMNL0C(Intf *self, LocalTensor<typename Intf::L0cT> &l0c) {
-    LocalTensor<typename Intf::SrcT> l0a = self->ctx.l0aBuf_.template Get<typename Intf::SrcT>();
-    LocalTensor<typename Intf::SrcT> l0b = self->ctx.l0bBuf_.template Get<typename Intf::SrcT>();
-
-    constexpr uint32_t l0aPingPongAddr = TOTAL_L0A_SIZE / 2 / sizeof(typename Intf::SrcT);
-    constexpr uint32_t l0bPingPongAddr = TOTAL_L0B_SIZE / 2 / sizeof(typename Intf::SrcT);
-
-    if (self->ctx.l0aPingPongFlag_) {
-        l0a = l0a[l0aPingPongAddr];
-        l0b = l0b[l0bPingPongAddr];
-    }
-    
-    LocalTensor<typename Intf::SrcT> useB1Buf = self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>();
-    InitZeroValue(self, useB1Buf);
-    self->ctx.b1Ping_.EnQue(useB1Buf);
-
-    LocalTensor<typename Intf::SrcT> useA1Buf = self->ctx.a1Ping_.template AllocTensor<typename Intf::SrcT>();
-    InitZeroValue(self, useA1Buf);
-    self->ctx.a1Ping_.EnQue(useA1Buf);
-
-    self->ctx.cacheB1BufPing_ = self->ctx.b1Ping_.template DeQue<typename Intf::SrcT>();
-    self->ctx.cacheA1BufPing_ = self->ctx.a1Ping_.template DeQue<typename Intf::SrcT>();
-
-    WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
-
-    using LoadData3DParamsV2SrcT = LoadData3DParamsV2<typename Intf::SrcT>;
-    LoadData3DParamsV2SrcT load3d_;
-    load3d_.padList[0] = 0;
-    load3d_.padList[1] = 0;
-    load3d_.padList[2] = 0;
-    load3d_.padList[3] = 255;
-    load3d_.l1W = 1;
-    load3d_.l1H = 1;
-    load3d_.channelSize = Ceil(self->ctx.tiling_->baseN, self->ctx.tiling_->n0) * self->ctx.tiling_->n0;
-    load3d_.kStartPt = 0;
-    load3d_.mStartPt = 0;
-    load3d_.kExtension = self->ctx.tiling_->baseN;
-    load3d_.mExtension = 16;
-    load3d_.strideW = 1;
-    load3d_.strideH = 1;
-    load3d_.filterH = 1;
-    load3d_.filterW = 1;
-    load3d_.dilationFilterW = 1;
-    load3d_.dilationFilterH = 1;
-
-#if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
-    LoadDataRepeatParamWithStride repeatParam = {0, 1, 0,
-        static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
-    SetLoadDataRepeatWithStride(repeatParam);
-    LoadDataWithStride(l0b[0], self->ctx.cacheB1BufPing_, load3d_);
-#else
-    LoadDataRepeatParam repeatParam = {0, 1, 0,
-        static_cast<uint16_t>(ShiftCeilM0(self->ctx.tiling_->baseN, self->ctx.tiling_->n0))};
-    SetLoadDataRepeat(repeatParam);
-    LoadData(l0b[0], self->ctx.cacheB1BufPing_, load3d_);
-#endif
-
-    LoadData2DParamsV2 load2dv2_;
-    load2dv2_.mStartPosition = 0;
-    load2dv2_.kStartPosition = 0;
-    load2dv2_.mStep = Ceil(self->ctx.tiling_->baseM, self->ctx.tiling_->m0);
-    if (IsSameType<typename Intf::SrcT, float>::value) {
-        load2dv2_.kStep = 2;    //fp32类型，kstep一定是2的倍数
-    } else {
-        load2dv2_.kStep = 1;
-    }
-    load2dv2_.srcStride = load2dv2_.mStep;
-    load2dv2_.dstStride = load2dv2_.mStep;
-    load2dv2_.ifTranspose = 0;
-    LoadData(l0a[0], self->ctx.cacheA1BufPing_, load2dv2_);
-    FreeB1Tensor(self, 1);
-    FreeA1Tensor(self, 1);
-    MmadParams mmad_;
-    mmad_.m = self->ctx.tiling_->baseM;
-    mmad_.n = self->ctx.tiling_->baseN;
-    mmad_.k = 16;
-    mmad_.cmatrixInitVal = true;
-
-    SetFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
-    WaitFlag<HardEvent::MTE1_M>(self->ctx.l0aPingPongFlag_);
-
-    Mmad(l0c[0], l0a[0], l0b[0], mmad_);
-    if (mmad_.m * mmad_.n <2560) {
-        PipeBarrier<PIPE_M>();
-    }
-
-    SetFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_);
-    self->ctx.l0aPingPongFlag_ ^= self->ctx.useL0PingPong_;
-}
-
-template <class Intf>
 __aicore__ inline void getHWkIdx(Intf* self, uint64_t hwkLoopIdx, uint64_t& hkIdx, uint64_t& wkIdx)
 {
     hkIdx = hwkLoopIdx / self->ctx.tiling_->wk;
     wkIdx = hwkLoopIdx % self->ctx.tiling_->wk;
-}
-
-__aicore__ inline void UpdateIdx(
-    bool isLastStepKa, bool isLastStepKb, uint32_t& kaIdx, uint32_t& kbIdx,
-    uint64_t& kaStepIdx, uint64_t& kbStepIdx)
-{
-    if (isLastStepKa) {
-        ++kaStepIdx;
-        kaIdx = 0;
-    } else {
-        ++kaIdx;
-    }
-    if (isLastStepKb) {
-        ++kbStepIdx;
-        kbIdx = 0;
-    } else {
-        ++kbIdx;
-    }
-}
-
-/*
- * 为规避load3d限制stride<=63的限制，H方向和W方向均跳着搬运有效数据
- * 因此循环搬运hiCopyLen次，每次搬运dnNum数量为W方向有效数据个数
- */
-template <class Intf>
-static __aicore__ inline void LoadToB1Dn2NzSplitKernelHW(
-    Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen,
-    uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params, LocalTensor<typename Intf::SrcT>& useB1Buf)
-{
-    Dn2NzParams dn2NzParams;
-    dn2NzParams.dnNum = self->ctx.load3d_.l1W;
-    dn2NzParams.nValue = 1; // hiwi每次搬运大小为1
-    dn2NzParams.dValue = self->ctx.bL1cin1CopyLen;
-    dn2NzParams.srcDValue = self->ctx.dhwI_;
-    dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->strideW; // dn中每次跳过的长度
-
-    dn2NzParams.dstNzC0Stride = hiCopyLen * self->ctx.load3d_.l1W;
-    dn2NzParams.dstNzNStride = 1;
-    dn2NzParams.dstNzMatrixStride = dn2NzParams.nValue * self->ctx.tiling_->k0;
-    InitZeroValue(self, useB1Buf);
-
-    uint32_t dstAddrOffset = 0;
-    for (uint32_t i = 0; i < hiCopyLen; ++i) {
-        DataCopy(useB1Buf[dstAddrOffset], self->ctx.fmapGlobal_[out2B1SrcAddrOffset], dn2NzParams);
-
-        out2B1SrcAddrOffset += static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH;
-        dstAddrOffset += self->ctx.load3d_.l1W * self->ctx.tiling_->k0;
-    }
-}
-
-template <class Intf>
-static __aicore__ inline void LoadToB1Nd2NzSplitKernelHW(
-    Intf* self, const uint32_t hiCopyLen, const uint32_t wiCopyLen,
-    uint64_t out2B1SrcAddrOffset, const Out2L1ScalarParams& params, LocalTensor<typename Intf::SrcT>& useB1Buf)
-{
-    Nd2NzParams nd2NzParams;
-    nd2NzParams.ndNum = self->ctx.load3d_.l1W;
-    nd2NzParams.nValue = 1;
-    nd2NzParams.dValue = self->ctx.bL1cin1CopyLen;
-    nd2NzParams.srcDValue = self->ctx.tiling_->cin;
-    nd2NzParams.srcNdMatrixStride = static_cast<uint64_t>(self->ctx.tiling_->strideW) * self->ctx.tiling_->cin;
-
-    nd2NzParams.dstNzC0Stride = hiCopyLen * self->ctx.load3d_.l1W;
-    nd2NzParams.dstNzNStride = 1;
-    nd2NzParams.dstNzMatrixStride = static_cast<uint64_t>(nd2NzParams.nValue) * self->ctx.tiling_->k0;
-
-    InitZeroValue(self, useB1Buf);
-    uint32_t dstAddrOffset = 0;
-    for (uint32_t i = 0; i < hiCopyLen; ++i) {
-        DataCopy(useB1Buf[dstAddrOffset], self->ctx.fmapGlobal_[out2B1SrcAddrOffset], nd2NzParams);
-        dstAddrOffset += self->ctx.load3d_.l1W * self->ctx.tiling_->k0;
-        out2B1SrcAddrOffset += static_cast<uint64_t>(self->ctx.tiling_->wi) * self->ctx.tiling_->strideH * self->ctx.tiling_->cin;
-    }
-}
-
-template <class Intf, class src1_T>
-__aicore__ inline void LoadToB1SplitKernelHW(Intf *self, bool cachePosB1, const Out2L1ScalarParams& params,
-    uint64_t kbStepIdx, uint64_t hkIdx, uint32_t startWo, bool &skipCurrentHiCompute)
-{
-    skipCurrentHiCompute = false;
-    // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
-    // 此时满足以下条件之一需要载入BL1：
-    // 1.BL1上无db，并且K方向需要多于一个buffer，每次都需要载入；BL1开db，并且K方向buffer数量小于等于2
-    // 2.singleShapeK / stepKb > 2, 优先循环k方向，BL1上数据无法复用
-    // 3.order_M时，L1上驻留AL1, BL1数据不复用
-    // 4.order_N时，BL1驻留在L1上，且K <=
-    // 2，即L1上可以载下全部Kb，此时遍历M方向，BL1数据上数据不会被覆盖，只在M方向循环第一次时载入BL1
-    if (params.isLoad2L1B) {
-        // L0shape到orgShape的对应关系，L0和L1是16对齐的，orgShape是Wi对齐的,先算Wo对齐再算Wi对齐
-        // 先算L0B所在BL1块的起始地址，16对齐的
-        uint64_t b1SrcKAlign = static_cast<uint64_t>(kbStepIdx) * self->ctx.kbl1_;
-        // load3d必须有完整Wo，做Wo对齐，计算起始地址所在的Ho
-        uint32_t b1SrcHo = b1SrcKAlign / self->ctx.singleShapeWo_;
-        uint32_t b1SrcHoGm = b1SrcHo + self->ctx.hoStartIdx_;
-        // 计算Ho对应的Hi，根据卷积原理
-        int64_t b1SrcHiGm = static_cast<uint64_t>(b1SrcHoGm) * self->ctx.tiling_->strideH +
-                    static_cast<uint64_t>(hkIdx) * self->ctx.tiling_->dilationH - self->ctx.tiling_->padUp;
-        uint32_t b1SrcHi = 0;
-        if (b1SrcHiGm > 0 && self->ctx.hiStartIdx_ > 0) {
-            b1SrcHi = b1SrcHiGm - self->ctx.hiStartIdx_;
-        } else if (b1SrcHiGm > 0) {
-            b1SrcHi = b1SrcHiGm;
-        }
-
-        uint32_t kbl1 = self->ctx.kbl1_;
-        if (self->ctx.stepKbRound == (kbStepIdx + 1)) {
-            kbl1 = self->ctx.singleShapeHo_ * self->ctx.singleShapeWo_ - b1SrcKAlign;
-        }
-
-        uint32_t ho = CalRows2Copy(kbl1, self->ctx.singleShapeWo_);
-        uint32_t hiCopyLen = (ho - 1) * self->ctx.tiling_->strideH + 1; //hk采用循环，每次只循环一个hk,filterH=1
-
-        int64_t b1SrcHiGmDown = b1SrcHiGm + hiCopyLen;
-        //当拷贝的行完全处于padUp部分或是padDown部分时跳出搬运, 注意此处的hicopyLen包含pad行
-        if ((b1SrcHiGmDown < 0) || (b1SrcHiGm >= self->ctx.tiling_->hi)) {
-            skipCurrentHiCompute = true;
-            return ;
-        }
-
-        uint32_t padUp = 0;
-        uint32_t padDown = 0;
-        uint32_t hiUpValidOffset = 0;
-        if (b1SrcHiGm < 0) {
-            //起始地址计算
-            padUp = -b1SrcHiGm;
-            hiUpValidOffset = Ceil(padUp, self->ctx.tiling_->strideH) *self->ctx.tiling_->strideH - padUp;
-        }
-        if (b1SrcHiGmDown >= self->ctx.tiling_->hi) {
-            padDown = b1SrcHiGmDown - self->ctx.tiling_->hi;
-        }
-
-        hiCopyLen = ho - Ceil(padUp, self->ctx.tiling_->strideH) - Ceil(padDown, self->ctx.tiling_->strideH);
-        hiCopyLen = hiCopyLen < 0 ? 0 : hiCopyLen;
-
-        if (hiCopyLen == 0) {
-            skipCurrentHiCompute = true;
-            return ;
-        }
-        LocalTensor<typename Intf::SrcT> useB1Buf;
-        if (cachePosB1) {
-            useB1Buf = self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>();
-        } else {
-            useB1Buf = self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
-        }
-        // 得到gm的偏移量
-        uint64_t out2B1SrcAddrOffset = 0;
-        if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-            out2B1SrcAddrOffset = params.out2B1SrcAddr + static_cast<uint64_t>(b1SrcHi + hiUpValidOffset) *
-                self->ctx.tiling_->wi;
-        } else if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
-            out2B1SrcAddrOffset = params.out2B1SrcAddr + static_cast<uint64_t>(b1SrcHi + hiUpValidOffset) *
-                self->ctx.tiling_->wi * self->ctx.tiling_->cin;
-        }
-
-        if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-            LoadToB1Dn2NzSplitKernelHW(self, hiCopyLen, 0, out2B1SrcAddrOffset, params, useB1Buf);
-        } else if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
-            LoadToB1Nd2NzSplitKernelHW(self, hiCopyLen, 0, out2B1SrcAddrOffset, params, useB1Buf);
-        }
-
-        if (cachePosB1) {
-            self->ctx.bL1HiCopyLenPing = hiCopyLen;
-            self->ctx.bL1PadUpPing = Ceil(padUp, self->ctx.tiling_->strideH);
-            self->ctx.b1Ping_.EnQue(useB1Buf);
-        } else {
-            self->ctx.bL1HiCopyLenPong = hiCopyLen;
-            self->ctx.bL1PadUpPong = Ceil(padUp, self->ctx.tiling_->strideH);
-            self->ctx.b1Pong_.EnQue(useB1Buf);
-        }
-    }
 }
 
 template <class Intf>
@@ -403,15 +139,16 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
     CalOut2L1ScalarParams(self, out2L1Params);
     bool isFirstMmad = true;
     uint64_t dstL0cOffsetBase = self->ctx.dstL0cOffset_;
-    uint64_t usedN = self->ctx.curNL1Idx_ * self->ctx.tiling_->baseN; //基本块模板中stepN一定等于1，此处使用curNL1Idx和curNL0Idx均可
+    // 基本块模板中stepN一定等于1，此处使用curNL1Idx和curNL0Idx均可
+    uint64_t usedN = self->ctx.curNIdx_ * self->ctx.tiling_->baseN;
     uint64_t hwkLoopStart = usedN / self->ctx.tiling_->n0;
     uint64_t hwkLoopEnd = (usedN + self->ctx.baseUseN_) / self->ctx.tiling_->n0;
     uint64_t hkIdx = 0;
     uint64_t wkIdx = 0;
     for (uint64_t hwkLoopIdx = hwkLoopStart; hwkLoopIdx < hwkLoopEnd; hwkLoopIdx++) {
         getHWkIdx(self, hwkLoopIdx, hkIdx, wkIdx);
-        self->ctx.dstL0cOffset_ = dstL0cOffsetBase +
-                                  (hwkLoopIdx - hwkLoopStart) * self->ctx.tiling_->baseM * self->ctx.tiling_->n0;
+        self->ctx.dstL0cOffset_ =
+            dstL0cOffsetBase + (hwkLoopIdx - hwkLoopStart) * self->ctx.tiling_->baseM * self->ctx.tiling_->n0;
         initParasSplitKernelHW(self);
         isFirstMmad = true;
 
@@ -440,7 +177,7 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                 updateParasForSplitKernelHW(self, out2L1Params, splitWoIdx * splitWo, out2B1SrcAddrStart, wkIdx);
                 if (!self->ctx.load3d_.l1W) {
                     PipeBarrier<PIPE_ALL>();
-                    continue ;
+                    continue;
                 }
                 bool a1PingPongFlag = true;
                 bool b1PingPongFlag = true;
@@ -450,8 +187,8 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                 uint32_t kbIdx = 0;
                 uint64_t kaStepIdx = 0;
                 uint64_t kbStepIdx = 0;
-                uint64_t curMKL1Idx = self->ctx.stepKaRound * DivStepM(self->ctx.curML1Idx_, self->ctx.tiling_->stepM);
-                uint64_t curNKL1Idx = self->ctx.stepKbRound * DivStepN(self->ctx.curNL1Idx_, self->ctx.tiling_->stepN);
+                uint64_t curMKL1Idx = self->ctx.stepKaRound * self->ctx.curMIdx_;
+                uint64_t curNKL1Idx = self->ctx.stepKbRound * self->ctx.curNIdx_;
 
                 bool skipCurrentHiCompute = false;
                 for (uint64_t k = 0; k < self->ctx.kIter_; k++) {
@@ -479,7 +216,7 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
 
                     if (isLoadB1) {
                         LoadToB1SplitKernelHW<Intf, typename Intf::SrcT>(
-                        self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx, splitWoIdx * splitWo, skipCurrentHiCompute);
+                            self, b1PingPongFlag, out2L1Params, kbStepIdx, hkIdx, skipCurrentHiCompute);
                     }
                     if (skipCurrentHiCompute) {
                         UpdateIdx(isLastStepKa, isLastStepKb, kaIdx, kbIdx, kaStepIdx, kbStepIdx);
@@ -489,8 +226,7 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
                         a1PingPongFlag = (curMKL1Idx + kaStepIdx + 1) & 1;
                     }
                     ConvolutionBackpropFunc::LoadToA1<Intf, typename Intf::SrcT>(
-                        self, a1PingPongFlag, k,
-                        out2L1Params, isLoadA1, kaStepIdx);
+                        self, a1PingPongFlag, k, out2L1Params, isLoadA1, kaStepIdx);
 
                     WaitFlag<HardEvent::M_MTE1>(self->ctx.l0aPingPongFlag_ & 1);
 
@@ -560,7 +296,7 @@ __aicore__ inline void ComputeSplitKernelHW(Intf* self, Out2L1ScalarParams& out2
             out2L1Params.out2A1SrcAddr = out2A1SrcAddrStart;
             out2L1Params.out2B1SrcAddr = out2B1SrcAddrStart;
         }
-        //batchout 偏移后的地址要还原回来
+        // batchout 偏移后的地址要还原回来
         out2L1Params.out2A1SrcAddr = out2A1BatchDoutSrcAddrStart;
         out2L1Params.out2B1SrcAddr = out2B1BatchDoutSrcAddrStart;
     }

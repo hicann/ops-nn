@@ -64,8 +64,7 @@ public:
         DEFINE_STUCT_TEMPLATE_FIELD(TQue, b1Pong_, TPosition::B1, 1);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0aBuf_, TPosition::A2);
         DEFINE_STUCT_TEMPLATE_FIELD(TBuf, l0bBuf_, TPosition::B2);
-        DEFINE_STUCT_FIELD(uint64_t, curNL0Idx_);
-        DEFINE_STUCT_FIELD(uint64_t, curNL1Idx_);
+        DEFINE_STUCT_FIELD(uint64_t, curNIdx_);
         DEFINE_STUCT_FIELD(uint64_t, stepKaRound);
         DEFINE_STUCT_FIELD(uint64_t, stepKbRound);
         DEFINE_STUCT_FIELD(uint64_t, hwO_);
@@ -93,10 +92,7 @@ public:
         DEFINE_STUCT_FIELD(uint32_t, tailM_);
         DEFINE_STUCT_FIELD(uint32_t, tailN_);
         DEFINE_STUCT_FIELD(uint32_t, tailK_);
-        DEFINE_STUCT_FIELD(uint32_t, curStepM_);
-        DEFINE_STUCT_FIELD(uint32_t, curStepN_);
-        DEFINE_STUCT_FIELD(uint32_t, curML0Idx_);
-        DEFINE_STUCT_FIELD(uint32_t, curML1Idx_);
+        DEFINE_STUCT_FIELD(uint32_t, curMIdx_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseM_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseN_);
         DEFINE_STUCT_FIELD(uint32_t, baseUseK_);
@@ -121,8 +117,6 @@ public:
         DEFINE_STUCT_FIELD(uint8_t, useL0PingPong_);
         DEFINE_STUCT_FIELD(uint8_t, isFirstIter_);
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-        DEFINE_STUCT_FIELD(bool, enableStepNIncludeDkNocinhwk_);
-        DEFINE_STUCT_FIELD(bool, enableStepNTail_);
         DEFINE_STUCT_FIELD(bool, isSplitWo_);
 #endif
         using LocalTnesor = LocalTensor<typename Intf::SrcT>;

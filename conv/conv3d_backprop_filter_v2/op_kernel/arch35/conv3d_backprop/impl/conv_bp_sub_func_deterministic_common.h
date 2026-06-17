@@ -77,9 +77,9 @@ static __aicore__ inline void DivTwoNumersInHalf(uint64_t &a, uint64_t &b)
 template <class Intf>
 static __aicore__ inline void CalcL0cParams(Intf *self, bool tailCinExist)
 {
-    bool isNLoop = (self->ctx.lastNIdx_ != self->ctx.curNL0Idx_);
+    bool isNLoop = (self->ctx.lastNIdx_ != self->ctx.curNIdx_);
     // 若cin有尾块，在cin循环开始时对其进行赋值初始化
-    if (tailCinExist && isNLoop && (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_ == 0)) {
+    if (tailCinExist && isNLoop && (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_ == 0)) {
         self->ctx.cinRemainLen_ = self->ctx.singleShapeCin_;
     }
 
@@ -172,7 +172,7 @@ static __aicore__ inline void Rearrange2GmDepthwise(Intf *self, const GlobalTens
         dstGmOffset = self->ctx.head_;
 
         self->ctx.head_ = self->ctx.tail_ == self->ctx.hwK_ ? 0 : self->ctx.tail_;
-        self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+        self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     }
 
     uint32_t strideHwk = Ceil((self->ctx.curSingleCoreDk_ * nValue), ALIGN_BYTE) * ALIGN_BYTE;
@@ -406,11 +406,11 @@ static __aicore__ inline void DataCopyPadBaseNUndivided(Intf *self, const Global
     ub2GmParams.blockLen = DST_DTYPE_BYTES; // len:byte
     ub2GmParams.dstStride = (self->ctx.dhwK_ - 1) * DST_DTYPE_BYTES;
     for (uint64_t j = 0; j < srcStride; j++) {
-        uint64_t totalHwk = wkCnt * self->ctx.curNL0Idx_ + j;
+        uint64_t totalHwk = wkCnt * self->ctx.curNIdx_ + j;
         uint64_t tailNSize = self->ctx.singleShapeCin_ - cutMNSize.usedNSize / self->ctx.hwK_ - j / self->ctx.hwK_ * BLOCK_CUBE;
         ub2GmParams.blockCount = (tailNSize > BLOCK_CUBE) ? BLOCK_CUBE : tailNSize;
         uint64_t srcOffset = j * BLOCK_CUBE;
-        uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
+        uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
                         self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
                         (totalHwk / self->ctx.hwK_) * (self->ctx.dhwK_ * BLOCK_CUBE) +
                         totalHwk % self->ctx.hwK_ + static_cast<uint64_t>(cutMNSize.usedNSize) * self->ctx.tiling_->dk;
@@ -441,10 +441,10 @@ static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(
     ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES;
     ub2GmParams.srcStride = (BLOCK_CUBE - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES >> 5;
     ub2GmParams.blockCount = srcStride;
-    uint64_t coutIdx = static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+    uint64_t coutIdx = static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
                        static_cast<uint64_t>(cutMNSize.usedMSize);
     uint64_t dstOffset = coutIdx * self->ctx.hwK_ * self->ctx.tiling_->cin1G +
-                         wkCnt * self->ctx.tiling_->cin1G * self->ctx.curNL0Idx_ +
+                         wkCnt * self->ctx.tiling_->cin1G * self->ctx.curNIdx_ +
                          static_cast<uint64_t>(cutMNSize.usedNSize) * self->ctx.tiling_->dk;
     SetLoopModePara(loopParams, DataCopyMVType::UB_TO_OUT);
     DataCopyPad(output[dstOffset], self->ctx.vecOutBuf_[srcSize], ub2GmParams);
@@ -457,9 +457,9 @@ static __aicore__ inline void DataCopyPadDkEqOne(Intf *self, const GlobalTensor<
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     DataCopyExtParams ub2GmParams;
-    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
+    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM + static_cast<uint64_t>(cutMNSize.usedMSize)) *
                         self->ctx.dhwK_ * self->ctx.tiling_->cin1G +
-                        static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN +
+                        static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +
                         static_cast<uint64_t>(cutMNSize.usedNSize);
     if (cutMNSize.isNTail) {
         uint64_t tailNSize = (self->ctx.singleShapeCin_ * self->ctx.hwK_ - cutMNSize.usedNSize);
@@ -486,9 +486,9 @@ static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const Globa
                          self->ctx.hwK_;
     DataCopyExtParams ub2GmParams;
     uint64_t dstOffset =
-        (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+        (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
          static_cast<uint64_t>(cutMNSize.usedMSize)) +
-        static_cast<uint64_t>(self->ctx.curNL0Idx_) * wkCnt * self->ctx.tiling_->cin1G * self->ctx.tiling_->cout +
+        static_cast<uint64_t>(self->ctx.curNIdx_) * wkCnt * self->ctx.tiling_->cin1G * self->ctx.tiling_->cout +
         static_cast<uint64_t>(cutMNSize.usedNSize) / srcStride * self->ctx.tiling_->cout;
     LoopModeParams loopParams;
     loopParams.loop2Size = 1;
@@ -520,10 +520,10 @@ static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(
 {
     uint64_t srcSize = cutMNSize.curNSize * cutMNSize.curMSize;
     DataCopyExtParams ub2GmParams;
-    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curML0Idx_) * self->ctx.tiling_->baseM +
+    uint64_t dstOffset = (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
                           static_cast<uint64_t>(cutMNSize.usedMSize)) *
                              self->ctx.hwK_ * self->ctx.tiling_->cin1G +
-                         static_cast<uint64_t>(self->ctx.curNL0Idx_) * self->ctx.tiling_->baseN +
+                         static_cast<uint64_t>(self->ctx.curNIdx_) * self->ctx.tiling_->baseN +
                          static_cast<uint64_t>(cutMNSize.usedNSize) / self->ctx.hwK_;
     uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ? self->ctx.singleShapeCin_ : baseCin;
     uint64_t tailN = shapeCin;
@@ -891,7 +891,7 @@ static __aicore__ inline void GetCutShape(Intf *self, DeterMinisticShape &deterS
             deterShape.usedMSize[inx] = j * cutMSize;
             deterShape.usedNSize[inx] = i * cutNSize;
             deterShape.addrOffset[inx] = workspaceOffset;
-            deterShape.isNTail[inx] = (self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) && (i == splitedNIter - 1);
+            deterShape.isNTail[inx] = (self->ctx.curNIdx_ == self->ctx.nIter_ - 1) && (i == splitedNIter - 1);
             workspaceOffset += deterShape.mnSize[inx];
         }
     }

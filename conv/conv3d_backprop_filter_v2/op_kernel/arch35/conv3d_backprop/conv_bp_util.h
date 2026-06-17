@@ -25,72 +25,6 @@ __aicore__ inline uint64_t Ceil(uint64_t a, uint64_t b)
     return (a + b - 1) / b;
 }
 
-__aicore__ inline uint64_t DivStepM(uint64_t a, uint32_t stepM)
-{
-    if (stepM == 1) {
-        return a;
-    } else if (stepM == STEP_2) {
-        return a >> 1;
-    } else {
-        return a / stepM;
-    }
-}
-
-__aicore__ inline uint64_t CeilStepM(uint64_t a, uint32_t stepM)
-{
-    if (stepM == 1) {
-        return a;
-    } else if (stepM == STEP_2) {
-        return (a + 1) >> 1;
-    } else {
-        return (a + stepM - 1) / stepM;
-    }
-}
-
-__aicore__ inline uint64_t RemainderStepM(uint64_t a, uint32_t stepM)
-{
-    if (stepM == 1) {
-        return 0;
-    } else if (stepM == STEP_2) {
-        return a & 1;
-    } else {
-        return a % stepM;
-    }
-}
-
-__aicore__ inline uint64_t DivStepN(uint64_t a, uint32_t stepN)
-{
-    if (stepN == 1) {
-        return a;
-    } else if (stepN == STEP_2) {
-        return a >> 1;
-    } else {
-        return a / stepN;
-    }
-}
-
-__aicore__ inline uint64_t CeilStepN(uint64_t a, uint32_t stepN)
-{
-    if (stepN == 1) {
-        return a;
-    } else if (stepN == STEP_2) {
-        return (a + 1) >> 1;
-    } else {
-        return (a + stepN - 1) / stepN;
-    }
-}
-
-__aicore__ inline uint64_t RemainderStepN(uint64_t a, uint32_t stepN)
-{
-    if (stepN == 1) {
-        return 0;
-    } else if (stepN == STEP_2) {
-        return a & 1;
-    } else {
-        return a % stepN;
-    }
-}
-
 __aicore__ inline uint64_t DivHkWk(uint64_t a, uint32_t hkWk)
 {
     if (hkWk > a) {
@@ -110,17 +44,6 @@ __aicore__ inline uint64_t CeilHkWk(uint64_t a, uint32_t hkWk)
         return a;
     } else {
         return Ceil(a, hkWk);
-    }
-}
-
-__aicore__ inline uint64_t RemainderOfHkWk(uint64_t a, uint32_t hkWk)
-{
-    if (hkWk > a) {
-        return a;
-    } else if (hkWk == 1) {
-        return 0;
-    } else {
-        return a % hkWk;
     }
 }
 

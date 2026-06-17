@@ -63,17 +63,10 @@ __aicore__ inline void CalcParamsL12L0b(Intf* self)
     }
 
     // posK
-    // 当存在dk循环，且tailN不等于baseN时，如果curNL1Idx_不对self->ctx.cinHkWkLoop_取余，则会精度不对
+    // 当存在dk循环，且tailN不等于baseN时，如果curNIdx_不对self->ctx.cinHkWkLoop_取余，则会精度不对
     // 当dk循环第二次，cinhkwk第一次循环，kStartPt应为0
     uint32_t hkwk16 = self->ctx.hwK_ * self->ctx.tiling_->n0;
-    // cinHkWkLoop_不等于1时，stepN偏移需考虑dk
-    uint32_t curNL0Idx =
-        (self->ctx.enableStepNTail_) ? (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) : self->ctx.curNL0Idx_;
-    uint32_t curStepN = (self->ctx.enableStepNIncludeDkNocinhwk_) ?
-                            (self->ctx.tiling_->stepN / self->ctx.cinHkWkLoop_ * self->ctx.cinHkWkLoop_) :
-                            self->ctx.tiling_->stepN;
-    self->ctx.load3d_.kStartPt = ((self->ctx.curNL1Idx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16 +
-                                 (curNL0Idx % curStepN) * self->ctx.tiling_->baseN;
+    self->ctx.load3d_.kStartPt = ((self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16;
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         self->ctx.load3d_.channelSize =
             Ceil(self->ctx.load3d_.kStartPt + self->ctx.baseUseN_, hkwk16) * self->ctx.tiling_->n0;
@@ -89,43 +82,33 @@ static __aicore__ inline void LoadL12L0a(
 {
     uint32_t kOffset =
         ShiftDivChannelSize<Intf>((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->k0);
-    uint32_t mOffset = ShiftCeilM0(
-        (self->ctx.curML0Idx_ % self->ctx.tiling_->stepM) * self->ctx.tiling_->baseM, self->ctx.tiling_->m0);
-    if (self->ctx.isSplitWo_ && IsSameType<typename Intf::SrcT, float>::value) {
-        mOffset = ShiftDivM0(
-            (self->ctx.curML0Idx_ % self->ctx.tiling_->stepM) * self->ctx.tiling_->baseM, self->ctx.tiling_->m0);
-        kOffset = ShiftDivM0((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->m0);
-    }
 
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (likely(!self->ctx.isSplitWo_)) {
             self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-            self->ctx.srcL12L0aOffset_ =
-                (mOffset * self->ctx.tiling_->m0 + kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
+            self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
         } else {
+            kOffset = ShiftDivM0((kPos % self->ctx.tiling_->stepKa) * self->ctx.tiling_->baseK, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->m0);
             self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->m0);
             self->ctx.srcL12L0aOffset_ =
-                (mOffset * self->ctx.alignedL1UseKa_ + kOffset * self->ctx.tiling_->m0) * self->ctx.tiling_->k0 +
+                (kOffset * self->ctx.tiling_->m0) * self->ctx.tiling_->k0 +
                 (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ % self->ctx.singleShapeWo_ * self->ctx.tiling_->k0;
         }
     } else if (self->ctx.baseUseM_ == 1) { // fp16 且 baseUseM_ == 1
         self->ctx.load2dv2_.kStep = ShiftCeilChannelSize<Intf>(self->ctx.baseUseK_, self->ctx.tiling_->k0);
-        self->ctx.srcL12L0aOffset_ =
-            (mOffset * self->ctx.tiling_->m0 + kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
+        self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.alignedL1UseM_) * self->ctx.tiling_->k0;
     } else {
         self->ctx.load2dv2_.srcStride = ShiftDivM0(self->ctx.alignedL1UseKa_, self->ctx.tiling_->k0);
         self->ctx.load2dv2_.mStep = ShiftCeilM0(self->ctx.baseUseK_, self->ctx.tiling_->k0);
         if (likely(!self->ctx.isSplitWo_)) {
-            self->ctx.srcL12L0aOffset_ =
-                (mOffset * self->ctx.alignedL1UseKa_ + kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0;
+            self->ctx.srcL12L0aOffset_ = (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0;
         } else {
             self->ctx.srcL12L0aOffset_ =
-                (mOffset * self->ctx.alignedL1UseKa_ + kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0 +
+                (kOffset * self->ctx.tiling_->k0) * self->ctx.tiling_->m0 +
                 (kPos / self->ctx.tiling_->stepKa) * self->ctx.kal1_ % self->ctx.singleShapeWo_ * self->ctx.tiling_->m0;
         }
     }
-
     LoadData(l0a[self->ctx.dstL12L0aOffset_], l1AMatrix[self->ctx.srcL12L0aOffset_], self->ctx.load2dv2_);
 }
 
@@ -135,16 +118,9 @@ __aicore__ inline void LoadL12L0bFp32(
 {
     // 由于fp32是通过k_repeat重复载入，先加载c0上数据，再加载c1数据（两者并不连续，中间隔着hkwkc0），两者合并为整体数据
     // 当前计算的kStart是c0连续的情况，c0不连续时，跳过已计算的数据为kStart需除以k_repeat，kStart为src跳过的地址
-    uint32_t curNL0Idx =
-        (self->ctx.enableStepNTail_) ? (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) : self->ctx.curNL0Idx_;
-    uint32_t curStepN = (self->ctx.enableStepNIncludeDkNocinhwk_) ?
-                            (self->ctx.tiling_->stepN / self->ctx.cinHkWkLoop_ * self->ctx.cinHkWkLoop_) :
-                            self->ctx.tiling_->stepN;
-    uint32_t calculatedL1N = (curNL0Idx % curStepN) * self->ctx.tiling_->baseN;
     uint32_t hkwk16 = self->ctx.hwK_ * self->ctx.tiling_->n0;
     self->ctx.load3d_.kStartPt =
-        (((self->ctx.curNL1Idx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16) / DOUBLE +
-        calculatedL1N / hkwk16 * hkwk16 + (calculatedL1N % hkwk16) / DOUBLE;
+        (((self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN) % hkwk16) / DOUBLE;
 
     // 先加载c0上的数据， 使用k_repeat方式来加载c1上的8个数， 从而凑齐16个数
     uint16_t repeatStride = (self->ctx.tiling_->singleCoreCin <= 8) ?

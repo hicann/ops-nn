@@ -27,13 +27,12 @@ static __aicore__ inline void CalOut2L1ScalarParams(Intf* self, Out2L1ScalarPara
     // to L1A
     if (params.isLoad2L1A) {
         if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-            params.out2A1SrcAddr = static_cast<uint64_t>(self->ctx.curML1Idx_) * self->ctx.tiling_->baseM *
+            params.out2A1SrcAddr = static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM *
                                    self->ctx.tiling_->dout * self->ctx.hwO_;
         } else {
-            params.out2A1SrcAddr = static_cast<uint64_t>(self->ctx.curML1Idx_) * self->ctx.tiling_->baseM;
+            params.out2A1SrcAddr = static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM;
         }
-        params.isLastMAL1 = DivStepM((self->ctx.mIter_ - 1), self->ctx.tiling_->stepM) ==
-                            DivStepM(self->ctx.curML0Idx_, self->ctx.tiling_->stepM);
+        params.isLastMAL1 = (self->ctx.mIter_ - 1) == self->ctx.curMIdx_;
     }
 
     // to L1B
@@ -110,9 +109,7 @@ __aicore__ inline void LoadToA1(
 
     if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
         if (self->ctx.baseUseM_ != 1) {
-            auto l1UseM = params.isLastMAL1 ?
-                              ((self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_) :
-                              (self->ctx.curStepM_ * self->ctx.tiling_->baseM);
+            auto l1UseM = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
             self->ctx.alignedL1UseM_ = ShiftCeilM0(l1UseM, self->ctx.tiling_->m0) * self->ctx.tiling_->m0;
         }
     }
@@ -147,8 +144,8 @@ __aicore__ inline void LoadToB1(
             return;
         }
         LocalTensor<typename Intf::SrcT> useB1Buf = cachePosB1 ?
-                                                        self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
-                                                        self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
+                                                    self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
+                                                    self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
         uint64_t out2B1SrcAddrOffset = CalB1GmOffset(self, hiParams.b1SrcHi, params);
         if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
             LoadToB1Dn2Nz(self, hiParams.hiCopyLen, out2B1SrcAddrOffset, params, useB1Buf);
@@ -162,6 +159,57 @@ __aicore__ inline void LoadToB1(
         } else {
             self->ctx.bL1HiCopyLenPong = hiParams.hiCopyLen;
             self->ctx.bL1PadUpPong = hiParams.padUp;
+            self->ctx.b1Pong_.EnQue(useB1Buf);
+        }
+    }
+}
+
+template <class Intf, class src1_T>
+__aicore__ inline void LoadToB1SplitKernelHW(
+    Intf* self, bool cachePosB1, const Out2L1ScalarParams& params, uint64_t kbStepIdx, uint64_t hkIdx, bool& skipCurrentHiCompute)
+{
+    skipCurrentHiCompute = false;
+    // 需要载入BL1的条件为，被计算的BL0块是BL1上的第一块数据，一次载入完整BL1大小
+    // 此时满足以下条件之一需要载入BL1：
+    // 1.BL1上无db，并且K方向需要多于一个buffer，每次都需要载入；BL1开db，并且K方向buffer数量小于等于2
+    // 2.singleShapeK / stepKb > 2, 优先循环k方向，BL1上数据无法复用
+    // 3.order_M时，L1上驻留AL1, BL1数据不复用
+    // 4.order_N时，BL1驻留在L1上，且K <=
+    // 2，即L1上可以载下全部Kb，此时遍历M方向，BL1数据上数据不会被覆盖，只在M方向循环第一次时载入BL1
+    if (params.isLoad2L1B) {
+        B1HiCopyParams hiParams;
+        if (CalB1HiCopyParamsSplitKernelHW(self, kbStepIdx, hkIdx, params, hiParams)) {
+            skipCurrentHiCompute = true;
+            return;
+        }
+        LocalTensor<typename Intf::SrcT> useB1Buf = cachePosB1 ?
+                                                    self->ctx.b1Ping_.template AllocTensor<typename Intf::SrcT>() :
+                                                    self->ctx.b1Pong_.template AllocTensor<typename Intf::SrcT>();
+
+        // 得到gm的偏移量
+        uint64_t out2B1SrcAddrOffset = 0;
+        if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
+            out2B1SrcAddrOffset =
+                params.out2B1SrcAddr + static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) * self->ctx.tiling_->wi;
+        } else if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
+            out2B1SrcAddrOffset = 
+                params.out2B1SrcAddr + static_cast<uint64_t>(hiParams.b1SrcHi + hiParams.hiUpValidOffset) * self->ctx.tiling_->wi *
+                self->ctx.tiling_->cin;
+        }
+
+        if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
+            LoadToB1Dn2NzSplitKernelHW(self, hiParams.hiCopyLen, 0, out2B1SrcAddrOffset, params, useB1Buf);
+        } else if constexpr (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDHWC) {
+            LoadToB1Nd2NzSplitKernelHW(self, hiParams.hiCopyLen, 0, out2B1SrcAddrOffset, params, useB1Buf);
+        }
+
+        if (cachePosB1) {
+            self->ctx.bL1HiCopyLenPing = hiParams.hiCopyLen;
+            self->ctx.bL1PadUpPing = Ceil(hiParams.padUp, self->ctx.tiling_->strideH);
+            self->ctx.b1Ping_.EnQue(useB1Buf);
+        } else {
+            self->ctx.bL1HiCopyLenPong = hiParams.hiCopyLen;
+            self->ctx.bL1PadUpPong = Ceil(hiParams.padUp, self->ctx.tiling_->strideH);
             self->ctx.b1Pong_.EnQue(useB1Buf);
         }
     }

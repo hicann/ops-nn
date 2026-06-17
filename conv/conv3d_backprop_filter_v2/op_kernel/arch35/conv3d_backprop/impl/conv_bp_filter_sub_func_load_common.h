@@ -40,6 +40,7 @@ struct B1HiCopyParams {
     uint32_t b1SrcHi{0};
     uint32_t hiCopyLen{0};
     uint32_t padUp{0};
+    uint32_t hiUpValidOffset{0};
 };
 
 __aicore__ inline uint64_t Ceil(uint64_t a, uint32_t b)

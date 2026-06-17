@@ -254,9 +254,9 @@ bool Conv3DDWV2BasicBlockTilingArch35::IsCapable()
 void Conv3DDWV2BasicBlockTilingArch35::UpdateSingleCoreInfo()
 {
     // 搬运对齐时默认向下取整，避免越过基本块运算导致重新触发L1载入
-    blockTiling_.singleCoreM = static_cast<uint64_t>(blockTiling_.stepM) * blockTiling_.blockBaseM;
+    blockTiling_.singleCoreM = blockTiling_.blockBaseM;
 
-    uint64_t l1Cin1 = std::max(blockTiling_.stepN * blockTiling_.blockBaseN / (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), 1U);
+    uint64_t l1Cin1 = std::max(blockTiling_.blockBaseN / (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), 1U);
     if (blockTiling_.isSplitKernelHW) {
         l1Cin1 = 1ULL; //切kernel需要保证ll1只包含一个hwk16
     }
@@ -351,8 +351,8 @@ void Conv3DDWV2BasicBlockTilingArch35::UpdateStepMNK()
     uint64_t minIter = 1;
 
     // 根据预置的StepM/StepN初始化StepKa和StepKb, 不超过K方向最大循环次数
-    blockTiling_.stepKa = std::max(std::min(aL1Max / baseMK / blockTiling_.stepM, maxKIter), minIter);
-    blockTiling_.stepKb = std::max(std::min(bL1Max / baseNK / blockTiling_.stepN, maxKIter), minIter);
+    blockTiling_.stepKa = std::max(std::min(aL1Max / baseMK, maxKIter), minIter);
+    blockTiling_.stepKb = std::max(std::min(bL1Max / baseNK, maxKIter), minIter);
 
     if (blockTiling_.stepKa > blockTiling_.stepKb) {
         blockTiling_.stepKa = std::max(blockTiling_.stepKa / blockTiling_.stepKb, 1U) * blockTiling_.stepKb;
@@ -508,8 +508,6 @@ void Conv3DDWV2BasicBlockTilingArch35::SetStepK4SplitMN()
     while (depthA1 >= 1U && depthB1 >= 1U) {
         blockTiling_.depthA1 = depthA1;
         blockTiling_.depthB1 = depthB1;
-        blockTiling_.stepM = 1U;
-        blockTiling_.stepN = 1U;
         UpdateStepMNK();
         if (!IsCurBlockL1Invalid()) {
             break;
@@ -717,10 +715,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalAL1Bound(const BasicBlockTilingPar
 {
     if (blockTiling.splitWo == runInfo_.wo) {
         //不切与原生逻辑保持一致
-        return static_cast<uint64_t>(blockTiling.stepKa)
-               * blockTiling.blockBaseK
-               * blockTiling.stepM
-               * blockTiling.blockBaseM;
+        return static_cast<uint64_t>(blockTiling.stepKa) * blockTiling.blockBaseK * blockTiling.blockBaseM;
     }
 
     uint64_t aL1SizeSplitWo = CalAL1BoundSplitWo(blockTiling, blockTiling.splitWo);
@@ -744,12 +739,9 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalAL1BoundSplitWo(
     } else {
         hoCal = NUM_HALF;
     }
-    uint64_t hw = Ops::Base::CeilAlign(
-        static_cast<uint64_t>(hoCal * currentSplitWo),
+    uint64_t hw = Ops::Base::CeilAlign(static_cast<uint64_t>(hoCal * currentSplitWo),
         static_cast<uint64_t>(BLOCK_CUBE));
-    uint64_t aL1Size = hw * blockTiling.blockBaseM * blockTiling.stepM;
-
-    return aL1Size;
+    return hw * blockTiling.blockBaseM;
 }
 
 uint64_t Conv3DDWV2BasicBlockTilingArch35::CalBL1Bound(const BasicBlockTilingParamsArch35& blockTiling)
@@ -805,7 +797,7 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalBL1BoundSplitWo(
 {
     int32_t hiCal = GetHiCal(blockTiling, currentSplitWo, blockTiling.isSplitKernelHW);
     uint32_t kernelHW = static_cast<uint32_t>(runInfo_.kh * runInfo_.kw);
-    uint32_t bL1N = Ops::Base::CeilDiv(blockTiling.stepN * blockTiling.blockBaseN, AscendC::BLOCK_CUBE);
+    uint32_t bL1N = Ops::Base::CeilDiv(blockTiling.blockBaseN, AscendC::BLOCK_CUBE);
     uint32_t bL1Cin1CopyLen = Ops::Base::CeilDiv(bL1N, kernelHW); // 向上取整，拖尾时默认多搬一行
     if (kernelHW > bL1N && kernelHW % bL1N != 0U) {
         ++bL1Cin1CopyLen; // 此时bL1Cin1CopyLen为1, 每个基本块不足一行，考虑拖尾最多搬两行
@@ -813,8 +805,8 @@ uint64_t Conv3DDWV2BasicBlockTilingArch35::CalBL1BoundSplitWo(
         ++bL1Cin1CopyLen; // 除了尾块是0.5，其他场景都要搬2行
     }
 
-    uint64_t singleCoreCin = std::max(static_cast<uint64_t>(blockTiling.stepN) * blockTiling.blockBaseN /
-        (runInfo_.kh * runInfo_.kw * BLOCK_CUBE), static_cast<uint64_t>(1)) * BLOCK_CUBE;
+    uint64_t singleCoreCin = std::max(static_cast<uint64_t>(blockTiling.blockBaseN) / (runInfo_.kh * runInfo_.kw * BLOCK_CUBE),
+        static_cast<uint64_t>(1)) * BLOCK_CUBE;
     uint64_t bL1Size = static_cast<uint64_t>(hiCal) * currentSplitWi *
                        std::min(singleCoreCin, static_cast<uint64_t>(bL1Cin1CopyLen) * BLOCK_CUBE);
     return bL1Size;
@@ -963,8 +955,6 @@ bool Conv3DDWV2BasicBlockTilingArch35::TranslateTunerTiling(tuningtiling::Tuning
     dwt.m0 = tunerTiling->m0;
     dwt.k0 = tunerTiling->k0;
     dwt.n0 = tunerTiling->n0;
-    dwt.stepM = tunerTiling->stepM;
-    dwt.stepN = tunerTiling->stepN;
     dwt.stepKa = tunerTiling->stepKa;
     dwt.stepKb = tunerTiling->stepKb;
     dwt.iterateOrder = tunerTiling->iterateOrder;
@@ -1010,8 +1000,6 @@ ge::graphStatus Conv3DDWV2BasicBlockTilingArch35::DoLibApiTiling()
     dwt.baseM = blockTiling_.blockBaseM;
     dwt.baseN = blockTiling_.blockBaseN;
     dwt.baseK = blockTiling_.blockBaseK;
-    dwt.stepM = blockTiling_.stepM;
-    dwt.stepN = blockTiling_.stepN;
     dwt.stepKa = blockTiling_.stepKa;
     dwt.stepKb = blockTiling_.stepKb;
     dwt.iterateOrder = blockTiling_.iterateOrder;
@@ -1209,7 +1197,6 @@ void Conv3DDWV2BasicBlockTilingArch35::InitTilingValue(TilingValueDwArch35& tili
     tilingData_.dwTiling.cin1G = static_cast<uint32_t>(ciPerRealGroup);
     tilingData_.dwTiling.cout1G = static_cast<uint32_t>(coPerRealGroup);
     tilingParams.singleCoreDk = 1U;
-    tilingParams.stepN = 1U;
     InitCalTilingValue(tilingParams);
 }
 
@@ -1219,10 +1206,6 @@ void Conv3DDWV2BasicBlockTilingArch35::InitCalTilingValue(TilingValueDwArch35& t
     tilingParams.baseM = BLOCK_CUBE;
     tilingParams.baseK = tilingData_.dwTiling.k0;
     // step
-    tilingParams.stepM = 1U;
-    if (!isHiF8Flag_) {
-        tilingParams.stepN = 1U;
-    }
     tilingParams.stepKa = 1U;
     tilingParams.stepKb = 1U;
     // pingpong buffer
@@ -1238,7 +1221,7 @@ void Conv3DDWV2BasicBlockTilingArch35::InitCalTilingValue(TilingValueDwArch35& t
 
     tilingParams.iterateOrder = 1U;
     tilingParams.bl1Bound = static_cast<uint32_t>(runInfo_.bl1_bound);
-    tilingParams.al1Bound = tilingParams.baseM * tilingParams.baseK * tilingParams.stepM * tilingParams.stepKa;
+    tilingParams.al1Bound = tilingParams.baseM * tilingParams.baseK * tilingParams.stepKa;
 }
 
 void Conv3DDWV2BasicBlockTilingArch35::SetTilingValue(
@@ -1258,8 +1241,6 @@ void Conv3DDWV2BasicBlockTilingArch35::SetTilingValue(
     dwt.baseK = tilingParams.baseK;
     dwt.baseN = tilingParams.baseN;
     // step
-    dwt.stepM = tilingParams.stepM;
-    dwt.stepN = tilingParams.stepN;
     dwt.stepKa = tilingParams.stepKa;
     dwt.stepKb = tilingParams.stepKb;
     // pingpong buffer
@@ -1286,7 +1267,6 @@ void Conv3DDWV2BasicBlockTilingArch35::PrintTilingData()
         << " al1Pbuffer: " << tiling.al1Pbuffer << " bl1Pbuffer: " << tiling.bl1Pbuffer
         << " baseM: " << tiling.baseM << " baseK: " << tiling.baseK << " baseN: " << tiling.baseN
         << " m0: " << tiling.m0 << " k0: " << tiling.k0 << " n0: " << tiling.n0
-        << " stepM: " << tiling.stepM << " stepN: " << tiling.stepN
         << " stepKa: " << tiling.stepKa << " stepKb: " << tiling.stepKb << " iterateOrder: " << tiling.iterateOrder
         << " al1Bound: " << tiling.al1Bound << " bl1Bound: " << tiling.bl1Bound << " hf32Flag: " << tiling.hf32Flag
         << " singleCoreDk: " << tiling.singleCoreDk << " singleCoreGroup: " << tiling.singleCoreGroup

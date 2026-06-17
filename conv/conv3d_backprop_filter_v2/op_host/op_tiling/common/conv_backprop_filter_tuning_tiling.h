@@ -71,8 +71,6 @@ TUNING_TILING_DATA_FIELD_DEF(uint32_t, baseN);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, m0);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, k0);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, n0);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, stepM);
-TUNING_TILING_DATA_FIELD_DEF(uint32_t, stepN);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, stepKa);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, stepKb);
 TUNING_TILING_DATA_FIELD_DEF(uint32_t, iterateOrder);
@@ -112,8 +110,6 @@ DECLARE_SCHEMA(Conv3DBackpropFilterTunerTiling,
   FIELD(Conv3DBackpropFilterTunerTiling, m0),
   FIELD(Conv3DBackpropFilterTunerTiling, k0),
   FIELD(Conv3DBackpropFilterTunerTiling, n0),
-  FIELD(Conv3DBackpropFilterTunerTiling, stepM),
-  FIELD(Conv3DBackpropFilterTunerTiling, stepN),
   FIELD(Conv3DBackpropFilterTunerTiling, stepKa),
   FIELD(Conv3DBackpropFilterTunerTiling, stepKb),
   FIELD(Conv3DBackpropFilterTunerTiling, iterateOrder),

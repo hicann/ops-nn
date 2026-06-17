@@ -40,7 +40,10 @@ DECLARE_CHECK_SYNC_IMPL(IterateAll);
 DECLARE_CHECK_SYNC_IMPL(GetTensorC);
 DECLARE_CHECK_SYNC_IMPL(VecPostProcess);
 DECLARE_CHECK_IMPL(End);
+
 namespace ConvolutionBackpropFunc {
+constexpr uint8_t FLAG_FIXP_ID = 5;
+constexpr uint8_t FLAG_MTE3_ID = 6;
 
 using TypeFalse = struct {
     __uint128_t _[1024];
@@ -51,239 +54,6 @@ enum class IterateOrder {
     ORDER_N,
     UNDEF,
 };
-
-template <class Intf>
-__aicore__ inline void CheckTiling(Intf *self)
-{
-#ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.tiling_->batch > 0),
-        "orignal batch is %d , which should be larger than 0", self->ctx.tiling_->batch);
-    ascendc_assert((self->ctx.tiling_->cin > 0),
-        "orignal cin is %d , which should be larger than 0", self->ctx.tiling_->cin);
-    ascendc_assert((self->ctx.tiling_->cout > 0),
-        "orignal cout is %d , which should be larger than 0", self->ctx.tiling_->cout);
-    ascendc_assert((self->ctx.tiling_->cin1G > 0),
-        "orignal cin1G is %d , which should be larger than 0", self->ctx.tiling_->cin1G);
-    ascendc_assert((self->ctx.tiling_->cout1G > 0),
-        "orignal cout1G is %d , which should be larger than 0", self->ctx.tiling_->cout1G);
-    ascendc_assert((self->ctx.tiling_->dout > 0),
-        "orignal dout is %d , which should be larger than 0", self->ctx.tiling_->dout);
-    ascendc_assert((self->ctx.tiling_->ho > 0),
-        "orignal ho is %d , which should be larger than 0", self->ctx.tiling_->ho);
-    ascendc_assert((self->ctx.tiling_->wo > 0),
-        "orignal wo is %d , which should be larger than 0", self->ctx.tiling_->wo);
-    ascendc_assert((self->ctx.tiling_->di > 0),
-        "orignal di is %d , which should be larger than 0", self->ctx.tiling_->di);
-    ascendc_assert((self->ctx.tiling_->hi > 0),
-        "orignal hi is %d , which should be larger than 0", self->ctx.tiling_->hi);
-    ascendc_assert((self->ctx.tiling_->wi > 0),
-        "orignal wi is %d , which should be larger than 0", self->ctx.tiling_->wi);
-    ascendc_assert((self->ctx.tiling_->dk > 0),
-        "orignal dk is %d , which should be larger than 0", self->ctx.tiling_->dk);
-    ascendc_assert((self->ctx.tiling_->hk > 0),
-        "orignal hk is %d , which should be larger than 0", self->ctx.tiling_->hk);
-    ascendc_assert((self->ctx.tiling_->wk > 0),
-        "orignal wk is %d , which should be larger than 0", self->ctx.tiling_->wk);
-    ascendc_assert((self->ctx.tiling_->singleCoreBatch > 0),
-        "singleCoreBatch is %d , which should be larger than 0", self->ctx.tiling_->singleCoreBatch);
-    ascendc_assert((self->ctx.tiling_->singleCoreCout > 0),
-        "singleCoreCout is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCout);
-    ascendc_assert((self->ctx.tiling_->singleCoreHo > 0),
-        "singleCoreHo is %d , which should be larger than 0", self->ctx.tiling_->singleCoreHo);
-    ascendc_assert((self->ctx.tiling_->singleCoreCin > 0),
-        "singleCoreCin is %d , which should be larger than 0", self->ctx.tiling_->singleCoreCin);
-    ascendc_assert((self->ctx.tiling_->baseM > 0),
-        "baseM is %d , which should be larger than 0", self->ctx.tiling_->baseM);
-    ascendc_assert((self->ctx.tiling_->baseK > 0),
-        "baseK is %d , which should be larger than 0", self->ctx.tiling_->baseK);
-    ascendc_assert((self->ctx.tiling_->baseN > 0),
-        "baseN is %d , which should be larger than 0", self->ctx.tiling_->baseN);
-    ascendc_assert((self->ctx.tiling_->stepM > 0),
-        "stepM is %d , which should be larger than 0", self->ctx.tiling_->stepM);
-    ascendc_assert((self->ctx.tiling_->stepN > 0),
-        "stepN is %d , which should be larger than 0", self->ctx.tiling_->stepN);
-    ascendc_assert((self->ctx.tiling_->stepKa > 0),
-        "stepKa is %d , which should be larger than 0", self->ctx.tiling_->stepKa);
-    ascendc_assert((self->ctx.tiling_->stepKb > 0),
-        "stepKb is %d , which should be larger than 0", self->ctx.tiling_->stepKb);
-#endif
-}
-
-template <class Intf>
-__aicore__ inline void InitStepMParams(Intf *self)
-{
-    self->ctx.mIter_ = Ceil(self->ctx.singleShapeCout_, self->ctx.tiling_->baseM);
-    self->ctx.tailM_ = self->ctx.singleShapeCout_ - self->ctx.tiling_->baseM * (self->ctx.mIter_ - 1);
-#ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.mIter_ > 0),
-        "self->ctx.mIter_ is %d , which should be larger than 0", self->ctx.mIter_);
-#endif
-}
-
-template <class Intf>
-__aicore__ inline void InitStepKParams(Intf *self)
-{
-    uint64_t singleCoreHoWo = static_cast<uint64_t>(self->ctx.singleShapeHo_) * self->ctx.tiling_->wo;
-    uint64_t kIter = Ceil(singleCoreHoWo, self->ctx.tiling_->baseK);
-    self->ctx.kIter_ = kIter;
-    self->ctx.tailK_ = singleCoreHoWo - self->ctx.tiling_->baseK * (kIter - 1);
-    self->ctx.stepKaRound = Ceil(kIter, self->ctx.tiling_->stepKa);
-    self->ctx.stepKbRound = Ceil(kIter, self->ctx.tiling_->stepKb);
-#ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.kIter_ > 0),
-        "self->ctx.kIter_ is %d , which should be larger than 0", self->ctx.kIter_);
-#endif
-}
-
-template <class Intf>
-__aicore__ inline void InitStepNParams(Intf *self)
-{
-    if (Intf::Config::xType::format == ConvolutionBackprop::CubeFormat::NDC1HWC0) {
-        self->ctx.nIter_ = Ceil(ShiftCeilChannelSize<Intf>(self->ctx.singleShapeCin_, self->ctx.tiling_->channelSize) *
-            self->ctx.tiling_->channelSize * self->ctx.hwK_, self->ctx.tiling_->baseN);
-        self->ctx.tailN_ =
-            self->ctx.singleShapeCin_ * self->ctx.hwK_ - self->ctx.tiling_->baseN * (self->ctx.nIter_ - 1);
-    } else {
-        uint64_t curNWithoutDk = ShiftCeilM0(self->ctx.singleShapeCin_, self->ctx.tiling_->n0) *
-            self->ctx.tiling_->n0 * self->ctx.hwK_;
-        self->ctx.nIter_ = Ceil(curNWithoutDk * self->ctx.singleShapeDk_, self->ctx.tiling_->baseN);
-        self->ctx.tailN_ = curNWithoutDk % self->ctx.tiling_->baseN;
-        bool baseNIncludeDkNoCin1Flag1 = (self->ctx.nIter_ > self->ctx.singleShapeDk_ &&
-                                    self->ctx.nIter_ % self->ctx.singleShapeDk_ != 0);
-        bool baseNIncludeDkNoCin1Flag2 = (self->ctx.nIter_ < self->ctx.singleShapeDk_ &&
-                                    self->ctx.singleShapeDk_ % self->ctx.nIter_ != 0);
-        // 当baseN上不包含cin1但包含全部的dk时，需手动干预，使baseN上先载cin后载dk
-        if (baseNIncludeDkNoCin1Flag1 || baseNIncludeDkNoCin1Flag2) {
-            self->ctx.nIter_ = Ceil(curNWithoutDk, self->ctx.tiling_->baseN) * self->ctx.singleShapeDk_;
-        }
-        // nIter_包含cinhkwk循环和dk循环，d上有padding时不计算
-        self->ctx.cinHkWkLoop_ = Ceil(self->ctx.nIter_, self->ctx.singleShapeDk_);
-        // 当SingleCoreDk_大于nIter_时，表明每次循环时SingleCoreDk_>1，否则SingleCoreDk_=1
-        self->ctx.curSingleCoreDk_ = Ceil(self->ctx.singleShapeDk_, self->ctx.nIter_);
-        self->ctx.tailN_ = self->ctx.tailN_ * self->ctx.curSingleCoreDk_;
-    }
-    if (self->ctx.tailN_ == 0) {
-        self->ctx.tailN_ = self->ctx.tiling_->baseN;
-    }
-#ifdef __CCE_KT_TEST__
-    ascendc_assert((self->ctx.nIter_ > 0),
-        "self->ctx.nIter_ is %d , which should be larger than 0", self->ctx.nIter_);
-#endif
-}
-
-template <class Intf>
-__aicore__ inline void InitParamsPart2(Intf *self)
-{
-    self->ctx.stepKaRound = 0;
-    self->ctx.stepKbRound = 0;
-    self->ctx.curStepM_ = 0;
-    self->ctx.curStepN_ = 0;
-
-    self->ctx.tailN_ = 0;
-    self->ctx.tailK_ = 0;
-    self->ctx.tailM_ = 0;
-
-    self->ctx.baseUseM_ = 0;
-    self->ctx.baseUseN_ = 0;
-    self->ctx.baseUseK_ = 0;
-
-    self->ctx.curML0Idx_ = 0;
-    self->ctx.curNL0Idx_ = 0;
-    self->ctx.curML1Idx_ = 0;
-    self->ctx.curNL1Idx_ = 0;
-
-    self->ctx.mIter_ = 0;
-    self->ctx.nIter_ = 0;
-    self->ctx.kIter_ = 0;
-
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    self->ctx.enableStepNIncludeDkNocinhwk_ = false;
-    self->ctx.enableStepNTail_ = false;
-    self->ctx.isSplitWo_ = false;
-    self->ctx.bL1cin1CopyLen = 0;
-    self->ctx.singleShapeDk_ = 0;
-    self->ctx.curSingleCoreDk_ = 0;
-    self->ctx.cinHkWkLoop_ = 0;
-    self->ctx.cinRemainLen_ = 0;
-    self->ctx.nLoopCinRemainLen_ = 0;
-    self->ctx.head_ = 0;
-    self->ctx.tail_ = 0;
-    self->ctx.nLoopHead_ = 0;
-    self->ctx.lastNIdx_ = -1;
-#endif
-}
-template <class Intf>
-__aicore__ inline void InitParams(Intf *self)
-{
-    self->ctx.baseMN_ = self->ctx.tiling_->baseM * self->ctx.tiling_->baseN;
-    self->ctx.hwK_ = static_cast<uint64_t>(self->ctx.tiling_->hk) * self->ctx.tiling_->wk;
-    self->ctx.hwO_ = static_cast<uint64_t>(self->ctx.tiling_->ho) * self->ctx.tiling_->wo;
-    self->ctx.hwI_ = static_cast<uint64_t>(self->ctx.tiling_->hi) * self->ctx.tiling_->wi;
-    self->ctx.dhwK_ = self->ctx.hwK_ * self->ctx.tiling_->dk;
-    self->ctx.dhwO_ = self->ctx.hwO_ * self->ctx.tiling_->dout;
-    self->ctx.dhwI_ = self->ctx.hwI_ * self->ctx.tiling_->di;
-    self->ctx.kal1_ = self->ctx.tiling_->stepKa * self->ctx.tiling_->baseK;
-    self->ctx.kbl1_ = self->ctx.tiling_->stepKb * self->ctx.tiling_->baseK;
-
-    // simplify the calculation of hi = (ho - 1) * strideh + (hk - 1) * dilationh + 1
-    self->ctx.strideKernelDilationH = static_cast<int64_t>(self->ctx.tiling_->hk - 1) * self->ctx.tiling_->dilationH
-        + 1 - self->ctx.tiling_->strideH;
-    // simplify the calculation of wi = (wo - 1) * stridew + (wk - 1) * dilationw + 1
-    self->ctx.strideKernelDilationW = static_cast<int64_t>(self->ctx.tiling_->wk - 1) * self->ctx.tiling_->dilationW
-        + 1 - self->ctx.tiling_->strideW;
-    self->ctx.isFirstIter_ = true;
-    self->ctx.l0aPingPongFlag_ = 0;
-    self->ctx.l0bPingPongFlag_ = 0;
-    self->ctx.l0cPingPongFlag_ = 1;
-    self->ctx.useL0PingPong_ = (self->ctx.tiling_->al0Pbuffer - 1) & (self->ctx.tiling_->bl0Pbuffer - 1);
-
-    self->ctx.singleShapeWo_ = 0;
-    self->ctx.singleShapeCout_ = 0;
-    self->ctx.singleShapeBatch_ = 0;
-    self->ctx.singleShapeCin_ = 0;
-    self->ctx.singleShapeHo_ = 0;
-    self->ctx.batchDoutStartIdx_ = 0;
-    self->ctx.hoStartIdx_ = 0;
-    self->ctx.hiStartIdx_ = 0;
-    self->ctx.dkStartIdx_ = 0;
-    InitParamsPart2<Intf>(self);
-    InitLoadToB2Params<Intf>(self);
-    InitLoadToA2Params<Intf>(self);
-    InitSetFmatrixParams<Intf>(self);
-    InitMmadParams<Intf>(self);
-}
-
-template <class Intf>
-__aicore__ inline void InitTque(Intf *self)
-{
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510)
-    // streamK场景，AIV需要申请UB空间，扩维场景AIC,AIV需要申请UB空间
-    self->ctx.pipe_.InitBuffer(self->ctx.vecBuf_, AscendC::TOTAL_UB_SIZE);
-
-#endif
-    if ASCEND_IS_AIC {
-        uint32_t al1BoundByteSize = self->ctx.tiling_->al1Bound * sizeof(typename Intf::SrcT);
-        self->ctx.pipe_.InitBuffer(self->ctx.a1Ping_, 1, al1BoundByteSize);
-        if (self->ctx.tiling_->al1Pbuffer > 1) {
-            self->ctx.pipe_.InitBuffer(self->ctx.a1Pong_, 1, al1BoundByteSize);
-        }
-
-        uint32_t bl1BoundByteSize = self->ctx.tiling_->bl1Bound * sizeof(typename Intf::SrcT);
-        self->ctx.pipe_.InitBuffer(self->ctx.b1Ping_, 1, bl1BoundByteSize);
-        if (self->ctx.tiling_->bl1Pbuffer > 1) {
-            self->ctx.pipe_.InitBuffer(self->ctx.b1Pong_, 1, bl1BoundByteSize);
-        }
-
-        uint32_t cMatrixByteSize = self->ctx.baseMN_ * sizeof(typename Intf::L0cT);
-        self->ctx.pipe_.InitBuffer(self->ctx.l0cPing_, 1, cMatrixByteSize);
-        if (self->ctx.tiling_->cl0Pbuffer > 1) {
-            self->ctx.pipe_.InitBuffer(self->ctx.l0cPong_, 1, cMatrixByteSize);
-        }
-
-        self->ctx.pipe_.InitBuffer(self->ctx.l0aBuf_, TOTAL_L0A_SIZE);
-        self->ctx.pipe_.InitBuffer(self->ctx.l0bBuf_, TOTAL_L0B_SIZE);
-    }
-}
 
 template <class Intf>
 __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Params)
@@ -317,7 +87,6 @@ __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Param
         self->ctx.mmad_.m = self->ctx.baseUseM_;
         CalcParamsL12L0a<Intf>(self);
     }
-
     for (uint64_t batchDoutIdx = self->ctx.batchDoutStartIdx_; batchDoutIdx < batchDoutEndIdx; batchDoutIdx++) {
         bool skipCurrentDinCompute = false; // dinIdx小于padFront或大于din+padFront则跳过本轮计算
         UpdateSrcAddrBaseOnBatchDoutIdx<Intf>(self, batchDoutIdx, out2L1Params, skipCurrentDinCompute);
@@ -347,8 +116,8 @@ __aicore__ inline void ComputeNormal(Intf *self, Out2L1ScalarParams& out2L1Param
             uint32_t kbIdx = 0;
             uint64_t kaStepIdx = 0;
             uint64_t kbStepIdx = 0;
-            uint64_t curMKL1Idx = self->ctx.stepKaRound * DivStepM(self->ctx.curML1Idx_, self->ctx.tiling_->stepM);
-            uint64_t curNKL1Idx = self->ctx.stepKbRound * DivStepN(self->ctx.curNL1Idx_, self->ctx.tiling_->stepN);
+            uint64_t curMKL1Idx = self->ctx.stepKaRound * self->ctx.curMIdx_;
+            uint64_t curNKL1Idx = self->ctx.stepKbRound * self->ctx.curNIdx_;
 
             bool skipCurrentHiCompute = false;
             for (uint64_t k = 0; k < self->ctx.kIter_; k++) {
@@ -472,10 +241,10 @@ struct Compute {
     static __aicore__ inline void call(Intf* self, Out2L1ScalarParams& out2L1Params)
     {
         self->ctx.baseUseM_ =
-            (self->ctx.curML0Idx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
+            (self->ctx.curMIdx_ + 1 == self->ctx.mIter_) ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
         // 由于N循环可能包含cinhkwk循环和dk循环，因此，self->ctx.baseUseN_的判断条件需改变
         self->ctx.baseUseN_ =
-            ((self->ctx.curNL0Idx_ + 1) % self->ctx.cinHkWkLoop_ == 0) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
+            ((self->ctx.curNIdx_ + 1) % self->ctx.cinHkWkLoop_ == 0) ? self->ctx.tailN_ : self->ctx.tiling_->baseN;
         if constexpr (!Intf::conv3ddwConfig.isSplitKernelHW) {
             ComputeNormal<Intf>(self, out2L1Params);
         } else {
@@ -483,30 +252,6 @@ struct Compute {
         }
     }
 };
-
-template <class Intf>
-__aicore__ inline void UpdateIdxAndStep(Intf *self)
-{
-    self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-    self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-    self->ctx.curStepM_ = (self->ctx.mIter_ - self->ctx.curML0Idx_) > self->ctx.tiling_->stepM ?
-        self->ctx.tiling_->stepM : (self->ctx.mIter_ - self->ctx.curML1Idx_);
-    // 是否不是最后一次循环
-    bool notLastLoop = (self->ctx.nIter_ - self->ctx.curNL0Idx_) > self->ctx.cinHkWkLoop_;
-
-    uint32_t nL0RemainLen = self->ctx.nIter_ - self->ctx.curNL0Idx_;
-    uint32_t nL1RemainLen = self->ctx.nIter_ - self->ctx.curNL1Idx_;
-    if (self->ctx.enableStepNIncludeDkNocinhwk_) {
-        self->ctx.curStepN_ = nL0RemainLen > (self->ctx.nIter_ % self->ctx.curStepN_) ?
-            self->ctx.curStepN_ : nL1RemainLen;
-    } else if (self->ctx.enableStepNTail_ && notLastLoop) {
-        // 若stepN有尾块，且非最后一次循环，需考虑dk循环，先循环cin后循环dk
-        self->ctx.curStepN_ = (nL0RemainLen % self->ctx.cinHkWkLoop_) > self->ctx.tiling_->stepN ?
-            self->ctx.tiling_->stepN : (nL1RemainLen % self->ctx.cinHkWkLoop_);
-    } else {
-        self->ctx.curStepN_ = nL0RemainLen > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN : nL1RemainLen;
-    }
-}
 
 template <class Intf>
 struct Init {
@@ -545,7 +290,6 @@ struct SetOutBackprop {
 template<class Intf>
 struct SetSingleShapeK {
     DECLARE_DEFAULT_OVERLOADING_FUN(Intf, ConvolutionBackpropFunc);
-
     static __aicore__ inline void call(Intf *self, uint64_t singleShapeK) {
         self->ctx.singleShapeHo_ = singleShapeK / self->ctx.tiling_->wo;
         InitStepKParams<Intf>(self);
@@ -573,12 +317,6 @@ struct SetSingleShape {
         InitStepMParams<Intf>(self);
         self->SetSingleShapeK(singleShapeK);
         InitStepNParams<Intf>(self);
-        // 是否stepN上包含dk， 未包含cinhkwk
-        self->ctx.enableStepNIncludeDkNocinhwk_ = (self->ctx.tiling_->stepN != 1) && (self->ctx.tiling_->stepN >
-            self->ctx.cinHkWkLoop_) && (self->ctx.tiling_->stepN  % self->ctx.cinHkWkLoop_ != 0);
-        // 是否stepN有尾块，例如nIter_=6，stepN为4，则存在尾块2，默认stepN大于cinHkWkLoop时不存在stepN尾块情况
-        self->ctx.enableStepNTail_ = (self->ctx.tiling_->stepN != 1) && (self->ctx.cinHkWkLoop_ >
-            self->ctx.tiling_->stepN) && (self->ctx.cinHkWkLoop_ % self->ctx.tiling_->stepN != 0);
         // 每次iterall之前都需将如下变量初始化赋值一次，否则会出现尾块精度问题
         self->ctx.head_ = 0;
         self->ctx.tail_ = 0;
@@ -633,113 +371,35 @@ struct UpdateMNIdx {
         // 如果K方向需要的buffer数量大于bl1Pbuffer，当K循环到stepKa时就需要置换AL1
         // B矩阵计算思路同A矩阵，区别是MN反过来
 
-        bool kIterCeilStepKaGreaterAl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
-        bool kIterCeilStepKbGreaterBl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
-        self->ctx.isSplitWo_ = (self->ctx.tiling_->splitWo == self->ctx.tiling_->wo) ? 0 : 1;
+        if (unlikely(self->ctx.isFirstIter_)) {
+            UpdateMNIdxFirstIterate<Intf>(self, out2L1Params);
+            return true;
+        }
+
         // 当singleShapeBatch大于1时，batchDout循环内移动，L1不驻留数据;当启动splitWo时,L1不能驻留数据
         if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
             out2L1Params.isLoad2L1A = true;
             out2L1Params.isFreeAL1  = true;
             out2L1Params.isLoad2L1B = true;
             out2L1Params.isFreeBL1  = true;
+        } else if (unlikely(self->ctx.isSplitWo_)) {
+            out2L1Params.isLoad2L1A = true;
+            out2L1Params.isFreeAL1  = true;
+            out2L1Params.isLoad2L1B = true;
+            out2L1Params.isFreeBL1  = true;
         } else {
-            if (unlikely(self->ctx.isSplitWo_)) {
-                out2L1Params.isLoad2L1A = true;
-                out2L1Params.isFreeAL1  = true;
-                out2L1Params.isLoad2L1B = true;
-                out2L1Params.isFreeBL1  = true;
-            } else {
-                out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
-                out2L1Params.isFreeAL1  = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
-                out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
-                out2L1Params.isFreeBL1  = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
-            }
+            bool kIterCeilStepKaGreaterAl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKa * self->ctx.tiling_->al1Pbuffer;
+            bool kIterCeilStepKbGreaterBl1Pbuffer = self->ctx.kIter_ > self->ctx.tiling_->stepKb * self->ctx.tiling_->bl1Pbuffer;
+            out2L1Params.isLoad2L1A = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+            out2L1Params.isFreeAL1  = out2L1Params.isLoad2L1A;
+            out2L1Params.isLoad2L1B = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1;
+            out2L1Params.isFreeBL1  = out2L1Params.isLoad2L1B;
         }
 
-        if (unlikely(self->ctx.isFirstIter_)) {
-            self->ctx.curML0Idx_ = 0;
-            self->ctx.curNL0Idx_ = 0;
-            self->ctx.curML1Idx_ = 0;
-            self->ctx.curNL1Idx_ = 0;
-            self->ctx.isFirstIter_ = false;
-            self->ctx.curStepM_ = self->ctx.mIter_ > self->ctx.tiling_->stepM ? self->ctx.tiling_->stepM : self->ctx.mIter_;
-            if (self->ctx.enableStepNIncludeDkNocinhwk_) {
-                uint32_t curStepN = self->ctx.tiling_->stepN / self->ctx.cinHkWkLoop_ * self->ctx.cinHkWkLoop_;
-                self->ctx.curStepN_ = self->ctx.nIter_ > curStepN ? curStepN : self->ctx.nIter_;
-            } else {
-                self->ctx.curStepN_ = self->ctx.nIter_ > self->ctx.tiling_->stepN ? self->ctx.tiling_->stepN : self->ctx.nIter_;
-            }
-            bool isLastNLoop = self->ctx.nIter_ == 1;
-            bool isLastMLoop = self->ctx.mIter_ == 1;
-            bool isNLastStep = isLastNLoop || self->ctx.tiling_->stepN == 1;
-            bool isMLastStep = isLastMLoop || self->ctx.tiling_->stepM == 1;
-            out2L1Params.isLoad2L1A = true;
-            out2L1Params.isLoad2L1B = true;
-            if constexpr (Intf::conv3ddwConfig.isSplitKernelHW) {
-                out2L1Params.isFreeAL1 = true;
-                out2L1Params.isFreeBL1 = true;
-            } else {
-                out2L1Params.isFreeAL1 = kIterCeilStepKaGreaterAl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
-                    (self->ctx.tiling_->iterateOrder && isMLastStep) || (!(self->ctx.tiling_->iterateOrder) && isLastNLoop && isMLastStep);  // OrderM
-                out2L1Params.isFreeBL1 = kIterCeilStepKbGreaterBl1Pbuffer || self->ctx.singleShapeBatch_ > 1  || self->ctx.isSplitWo_ == 1 ||
-                    (self->ctx.tiling_->iterateOrder && isLastMLoop && isNLastStep) || (!(self->ctx.tiling_->iterateOrder) && isNLastStep);  // OrderN
-            }
-        } else if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
-            if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                self->ctx.curML0Idx_ = self->ctx.curML1Idx_;
-                if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                    self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    if (self->ctx.curNL0Idx_ >= self->ctx.nIter_ && self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        return false;
-                    }
-                    if (self->ctx.curML1Idx_ >= self->ctx.mIter_) {
-                        self->ctx.curML1Idx_ = 0;
-                        self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                    if (self->ctx.curML0Idx_ == 0) {
-                        out2L1Params.isLoad2L1B = true; // OrderN, N轴循环结束，需要置换BL1
-                    }
-                }
-                out2L1Params.isLoad2L1A = true; // OrderN, M轴循环结束，需要置换AL1
-            }
-            if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
-                self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1) {
-                out2L1Params.isFreeAL1 = true; // OrderN, M轴最后一次循环，需要释放AL1
-            }
-            if (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) &&
-                (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
-                self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1)) {
-                out2L1Params.isFreeBL1 = true; // OrderN, N轴最后一次循环，需要释放BL1
-            }
+        if (likely(self->ctx.tiling_->iterateOrder == static_cast<int>(IterateOrder::ORDER_N))) {
+            return UpdateMNIdxOrderN<Intf>(self, out2L1Params);
         } else {  // order_M
-            if (++self->ctx.curNL0Idx_ >= self->ctx.curNL1Idx_ + self->ctx.curStepN_) {
-                self->ctx.curNL0Idx_ = self->ctx.curNL1Idx_;
-                if (++self->ctx.curML0Idx_ >= self->ctx.curML1Idx_ + self->ctx.curStepM_) {
-                    self->ctx.curNL1Idx_ += self->ctx.curStepN_;
-                    if (self->ctx.curML0Idx_ >= self->ctx.mIter_ && self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        return false;
-                    }
-                    if (self->ctx.curNL1Idx_ >= self->ctx.nIter_) {
-                        self->ctx.curNL1Idx_ = 0;
-                        self->ctx.curML1Idx_ += self->ctx.curStepM_;
-                    }
-                    UpdateIdxAndStep<Intf>(self);
-                    if (self->ctx.curNL0Idx_ == 0) {
-                        out2L1Params.isLoad2L1A = true; // OrderM, M轴循环结束，需要置换AL1
-                    }
-                }
-                out2L1Params.isLoad2L1B = true; // OrderM, N轴循环结束，需要置换BL1
-            }
-            if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) &&
-                (unlikely(self->ctx.curML0Idx_ == self->ctx.mIter_ - 1) ||
-                self->ctx.curML0Idx_ == self->ctx.curML1Idx_ + self->ctx.curStepM_ - 1)) {
-                out2L1Params.isFreeAL1 = true; // OrderM, M轴最后一次循环，需要释放AL1
-            }
-            if (unlikely(self->ctx.curNL0Idx_ == self->ctx.nIter_ - 1) ||
-                self->ctx.curNL0Idx_ == self->ctx.curNL1Idx_ + self->ctx.curStepN_ - 1) {
-                out2L1Params.isFreeBL1 = true; // OrderM, N轴最后一次循环，需要释放BL1
-            }
+            return UpdateMNIdxOrderM<Intf>(self, out2L1Params);
         }
         return true;
     }

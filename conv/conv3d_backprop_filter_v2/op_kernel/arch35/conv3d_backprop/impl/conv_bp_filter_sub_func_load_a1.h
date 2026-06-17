@@ -30,9 +30,9 @@ static __aicore__ inline void LoadToA1Fp32Nd2Nz(
         nd2NzParams.ndNum = 1;
         if (params.isLastMAL1) {
             // 最后一块mAL1，需要考虑tailM
-            nd2NzParams.nValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+            nd2NzParams.nValue = self->ctx.tailM_;
         } else {
-            nd2NzParams.nValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM; // N:Cout
+            nd2NzParams.nValue = self->ctx.tiling_->baseM; // N:Cout
         }
 
         if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
@@ -70,9 +70,9 @@ static __aicore__ inline void SplitWLoadToA1Dn2Nz(
     dn2NzParams.nValue = self->ctx.singleShapeWo_; // NCDHW
     if (params.isLastMAL1) {
         // 最后一块mAL1，需要考虑tailM
-        dn2NzParams.dValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+        dn2NzParams.dValue = self->ctx.tailM_;
     } else {
-        dn2NzParams.dValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM;
+        dn2NzParams.dValue = self->ctx.tiling_->baseM;
     }
     dn2NzParams.srcDValue = self->ctx.dhwO_;
     dn2NzParams.srcDnMatrixStride = self->ctx.tiling_->wo;
@@ -102,9 +102,9 @@ static __aicore__ inline void LoadToA1Fp16Dn2Nz(
 
         if (params.isLastMAL1) {
             // 最后一块mAL1，需要考虑tailM
-            dn2NzParams.dValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+            dn2NzParams.dValue = self->ctx.tailM_;
         } else {
-            dn2NzParams.dValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM;
+            dn2NzParams.dValue = self->ctx.tiling_->baseM;
         }
 
         dn2NzParams.srcDValue = self->ctx.dhwO_;
@@ -131,9 +131,9 @@ static __aicore__ inline void LoadToA1Fp32Dn2Nz(
         dn2NzParams.dnNum = 1;
         if (params.isLastMAL1) {
             // 最后一块mAL1，需要考虑tailM
-            dn2NzParams.nValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+            dn2NzParams.nValue = self->ctx.tailM_;
         } else {
-            dn2NzParams.nValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM; // B:Cout
+            dn2NzParams.nValue = self->ctx.tiling_->baseM; // B:Cout
         }
 
         if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
@@ -169,9 +169,9 @@ static __aicore__ inline void LoadToA1Nd2NzNormal(
 
     if (params.isLastMAL1) {
         // 最后一块mAL1，需要考虑tailM
-        nd2NzParams.dValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+        nd2NzParams.dValue = self->ctx.tailM_;
     } else {
-        nd2NzParams.dValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM;
+        nd2NzParams.dValue = self->ctx.tiling_->baseM;
     }
 
     nd2NzParams.srcDValue = self->ctx.tiling_->cout;
@@ -196,9 +196,9 @@ static __aicore__ inline void SplitWLoadToA1Nd2Nz(
     nd2NzParams.nValue = self->ctx.singleShapeWo_;
     if (params.isLastMAL1) {
         // 最后一块mAL1，需要考虑tailM
-        nd2NzParams.dValue = (self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_;
+        nd2NzParams.dValue = self->ctx.tailM_;
     } else {
-        nd2NzParams.dValue = self->ctx.curStepM_ * self->ctx.tiling_->baseM;
+        nd2NzParams.dValue = self->ctx.tiling_->baseM;
     }
     nd2NzParams.srcDValue = self->ctx.tiling_->cout;
     nd2NzParams.srcNdMatrixStride = self->ctx.tiling_->wo * self->ctx.tiling_->cout;
@@ -275,9 +275,7 @@ static __aicore__ inline void LoadToA1BaseUseMEqualOne(
     Intf* self, uint64_t kaIdx, const Out2L1ScalarParams& params, uint64_t kaStepIdx,
     LocalTensor<typename Intf::SrcT>& useA1Buf)
 {
-    self->ctx.alignedL1UseM_ = params.isLastMAL1 ?
-                                   ((self->ctx.curStepM_ - 1) * self->ctx.tiling_->baseM + self->ctx.tailM_) :
-                                   (self->ctx.curStepM_ * self->ctx.tiling_->baseM);
+    self->ctx.alignedL1UseM_ = params.isLastMAL1 ? self->ctx.tailM_ : self->ctx.tiling_->baseM;
     uint32_t totalSize;
     if (self->ctx.stepKaRound == (kaStepIdx + 1)) {
         // 最后一块kAL1，考虑tailK
@@ -300,53 +298,53 @@ static __aicore__ inline void LoadToA1ForTransFormat(
 {
     if (self->ctx.baseUseM_ == 1) {
         LoadToA1BaseUseMEqualOne(self, kaIdx, params, kaStepIdx, useA1Buf);
-    } else {
-        if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
-            uint64_t offset = kaStepIdx * self->ctx.kal1_;
-            if (unlikely(self->ctx.isSplitWo_)) {
-                offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo);
-            }
-            uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-                if (likely(!self->ctx.isSplitWo_)) {
-                    // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
-                    Nd2NzParams nd2NzParams;
-                    LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
-                    DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
-                } else {
-                    Dn2NzParams dn2NzParams;
-                    LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
-                    DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
-                }
+        return;
+    }
+    if constexpr (Intf::Config::cType::format == ConvolutionBackprop::CubeFormat::NCDHW) {
+        uint64_t offset = kaStepIdx * self->ctx.kal1_;
+        if (unlikely(self->ctx.isSplitWo_)) {
+            offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo);
+        }
+        uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
+        if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+            if (likely(!self->ctx.isSplitWo_)) {
+                // fp32 时，使用nd2nz实现DN规格，主要是将D轴变为HoWo，N轴变为Cout
+                Nd2NzParams nd2NzParams;
+                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+                DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
             } else {
                 Dn2NzParams dn2NzParams;
-                LoadToA1Fp16Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
             }
         } else {
-            uint64_t offset = kaStepIdx * self->ctx.kal1_ * self->ctx.tiling_->cout;
-            if (unlikely(self->ctx.isSplitWo_)) {
-                offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo) *
-                         self->ctx.tiling_->cout;
-            }
-            uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
-            if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
-                if (likely(!self->ctx.isSplitWo_)) {
-                    // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
-                    Dn2NzParams dn2NzParams;
-                    LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
-                    DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
-                } else {
-                    Nd2NzParams nd2NzParams;
-                    LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
-                    DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
-                }
-
+            Dn2NzParams dn2NzParams;
+            LoadToA1Fp16Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+            DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
+        }
+    } else {
+        uint64_t offset = kaStepIdx * self->ctx.kal1_ * self->ctx.tiling_->cout;
+        if (unlikely(self->ctx.isSplitWo_)) {
+            offset = (kaStepIdx * self->ctx.kal1_ / self->ctx.singleShapeWo_ * self->ctx.tiling_->wo) *
+                        self->ctx.tiling_->cout;
+        }
+        uint64_t out2A1SrcAddrOffset = params.out2A1SrcAddr + offset;
+        if constexpr (IsSameType<typename Intf::SrcT, float>::value) {
+            if (likely(!self->ctx.isSplitWo_)) {
+                // fp32 时，使用dn2nz实现ND规格，主要是将D轴变为HoWo，N轴变为Cout
+                Dn2NzParams dn2NzParams;
+                LoadToA1Fp32Dn2Nz<Intf>(self, kaIdx, params, kaStepIdx, dn2NzParams);
+                DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], dn2NzParams);
             } else {
                 Nd2NzParams nd2NzParams;
-                LoadToA1Fp16Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+                LoadToA1Fp32Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
                 DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
             }
+
+        } else {
+            Nd2NzParams nd2NzParams;
+            LoadToA1Fp16Nd2Nz<Intf>(self, kaIdx, params, kaStepIdx, nd2NzParams);
+            DataCopy(useA1Buf, self->ctx.outBackPropGlobal_[out2A1SrcAddrOffset], nd2NzParams);
         }
     }
 }

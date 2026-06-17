@@ -47,8 +47,6 @@ struct TilingValueDwArch35 {
     uint32_t baseM;
     uint32_t baseK;
     uint32_t baseN;
-    uint32_t stepM;
-    uint32_t stepN;
     uint32_t stepKa;
     uint32_t stepKb;
     uint32_t iterateOrder;
@@ -69,8 +67,6 @@ struct BasicBlockTilingParamsArch35 {
     uint32_t depthB1 = 1;
     uint32_t stepKa = 1;
     uint32_t stepKb = 1;
-    uint32_t stepM = 1;
-    uint32_t stepN = 1;
     uint32_t dbL1A = 1;
     uint32_t dbL1B = 1;
     uint32_t dbL0C = 1;

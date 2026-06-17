@@ -35,8 +35,8 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(
     bool tailCinExist = (self->ctx.singleShapeCin_ & 0xF) != 0;
     CalcL0cParams(self, tailCinExist);
 
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
-                        self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->dk;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
+                        self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->dk;
 
     // the problem is simplified to (ci1, co1, co0, ci0) -> (co, ci) NZ2ND
     AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
@@ -62,7 +62,7 @@ static __aicore__ inline void LoadL0c2GmDkhkwkEqOne(
         self->ctx.cinRemainLen_ -= self->ctx.baseUseN_;
     }
     // 更新上一次N的Idx
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -70,8 +70,8 @@ template <class Intf>
 static __aicore__ inline void LoadL0c2GmDkhkwkEqOneNz2DHWCN(
     Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
 {
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM +
-                        self->ctx.curNL0Idx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->cout;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM +
+                        self->ctx.curNIdx_ * self->ctx.tiling_->baseN * self->ctx.tiling_->cout;
 
     // the problem is simplified to (ci1, co1, co0, ci0) -> (ci, co) NZ2DN
     AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
@@ -112,7 +112,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
 
     AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
     uint32_t numBaseNIncludeHwk =
         (c1hkwk + self->ctx.head_ >= self->ctx.hwK_) ? (c1hkwk - (self->ctx.hwK_ - self->ctx.head_)) : 0;
@@ -151,8 +151,8 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
         int64_t srcOffset = nValueSum * ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE * BLOCK_CUBE;
         nValueSum += nValue;
         int64_t baseNAlignLength = baseCin * self->ctx.hwK_;
-        int64_t dstDkOffset = (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_;
-        int64_t dstCinOffset = (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
+        int64_t dstDkOffset = (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_;
+        int64_t dstCinOffset = (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
                                baseNAlignLength * baseNAlignLength * self->ctx.tiling_->dk;
 
         int64_t dstBaseNOffset =
@@ -162,7 +162,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndivided(
             output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -176,7 +176,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
 
     AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.cinG_ * self->ctx.dhwK_;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
     uint64_t baseNIter = Ceil(c1hkwk - (self->ctx.hwK_ - self->ctx.head_), self->ctx.hwK_) + 1;
 
@@ -209,9 +209,9 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
         int64_t srcOffset = nValueSum * ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE * BLOCK_CUBE;
         nValueSum += nValue;
         int64_t baseNAlignLength = baseCin * self->ctx.hwK_;
-        int64_t dstDkOffset = (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_ * self->ctx.cinG_;
+        int64_t dstDkOffset = (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_ * self->ctx.cinG_;
         int64_t dstCinOffset =
-            (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN / baseNAlignLength * baseCin;
+            (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN / baseNAlignLength * baseCin;
 
         int64_t dstBaseNOffset =
             dstOffset + dstDkOffset + dstCinOffset + self->ctx.head_ * self->ctx.cinG_ + j * baseCin;
@@ -219,7 +219,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2Nd(
             output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -234,7 +234,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
 
     AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     uint64_t nValueSum = 0;
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM;
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM;
     uint32_t c1hkwk = ShiftDivM0(self->ctx.baseUseN_, baseCin);
     uint64_t baseNIter = Ceil(c1hkwk - (self->ctx.hwK_ - self->ctx.head_), self->ctx.hwK_) + 1;
 
@@ -271,9 +271,9 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
         int64_t srcOffset = nValueSum * ShiftCeilM0(self->ctx.baseUseM_, BLOCK_CUBE) * BLOCK_CUBE * BLOCK_CUBE;
         nValueSum += nValue;
         int64_t baseNAlignLength = baseCin * self->ctx.hwK_;
-        int64_t dstDkOffset = (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_ * self->ctx.cinG_ *
+        int64_t dstDkOffset = (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.hwK_ * self->ctx.cinG_ *
                               self->ctx.tiling_->cout;
-        int64_t dstCinOffset = (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
+        int64_t dstCinOffset = (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * self->ctx.tiling_->baseN /
                                baseNAlignLength * baseCin * self->ctx.tiling_->cout;
 
         int64_t dstBaseNOffset = dstOffset + dstDkOffset + dstCinOffset +
@@ -283,7 +283,7 @@ static __aicore__ inline void LoadL0c2GmBaseNUndividedNz2DHWCN(
             output[dstBaseNOffset], l0c[srcOffset], fixPipeParams);
         UpdateHwKIterState<Intf>(self, tailCinExist, baseCin);
     }
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -294,10 +294,10 @@ static __aicore__ inline void LoadL0c2GmNormal(
     bool tailCinExist = (self->ctx.singleShapeCin_ & 0xF) != 0;
     CalcL0cParams(self, tailCinExist);
 
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
-                        (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) *
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
+                        (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) *
                             Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_) * self->ctx.tiling_->dk +
-                        (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_;
+                        (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_;
 
     AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
     fixPipeParams.params.dnNum = self->ctx.baseUseM_;
@@ -336,7 +336,7 @@ static __aicore__ inline void LoadL0c2GmNormal(
         self->ctx.cinRemainLen_ -= baseCin;
     }
     // 更新上一次N的Idx
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -349,9 +349,9 @@ static __aicore__ inline void LoadL0c2GmNormalNz2Nd(
 
     uint32_t curCin = Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_ * self->ctx.hwK_);
     int64_t dstOffset =
-        self->ctx.curML0Idx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
-        (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) * curCin +
-        (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ * self->ctx.cinG_;
+        self->ctx.curMIdx_ * self->ctx.tiling_->baseM * self->ctx.dhwK_ * self->ctx.cinG_ +
+        (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * curCin +
+        (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ * self->ctx.cinG_;
 
     AscendC::FixpipeParamsC310<CO2Layout::ROW_MAJOR> fixPipeParams;
     fixPipeParams.params.ndNum = self->ctx.hwK_;
@@ -387,7 +387,7 @@ static __aicore__ inline void LoadL0c2GmNormalNz2Nd(
         self->ctx.cinRemainLen_ -= baseCin;
     }
     // 更新上一次N的Idx
-    self->ctx.lastNIdx_ = self->ctx.curNL0Idx_;
+    self->ctx.lastNIdx_ = self->ctx.curNIdx_;
     return;
 }
 
@@ -396,9 +396,9 @@ static __aicore__ inline void LoadL0c2GmNormalNz2DHWCN(
     Intf* self, const GlobalTensor<typename Intf::DstT>& output, LocalTensor<typename Intf::L0cT>& l0c)
 {
     uint32_t curCin = Ceil(self->ctx.tiling_->baseN, self->ctx.curSingleCoreDk_ * self->ctx.hwK_);
-    int64_t dstOffset = self->ctx.curML0Idx_ * self->ctx.tiling_->baseM +
-                        (self->ctx.curNL0Idx_ % self->ctx.cinHkWkLoop_) * curCin * self->ctx.tiling_->cout +
-                        (self->ctx.curNL0Idx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ *
+    int64_t dstOffset = self->ctx.curMIdx_ * self->ctx.tiling_->baseM +
+                        (self->ctx.curNIdx_ % self->ctx.cinHkWkLoop_) * curCin * self->ctx.tiling_->cout +
+                        (self->ctx.curNIdx_ / self->ctx.cinHkWkLoop_) * self->ctx.curSingleCoreDk_ * self->ctx.hwK_ *
                             self->ctx.cinG_ * self->ctx.tiling_->cout;
 
     AscendC::FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fixPipeParams;
