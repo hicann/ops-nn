@@ -117,32 +117,33 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y, bias, x3",
             Ops::NN::FormatString(
-                "%s, %s, %s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
-                std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str(),
-                std::to_string(args.x3Type).c_str())
+                "%s, %s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str(),
+                Ops::Base::ToString(args.x3Type).c_str())
                 .c_str(),
             Ops::NN::FormatString(
-                "The dtypes of %s must be within the range %s", "x1/x2/y/bias/x3", "dtype support list")
+                "The dtypes of %s must be within the range %s", "x1, x2, y, bias, x3", "dtype support list")
                 .c_str());
         return ge::GRAPH_FAILED;
     } else if (args.hasBias) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y, bias",
             Ops::NN::FormatString(
-                "%s, %s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
-                std::to_string(args.cType).c_str(), std::to_string(args.biasType).c_str())
+                "%s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+                Ops::Base::ToString(args.cType).c_str(), Ops::Base::ToString(args.biasType).c_str())
                 .c_str(),
-            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1/x2/y/bias", "dtype support list")
+            Ops::NN::FormatString(
+                "The dtypes of %s must be within the range %s", "x1, x2, y, bias", "dtype support list")
                 .c_str());
         return ge::GRAPH_FAILED;
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             args.opName, "x1, x2, y",
             Ops::NN::FormatString(
-                "%s, %s, %s", std::to_string(args.aType).c_str(), std::to_string(args.bType).c_str(),
-                std::to_string(args.cType).c_str())
+                "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
+                Ops::Base::ToString(args.cType).c_str())
                 .c_str(),
-            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1/x2/y", "dtype support list")
+            Ops::NN::FormatString("The dtypes of %s must be within the range %s", "x1, x2, y", "dtype support list")
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -165,7 +166,7 @@ ge::graphStatus CheckGeluShapeDim(const gert::TilingContext& context, const MatM
     }
 
     OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-        args.opName, "x1, x2, y", Ops::NN::FormatString("%zuD, %zuD, %zuD", aDimNum, bDimNum, cDimNum).c_str(),
+        args.opName, "x1, x2, y", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
         Ops::NN::FormatString("The shape dims of %s must be %zu for gelu op type", "x1, x2, y", NUM_TWO).c_str());
     return ge::GRAPH_FAILED;
 }
@@ -199,7 +200,9 @@ ge::graphStatus CheckX3Shape(const gert::TilingContext& context, MatMulV3Args& a
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args.opName, "x3", Ops::Base::ToString(x3Shape).c_str(),
                 Ops::NN::FormatString(
-                    "%s of %s must satisfy broadcast rule (equal or one is 1)", "Batch-axis", "x3, y")
+                    "The batch-axis of %s must meet the broadcast principle: The batch-axis in the corresponding "
+                    "positions must be equal, or one of the batch-axis in the corresponding positions must be 1",
+                    "x3, y")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -331,7 +334,7 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
             args.opName, "x1, x2",
             Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
                 .c_str(),
-            Ops::NN::FormatString("Batch axes of %s must be positive numbers", "x1, x2").c_str());
+            Ops::NN::FormatString("Batch-axis of %s must be positive numbers", "x1, x2").c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -349,8 +352,8 @@ ge::graphStatus FusedMatMulBuiltInTiling::GetBatchInfo(
             Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
                 .c_str(),
             Ops::NN::FormatString(
-                "The batch_axis of %s must satisfy the broadcast rule: the batch_axis at corresponding "
-                "positions must be equal or one of them must be 1",
+                "The batch-axis of %s must meet the broadcast principle: The batch-axis in the corresponding "
+                "positions must be equal, or one of the batch-axis in the corresponding positions must be 1",
                 "x1, x2")
                 .c_str());
         return ge::GRAPH_FAILED;

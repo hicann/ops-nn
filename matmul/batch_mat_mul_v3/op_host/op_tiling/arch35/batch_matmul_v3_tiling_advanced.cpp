@@ -63,19 +63,18 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
     // 先校验bias的尾值是否与output尾值相等
     if (biasShape[biasDims - FINAL_SHAPE_DIM] != outputShape[cDims - FINAL_SHAPE_DIM]) {
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            args.opName, "self, out",
+            args.opName, "bias, out",
             Ops::NN::FormatString(
                 "%s, %s", Ops::Base::ToString(biasShape).c_str(), Ops::Base::ToString(outputShape).c_str())
                 .c_str(),
-            Ops::NN::FormatString("%s of %s must be equal to %s of %s", "Last dim", "self", "last dim", "out")
-                .c_str());
+            Ops::NN::FormatString("%s of %s must be equal to %s of %s", "Last dim", "bias", "last dim", "out").c_str());
         return ge::GRAPH_FAILED;
     }
     if (biasDims >= NUM_TWO) {
         if (biasShape[biasDims - NO_BATCH_SHAPE_DIM] != 1) { // bias的倒数第二维必须为1
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                args.opName, "self", Ops::Base::ToString(biasShape).c_str(),
-                Ops::NN::FormatString("%s of %s must be equal to %d", "M-axis", "self", 1).c_str());
+                args.opName, "bias", Ops::Base::ToString(biasShape).c_str(),
+                Ops::NN::FormatString("%s of %s must be equal to %d", "M-axis", "bias", 1).c_str());
             return ge::GRAPH_FAILED;
         }
     }
@@ -84,13 +83,13 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
         if (batchInfo.batchA0 != batchInfo.batchB0 || batchInfo.batchA1 != batchInfo.batchB1 ||
             batchInfo.batchA2 != batchInfo.batchB2 || batchInfo.batchA3 != batchInfo.batchB3) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                args.opName, "batch1, batch2",
+                args.opName, "self, mat2",
                 Ops::NN::FormatString(
                     "%s, %s", Ops::Base::ToString(context.GetInputShape(0)->GetOriginShape()).c_str(),
                     Ops::Base::ToString(context.GetInputShape(1)->GetOriginShape()).c_str())
                     .c_str(),
                 Ops::NN::FormatString(
-                    "When optional parameter %s exists, %s of %s must be the same", "self", "batch-axis", "batch1, batch2")
+                    "When optional parameter %s exists, %s of %s must be the same", "bias", "batch-axis", "self, mat2")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -101,13 +100,12 @@ ge::graphStatus BatchMatMulV3Tiling::GetBmmBiasInfo(const gert::TilingContext &c
         if (!(batchBias3 == batchInfo.batchC3 && batchBias2 == batchInfo.batchC2 && batchBias1 == batchInfo.batchC1 &&
               batchBias0 == batchInfo.batchC0)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                args.opName, "self, out",
+                args.opName, "bias, out",
                 Ops::NN::FormatString(
                     "%s, %s", Ops::Base::ToString(biasShape).c_str(),
                     Ops::Base::ToString(context.GetOutputShape(0)->GetOriginShape()).c_str())
                     .c_str(),
-                Ops::NN::FormatString(
-                    "%s of %s must be equal to %s of %s", "Batch-axis", "self", "batch-axis", "out")
+                Ops::NN::FormatString("%s of %s must be equal to %s of %s", "Batch-axis", "bias", "batch-axis", "out")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -130,8 +128,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
     if (aDims > BATCH_DIM_MAX || bDims > BATCH_DIM_MAX) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
             args.opName, "self, mat2", Ops::NN::FormatString("%zu, %zu", aDims, bDims).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %s %llu", "self, mat2", "less than or equal to",
-                                  BATCH_DIM_MAX)
+            Ops::NN::FormatString(
+                "The shape dims of %s must be %s %llu", "self, mat2", "less than or equal to", BATCH_DIM_MAX)
                 .c_str());
         return ge::GRAPH_FAILED;
     }
@@ -158,7 +156,7 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
             args.opName, "self, mat2",
             Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
                 .c_str(),
-            Ops::NN::FormatString("%s of %s must be a positive number", "Batch axis", "self, mat2").c_str());
+            Ops::NN::FormatString("%s of %s must be a positive number", "Batch-axis", "self, mat2").c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -176,8 +174,8 @@ ge::graphStatus BatchMatMulV3Tiling::GetBatchInfo(const gert::TilingContext &con
             Ops::NN::FormatString("%s, %s", Ops::Base::ToString(aShape).c_str(), Ops::Base::ToString(bShape).c_str())
                 .c_str(),
             Ops::NN::FormatString(
-                "The batch_axis of %s must satisfy the broadcast rule: the batch_axis at corresponding "
-                "positions must be equal or one of them must be 1",
+                "The batch-axis of %s must meet the broadcast principle: The batch-axis in the corresponding "
+                "positions must be equal, or one of the batch-axis in the corresponding positions must be 1",
                 "self, mat2")
                 .c_str());
         return ge::GRAPH_FAILED;
