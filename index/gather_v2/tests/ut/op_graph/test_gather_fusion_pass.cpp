@@ -19,6 +19,9 @@
 #include "register/register_custom_pass.h"
 #include "../../../op_graph/fusion_pass/gather_fusion_pass.h"
 
+#include "version/ge-compiler_version.h"
+#if GE_COMPILER_VERSION_NUM >= 90000000U
+
 using namespace ut_util;
 using namespace std;
 using namespace ge;
@@ -279,3 +282,5 @@ TEST_F(GatherToGatherV2FusionPassTest, gather_1d_success)
     EXPECT_TRUE(FindNodeByType(graph, "GatherV2"));
     EXPECT_FALSE(FindNodeByType(graph, "Gather"));
 }
+
+#endif // GE_COMPILER_VERSION_NUM >= 90000000U

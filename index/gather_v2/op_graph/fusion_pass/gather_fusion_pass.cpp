@@ -26,6 +26,8 @@
 #include "platform/platform_info.h"
 #include "ge/ge_utils.h"
 #include "ge/es_graph_builder.h"
+#include "version/ge-compiler_version.h"
+#include "acl/acl_rt.h"
 
 using namespace ge;
 using namespace fe;
@@ -85,6 +87,18 @@ static Status InferShape(const GraphUniqPtr& replaceGraph, const std::vector<Sub
     return GeUtils::InferShape(*replaceGraph, inputShapes);
 }
 
+#if GE_COMPILER_VERSION_NUM >= 90000000U
+CustomPassStage GetGatherFusionPassStage()
+{
+    int32_t version = 0;
+    aclsysGetVersionNum("ge_compiler", &version);
+    if (version >= 90000000) {
+        return CustomPassStage::kCompatibleInherited;
+    }
+    return CustomPassStage::kBeforeInferShape;
+}
+#endif
+
 } // anonymous namespace
 
 // ---------------------------------------------------------------------------
@@ -137,6 +151,13 @@ std::vector<PatternUniqPtr> GatherToGatherV2FusionPass::Patterns()
 bool GatherToGatherV2FusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
     OPS_LOG_D(PASS_NAME.c_str(), "Enter MeetRequirements");
+
+    int32_t version = 0;
+    aclsysGetVersionNum("ge_compiler", &version);
+    if (version < 90000000) {
+        OPS_LOG_D(PASS_NAME.c_str(), "Runtime version below 9.0.0, skip fusion.");
+        return false;
+    }
 
     if (!IsTargetPlatform()) {
         OPS_LOG_D(PASS_NAME.c_str(), "Platform check failed, skip fusion.");
@@ -232,6 +253,8 @@ GraphUniqPtr GatherToGatherV2FusionPass::Replacement(const std::unique_ptr<Match
     return replaceGraph;
 }
 
-REG_FUSION_PASS(GatherToGatherV2FusionPass).Stage(CustomPassStage::kCompatibleInherited);
+#if GE_COMPILER_VERSION_NUM >= 90000000U
+REG_FUSION_PASS(GatherToGatherV2FusionPass).Stage(GetGatherFusionPassStage());
+#endif
 } // namespace NN
 } // namespace OPS
