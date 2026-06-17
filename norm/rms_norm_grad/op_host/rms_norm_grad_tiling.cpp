@@ -362,7 +362,7 @@ static void SetChunkWorkspace(
     uint32_t blockDim = tiling.get_block_dim();
     uint32_t need_chunk = 0;
     // Deterministic mode: calculate chunk parameters
-    uint64_t currentWorkspace = (uint64_t)blockDim * col_val_align * sizeof_float;
+    uint64_t currentWorkspace = static_cast<uint64_t>(blockDim) * col_val_align * sizeof_float;
     auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     platform_ascendc::SocVersion curSocVersion = ascendc_platform.GetSocVersion();
     bool isSoc910bc = curSocVersion == platform_ascendc::SocVersion::ASCEND910B || curSocVersion == platform_ascendc::SocVersion::ASCEND910_93; 
