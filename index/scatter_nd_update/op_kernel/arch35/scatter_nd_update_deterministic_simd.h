@@ -40,6 +40,7 @@ private:
     TYPE_T idxLoopSize = 0;
     TYPE_T updateLoopSize = 0;
     int32_t updateCount = 0;
+    TQueBind<QuePosition::VECIN, QuePosition::VECOUT, DOUBLE_BUFFER> inQueue_;
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
@@ -62,7 +63,8 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
     if (this->blockIdx >= this->tiling_.usedCoreNumBefore) {
         return;
     }
-    this->InitUpdateBuffer();
+    this->pipe_.Reset();
+    this->pipe_.InitBuffer(inQueue_, 2, Ops::Base::CeilAlign(this->tiling_.afterAxisFactor * sizeof(PARAMS_T), UB_AGLIN_VALUE));
 
     if (this->blockIdx == this->tiling_.usedCoreNumBefore - 1) {
         this->currBlockHandleIdx = this->tiling_.tailCoreIndexCount; 
@@ -88,7 +90,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
         }
 
         for (TYPE_T j = 0; j < this->updateLoopSize; j++) {
-            LocalTensor<PARAMS_T> updateLocal = this->inQueX.template AllocTensor<PARAMS_T>();
+            LocalTensor<PARAMS_T> updateLocal = inQueue_.template AllocTensor<PARAMS_T>();
             this->updateOffSet = this->indiceOffSet * this->tiling_.sliceSize + j * this->tiling_.afterAxisFactor;
             uint64_t varGmOffSet = globalValRowIdx + j * this->tiling_.afterAxisFactor;
             if (j == this->updateLoopSize-1) {
@@ -97,13 +99,10 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
                 this->updateCount = this->tiling_.afterAxisFactor;
             }
             CopyInUpdate(updateLocal);
-            event_t eventIdMte2ToMte3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_MTE3));
-            SetFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
-            WaitFlag<HardEvent::MTE2_MTE3>(eventIdMte2ToMte3);
+            inQueue_.EnQue(updateLocal);
+            updateLocal = inQueue_.DeQue<PARAMS_T>();
             CopyOutUpdate(updateLocal, varGmOffSet);
-            event_t eventIdMte3ToMte2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
-            SetFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
-            WaitFlag<HardEvent::MTE3_MTE2>(eventIdMte3ToMte2);
+            inQueue_.template FreeTensor(updateLocal);
         }
     }
 }
@@ -121,7 +120,6 @@ __aicore__ inline void ScatterNdUpdateDeterministicSimd<PARAMS_T, INDICES_T, TYP
 {
     DataCopyExtParams xCopyParams{1, static_cast<uint32_t>(this->updateCount * sizeof(PARAMS_T)), 0, 0, 0};
     DataCopyPad(this->outputGm[varGmOffSet], updateLocal[0], xCopyParams);
-    this->inQueX.template FreeTensor(updateLocal); 
 }
 } // namespace ScatterNdUpdate
 

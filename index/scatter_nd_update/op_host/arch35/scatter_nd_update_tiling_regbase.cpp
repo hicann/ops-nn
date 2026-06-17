@@ -265,7 +265,7 @@ ge::graphStatus ScatterNdUpdateTiling::CalculateDerivedParams(
     varStorageInAxis_ = outputStorageShapeSize_ / afterAxis_;
     sliceSize = static_cast<uint64_t>(afterAxis_);
 
-    if (context_->GetDeterministic() == 1) {
+    if (context_->GetDeterministic() == 1 && indicesAxis_ > 1) {
         isDeterminstic_ = 1;
         context_->SetScheduleMode(1);
     }

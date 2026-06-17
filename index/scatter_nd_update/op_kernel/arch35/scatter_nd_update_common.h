@@ -40,6 +40,7 @@ constexpr uint16_t INDICE_RANK_TWO = 2;
 constexpr float SORT_HIST_THRESHOLD = 0.01f;
 constexpr uint32_t HASH_SCORE_BUF_SIZE = 128;
 constexpr uint32_t MASK_DEFAULT = 0;
+constexpr uint64_t LEAST_DEAL_SIZE = 256;
 
 constexpr MicroAPI::CastTrait castTraitB322B64 = {
     MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN, MicroAPI::MaskMergeMode::ZEROING, RoundMode::UNKNOWN};
@@ -431,6 +432,7 @@ public:
     __aicore__ inline void InitBase(GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace);
     __aicore__ inline void CalcMask();
     __aicore__ inline void InitUpdateBuffer();
+    __aicore__ inline void InitMaskGm(uint64_t totalSize, GM_ADDR workspace);
     __aicore__ inline void CopyInIndices(uint64_t indicesGmOffset, uint32_t indicesCount);
     __aicore__ inline uint32_t DeterministicSortAndComputeUniqueIdx(
         int64_t rowLen, LocalTensor<OFFSET_T> indicesSrcLocal, LocalTensor<OFFSET_T> sortIndicesLocal,
@@ -461,6 +463,31 @@ protected:
 };
 
 template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
+__aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitMaskGm(
+    uint64_t totalSize, GM_ADDR workspace) 
+{
+    uint64_t blockNum = GetBlockNum();
+    uint64_t perCoreInitNum = Ops::Base::CeilDiv(totalSize, blockNum);
+    uint64_t alignFactor = LEAST_DEAL_SIZE / sizeof(PARAMS_T);
+    perCoreInitNum = Ops::Base::CeilDiv(perCoreInitNum, alignFactor) * alignFactor;
+
+    uint64_t initUsedCore = Ops::Base::CeilDiv(totalSize, perCoreInitNum);
+    if (GetBlockIdx() >= initUsedCore) {
+        return;
+    }
+    uint64_t tailCoreInitNum = totalSize - (initUsedCore - 1) * perCoreInitNum;
+
+    uint64_t maskBlockOffset = GetBlockIdx() * perCoreInitNum;
+    maskBlockGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + maskBlockOffset);
+
+    uint64_t maskBlockLen = perCoreInitNum;
+    if (GetBlockIdx() == initUsedCore - 1) {
+        maskBlockLen = tailCoreInitNum;
+    }
+    InitGlobalMemory(maskBlockGm, maskBlockLen, static_cast<TYPE_T>(MASK_DEFAULT));
+}
+
+template <typename PARAMS_T, typename INDICES_T, typename TYPE_T, typename OFFSET_T>
 __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, TYPE_T, OFFSET_T>::InitBase(
     GM_ADDR x, GM_ADDR indices, GM_ADDR updates, GM_ADDR y, GM_ADDR workspace)
 {
@@ -474,6 +501,7 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     maskGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace);
     varIdxGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + (tiling_.varStorageInAxis + 1));
 
+    InitMaskGm(tiling_.varInAxis, workspace);
     if (blockIdx >= tiling_.calcMaskUsedCoreNum) {
         return;
     }
@@ -485,14 +513,6 @@ __aicore__ inline void ScatterNdUpdateDeterministicCommon<PARAMS_T, INDICES_T, T
     } else {
         this->currBlockHandleIdx = tiling_.normCoreHandleIdx;
     }
-
-    uint64_t maskBlockOffset = blockIdx * tiling_.maskNormBlockLen;
-    maskBlockGm.SetGlobalBuffer((__gm__ TYPE_T*)workspace + maskBlockOffset);
-    uint64_t maskBlockLen = tiling_.maskNormBlockLen;
-    if (blockIdx == tiling_.calcMaskUsedCoreNum - 1) {
-        maskBlockLen = tiling_.maskTailBlockLen;
-    }
-    InitGlobalMemory(maskBlockGm, maskBlockLen, static_cast<TYPE_T>(MASK_DEFAULT));
 
     pipe_.InitBuffer(
         indicesQue_, 1, Ops::Base::CeilAlign(tiling_.indicesUbFactor * rankSize_ * sizeof(INDICES_T), UB_AGLIN_VALUE));
