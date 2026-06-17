@@ -3,7 +3,7 @@
 #include <random>
 #include <algorithm>
 #include "acl/acl.h"
-#include "aclnnop/aclnn_modulate_grad.h"
+#include "aclnnop/aclnn_modulate_backward.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -105,7 +105,7 @@ std::vector<float> GenerateRandomData(int64_t size, float min = -1.0f, float max
 }
 
 int main(){
-    int32_t deviceId = 1;
+    int32_t deviceId = 0;
     aclrtStream stream;
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);

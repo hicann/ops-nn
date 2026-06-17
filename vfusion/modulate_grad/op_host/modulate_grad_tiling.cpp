@@ -24,9 +24,9 @@
 
 namespace optiling{
     struct ModulateGradTilingData{
-        uint32_t B;
-        uint32_t L;
-        uint32_t D;
+        uint64_t B;
+        uint64_t L;
+        uint64_t D;
         uint32_t dataType = 2;
         uint32_t block_dim;
         uint32_t dataTypeSize = 4;
@@ -50,9 +50,9 @@ namespace optiling{
 
     void PrintTilingData(gert::TilingContext* context, ModulateGradTilingData& tiling)
     {
-        OP_LOGD(context,"B:%u.", tiling.B);
-        OP_LOGD(context,"L:%u", tiling.L);
-        OP_LOGD(context,"D:%u.", tiling.D);
+        OP_LOGD(context,"B:%lu.", tiling.B);
+        OP_LOGD(context,"L:%lu", tiling.L);
+        OP_LOGD(context,"D:%lu.", tiling.D);
         OP_LOGD(context,"dataType:%u.", tiling.dataType);
         OP_LOGD(context,"block_dim:%u.", tiling.block_dim);
         OP_LOGD(context,"dataTypeSize:%u.", tiling.dataTypeSize);
@@ -66,13 +66,13 @@ namespace optiling{
         OP_LOGD(context,"has_shift:%u.", tiling.has_shift);
     }
     void GenerateTilingData(ModulateGradTilingData* tiling, uint32_t numBlocks){
-        uint32_t B = tiling->B;
-        uint32_t D = tiling->D;
+        uint64_t B = tiling->B;
+        uint64_t D = tiling->D;
         if (numBlocks == 0){
             return ;
         }
         numBlocks = numBlocks < B * D ? numBlocks : B * D;
-        uint32_t splitBlock = numBlocks / 2; 
+        uint32_t splitBlock = numBlocks / 2;
         tiling -> splitB = (B < splitBlock) ? 1 : 0;
 
         if (tiling->splitB){
@@ -85,7 +85,7 @@ namespace optiling{
             tiling->formerNum = remainderD;
             tiling->formerLength = dPerCore + 1;
             tiling->tailNum = tiling-> coresPerB - remainderD;
-            tiling->tailLength = dPerCore; 
+            tiling->tailLength = dPerCore;
         }else{
             numBlocks = numBlocks < B ? numBlocks : B;
             tiling->coresPerB = 1;
@@ -118,9 +118,9 @@ namespace optiling{
         if (shift_input){
             has_shift = 1;
         }
-        const uint32_t B = input_shape->GetStorageShape().GetDim(0);
-        const uint32_t L = input_shape->GetStorageShape().GetDim(1);
-        const uint32_t D = input_shape->GetStorageShape().GetDim(2);
+        const uint64_t B = input_shape->GetStorageShape().GetDim(0);
+        const uint64_t L = input_shape->GetStorageShape().GetDim(1);
+        const uint64_t D = input_shape->GetStorageShape().GetDim(2);
         tiling.B = B;
         tiling.L = L;
         tiling.D = D;
