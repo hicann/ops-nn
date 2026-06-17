@@ -50,6 +50,10 @@ public:
         Ppipe->InitBuffer(tensor_buf, 32);
         Ppipe->InitBuffer(tmpBuf, 3 * this->numLastDimAligned * sizeof(float));
         Ppipe->InitBuffer(gammaBetaBuf, 2 * this->numLastDimAligned * sizeof(T));
+
+        if (this->isPerTensor) {
+            GetPerTensorScaleOffset();
+        }
     }
 
     __aicore__ inline void Process()
@@ -64,6 +68,27 @@ public:
     }
 
 private:
+    __aicore__ inline void GetPerTensorScaleOffset()
+    {
+        if constexpr (is_same<T, float>::value) {
+            perTensorScale = scalesGm.GetValue(0);
+        } else if constexpr (is_same<T, half>::value) {
+            perTensorScale = static_cast<float>(scalesGm.GetValue(0));
+        } else {
+            perTensorScale = Cast(scalesGm.GetValue(0));
+        }
+
+        if (isOffsetExist) {
+            if constexpr (is_same<T, float>::value) {
+                perTensorOffset = offsetsGm.GetValue(0);
+            } else if constexpr (is_same<T, half>::value) {
+                perTensorOffset = static_cast<float>(offsetsGm.GetValue(0));
+            } else {
+                perTensorOffset = Cast(offsetsGm.GetValue(0));
+            }
+        }
+    }
+
     __aicore__ inline void CopyInAddSingleRowFp32(uint64_t gmOffset, LocalTensor<float> tmpTensors,
         LocalTensor<T> biasIn, LocalTensor<T> tensor_local)
     {
@@ -209,34 +234,44 @@ private:
     __aicore__ inline void ApplyScaleOffsetAndQuantize(uint64_t gmOffset, LocalTensor<float> xTensor,
         LocalTensor<float> tmpTensor, LocalTensor<T> tensor_local)
     {
-        LocalTensor<T> inTensor = rowOutQue.template AllocTensor<T>();
-        DataCopyExV2(inTensor, scalesGm, tensor_local, this->numLastDim);
-        event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-        SetFlag<HardEvent::MTE2_V>(eventMTE2V);
-        WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
+        if (this->isPerTensor) {
+            Muls(xTensor, xTensor, perTensorScale, this->numLastDim);
+            PipeBarrier<PIPE_V>();
+            if (isOffsetExist) {
+                Adds(xTensor, xTensor, perTensorOffset, this->numLastDim);
+                PipeBarrier<PIPE_V>();
+            }
+        } else {
+            LocalTensor<T> inTensor = rowOutQue.template AllocTensor<T>();
+            DataCopyExV2(inTensor, scalesGm, tensor_local, this->numLastDim);
+            event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+            SetFlag<HardEvent::MTE2_V>(eventMTE2V);
+            WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
-        CastToFloat<T>(tmpTensor, inTensor, this->numLastDimAligned);
-        PipeBarrier<PIPE_V>();
-        Mul(xTensor, xTensor, tmpTensor, this->numLastDim);
-        PipeBarrier<PIPE_V>();
-
-        event_t eventVMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
-        if (isOffsetExist) {
-            SetFlag<HardEvent::V_MTE2>(eventVMTE2);
-            WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
-            DataCopyExV2(inTensor, offsetsGm, tensor_local, this->numLastDim);
-            event_t eventMTE2V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
-            SetFlag<HardEvent::MTE2_V>(eventMTE2V1);
-            WaitFlag<HardEvent::MTE2_V>(eventMTE2V1);
             CastToFloat<T>(tmpTensor, inTensor, this->numLastDimAligned);
             PipeBarrier<PIPE_V>();
-            Add(xTensor, xTensor, tmpTensor, this->numLastDim);
+            Mul(xTensor, xTensor, tmpTensor, this->numLastDim);
             PipeBarrier<PIPE_V>();
+
+            event_t eventVMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
+            if (isOffsetExist) {
+                SetFlag<HardEvent::V_MTE2>(eventVMTE2);
+                WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
+                DataCopyExV2(inTensor, offsetsGm, tensor_local, this->numLastDim);
+                event_t eventMTE2V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
+                SetFlag<HardEvent::MTE2_V>(eventMTE2V1);
+                WaitFlag<HardEvent::MTE2_V>(eventMTE2V1);
+                CastToFloat<T>(tmpTensor, inTensor, this->numLastDimAligned);
+                PipeBarrier<PIPE_V>();
+                Add(xTensor, xTensor, tmpTensor, this->numLastDim);
+                PipeBarrier<PIPE_V>();
+            }
+            rowOutQue.FreeTensor(inTensor);
         }
-        rowOutQue.FreeTensor(inTensor);
 
         LocalTensor<int8_t> yLocal = quantizeOutQue.template AllocTensor<int8_t>();
         QuantizeToInt8(xTensor, yLocal);
+        event_t eventVMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE2));
         SetFlag<HardEvent::V_MTE2>(eventVMTE2);
         WaitFlag<HardEvent::V_MTE2>(eventVMTE2);
         quantizeOutQue.EnQue(yLocal);
@@ -323,6 +358,9 @@ private:
     GlobalTensor<float> workspaceGm;
 
     bool isOffsetExist;
+
+    float perTensorScale = 1.0f;
+    float perTensorOffset = 0.0f;
 };
 
 #endif // __ADD_LAYER_NORM_SOLE_STATIC_QUANT_SINGLE_ROW_KERNEL_H_

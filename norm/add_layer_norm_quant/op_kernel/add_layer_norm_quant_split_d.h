@@ -57,6 +57,9 @@ public:
         InitSplitDParams(tiling, layernormRes);
         InitSplitDGlobalTensors(scales1, scales2, zeroPoints1, zeroPoints2, workspace);
         InitUBBuffers();
+        if (this->isPerTensor && scales1Exist) {
+            GetPerTensorScaleOffset();
+        }
     }
 
     /**
@@ -133,6 +136,27 @@ public:
         workspaceGm.SetGlobalBuffer((__gm__ float*)workspace + block_idx * this->gmOffset_);
     }
 
+    __aicore__ inline void GetPerTensorScaleOffset()
+    {
+        if constexpr (is_same<S, float>::value) {
+            perTensorScale = scales1Gm.GetValue(0);
+        } else if constexpr (is_same<S, half>::value) {
+            perTensorScale = static_cast<float>(scales1Gm.GetValue(0));
+        } else {
+            perTensorScale = Cast(scales1Gm.GetValue(0));
+        }
+
+        if (isZeroPoint1Exist) {
+            if constexpr (is_same<S, float>::value) {
+                perTensorOffset = zeroPoints1Gm.GetValue(0);
+            } else if constexpr (is_same<S, half>::value) {
+                perTensorOffset = static_cast<float>(zeroPoints1Gm.GetValue(0));
+            } else {
+                perTensorOffset = Cast(zeroPoints1Gm.GetValue(0));
+            }
+        }
+    }
+
     __aicore__ inline void InitUBBuffers()
     {
         uint32_t maxSliceAligned = (sliceSizeAligned > tailSliceSizeAligned) ? sliceSizeAligned : tailSliceSizeAligned;
@@ -159,6 +183,36 @@ public:
     }
 
 private:
+    template<typename U>
+    __aicore__ inline void CopyGmToUb(LocalTensor<U> dst, GlobalTensor<U> src, uint32_t size)
+    {
+#if __NPU_ARCH__ == 2201
+        DataCopyPadExtParams<U> padParams;
+        padParams.isPad = false;
+        DataCopyExtParams copyParams;
+        copyParams.blockCount = 1;
+        copyParams.blockLen = size * sizeof(U);
+        DataCopyPad(dst, src, copyParams, padParams);
+#else
+        LocalTensor<U> tensor_local = tensorBuf.Get<U>();
+        DataCopyExV2(dst, src, tensor_local, size);
+#endif
+    }
+
+    template<typename U>
+    __aicore__ inline void CopyUbToGm(GlobalTensor<U> dst, LocalTensor<U> src, uint32_t size)
+    {
+#if __NPU_ARCH__ == 2201
+        DataCopyExtParams copyParams;
+        copyParams.blockCount = 1;
+        copyParams.blockLen = size * sizeof(U);
+        DataCopyPad(dst, src, copyParams);
+#else
+        LocalTensor<U> tensor_local = tensorBuf.Get<U>();
+        DataCopyExV2(dst, src, tensor_local, size);
+#endif
+    }
+
     /**
      * 搬运 x1, x2 到 UB，转换为 float，计算 x = x1 + x2
      * 
@@ -174,20 +228,8 @@ private:
     __aicore__ inline void CopyInX1X2AndAdd(uint32_t colOffset, uint32_t curSliceSize, uint32_t curSliceAligned)
     {
         LocalTensor<T> x1x2Local = inQueX.AllocTensor<T>();
-
-#if __NPU_ARCH__ == 2201
-        DataCopyPadExtParams<T> padParams;
-        padParams.isPad = false;
-        DataCopyExtParams copyParams;
-        copyParams.blockCount = 1;
-        copyParams.blockLen = curSliceSize * sizeof(T);
-        DataCopyPad(x1x2Local, this->x1Gm[colOffset], copyParams, padParams);
-        DataCopyPad(x1x2Local[curSliceAligned], this->x2Gm[colOffset], copyParams, padParams);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(x1x2Local, this->x1Gm[colOffset], tensor_local, curSliceSize);
-        DataCopyExV2(x1x2Local[curSliceAligned], this->x2Gm[colOffset], tensor_local, curSliceSize);
-#endif
+        CopyGmToUb<T>(x1x2Local, this->x1Gm[colOffset], curSliceSize);
+        CopyGmToUb<T>(x1x2Local[curSliceAligned], this->x2Gm[colOffset], curSliceSize);
         inQueX.EnQue(x1x2Local);
         LocalTensor<T> x1x2Deq = inQueX.DeQue<T>();
 
@@ -215,17 +257,7 @@ private:
     __aicore__ inline void AddElewiseBias(uint32_t colOffset, uint32_t curSliceSize)
     {
         LocalTensor<T> biasLocal = inQueBias.AllocTensor<T>();
-#if __NPU_ARCH__ == 2201
-        DataCopyPadExtParams<T> padParamsBias;
-        padParamsBias.isPad = false;
-        DataCopyExtParams copyParamsBias;
-        copyParamsBias.blockCount = 1;
-        copyParamsBias.blockLen = curSliceSize * sizeof(T);
-        DataCopyPad(biasLocal, this->biasGm[colOffset], copyParamsBias, padParamsBias);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(biasLocal, this->biasGm[colOffset], tensor_local, curSliceSize);
-#endif
+        CopyGmToUb<T>(biasLocal, this->biasGm[colOffset], curSliceSize);
         inQueBias.EnQue(biasLocal);
         LocalTensor<T> biasDeq = inQueBias.DeQue<T>();
 
@@ -249,17 +281,7 @@ private:
     __aicore__ inline void AddBroadcastBias(uint32_t sliceOffset, uint32_t curSliceSize)
     {
         LocalTensor<T> biasLocal = inQueBias.AllocTensor<T>();
-#if __NPU_ARCH__ == 2201
-        DataCopyPadExtParams<T> padParamsBias;
-        padParamsBias.isPad = false;
-        DataCopyExtParams copyParamsBias;
-        copyParamsBias.blockCount = 1;
-        copyParamsBias.blockLen = curSliceSize * sizeof(T);
-        DataCopyPad(biasLocal, this->biasGm[sliceOffset], copyParamsBias, padParamsBias);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(biasLocal, this->biasGm[sliceOffset], tensor_local, curSliceSize);
-#endif
+        CopyGmToUb<T>(biasLocal, this->biasGm[sliceOffset], curSliceSize);
         inQueBias.EnQue(biasLocal);
         LocalTensor<T> biasDeq = inQueBias.DeQue<T>();
 
@@ -296,15 +318,7 @@ private:
         outQueRes.EnQue(xOutLocal);
         
         LocalTensor<T> xOutDeq = outQueRes.DeQue<T>();
-#if __NPU_ARCH__ == 2201
-        DataCopyExtParams copyParamsOut;
-        copyParamsOut.blockCount = 1;
-        copyParamsOut.blockLen = curSliceSize * sizeof(T);
-        DataCopyPad(this->xGm[colOffset], xOutDeq, copyParamsOut);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(this->xGm[colOffset], xOutDeq, tensor_local, curSliceSize);
-#endif
+        CopyUbToGm<T>(this->xGm[colOffset], xOutDeq, curSliceSize);
         outQueRes.FreeTensor(xOutDeq);
     }
 
@@ -376,15 +390,7 @@ private:
         SetFlag<HardEvent::S_V>(eventSV);
         WaitFlag<HardEvent::S_V>(eventSV);
 
-#if __NPU_ARCH__ == 2201
-        DataCopyExtParams copyParamsWs;
-        copyParamsWs.blockCount = 1;
-        copyParamsWs.blockLen = curSliceSize * sizeof(float);
-        DataCopyPad(workspaceGm[colOffset], xFp32, copyParamsWs);
-#else
-        LocalTensor<float> tensor_local_f = tensorBuf.Get<float>();
-        DataCopyExV2(workspaceGm[colOffset], xFp32, tensor_local_f, curSliceSize);
-#endif
+        CopyUbToGm<float>(workspaceGm[colOffset], xFp32, curSliceSize);
         event_t eventMTE3V2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
         SetFlag<HardEvent::MTE3_V>(eventMTE3V2);
         WaitFlag<HardEvent::MTE3_V>(eventMTE3V2);
@@ -415,17 +421,7 @@ private:
             LocalTensor<float> yFp32 = yBufFp32.Get<float>();
             LocalTensor<float> zFp32 = zBufFp32.Get<float>();
 
-#if __NPU_ARCH__ == 2201
-            DataCopyPadExtParams<float> padParams;
-            padParams.isPad = false;
-            DataCopyExtParams copyParams;
-            copyParams.blockCount = 1;
-            copyParams.blockLen = curSliceSize * sizeof(float);
-            DataCopyPad(xFp32, workspaceGm[colOffset], copyParams, padParams);
-#else
-            LocalTensor<float> tensor_local_f = tensorBuf.Get<float>();
-            DataCopyExV2(xFp32, workspaceGm[colOffset], tensor_local_f, curSliceSize);
-#endif
+            CopyGmToUb<float>(xFp32, workspaceGm[colOffset], curSliceSize);
             event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
@@ -467,19 +463,8 @@ private:
         // gamma 存储在 gammaBetaLocal[0:alignedSize]
         // beta 存储在 gammaBetaLocal[alignedSize:2*alignedSize]
         LocalTensor<T> gammaBetaLocal = inQueGammaBeta.AllocTensor<T>();
-#if __NPU_ARCH__ == 2201
-        DataCopyPadExtParams<T> padParams;
-        padParams.isPad = false;
-        DataCopyExtParams copyParams;
-        copyParams.blockCount = 1;
-        copyParams.blockLen = size * sizeof(T);
-        DataCopyPad(gammaBetaLocal, this->gammaGm[sliceOffset], copyParams, padParams);
-        DataCopyPad(gammaBetaLocal[alignedSize], this->betaGm[sliceOffset], copyParams, padParams);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(gammaBetaLocal, this->gammaGm[sliceOffset], tensor_local, size);
-        DataCopyExV2(gammaBetaLocal[alignedSize], this->betaGm[sliceOffset], tensor_local, size);
-#endif
+        CopyGmToUb<T>(gammaBetaLocal, this->gammaGm[sliceOffset], size);
+        CopyGmToUb<T>(gammaBetaLocal[alignedSize], this->betaGm[sliceOffset], size);
         inQueGammaBeta.EnQue(gammaBetaLocal);
         LocalTensor<T> gammaBetaDeq = inQueGammaBeta.DeQue<T>();
 
@@ -487,18 +472,7 @@ private:
         LocalTensor<float> xFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yFp32 = yBufFp32.Get<float>();
 
-        // 从 workspace 读取 x 到 UB
-#if __NPU_ARCH__ == 2201
-        DataCopyPadExtParams<float> padParamsWs;
-        padParamsWs.isPad = false;
-        DataCopyExtParams copyParamsWs;
-        copyParamsWs.blockCount = 1;
-        copyParamsWs.blockLen = size * sizeof(float);
-        DataCopyPad(xFp32, workspaceGm[colOffset], copyParamsWs, padParamsWs);
-#else
-        LocalTensor<float> tensor_local_f = tensorBuf.Get<float>();
-        DataCopyExV2(xFp32, workspaceGm[colOffset], tensor_local_f, size);
-#endif
+        CopyGmToUb<float>(xFp32, workspaceGm[colOffset], size);
         event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
         SetFlag<HardEvent::MTE2_V>(eventMTE2V);
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
@@ -547,37 +521,23 @@ private:
         outQueRes.EnQue(resLocal);
         LocalTensor<T> resDeq = outQueRes.DeQue<T>();
 
-#if __NPU_ARCH__ == 2201
-        DataCopyExtParams copyParams;
-        copyParams.blockCount = 1;
-        copyParams.blockLen = size * sizeof(T);
-        DataCopyPad(resGm[colOffset], resDeq, copyParams);
-#else
-        LocalTensor<T> tensor_local = tensorBuf.Get<T>();
-        DataCopyExV2(resGm[colOffset], resDeq, tensor_local, size);
-#endif
+        CopyUbToGm<T>(resGm[colOffset], resDeq, size);
         outQueRes.FreeTensor(resDeq);
     }
 
     __aicore__ inline void CopyInScalesAndZeroPoints(uint32_t sliceOffset, uint32_t size)
     {
         if (scales1Exist) {
+            if (this->isPerTensor) {
+                return;
+            }
             LocalTensor<float> scalesLocal = scalesBuf.Get<float>();
             LocalTensor<S> scalesTmp = inQueX.AllocTensor<S>();
-#if __NPU_ARCH__ == 2201
-            DataCopyPadExtParams<S> padParams;
-            padParams.isPad = false;
-            DataCopyExtParams copyParams;
-            copyParams.blockCount = 1;
-            copyParams.blockLen = size * sizeof(S);
-            DataCopyPad(scalesTmp, scales1Gm[sliceOffset], copyParams, padParams);
-#else
-            LocalTensor<S> tensor_local = tensorBuf.Get<S>();
-            DataCopyExV2(scalesTmp, scales1Gm[sliceOffset], tensor_local, size);
-#endif
+            CopyGmToUb<S>(scalesTmp, scales1Gm[sliceOffset], size);
             event_t eventMTE2V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
             SetFlag<HardEvent::MTE2_V>(eventMTE2V);
             WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
+
             CastToFloat<S>(scalesLocal, scalesTmp, size);
             PipeBarrier<PIPE_V>();
             inQueX.FreeTensor(scalesTmp);
@@ -585,11 +545,7 @@ private:
             if (isZeroPoint1Exist) {
                 LocalTensor<float> offsetLocal = offsetBuf.Get<float>();
                 LocalTensor<S> offsetTmp = inQueX.AllocTensor<S>();
-#if __NPU_ARCH__ == 2201
-                DataCopyPad(offsetTmp, zeroPoints1Gm[sliceOffset], copyParams, padParams);
-#else
-                DataCopyExV2(offsetTmp, zeroPoints1Gm[sliceOffset], tensor_local, size);
-#endif
+                CopyGmToUb<S>(offsetTmp, zeroPoints1Gm[sliceOffset], size);
                 event_t eventMTE2V1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_V));
                 SetFlag<HardEvent::MTE2_V>(eventMTE2V1);
                 WaitFlag<HardEvent::MTE2_V>(eventMTE2V1);
@@ -608,12 +564,20 @@ private:
         PipeBarrier<PIPE_V>();
 
         if (scales1Exist) {
-            LocalTensor<float> scalesLocal = scalesBuf.Get<float>();
-            Mul(xFp32, xFp32, scalesLocal, size);
+            if (this->isPerTensor) {
+                Muls(xFp32, xFp32, perTensorScale, size);
+            } else {
+                LocalTensor<float> scalesLocal = scalesBuf.Get<float>();
+                Mul(xFp32, xFp32, scalesLocal, size);
+            }
             PipeBarrier<PIPE_V>();
             if (isZeroPoint1Exist) {
-                LocalTensor<float> offsetLocal = offsetBuf.Get<float>();
-                Add(xFp32, xFp32, offsetLocal, size);
+                if (this->isPerTensor) {
+                    Adds(xFp32, xFp32, perTensorOffset, size);
+                } else {
+                    LocalTensor<float> offsetLocal = offsetBuf.Get<float>();
+                    Add(xFp32, xFp32, offsetLocal, size);
+                }
                 PipeBarrier<PIPE_V>();
             }
         }
@@ -634,15 +598,7 @@ private:
 
         outQueY.EnQue(yLocal);
         LocalTensor<int8_t> yDeq = outQueY.DeQue<int8_t>();
-#if __NPU_ARCH__ == 2201
-        DataCopyExtParams copyParamsY;
-        copyParamsY.blockCount = 1;
-        copyParamsY.blockLen = size;
-        DataCopyPad(this->y1Gm[colOffset], yDeq, copyParamsY);
-#else
-        LocalTensor<int8_t> tensor_local_y = tensorBuf.Get<int8_t>();
-        DataCopyExV2(this->y1Gm[colOffset], yDeq, tensor_local_y, size);
-#endif
+        CopyUbToGm<int8_t>(this->y1Gm[colOffset], yDeq, size);
         PipeBarrier<PIPE_MTE3>();
         outQueY.FreeTensor(yDeq);
     }
@@ -707,6 +663,9 @@ private:
     bool scales2Exist = false;
     bool isZeroPoint1Exist = false;
     bool isZeroPoint2Exist = false;
+
+    float perTensorScale = 1.0f;
+    float perTensorOffset = 0.0f;
 };
 
 #endif // ADD_LAYER_NORM_QUANT_SPLIT_D_H_

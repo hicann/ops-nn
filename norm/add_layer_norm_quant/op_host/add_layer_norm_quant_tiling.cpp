@@ -399,16 +399,20 @@ static inline bool ComputeFusedAxisV2(
     auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
     size_t xDimNum = xShape.GetDimNum();
     size_t gammaDimNum = gammaShape.GetDimNum();
-    if (gammaDimNum > xDimNum) {
-        OP_LOGE(context, "gamma dim count %zu exceeds x dim count %zu, invalid shape", gammaDimNum, xDimNum);
+    size_t normDimNum = gammaDimNum;
+    if (tiling->get_isPerTensor() == 1) {
+        normDimNum = gammaDimNum - 1;
+    }
+    if (normDimNum > xDimNum) {
+        OP_LOGE(context, "norm dim count %zu exceeds x dim count %zu, invalid shape", normDimNum, xDimNum);
         return false;
     }
 
-    for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
+    for (size_t i = 0; i < xDimNum - normDimNum; i++) {
         numRow *= xShape.GetDim(i);
     }
-    for (size_t i = 0; i < gammaDimNum; i++) {
-        numCol *= gammaShape.GetDim(i);
+    for (size_t i = 0; i < normDimNum; i++) {
+        numCol *= gammaShape.GetDim(gammaDimNum - normDimNum + i);
     }
 
     SetFusedAxisTiling(tiling, numRow, numCol, dtSize);
@@ -492,16 +496,15 @@ static ge::graphStatus Tiling4AddLayerNormQuantV2Membase(gert::TilingContext* co
     uint32_t optionalScaleOffsetMode = ComputeOptCode(context);
 
     OP_CHECK_IF(!CheckScaleOffset(isDynamicQuant, optionalScaleOffsetMode),
-        OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed",
-            optionalScaleOffsetMode),return ge::GRAPH_FAILED);
+        OP_LOGE(context, "Optional input Scales and Offsets are invalid, get mode = %u, tiling failed", optionalScaleOffsetMode),return ge::GRAPH_FAILED);
 
     tiling.set_scaleOffsetMode(optionalScaleOffsetMode);
     tiling.set_isPerTensor(0);
-    if ((nullptr != scales1Shape)) {
-        OP_LOGD(context, "scales1Shape size : %ld", scales1Shape->GetStorageShape().GetShapeSize());
-        if (!isDynamicQuant && (scales1Shape->GetStorageShape().GetShapeSize() == 1)) {
+    if (!isDynamicQuant && (nullptr != scales1Shape)) {
+        auto gammaShape = context->GetInputShape(GAMMA_IDX)->GetStorageShape();
+        if (gammaShape.GetDimNum() == 2 && gammaShape.GetDim(0) == 1 && scales1Shape->GetStorageShape().GetShapeSize() == 1) {
             tiling.set_isPerTensor(1);
-            OP_LOGD(context, "PerTensor Mode Open. ");
+            OP_LOGD(context, "AddLayerNormQuantV2 PerTensor Mode Open. ");
         }
     }
 

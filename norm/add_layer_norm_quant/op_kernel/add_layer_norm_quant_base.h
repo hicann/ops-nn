@@ -58,6 +58,7 @@ public:
         this->mulLoopFp32 = tiling->mulLoopFp32;
         this->mulTailFp32 = tiling->mulTailFp32;
         this->dstRepStrideFp32 = tiling->dstRepStrideFp32;
+        this->isPerTensor = (tiling->isPerTensor == 1);
     }
 
     __aicore__ inline void InitInGlobalTensors(GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR beta, GM_ADDR bias)
@@ -116,6 +117,7 @@ protected:
     bool lastDimPad = false;
     size_t numLastDimAligned;
     size_t numLastDimRoundUp32;
+    bool isPerTensor = false;
 };
 
 #endif // __ADD_LAYER_NORM_QUANT_BASE_CLASS_H_

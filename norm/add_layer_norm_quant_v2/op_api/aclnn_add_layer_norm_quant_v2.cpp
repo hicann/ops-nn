@@ -138,28 +138,38 @@ static bool CheckDtypeValidV2(
     return true;
 }
 
-static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const aclTensor* outScales1Out, bool isDynQuant)
+static bool CheckShapeRelV2(const aclTensor* x1, const aclTensor* gamma, const aclTensor* beta,
+    const aclTensor* scales1Optional, const aclTensor* zeroPoints1Optional,
+    const aclTensor* outScales1Out, bool isDynQuant)
 {
     OP_CHECK_MAX_DIM(x1, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_MAX_DIM(gamma, MAX_SUPPORT_DIMS_NUMS, return false);
 
     size_t x1DimNums = x1->GetViewShape().GetDimNum();
     size_t gammaDimNums = gamma->GetViewShape().GetDimNum();
+
     OP_CHECK(
-        (x1DimNums >= gammaDimNums), OP_LOGE(ACLNN_ERR_PARAM_INVALID, "DimNum of x1 should bigger than gamma"),
+        (gamma->GetViewShape() == beta->GetViewShape()),
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "beta shape must be same as gamma"),
         return false);
 
-    for (size_t i = 0; i < gammaDimNums; i++) {
+    if (!isDynQuant) {
+        bool isPerTensor = (nullptr != scales1Optional) &&
+            (gammaDimNums == 2 && gamma->GetViewShape().GetDim(0) == 1 &&
+             gamma->GetViewShape().GetDim(1) == x1->GetViewShape().GetDim(x1DimNums - 1) &&
+             scales1Optional->GetViewShape().GetDimNum() == 1 &&
+             scales1Optional->GetViewShape().GetShapeSize() == 1);
+        bool isPerChannel = (nullptr != scales1Optional) &&
+            (scales1Optional->GetViewShape() == gamma->GetViewShape());
         OP_CHECK(
-            (x1->GetViewShape().GetDim(i + x1DimNums - gammaDimNums) == gamma->GetViewShape().GetDim(i)),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Shape of gamma should be equal to few dims of shape x1"), return false);
-    }
-
-    if (isDynQuant) {
+            (isPerTensor || isPerChannel),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid gamma/scales1 shape combination for static quantization"),
+            return false);
+    } else {
         size_t reduceDimNum = outScales1Out->GetViewShape().GetDimNum();
         OP_CHECK(
-            ((x1DimNums >= 2) && (gammaDimNums == 1)),
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In dyn quant, x1.dims() >= 2 and gamma.dims() == 1 should be followed"),
+            (x1DimNums >= 2),
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "In dyn quant, x1.dims() >= 2 should be followed"),
             return false);
 
         OP_CHECK(
@@ -188,16 +198,12 @@ static bool CheckOptCombValidV2(
         isDynQuant);
 
     if (isDynQuant) {
-        bool validDynQuantComb = (s1Exist && s2Exist && (!z1Exist) && (!z2Exist)) ||
-                                 (s1Exist && (!s2Exist) && (!z1Exist) && (!z2Exist)) ||
-                                 ((!s1Exist) && (!s2Exist) && (!z1Exist) && (!z2Exist));
+        bool validDynQuantComb = (s1Exist && (!z1Exist)) || ((!s1Exist) && (!z1Exist));
         OP_CHECK(
             (validDynQuantComb),
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input combination in dyn quant mode"), return false);
     } else {
-        bool validStcQuantComb =
-            (s1Exist && s2Exist && z1Exist && z2Exist) || (s1Exist && s2Exist && (!z1Exist) && (!z2Exist)) ||
-            (s1Exist && (!s2Exist) && z1Exist && (!z2Exist)) || (s1Exist && (!s2Exist) && (!z1Exist) && (!z2Exist));
+        bool validStcQuantComb = (s1Exist && z1Exist) || (s1Exist && (!z1Exist));
         OP_CHECK(
             (validStcQuantComb),
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Invalid Optional input combination in stc quant mode"), return false);
@@ -226,11 +232,14 @@ static bool CheckShapeEqsV2(
     eleShapeEqs = (isDual) ? eleShapeEqs && (x1->GetViewShape() == y2Out->GetViewShape()) : eleShapeEqs;
     OP_CHECK(eleShapeEqs, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensors x1/x2/y1/y2/x/layernormRes shape not same."), return false);
 
-    bool weightShapeEqs = (gamma->GetViewShape() == beta->GetViewShape()) && ShapeEqs2OptV2(gamma, scales1Optional) &&
-                          ShapeEqs2OptV2(gamma, scales2Optional) && ShapeEqs2OptV2(gamma, zeroPoints1Optional) &&
-                          ShapeEqs2OptV2(gamma, zeroPoints2Optional);
+    bool weightShapeEqs = ShapeEqs2OptV2(scales1Optional, zeroPoints1Optional);
     OP_CHECK(
-        weightShapeEqs, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensors gamma/beta/s1/s2/z1/z2 shape not same."),
+        weightShapeEqs, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensors scales1/zeroPoints1 shape not same."),
+        return false);
+
+    bool weightShapeEqs2 = ShapeEqs2OptV2(scales2Optional, zeroPoints2Optional);
+    OP_CHECK(
+        weightShapeEqs2, OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Tensors scales2/zeroPoints2 shape not same."),
         return false);
 
     bool biasShapeEqs = ShapeEqs2OptV2(gamma, biasOptional) || ShapeEqs2OptV2(x1, biasOptional);
@@ -266,7 +275,7 @@ static aclnnStatus CheckParamsV2(
         ACLNN_ERR_PARAM_INVALID);
 
     // 4. 查 x1, gamma, outScales1Out 的等量关系
-    CHECK_RET(CheckShapeRelV2(x1, gamma, outScales1Out, isDynQuant), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShapeRelV2(x1, gamma, beta, scales1Optional, zeroPoints1Optional, outScales1Out, isDynQuant), ACLNN_ERR_PARAM_INVALID);
 
     // 5. 查 所有shape 的等量关系
     CHECK_RET(
