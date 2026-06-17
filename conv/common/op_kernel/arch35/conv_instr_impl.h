@@ -46,6 +46,7 @@ public:
         InitConstValueParams<ChannelWiseT> initParams(
             1, static_cast<uint16_t>(AlignB(loadNum, BLOCK_L0_N) * byteNum / C0_SIZE), 0, 0);
         InitConstValue<ChannelWiseT>(tensorL1, initParams);
+        PipeBarrier<PIPE_MTE2>();
         DataCopyParams dataCopyParams(1, loadNum * byteNum, 0, 0);
         uint8_t rightPadding = (uint8_t)(AlignB(loadNum * byteNum, PADDING_ALIGN_SIZE) / byteNum - loadNum);
         DataCopyPadParams padParams(true, 0, rightPadding, 0);
