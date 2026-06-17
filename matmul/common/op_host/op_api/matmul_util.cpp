@@ -470,7 +470,6 @@ static const aclTensor* GetMatMulOp(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
 {
-    auto npuArch = GetCurrentPlatformInfo().GetCurNpuArch();
     bool enable16In32Out = NeedEnableFp32Output(
         mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_dtype,
         KEEP_DTYPE, bias);
@@ -2032,7 +2031,6 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
         mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT || mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT;
     bool tensorBfloat16 =
         mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 || mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16;
-    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
 
     bool lowPrecisionInput =
         (mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16) ||

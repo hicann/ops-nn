@@ -370,8 +370,8 @@ protected:
         if (context_->InputIsView(0) && selfViewShape.GetDimNum() == 3 && mat2Shape.GetDimNum() == 2 &&
             selfStorageShape.GetDimNum() == 1) {
             auto selfViewStride = context_->GetInputStride(0);
-            tilingData.sliceM = selfViewShape[1];                  // sliceM=self[1], ndNum = baseM/sliceM
-            tilingData.srcNdStride = selfViewStride->GetStride(0); // oriM * srcK
+            tilingData.sliceM = static_cast<uint32_t>(selfViewShape[1]); // sliceM=self[1], ndNum = baseM/sliceM
+            tilingData.srcNdStride = static_cast<uint32_t>(selfViewStride->GetStride(0)); // oriM * srcK
         } else {
             tilingData.sliceM = runInfo_.baseM;
             tilingData.srcNdStride = 1;
