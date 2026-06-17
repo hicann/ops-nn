@@ -12,6 +12,7 @@
  * \file conv2d_v2_base_tiling_tilingkey.cpp
  * \brief
  */
+#include <sstream>
 #include "conv2d_v2_base_tiling.h"
 #include "../../../../common/op_kernel/arch35/conv_tilingkey.h"
 #include "../../../op_kernel/arch35/conv2d_v2_tilingkey.h"
@@ -139,8 +140,26 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         return CONV_NOT_SMALL_KERNEL;
     }
 
-    if ((flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1) &&
-        tilingKeyPara_.fmpTiling == FULLLOAD_AL1 && tilingKeyPara_.weightTiling == FULLLOAD_BL1) {
+    uint64_t ci1 = ConvCeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
+    uint64_t fmpKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
+                        shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                        ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t weightKSize = flagInfo_.enableC04Flag ? ConvAlignB(C04_CIN_SIZE *
+                           shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0) :
+                           ci1 * shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    uint64_t singleCoreNSize = ConvAlignB(ConvCeilDiv(shapeInfo_.co, numBlocksRes.nDim), convOpsConstParams_.n0);
+
+    bool kAL1FullloadFlag = tilingData_.get_kAL1() == fmpKSize;
+    bool kBL1FullloadFlag = tilingData_.get_kBL1() == weightKSize;
+    bool mL1FullloadFlag = tilingData_.get_innerBatch() == 1 ?
+                           tilingData_.get_singleCoreHo() <= tilingData_.get_hoL1() :
+                           tilingData_.get_innerBatch() == tilingData_.get_singleCoreBatch();
+    bool nL1FullloadFlag = tilingData_.get_nBL1() == singleCoreNSize;
+
+    bool al1Fullload = kAL1FullloadFlag && mL1FullloadFlag;
+    bool bl1Fullload = kBL1FullloadFlag && nL1FullloadFlag;
+    if (flagInfo_.mSplitModeFlag && al1Fullload && bl1Fullload &&
+        (flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV || tilingData_.get_groupOpt() == 1)) {
         return CONV_SMALL_KERNEL;
     }
 
@@ -315,8 +334,26 @@ ge::graphStatus Conv2dBaseTiling::SetTilingKey()
 
     OP_LOGD(context_->GetNodeName(), "%s AscendC: c04 mode status is: %d",
             paramInfo_.nodeType.c_str(), flagInfo_.enableC04Flag);
-    OP_LOGD(context_->GetNodeName(), "%s AscendC: tiling key: %lu.",
-            paramInfo_.nodeType.c_str(), tilingKey_);
+    std::stringstream ss;
+    ss << paramInfo_.nodeType << " AscendC: tiling key: " << tilingKey_
+       << ". fmpTiling[" << tilingKeyPara_.fmpTiling
+       << "], weightTiling[" << tilingKeyPara_.weightTiling
+       << "], l1PingPong[" << tilingKeyPara_.l1PingPong
+       << "], l0PingPong[" << tilingKeyPara_.l0PingPong
+       << "], outputOrder[" << tilingKeyPara_.outputOrder
+       << "], iterOrder[" << tilingKeyPara_.iterOrder
+       << "], groupType[" << tilingKeyPara_.groupType
+       << "], enableSmallChannel[" << tilingKeyPara_.enableSmallChannel
+       << "], weightUbTrans[" << tilingKeyPara_.weightUbTrans
+       << "], fmapCppyMode[" << tilingKeyPara_.fmapCppyMode
+       << "], innerBatch[" << tilingKeyPara_.innerBatch
+       << "], disContinuous[" << tilingKeyPara_.disContinuous
+       << "], batchOne[" << tilingKeyPara_.batchOne
+       << "], noPad[" << tilingKeyPara_.noPad
+       << "], smallWeight[" << tilingKeyPara_.smallWeight
+       << "], smallKernel[" << tilingKeyPara_.smallKernel
+       << "].";
+    OP_LOGD(context_->GetNodeName(), "%s", ss.str().c_str());
     return ge::GRAPH_SUCCESS;
 }
 }

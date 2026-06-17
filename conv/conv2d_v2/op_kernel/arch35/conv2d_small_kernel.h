@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2026-2026. All rights reserved.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -8,8 +8,8 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
-#ifndef CONV2D_KERNEL_H
-#define CONV2D_KERNEL_H
+#ifndef CONV2D_SMALL_KERNEL_H
+#define CONV2D_SMALL_KERNEL_H
 
 #include "kernel_operator.h"
 #include "conv2d_v2_util.h"
@@ -22,8 +22,26 @@ constexpr uint32_t AL0_BUF_BYTES = L0A_SIZE / 2;
 constexpr uint32_t BL0_BUF_BYTES = L0B_SIZE / 2;
 constexpr uint32_t AL0_BUF_ELEMS = AL0_BUF_BYTES / sizeof(int8_t);
 constexpr uint32_t BL0_BUF_ELEMS = BL0_BUF_BYTES / sizeof(int8_t);
+constexpr uint32_t PAD_LIST_NUM = 4;
+constexpr uint32_t PAD_BOTTOM_VALUE = 255;
+constexpr uint32_t FLOAT_ONE_FIXED_POINT = 1065353216UL; // IEEE 754 representation of float 1.0
 
 static constexpr event_t EVT_MTE2_DONE = static_cast<event_t>(2);
+
+template<typename ChannelWiseT>
+__aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT> &tensorL1,
+    const GlobalTensor<ChannelWiseT> &tensorGm, uint64_t loadNum)
+{
+    uint64_t byteNum = sizeof(ChannelWiseT);
+    InitConstValueParams<ChannelWiseT> initParams(
+        1, static_cast<uint16_t>(AlignB(loadNum, BLOCK_L0_N) * 4 / C0_SIZE), 0, 0); // 4 for 64 bit align.
+    InitConstValue<ChannelWiseT>(tensorL1, initParams);
+    PipeBarrier<PIPE_MTE2>();
+    DataCopyParams dataCopyParams(1, loadNum * byteNum, 0, 0);
+    uint8_t rightPadding = (uint8_t)(AlignB(loadNum * byteNum, PADDING_ALIGN_SIZE) / byteNum - loadNum);
+    DataCopyPadParams padParams(true, 0, rightPadding, 0);
+    DataCopyPad<ChannelWiseT>(tensorL1, tensorGm, dataCopyParams, padParams);
+}
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type = half>
 class Conv2dSmallKernel {
@@ -36,10 +54,12 @@ public:
     const static uint32_t GK0 = C0_SIZE / sizeof(WeightT);
 
     __aicore__ inline void Init(const Conv2DTilingData& tiling);
-    __aicore__ inline void Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams);
+    __aicore__ inline void Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y,
+                                   const ExtendParams* extendParams);
 
-private:
-    static constexpr uint32_t L0C_ELEMS = (256 * 1024) / sizeof(int32_t); // The space size of L0C is 256*1024B.
+protected:
+    static constexpr uint32_t L0C_ELEMS = L0C_SIZE / sizeof(int32_t);
+    __aicore__ inline void InitCommon(const Conv2DTilingData& tiling);
     __aicore__ inline void LoadFmapL1(GM_ADDR x);
     __aicore__ inline void LoadWeightL1(GM_ADDR filter);
     __aicore__ inline void LoadBiasScaleL1(GM_ADDR bias, const ExtendParams* extendParams);
@@ -104,7 +124,7 @@ private:
 };
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Init(
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::InitCommon(
     const Conv2DTilingData& tiling)
 {
     tiling_ = &tiling;
@@ -150,6 +170,14 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     kTotal_ = cinAligned_ * tiling_->kh * tiling_->kw;
     n1PerCore_ = CeilDiv(actualCo_, GN0);
     k1Total_ = CeilDiv(kTotal_, GK0);
+}
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Init(
+    const Conv2DTilingData& tiling)
+{
+    InitCommon(tiling);
+    if (!coreActive_) return;
 
     // Compute fmap H range for this core's M range
     uint32_t orgWo = static_cast<uint32_t>(tiling_->wout);
@@ -202,7 +230,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 {
     uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
     GlobalTensor<FmapT> fmapGm;
-    fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff + static_cast<uint64_t>(hiLoadStart_) * orgWin_,
+    fmapGm.SetGlobalBuffer(reinterpret_cast<__gm__ FmapT*>(x) + batchFmapOff +
+                               static_cast<uint64_t>(hiLoadStart_) * orgWin_,
                            tiling_->cin * tiling_->hin * tiling_->win);
 
     LocalTensor<FmapT> al1(TPosition::A1, 0, al1ElemCount_);
@@ -220,7 +249,8 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadWeightL1(GM_ADDR filter)
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadWeightL1(
+    GM_ADDR filter)
 {
     uint32_t n1Total = AlignB(tiling_->cout, GN0) / GN0;
     GlobalTensor<WeightT> filterGm;
@@ -241,23 +271,9 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     }
 }
 
-template<typename ChannelWiseT>
-__aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT> &tensorL1,
-    const GlobalTensor<ChannelWiseT> &tensorGm, uint64_t loadNum)
-{
-    uint64_t byteNum = sizeof(ChannelWiseT);
-    InitConstValueParams<ChannelWiseT> initParams(
-        1, static_cast<uint16_t>(AlignB(loadNum, BLOCK_L0_N) * 4 / C0_SIZE), 0, 0);
-    InitConstValue<ChannelWiseT>(tensorL1, initParams);
-    PipeBarrier<PIPE_MTE2>();
-    DataCopyParams dataCopyParams(1, loadNum * byteNum, 0, 0);
-    uint8_t rightPadding = (uint8_t)(AlignB(loadNum * byteNum, PADDING_ALIGN_SIZE) / byteNum - loadNum);
-    DataCopyPadParams padParams(true, 0, rightPadding, 0);
-    DataCopyPad<ChannelWiseT>(tensorL1, tensorGm, dataCopyParams, padParams);
-}
-
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadBiasScaleL1(GM_ADDR bias, const ExtendParams* extendParams)
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadBiasScaleL1(
+    GM_ADDR bias, const ExtendParams* extendParams)
 {
     uint32_t bsOff = nIdx_ * tiling_->singleCoreCo;
     GlobalTensor<BiasT> biasGm;
@@ -268,16 +284,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     }
     {
         if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-            scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0) + nIdx_ * tiling_->singleCoreCo,
-                                      tiling_->singleCoreCo);
+            scale0Gm_.SetGlobalBuffer(
+                reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0) + nIdx_ * tiling_->singleCoreCo,
+                tiling_->singleCoreCo);
             LocalTensor<uint64_t> scale0L1(TPosition::A1, scale0L1OffBytes_, tiling_->singleCoreCo);
             LoadChannelWiseL1FullLoad<uint64_t>(scale0L1, scale0Gm_[0], actualCo_);
         } else if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
             scale0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale0));
         }
         if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
-            reluWeight0Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight0) + nIdx_ * tiling_->singleCoreCo,
-                                           tiling_->singleCoreCo);
+            reluWeight0Gm_.SetGlobalBuffer(
+                reinterpret_cast<__gm__ float*>(extendParams->reluWeight0) + nIdx_ * tiling_->singleCoreCo,
+                tiling_->singleCoreCo);
             LocalTensor<float> reluWeight0L1(TPosition::A1, reluWeight0L1OffBytes_, tiling_->singleCoreCo);
             LoadChannelWiseL1FullLoad<float>(reluWeight0L1, reluWeight0Gm_[0], actualCo_);
         } else if (tiling_->reluMode0 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
@@ -286,16 +304,18 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
         if (tiling_->dualOutput) {
             if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1) + nIdx_ * tiling_->singleCoreCo,
-                                          tiling_->singleCoreCo);
+                scale1Gm_.SetGlobalBuffer(
+                    reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1) + nIdx_ * tiling_->singleCoreCo,
+                    tiling_->singleCoreCo);
                 LocalTensor<uint64_t> scale1L1(TPosition::A1, scale1L1OffBytes_, tiling_->singleCoreCo);
                 LoadChannelWiseL1FullLoad<uint64_t>(scale1L1, scale1Gm_[0], actualCo_);
             } else if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
                 scale1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ uint64_t*>(extendParams->scale1));
             }
             if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::VECTOR_RELU)) {
-                reluWeight1Gm_.SetGlobalBuffer(reinterpret_cast<__gm__ float*>(extendParams->reluWeight1) + nIdx_ * tiling_->singleCoreCo,
-                                               tiling_->singleCoreCo);
+                reluWeight1Gm_.SetGlobalBuffer(
+                    reinterpret_cast<__gm__ float*>(extendParams->reluWeight1) + nIdx_ * tiling_->singleCoreCo,
+                    tiling_->singleCoreCo);
                 LocalTensor<float> reluWeight1L1(TPosition::A1, reluWeight1L1OffBytes_, tiling_->singleCoreCo);
                 LoadChannelWiseL1FullLoad<float>(reluWeight1L1, reluWeight1Gm_[0], actualCo_);
             } else if (tiling_->reluMode1 == static_cast<uint8_t>(ReluMode::SCALAR_RELU)) {
@@ -320,11 +340,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
 __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::SetupLoad3DBase()
 {
-    uint8_t padList[4] = {
+    uint8_t padList[PAD_LIST_NUM] = {
         static_cast<uint8_t>(tiling_->padLeft),
         static_cast<uint8_t>(tiling_->padRight),
         static_cast<uint8_t>(padTopL1_),
-        static_cast<uint8_t>(255)
+        static_cast<uint8_t>(PAD_BOTTOM_VALUE)
     };
     Load3DSetFMatrixCal(curHiLoadL1_, orgWin_, padList);
     Load3DSetPaddingCal(tiling_->offsetx);
@@ -472,7 +492,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, fp);
         }
     } else {
-        fp.deqScalar = 1065353216UL; // 1065353216 Fixed-point number.
+        fp.deqScalar = FLOAT_ONE_FIXED_POINT;
         Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output0Gm[mIdxStart_ + mOff], cl0, fp);
     }
 #endif
@@ -488,7 +508,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     GlobalTensor<Output1T> output1Gm;
     output1Gm.SetGlobalBuffer(reinterpret_cast<__gm__ Output1T*>(y1) + batchOutOff + nOutOff,
                                actualCo_ * hwOut);
-  
+
     FixpipeParamsC310<CO2Layout::COLUMN_MAJOR> fp;
     fp.nSize = actualCo;
     fp.mSize = curM;
@@ -500,7 +520,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     fp.params.srcNzMatrixStride = curMAlign * CeilDiv(actualCo, GM0);
     fp.params.dstDnMatrixStride = hwOut;
     fp.params.srcNzC0Stride = 1;
- 
+
     fp.reluEn = tiling_->reluMode1 != 0;
 #if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
     fp.preReluMode = static_cast<ReluMode>(tiling_->reluMode1);
@@ -523,14 +543,15 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, fp);
         }
     } else {
-        fp.deqScalar = 1065353216UL;
+        fp.deqScalar = FLOAT_ONE_FIXED_POINT;
         Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output1Gm[mIdxStart_ + mOff], cl0, fp);
     }
 #endif
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
+__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Process(
+    GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
     if (!coreActive_ || actualCo_ == 0) return;
 
@@ -619,7 +640,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
         WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(0));
         WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(1));
 
-    	DoCopyOut0(y, cl0, mOff, curM, curMAlign, actualCo_);
+        DoCopyOut0(y, cl0, mOff, curM, curMAlign, actualCo_);
         if (tiling_->dualOutput) {
             DoCopyOut1(extendParams->y1, cl0, mOff, curM, curMAlign, actualCo_);
         }

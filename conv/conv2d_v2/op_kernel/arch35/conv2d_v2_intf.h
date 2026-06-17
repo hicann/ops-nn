@@ -149,7 +149,9 @@ struct Conv2dIntf {
 
     constexpr static bool isKL1NL0FullLoad = ConvParam::smallWeight == 1 || ConvParam::smallWeight == 2;
     constexpr static bool isL0BFullLoadable = false;
-    constexpr static bool isMPreLoad = false;
+    constexpr static bool isMPreLoad = isKL1NL0FullLoad && !isInnerBatchFlag &&
+                                       outputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
+                                       ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::AL1_OPEN);
 
 public:
     ContextType ctx;

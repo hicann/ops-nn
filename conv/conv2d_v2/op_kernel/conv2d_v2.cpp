@@ -19,6 +19,7 @@
 #include "arch35/conv2d_v2_group.h"
 #include "arch35/conv2d_v2_tilingkey.h"
 #include "arch35/conv2d_small_kernel.h"
+#include "arch35/conv2d_small_kernel_parallelism.h"
 
 using namespace AscendC;
 using namespace Conv2DV2Key;
@@ -116,9 +117,24 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
     if constexpr (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
         fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW &&
         AscendC::IsSameType<DTYPE_X, half>::value) {
-        Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
-        op.Init(tilingData);
-        op.Process(x, filter, bias, y, nullptr);
+        const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
+        uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
+        bool isParallelism = false;
+        if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
+            isParallelism = true;
+        } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
+            isParallelism = true;
+        }
+
+        if (isParallelism) {
+            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+            op.Init(tilingData);
+            op.Process(x, filter, bias, y, nullptr);
+        } else {
+            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+            op.Init(tilingData);
+            op.Process(x, filter, bias, y, nullptr);
+        }
     } else {
         if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
             Conv2dBase<fmapType, weightType, outputType, biasType, scaleType,
