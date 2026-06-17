@@ -1941,10 +1941,22 @@ bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
     int64_t dimNum = selfShape.GetDimNum();
-    auto isNAligin = [mat2Shape, dimNum]() {
+    if (dimNum < NUM_TWO) {
+        return false;
+    }
+    auto isKAligned = [mat2Shape, dimNum]() {
+        return ((static_cast<uint64_t>(mat2Shape.GetDim(dimNum - NUM_TWO)) & 0x0000000F) == 0);
+    };
+    auto isNAligned = [mat2Shape, dimNum]() {
         return ((static_cast<uint64_t>(mat2Shape.GetDim(dimNum - 1)) & 0x0000000F) == 0);
     };
-    if (isNAligin() && self->GetDataType() == op::DataType::DT_FLOAT16) {
+    // 310p weightnz input only supports k and n both 32B(16 element for fp16) aligned.
+    bool isMat2NzNotAligned = (mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ) && (!isNAligned() || !isKAligned());
+    if (isMat2NzNotAligned){
+        OP_LOGD("NzNzNd is not supported for mat2 format nz and k(or n) not aligned scenario.");
+        return false;
+    }
+    if (isNAligned() && self->GetDataType() == op::DataType::DT_FLOAT16) {
         return true;
     }
     return false;
