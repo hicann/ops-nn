@@ -74,9 +74,6 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_stc_001)
     auto tensor_desc_beta = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_bias = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
     auto tensor_desc_s1 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_s2 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o1 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
-    auto tensor_desc_o2 = TensorDesc({64}, ACL_FLOAT16, ACL_FORMAT_ND);
 
     auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
     auto tensor_desc_y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
@@ -94,7 +91,40 @@ TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_stc_001)
         aclnnAddLayerNormQuantV2,
         INPUT(
             tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
-            tensor_desc_s2, tensor_desc_o1, tensor_desc_o2, quantMode, eps, xout, divMode),
+            (aclTensor*)nullptr, (aclTensor*)nullptr, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
+        OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
+
+    uint64_t workspace_size = 0;
+    aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
+}
+
+TEST_F(l2_add_layer_norm_quant_v2_test, ascend910b_case_stc_pertensor_001)
+{
+    auto tensor_desc_x1 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_x2 = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_gamma = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_beta = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_bias = TensorDesc({1, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_s1 = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_o1 = TensorDesc({1}, ACL_FLOAT16, ACL_FORMAT_ND);
+
+    auto tensor_desc_y1 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_y2 = TensorDesc({8, 64}, ACL_INT8, ACL_FORMAT_ND);
+    auto tensor_desc_x = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_layernorm_res = TensorDesc({8, 64}, ACL_FLOAT16, ACL_FORMAT_ND);
+    auto tensor_desc_os1 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+    auto tensor_desc_os2 = TensorDesc({8}, ACL_FLOAT, ACL_FORMAT_ND);
+
+    const char* quantMode = "static";
+    double eps = 1e-5;
+    bool xout = true;
+    bool divMode = true;
+
+    auto ut = OP_API_UT(
+        aclnnAddLayerNormQuantV2,
+        INPUT(
+            tensor_desc_x1, tensor_desc_x2, tensor_desc_gamma, tensor_desc_beta, tensor_desc_bias, tensor_desc_s1,
+            (aclTensor*)nullptr, tensor_desc_o1, (aclTensor*)nullptr, quantMode, eps, xout, divMode),
         OUTPUT(tensor_desc_y1, tensor_desc_y2, tensor_desc_x, tensor_desc_layernorm_res, tensor_desc_os1, tensor_desc_os2));
 
     uint64_t workspace_size = 0;

@@ -89,6 +89,7 @@ int main() {
 
   std::vector<int64_t> xShape = {1, 32};
   std::vector<int64_t> gammaShape = {1, 32};
+  std::vector<int64_t> scaleShape = {1};
 
   std::vector<int64_t> reduceShape = {1, 32};
 
@@ -98,9 +99,7 @@ int main() {
   void *gammaDeviceAddr = nullptr;
   void *biasDeviceAddr = nullptr;
   void *s1DeviceAddr = nullptr;
-  void *s2DeviceAddr = nullptr;
   void *z1DeviceAddr = nullptr;
-  void *z2DeviceAddr = nullptr;
 
   // 用于不带bias的输出 Device地址
   void *y1DeviceAddr = nullptr;
@@ -116,9 +115,7 @@ int main() {
   aclTensor *gamma = nullptr;
   aclTensor *bias = nullptr;
   aclTensor *s1 = nullptr;
-  aclTensor *s2 = nullptr;
   aclTensor *z1 = nullptr;
-  aclTensor *z2 = nullptr;
 
   // 用于不带bias的aclTensor
   aclTensor *y1 = nullptr;
@@ -130,6 +127,7 @@ int main() {
 
   int64_t xShapeSize = GetShapeSize(xShape);
   int64_t gammaShapeSize = GetShapeSize(gammaShape);
+  int64_t scaleShapeSize = GetShapeSize(scaleShape);
   int64_t reduceShapeSize = GetShapeSize(reduceShape);
 
   std::vector<float> x1HostData(xShapeSize, 0x3C00);
@@ -138,10 +136,8 @@ int main() {
   std::vector<float> betaHostData(gammaShapeSize, 0x3C00);
   std::vector<float> biasHostData(gammaShapeSize, 0x3C00);
 
-  std::vector<float> s1HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> s2HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> z1HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> z2HostData(gammaShapeSize, 0x3C00);
+  std::vector<float> s1HostData(scaleShapeSize, 0x3C00);
+  std::vector<float> z1HostData(scaleShapeSize, 0x3C00);
 
   // 用于不带bias的HostData
   std::vector<int8_t> y1HostData(xShapeSize, 0);
@@ -162,13 +158,9 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHostData, gammaShape, &biasDeviceAddr, aclDataType::ACL_FLOAT16, &bias);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s1HostData, gammaShape, &s1DeviceAddr, aclDataType::ACL_FLOAT16, &s1);
+  ret = CreateAclTensor(s1HostData, scaleShape, &s1DeviceAddr, aclDataType::ACL_FLOAT16, &s1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s2HostData, gammaShape, &s2DeviceAddr, aclDataType::ACL_FLOAT16, &s2);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z1HostData, gammaShape, &z1DeviceAddr, aclDataType::ACL_FLOAT16, &z1);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z2HostData, gammaShape, &z2DeviceAddr, aclDataType::ACL_FLOAT16, &z2);
+  ret = CreateAclTensor(z1HostData, scaleShape, &z1DeviceAddr, aclDataType::ACL_FLOAT16, &z1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建不带 bias 的 aclTensor
@@ -191,7 +183,7 @@ int main() {
   // 调用aclnnAddLayerNormQuantV2第一段接口
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
-  ret = aclnnAddLayerNormQuantV2GetWorkspaceSize(x1, x2, gamma, beta, nullptr, s1, nullptr, nullptr, nullptr, quantMode, eps, additionalOut, divMode, y1, y2, x, layernormRes, outScales1, outScales2, &workspaceSize, &executor);
+  ret = aclnnAddLayerNormQuantV2GetWorkspaceSize(x1, x2, gamma, beta, nullptr, s1, nullptr, z1, nullptr, quantMode, eps, additionalOut, divMode, y1, y2, x, layernormRes, outScales1, outScales2, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
   // 2. 根据第一段接口计算出的workspaceSize申请device内存
@@ -250,9 +242,7 @@ int main() {
   aclDestroyTensor(gamma);
   aclDestroyTensor(bias);
   aclDestroyTensor(s1);
-  aclDestroyTensor(s2);
   aclDestroyTensor(z1);
-  aclDestroyTensor(z2);
 
   aclDestroyTensor(y1);
   aclDestroyTensor(y2);
@@ -268,9 +258,7 @@ int main() {
   aclrtFree(betaDeviceAddr);
   aclrtFree(biasDeviceAddr);
   aclrtFree(s1DeviceAddr);
-  aclrtFree(s2DeviceAddr);
   aclrtFree(z1DeviceAddr);
-  aclrtFree(z2DeviceAddr);
 
   aclrtFree(y1DeviceAddr);
   aclrtFree(y2DeviceAddr);

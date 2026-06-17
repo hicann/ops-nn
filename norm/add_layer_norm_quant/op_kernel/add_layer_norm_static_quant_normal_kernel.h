@@ -71,6 +71,10 @@ public:
         if constexpr (IS_BIAS_BROADCAST) {
             Ppipe->InitBuffer(biasBuf, ROUND_UP32(alignedStride * sizeof(T)));
         }
+
+        if (this->isPerTensor && this->scales1Exist) {
+            GetPerTensorScaleOffset();
+        }
     }
 
     __aicore__ inline void Process()
@@ -117,6 +121,27 @@ public:
     }
 
 private:
+    __aicore__ inline void GetPerTensorScaleOffset()
+    {
+        if constexpr (is_same<S, float>::value) {
+            perTensorScale1 = scales1Gm.GetValue(0);
+        } else if constexpr (is_same<S, half>::value) {
+            perTensorScale1 = static_cast<float>(scales1Gm.GetValue(0));
+        } else {
+            perTensorScale1 = Cast(scales1Gm.GetValue(0));
+        }
+
+        if (isZeroPoint1Exist) {
+            if constexpr (is_same<S, float>::value) {
+                perTensorOffset1 = zeroPoints1Gm.GetValue(0);
+            } else if constexpr (is_same<S, half>::value) {
+                perTensorOffset1 = static_cast<float>(zeroPoints1Gm.GetValue(0));
+            } else {
+                perTensorOffset1 = Cast(zeroPoints1Gm.GetValue(0));
+            }
+        }
+    }
+
     __aicore__ inline void CopyInX1X2(uint64_t gmOffset, int32_t rowCount, int32_t elementCount, DataCopyPadParams& padParams)
     {
         LocalTensor<T> x1x2LocalIn = inRowsQue.template AllocTensor<T>();
@@ -386,30 +411,39 @@ private:
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- y
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
 
-        LocalTensor<S> scalesOffsetLocal = inRowsQue.template DeQue<S>();
-        LocalTensor<float> tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
-        auto scalesLocal = scalesOffsetLocal[0];
-        auto offsetsLocal = scalesOffsetLocal[alignedStride];
+        if (this->isPerTensor && layernormResExist) {
+            Muls(xLocalFp32, xLocalFp32, perTensorScale1, elementCount);
+            PipeBarrier<PIPE_V>();
+            if (isZeroPoint1Exist) {
+                Adds(xLocalFp32, xLocalFp32, perTensorOffset1, elementCount);
+                PipeBarrier<PIPE_V>();
+            }
+        } else {
+            LocalTensor<S> scalesOffsetLocal = inRowsQue.template DeQue<S>();
+            LocalTensor<float> tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
+            auto scalesLocal = scalesOffsetLocal[0];
+            auto offsetsLocal = scalesOffsetLocal[alignedStride];
 
-        CastToFloat<T>(yLocalFp32, scalesLocal, this->numLastDim);
-        PipeBarrier<PIPE_V>();
-        for (int32_t rid = 0; rid < nums; ++rid) {
-            if (layernormResExist) {
+            CastToFloat<T>(yLocalFp32, scalesLocal, this->numLastDim);
+            PipeBarrier<PIPE_V>();
+            for (int32_t rid = 0; rid < nums; ++rid) {
+                if (layernormResExist) {
                 Mul(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim); // xLocalFp32 <-- y * scales1
             } else{
                 Div(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim); // xLocalFp32 <-- y / scales1
+                }
             }
-        }
-        PipeBarrier<PIPE_V>();
-        if (isZeroPoint1Exist) {
-            CastToFloat<T>(tmpLocal, offsetsLocal, this->numLastDim);
             PipeBarrier<PIPE_V>();
-            for (int32_t rid = 0; rid < nums; ++rid) {
-                Add(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], tmpLocal, this->numLastDim);
+            if (isZeroPoint1Exist) {
+                CastToFloat<T>(tmpLocal, offsetsLocal, this->numLastDim);
+                PipeBarrier<PIPE_V>();
+                for (int32_t rid = 0; rid < nums; ++rid) {
+                    Add(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], tmpLocal, this->numLastDim);
+                }
             }
+            inRowsQue.FreeTensor(scalesOffsetLocal);
+            PipeBarrier<PIPE_V>();
         }
-        inRowsQue.FreeTensor(scalesOffsetLocal);
-        PipeBarrier<PIPE_V>();
         LocalTensor<int8_t> yLocal = outRowQue.template AllocTensor<int8_t>();
         RoundFloat2Int8(yLocal, xLocalFp32, elementCount);
         PipeBarrier<PIPE_V>();
@@ -427,7 +461,7 @@ private:
         for (int32_t rid = 0; rid < nums; ++rid) {
             if (layernormResExist) {
                 Mul(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim);
-            }else{
+            } else {
                 Div(xLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], yLocalFp32, this->numLastDim);
             }
         }
@@ -447,31 +481,39 @@ private:
         LocalTensor<float> xLocalFp32 = xBufFp32.Get<float>(); // xLocalFp32 <-- y
         LocalTensor<float> yLocalFp32 = yBufFp32.Get<float>();
 
-        LocalTensor<S> scalesOffsetLocal = inRowsQue.template DeQue<S>();
-        LocalTensor<float> tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
-        auto scalesLocal = scalesOffsetLocal[0];
-        auto offsetsLocal = scalesOffsetLocal[alignedStride];
+        if (this->isPerTensor && layernormResExist) {
+            Muls(yLocalFp32, xLocalFp32, perTensorScale1, elementCount);
+            PipeBarrier<PIPE_V>();
+            if (isZeroPoint1Exist) {
+                Adds(yLocalFp32, yLocalFp32, perTensorOffset1, elementCount);
+                PipeBarrier<PIPE_V>();
+            }
+        } else {
+            LocalTensor<S> scalesOffsetLocal = inRowsQue.template DeQue<S>();
+            LocalTensor<float> tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
+            auto scalesLocal = scalesOffsetLocal[0];
+            auto offsetsLocal = scalesOffsetLocal[alignedStride];
 
-        auto scales1Fp32 = yLocalFp32[(nums - 1) * alignedStride];
-        CastToFloat<S>(scales1Fp32, scalesLocal, this->numLastDim);
-        PipeBarrier<PIPE_V>();
-        for (int32_t rid = 0; rid < nums; ++rid) {
-            if (layernormResExist) {
-                Mul(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
-            } else{
-                Div(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
-            }      
-        }
-        PipeBarrier<PIPE_V>();
-        if (isZeroPoint1Exist) {
-            CastToFloat<S>(tmpLocal, offsetsLocal, this->numLastDim);
+            auto scales1Fp32 = yLocalFp32[(nums - 1) * alignedStride];
+            CastToFloat<S>(scales1Fp32, scalesLocal, this->numLastDim);
             PipeBarrier<PIPE_V>();
             for (int32_t rid = 0; rid < nums; ++rid) {
-                Add(yLocalFp32[rid * alignedStride], yLocalFp32[rid * alignedStride], tmpLocal, this->numLastDim);
+                if (layernormResExist) {
+                    Mul(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
+                } else {
+                    Div(yLocalFp32[rid * alignedStride], xLocalFp32[rid * alignedStride], scales1Fp32, this->numLastDim);
+                }
             }
+            PipeBarrier<PIPE_V>();
+            if (isZeroPoint1Exist) {
+                CastToFloat<S>(tmpLocal, offsetsLocal, this->numLastDim);
+                PipeBarrier<PIPE_V>();
+                for (int32_t rid = 0; rid < nums; ++rid) {
+                    Add(yLocalFp32[rid * alignedStride], yLocalFp32[rid * alignedStride], tmpLocal, this->numLastDim);
+                }
+            }
+            inRowsQue.FreeTensor(scalesOffsetLocal);
         }
-        
-        inRowsQue.FreeTensor(scalesOffsetLocal);
         PipeBarrier<PIPE_V>();
 
         CopyInScaleOffset(scales2Gm, zeroPoints2Gm, isZeroPoint2Exist);
@@ -482,9 +524,8 @@ private:
         RoundFloat2Int8(y1Local, yLocalFp32, elementCount);
         PipeBarrier<PIPE_V>();
 
-        // compute scales2
-        scalesOffsetLocal = inRowsQue.template DeQue<S>();
-        tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
+        LocalTensor<S> scalesOffsetLocal = inRowsQue.template DeQue<S>();
+        LocalTensor<float> tmpLocal = scalesOffsetLocal.template ReinterpretCast<float>();
         ApplyScales2AndOffsets(nums, alignedStride, xLocalFp32, yLocalFp32, scalesOffsetLocal, tmpLocal);
         PipeBarrier<PIPE_V>();
 
@@ -550,6 +591,9 @@ private:
 
     __aicore__ inline void CopyInScaleOffset(GlobalTensor<S> scalesGM, GlobalTensor<S> offsetsGM, bool hasOffset)
     {
+        if (this->isPerTensor) {
+            return;
+        }
         LocalTensor<S> scalesOffsetCopyIn = inRowsQue.template AllocTensor<S>();
         if (layernormResExist) {
             LocalTensor<S> tensor_local = tensor_buf.Get<S>();
@@ -590,6 +634,9 @@ private:
     bool isZeroPoint2Exist;
     bool layernormResExist;
     int32_t alignedStride;
+
+    float perTensorScale1 = 1.0f;
+    float perTensorOffset1 = 0.0f;
 };
 
 #endif // __ADD_LAYER_NORM_STATIC_QUANT_NORMAL_KERNEL_H_
