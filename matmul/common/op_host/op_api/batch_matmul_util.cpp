@@ -241,6 +241,19 @@ static bool CheckAscendCScenario(
         return false;
     }
 
+    // vector kernel scenario: effective N dim of x2 is 1
+    // 当nDim = 1时，触发vector kernel场景
+    size_t x2DimNum = x2->GetViewShape().GetDimNum();
+    int64_t nDim = x2->GetViewShape().GetDim(x2DimNum - 2);
+    size_t x1DimNum = x1->GetViewShape().GetDimNum();
+    int64_t mDim = x1->GetViewShape().GetDim(x1DimNum - 2);
+    int64_t kDim = x1->GetViewShape().GetDim(x1DimNum - 1);
+    int64_t MAX_MK_DIM = 8;
+    if (npuArch == NpuArch::DAV_2201 && adjX2 == 1 && nDim == 1 && mDim <= MAX_MK_DIM && kDim <= MAX_MK_DIM) {
+        OP_LOGI("Hit batch_mat_mul_v3 vector kernel scenario: effective N dimension is 1.");
+        return true;
+    }
+
     return Ops::NN::BmmCheckHitV3Shape(x1, x2, bias, adjX1, adjX2, mmOpInfo.support_info.self_format,
                                        mmOpInfo.support_info.mat2_format, mmOpInfo.enableFp16Bf16InFp32Out);
 }

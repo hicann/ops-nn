@@ -14,6 +14,7 @@
  */
 #include "batch_mat_mul_v3.h"
 #include "batch_mat_mul_v3_tiling_key.h"
+#include "batch_mat_mul_v3_vector.h"
 
 using namespace AscendC;
 using namespace matmul;
@@ -137,6 +138,17 @@ constexpr CubeFormat format_y = CubeFormat::ND;
         op.Process();                                                                                                 \
     } while (0)
 
+#define BMMV3_IMPL_VECTOR_CLASS(templateClass)                                                                        \
+    do {                                                                                                              \
+        using aType = MatmulType<AscendC::TPosition::GM, format_x1, float, false, LayoutMode::NORMAL>;             \
+        using bType = MatmulType<AscendC::TPosition::GM, format_x2, float, false, LayoutMode::NORMAL>;             \
+        using cType = MatmulType<AscendC::TPosition::GM, format_y, float, false, LayoutMode::NORMAL>;               \
+        TPipe pipe;                                                                                                   \
+        templateClass<aType, bType, cType> op;                                                                        \
+        op.Init(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM, &tilingData, &pipe);                                   \
+        op.Process();                                                                                                 \
+    } while (0)
+
 template<int MULTIBATCHL1FULLLOAD, int MULTIBATCH, int LOADMODE, int ISMULTIBATCHOUT, int MIXND2NZ>
 __global__ __aicore__ void batch_mat_mul_v3(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
@@ -194,6 +206,13 @@ __global__ __aicore__ void batch_mat_mul_v3(
         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
         BMMV3_IMPL_CLASS(BatchMatMulUnalignedMultiBatchKernel, BatchMatMulUnalignedMultiBatchBaseBlock, MM_CFG_MULTI_BATCH_OUT);
+    } else if constexpr (
+        MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
+        MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_VECTOR_FULLLOAD &&
+        ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE &&
+        format_x1 == CubeFormat::ND && format_x2 == CubeFormat::ND &&
+        std::is_same_v<DTYPE_X1, float> && std::is_same_v<DTYPE_X2, float> && std::is_same_v<DTYPE_Y, float>) {
+        BMMV3_IMPL_VECTOR_CLASS(BatchMatmulVectorKernel);
 #if defined(ORIG_DTYPE_X1) && ORIG_DTYPE_X1 == DT_FLOAT
     } else if constexpr (
         MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_TRUE &&
