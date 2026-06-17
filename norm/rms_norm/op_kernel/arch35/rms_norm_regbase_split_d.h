@@ -27,6 +27,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormTilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
+        is_gemma = tiling->is_gemma;
         numCol = tiling->num_col;
         numRow = tiling->num_row;
         blockFactor = tiling->block_factor;
@@ -206,7 +207,7 @@ private:
             LocalTensor<DX> xLocal = inQueueX.DeQue<DX>();
             LocalTensor<DX> yLocal = outQueueY.AllocTensor<DX>();
             uint32_t calCount = CeilAlign((uint64_t)(calColNum * sizeof(DX)), ALIGN_512_FACTOR) / sizeof(DX);
-            ComputeLatterY<DX, DG>(xLocal, gammaLocal, yLocal, rstdLocal, row, calCount);
+            ComputeLatterY<DX, DG>(xLocal, gammaLocal, yLocal, rstdLocal, row, calCount, is_gemma);
             inQueueX.FreeTensor(xLocal);
             outQueueY.EnQue<DX>(yLocal);
             CopyOutY(rowRepeat * rowFactor + row, colRepeat, calColNum);
@@ -256,6 +257,7 @@ private:
     float avgFactor;
     uint32_t rowWork{1};
     uint32_t workLocalLen{0};
+    uint8_t is_gemma = 0;
 };
 } // namespace RmsNorm
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_SPLIT_D_H

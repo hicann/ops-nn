@@ -484,6 +484,41 @@ __aicore__ inline void ComputeY(
         }
     }
 }
+
+template <typename DG>
+__aicore__ inline void GemmaWithOutFloat(
+    RegTensor<DG> gammaReg1, RegTensor<DG> gammaReg2, RegTensor<float>& gammaFp32Reg1, RegTensor<float>& gammaFp32Reg2, 
+    uint8_t isGemma, MaskReg pregMask)
+{
+    if(isGemma) {
+        RegTensor<float> gammaTmp1, gammaTmp2;
+        Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, pregMask);
+        Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, pregMask);
+        Adds(gammaFp32Reg1, gammaTmp1, 1.0f, pregMask);
+        Adds(gammaFp32Reg2, gammaTmp2, 1.0f, pregMask);
+    } else {
+        Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, pregMask);
+        Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, pregMask);
+    }
+}
+
+template <typename DG>
+__aicore__ inline void GemmaWithFloat(
+    __local_mem__ DG* gammaAddr1, __local_mem__ DG* gammaAddr2, RegTensor<DG>& gammaReg1, RegTensor<DG>& gammaReg2, 
+    uint8_t isGemma, MaskReg maskReg, uint16_t i)
+{
+    if(isGemma) {
+        RegTensor<float> gammaTmp1, gammaTmp2;
+        DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+        DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+        Adds(gammaReg1, gammaTmp1, 1.0f, maskReg);
+        Adds(gammaReg2, gammaTmp2, 1.0f, maskReg);
+    } else {
+        DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
+        DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+    }
+}
+
 /*!
  * compute multi N yLocal = xLocal * rstd * gammaLocal
  *
@@ -496,8 +531,8 @@ __aicore__ inline void ComputeY(
  */
 template <typename DX, typename DG>
 __aicore__ inline void ComputeYMultiN(
-    LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal,
-    uint32_t offset, uint32_t count, uint32_t curRows)
+    LocalTensor<float>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal, 
+    uint32_t offset, uint32_t count, uint32_t curRows, uint8_t isGemma)
 {
     uint32_t calCount = count / 2;
     uint16_t repeatTimes = CeilDivision(calCount, V_LENGTH);
@@ -528,8 +563,7 @@ __aicore__ inline void ComputeYMultiN(
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                     DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, pregMask);
-                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, pregMask);
+                    GemmaWithOutFloat(gammaReg1, gammaReg2, gammaFp32Reg1, gammaFp32Reg2, isGemma, pregMask);
                     Mul(dst1Reg, xReg1, rstdReg, pregMask);
                     Mul(dst2Reg, xReg2, rstdReg, pregMask);
                     Mul(yReg1, dst1Reg, gammaFp32Reg1, pregMask);
@@ -562,8 +596,7 @@ __aicore__ inline void ComputeYMultiN(
                     maskReg = UpdateMask<float>(sreg);
                     DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                    DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                    GemmaWithFloat(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, isGemma, maskReg, i);
                     Mul(dst1Reg, xReg1, rstdReg, maskReg);
                     Mul(dst2Reg, xReg2, rstdReg, maskReg);
                     Mul(yReg1, dst1Reg, gammaReg1, maskReg);
@@ -594,8 +627,7 @@ __aicore__ inline void ComputeYMultiN(
                     maskReg = UpdateMask<float>(sreg);
                     DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                     DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                    DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                    DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                    GemmaWithFloat(gammaAddr1, gammaAddr2, gammaReg1, gammaReg2, isGemma, maskReg, i);
                     Mul(vRegTmp1, xReg1, rstdReg, maskReg);
                     Mul(vRegTmp2, xReg2, rstdReg, maskReg);
                     Mul(yReg1, vRegTmp1, gammaReg1, maskReg);
@@ -626,7 +658,7 @@ __aicore__ inline void ComputeYMultiN(
 template <typename DX, typename DG>
 __aicore__ inline void ComputeLatterY(
     LocalTensor<DX>& xLocal, LocalTensor<DG>& gammaLocal, LocalTensor<DX>& yLocal, LocalTensor<float>& rstdLocal,
-    uint32_t offset, uint32_t count)
+    uint32_t offset, uint32_t count, uint8_t isGemma)
 {
     uint32_t calCount = count / 2;
     uint32_t sreg = (uint32_t)calCount;
@@ -656,8 +688,16 @@ __aicore__ inline void ComputeLatterY(
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg1, gammaAddr1 + i * V_LENGTH);
                 DataCopy<DG, LoadDist::DIST_UNPACK_B16>(gammaReg2, gammaAddr2 + i * V_LENGTH);
-                Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, maskReg);
-                Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, maskReg);
+                if(isGemma) {
+                    RegTensor<float> gammaTmp1, gammaTmp2;
+                    Cast<float, DG, castTraitB162B32>(gammaTmp1, gammaReg1, maskReg);
+                    Cast<float, DG, castTraitB162B32>(gammaTmp2, gammaReg2, maskReg);
+                    Adds(gammaFp32Reg1, gammaTmp1, 1.0f, maskReg);
+                    Adds(gammaFp32Reg2, gammaTmp2, 1.0f, maskReg);
+                } else {
+                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg1, gammaReg1, maskReg);
+                    Cast<float, DG, castTraitB162B32>(gammaFp32Reg2, gammaReg2, maskReg);
+                }
                 Cast<float, DX, castTraitB162B32>(xReg1, xB16Reg1, maskReg);
                 Cast<float, DX, castTraitB162B32>(xReg2, xB16Reg2, maskReg);
                 Mul(dst1Reg, xReg1, rstdReg, maskReg);
@@ -683,8 +723,16 @@ __aicore__ inline void ComputeLatterY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg1, xAddr1 + i * V_LENGTH);
                 DataCopy<DX, LoadDist::DIST_UNPACK_B16>(xB16Reg2, xAddr2 + i * V_LENGTH);
-                DataCopy(gammaFp32Reg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy(gammaFp32Reg2, gammaAddr2 + i * V_LENGTH);
+                if(isGemma) {
+                    RegTensor<float> gammaTmp1, gammaTmp2;
+                    DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+                    DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+                    Adds(gammaFp32Reg1, gammaTmp1, 1.0f, maskReg);
+                    Adds(gammaFp32Reg2, gammaTmp2, 1.0f, maskReg);
+                } else {
+                    DataCopy(gammaFp32Reg1, gammaAddr1 + i * V_LENGTH);
+                    DataCopy(gammaFp32Reg2, gammaAddr2 + i * V_LENGTH);
+                }
                 Cast<float, DX, castTraitB162B32>(xReg1, xB16Reg1, maskReg);
                 Cast<float, DX, castTraitB162B32>(xReg2, xB16Reg2, maskReg);
                 Mul(dst1Reg, xReg1, rstdReg, maskReg);
@@ -709,8 +757,16 @@ __aicore__ inline void ComputeLatterY(
                 maskReg = UpdateMask<float>(sreg);
                 DataCopy(xReg1, xAddr1 + i * V_LENGTH);
                 DataCopy(xReg2, xAddr2 + i * V_LENGTH);
-                DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
-                DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                if(isGemma) {
+                    RegTensor<float> gammaTmp1, gammaTmp2;
+                    DataCopy(gammaTmp1, gammaAddr1 + i * V_LENGTH);
+                    DataCopy(gammaTmp2, gammaAddr2 + i * V_LENGTH);
+                    Adds(gammaReg1, gammaTmp1, 1.0f, maskReg);
+                    Adds(gammaReg2, gammaTmp2, 1.0f, maskReg);
+                } else {
+                    DataCopy(gammaReg1, gammaAddr1 + i * V_LENGTH);
+                    DataCopy(gammaReg2, gammaAddr2 + i * V_LENGTH);
+                }
                 Mul(vRegTmp1, xReg1, rstdReg, maskReg);
                 Mul(vRegTmp2, xReg2, rstdReg, maskReg);
                 Mul(yReg1, vRegTmp1, gammaReg1, maskReg);

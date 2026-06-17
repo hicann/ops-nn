@@ -27,6 +27,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormArch35TilingData* tiling)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
+        is_gemma = tiling->is_gemma;
         numRow = tiling->num_row;
         numCol = tiling->num_col;
         blockFactor = tiling->block_factor;
@@ -155,9 +156,9 @@ private:
 
         if constexpr (is_same<DX, half>::value || is_same<DX, bfloat16_t>::value) {
             inQueueX.FreeTensor(xLocal);
-            ComputeYMultiN<DX, DG>(xFp32, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows);
+            ComputeYMultiN<DX, DG>(xFp32, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows, is_gemma);
         } else {
-            ComputeYMultiN<DX, DG>(xLocal, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows);
+            ComputeYMultiN<DX, DG>(xLocal, gammaLocal, yLocal, rstdLocal, curRow, numColAlign, curRows, is_gemma);
             inQueueX.FreeTensor(xLocal);
         }
         outQueueY.EnQue<DX>(yLocal);
@@ -205,6 +206,7 @@ private:
     float avgFactor;
     uint32_t rowWork{1};
     uint32_t workLocalLen{0};
+    uint8_t is_gemma = 0;
 };
 } // namespace RmsNorm
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_H

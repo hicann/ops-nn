@@ -64,6 +64,8 @@ constexpr int32_t PERFORMANC_DIM_THREE = 3;
 constexpr int32_t PERFORMANC_DIM_ONE_MAX = 512;
 constexpr int32_t PERFORMANC_DIM_TWO_MAX = 8;
 constexpr int32_t PERFORMANC_DIM_THREE_MAX = 5120;
+constexpr uint8_t GEMMA_MODE = 1;
+constexpr uint8_t RMSNORM_MODE = 0;
 
 RMSNormTilingData tilingData;
 
@@ -360,7 +362,7 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
         RMSNormArch35TilingData arch35TilingData;
         return TilingArch354RmsNorm(
-            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon, tiling, arch35TilingData);
+            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, *epsilon, RMSNORM_MODE, tiling, arch35TilingData);
     } else if (curSocVersion == platform_ascendc::SocVersion::ASCEND910) {
         SocVersion = 1U;
         colAlign = numColAlign == numCol ? 1ULL : 0ULL;
@@ -551,14 +553,16 @@ static ge::graphStatus Tiling4RmsNorm(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-void setPlateCoreInfo(gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize)
+void setPlateCoreInfo(gert::TilingContext* context, uint32_t& numCore, uint64_t& ubSize, platform_ascendc::SocVersion& curSocVersion)
 {
     auto ptrCompileInfo = reinterpret_cast<const Tiling4RmsNormCompileInfo*>(context->GetCompileInfo());
     if (nullptr == ptrCompileInfo) {
         auto ascendc_platform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
+        curSocVersion = ascendc_platform.GetSocVersion();
         numCore = ascendc_platform.GetCoreNumAiv();
         ascendc_platform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
     } else {
+        curSocVersion = ptrCompileInfo->curSocVersion;
         numCore = ptrCompileInfo->totalCoreNum;
         ubSize = ptrCompileInfo->totalUbSize;
     }
@@ -579,17 +583,17 @@ static bool setEpsTiling(const gert::TilingContext* context)
 }
 
 static bool getUbFactor(
-    const uint32_t dataPerBlock, const uint32_t xDtypeKey, const uint32_t numCore, gert::TilingContext* context)
+    const uint32_t dataPerBlock, const uint32_t xDtypeKey, const uint32_t numCore, 
+    uint64_t& numCol, uint64_t& numRow, gert::TilingContext* context)
 {
     const gert::Shape x_shape = context->GetInputShape(X_INDEX)->GetStorageShape();
     const gert::Shape gamma_shape = context->GetInputShape(GAMMA_INDEX)->GetStorageShape();
     std::string opType(context->GetNodeType());
 
-    uint64_t numCol = gamma_shape.GetShapeSize();
+    numCol = gamma_shape.GetShapeSize();
     float avgFactor = (static_cast<float>(numCol) == 0.0f) ? 0.0f : (1.0f / static_cast<float>(numCol));
     size_t xDimNum = x_shape.GetDimNum();
     size_t gammaDimNum = gamma_shape.GetDimNum();
-    uint64_t numRow = 1;
     for (size_t i = 0; i < xDimNum - gammaDimNum; i++) {
         numRow *= x_shape.GetDim(i);
     }
@@ -650,29 +654,43 @@ void setWorkSize(gert::TilingContext* context)
 
 static ge::graphStatus Tiling4GemmaRmsNorm(gert::TilingContext* context)
 {
+    platform_ascendc::SocVersion curSocVersion;
     OP_TILING_CHECK(
         !CheckInputShape4RmsNorm(context), OP_LOGE(context, "Input shape invalid."),
         return ge::GRAPH_FAILED);
-    OP_LOGD(context, " Tiling4RmsNorm");
+    OP_LOGD(context, " Tiling4GemmaRmsNorm");
     OP_TILING_CHECK(
         !setEpsTiling(context), OP_LOGE(context, "Get attr epsilon error."), return ge::GRAPH_FAILED);
 
     auto xDesc = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
     auto xDataType = xDesc->GetDataType();
+    
+    auto gammaDesc = context->GetInputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context, gammaDesc);
+    auto gammaDataType = gammaDesc->GetDataType();
+
 
     uint32_t numCore;
     uint32_t dataPerBlock;
     uint64_t ubSize;
-    setPlateCoreInfo(context, numCore, ubSize);
+    setPlateCoreInfo(context, numCore, ubSize, curSocVersion);
     ubSize = ubSize - UB_USED;
 
     uint32_t xDtypeKey = DTYPE_KEY_FP16;
     SetByDtype(xDataType, xDtypeKey, dataPerBlock);
+    uint64_t numRow = 1;
+    uint64_t numCol = 0;
     OP_TILING_CHECK(
-        !getUbFactor(dataPerBlock, xDtypeKey, numCore, context),
-        OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling split last dim failed, please check."),
+        !getUbFactor(dataPerBlock, xDtypeKey, numCore, numCol, numRow, context),
+        OPS_REPORT_VECTOR_INNER_ERR(context, "Tiling getUbFactor failed, please check."),
         return ge::GRAPH_FAILED);
+    float epsilon = tilingData.get_epsilon();
+    if (Ops::NN::OpTiling::IsRegbaseSocVersion(context)) {
+        RMSNormArch35TilingData arch35TilingData;
+        return TilingArch354RmsNorm(
+            context, numRow, numCol, numCore, ubSize, xDataType, gammaDataType, epsilon, GEMMA_MODE, tilingData, arch35TilingData);
+    } 
     SetDefaultTiling();
     setWorkSize(context);
     tilingData.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());

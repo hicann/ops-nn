@@ -330,7 +330,7 @@
     {"name":"MoeTutelDispatch", "compute_units": ["ascend910b"], "auto_sync" : true},
     {"name": "RmsNorm", "compute_units": ["ascend950", "ascend910_93", "ascend910b", "ascend910", "ascend310p", "kirinx90", "kirin9030", "mc62"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"], "mc62": ["--cce-no-dcache-flush"]}},
     {"name": "RmsNormDynamicMxQuant", "compute_units": ["ascend950"], "auto_sync" : false, "impl_mode" : "", "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"GemmaRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "kirinx90", "kirin9030"], "auto_sync" : false},
+    {"name":"GemmaRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "kirinx90", "kirin9030", "ascend950"], "auto_sync" : false},
     {"name":"AddRmsNorm", "compute_units": ["ascend910_93", "ascend910b", "ascend310p", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name":"AddRmsNormCast", "compute_units": ["ascend910_93", "ascend910b", "ascend950", "kirinx90", "kirin9030"], "auto_sync" : false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
     {"name": "DuaQuantizeAddLayerNorm", "compute_units": ["ascend910b", "ascend910_93"], "auto_sync" : false},

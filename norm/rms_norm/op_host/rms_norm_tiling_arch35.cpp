@@ -18,7 +18,7 @@
 namespace optiling {
 ge::graphStatus TilingArch354RmsNorm(
     gert::TilingContext* context, uint64_t numRow, uint64_t numCol, uint32_t numCore, uint64_t ubSize,
-    ge::DataType xDataType, ge::DataType gammaDataType, float epsilon, RMSNormTilingData& rmsNormTilingData, RMSNormArch35TilingData& rmsNormArch35TilingData)
+    ge::DataType xDataType, ge::DataType gammaDataType, float epsilon, uint8_t isGemma, RMSNormTilingData& rmsNormTilingData, RMSNormArch35TilingData& rmsNormArch35TilingData)
 {
     uint64_t blockFactor = 1ULL;
     uint64_t tileNum = CeilDiv(numRow, static_cast<uint64_t>(numCore));
@@ -71,6 +71,7 @@ ge::graphStatus TilingArch354RmsNorm(
         rmsNormArch35TilingData.set_epsilon(epsilon);
         rmsNormArch35TilingData.set_avg_factor(avgFactor);
         rmsNormArch35TilingData.set_last_block_factor(lastBlockFactor);
+        rmsNormArch35TilingData.set_is_gemma(isGemma);
         OP_LOGD(
             context,
             "TilingData[%u] numCore: %u, ubSize: %lu, numRow: %lu, numCol: %lu, numColAlignFullLoad: %lu "
@@ -124,6 +125,7 @@ ge::graphStatus TilingArch354RmsNorm(
         rmsNormTilingData.set_col_buffer_length(colBufferLength);
         rmsNormTilingData.set_multi_n_num(multiNNum);
         rmsNormTilingData.set_is_nddma(isNddma);
+        rmsNormTilingData.set_is_gemma(isGemma);
 
         OP_LOGD(
             context,

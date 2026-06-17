@@ -30,6 +30,7 @@ namespace RmsNorm {
         __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR y, GM_ADDR rstd, const RMSNormArch35TilingData* tiling)
         {
             // Tilingdata init
+            is_gemma = tiling->is_gemma;
             curBlockIdx = GetBlockIdx();
             coreNum = GetBlockNum();
             numRow = tiling->num_row;
@@ -173,6 +174,7 @@ namespace RmsNorm {
             {
                 RegTensor<float> RstdReg;
                 RegTensor<float> gammaReg;
+                
                 RegTensor<float> xReg;
                 RegTensor<float> mul1Reg;
                 RegTensor<float> mul2Reg;
@@ -185,7 +187,13 @@ namespace RmsNorm {
                         LoadRegForDtype(xLocalAddr, xReg, pregCurLoop, (i * colNumAlign + j * VectorLenB32));
                         Mul(mul1Reg, xReg, RstdReg, pregCurLoop);
                         LoadRegForDtype(gammaLocalUbAddr, gammaReg, pregCurLoop, (j * VectorLenB32));
-                        Mul(mul2Reg, mul1Reg, gammaReg, pregCurLoop);
+                        if (is_gemma) {
+                            RegTensor<float> gammaAddReg;
+                            Adds(gammaAddReg, gammaReg, 1.0f, pregCurLoop);
+                            Mul(mul2Reg, mul1Reg, gammaAddReg, pregCurLoop);
+                        } else {
+                            Mul(mul2Reg, mul1Reg, gammaReg, pregCurLoop);
+                        }
                         StoreRegForDtype(yLocalUbAddr, mul2Reg, pregCurLoop, (i * colNumAlign + j * VectorLenB32));
                     }
                 }
@@ -230,6 +238,7 @@ namespace RmsNorm {
         static constexpr float RMS_ZERO = 0.0f;
         static constexpr int32_t NUM_ONE = 1;
         static constexpr int32_t NUM_TWO = 2;
+        uint8_t is_gemma = 0;
 };
 } // namespace RmsNorm
 #endif // OPS_BUILT_IN_TBE_IMPL_ASCENDC_RMS_NORM_REGBASE_PERF_H
