@@ -34,6 +34,11 @@ static const std::initializer_list<op::DataType> AICORE910B_DTYPE_SUPPORT_LIST =
     op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
     op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> BIG_SHAPE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16,
+    op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BOOL};
+
 static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize)
 {
     if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
@@ -41,12 +46,20 @@ static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* rep
         return false;
     }
 
+    auto xViewShape = x->GetViewShape();
+    auto xDataType = x->GetDataType();
+    int64_t xDimNum = xViewShape.GetDimNum();
+    for (int64_t i = 0; i < xDimNum; i++) {
+        if (xViewShape[i] > INT32_MAX_NUM && CheckType(xDataType, BIG_SHAPE_DTYPE_SUPPORT_LIST)) {
+            return true;
+        }
+    }
+
     if (outputSize >= INT32_MAX_NUM) {
         return false;
     }
 
     // 这种情况是V1特殊优化场景，走V1
-    int64_t xDimNum = x->GetViewShape().GetDimNum();
     if (xDimNum == 1 && repeats->GetViewShape().GetDimNum() == 1 &&
         repeats->GetViewShape().GetDim(0) == x->GetViewShape().GetDim(0)) {
         // repeats and z one-to-one，and rowLength = 1 and not is int64
