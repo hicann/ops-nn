@@ -140,7 +140,7 @@ GraphUniqPtr BucketizeFusionPass::Replacement(const std::unique_ptr<MatchResult>
     bucketize_io.node.GetAttr("boundaries", boundaries);
     std::vector<int64_t> dims = {static_cast<int64_t>(boundaries.size())};
     auto boundaries_dtype = bucketize_input_desc.GetDataType();
-    auto boundaries_node = replace_graph_builder.CreateConst(boundaries, dims, DT_FLOAT);
+    auto boundaries_node = replace_graph_builder.CreateConst(boundaries, dims);
     auto boundaries_tensor = es::Cast(boundaries_node, boundaries_dtype);
 
     // 更新 boundaries_tensor 的 TensorDesc，设置 shape、dtype 和 origin 信息
