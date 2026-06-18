@@ -62,6 +62,7 @@ protected:
     void SetTilingData();
     void DumpSimdTilingInfo(std::ostringstream &info);
     void SetSimdTilingData(ScatterUpdateTilingData *tilingData);
+    void SetDeterSimdSplitCol(ScatterUpdateTilingData *tilingData);
     ge::graphStatus CheckInputDtype();
     ge::graphStatus CheckUpdatesShape(const gert::Shape& varShape, const gert::Shape& indicesShape,
                                     const gert::Shape& updatesShape);
@@ -75,6 +76,8 @@ protected:
     void ProcessSimdNonSort(uint64_t existNodeSize);
     void DoMaskSimdTiling();
     void DoSimtTiling();
+    void IsUpdateColMany();
+    void SetUpdateColManyTiling();
     void DoDeterministicTiling();
     void CalcMask();
     uint64_t CalcIndicesUbFactor();
@@ -141,6 +144,13 @@ private:
     uint64_t maskNormBlockLen_ = 0;
     uint64_t maskTailBlockLen_ = 0;
     bool isIndicesSizeInt64_ = false;
+    bool updateColMany_ = false;
+    uint64_t updateUbProNum_ = 0;
+    uint64_t updateOneColAlign_ = 0;
+    uint64_t indicesUbForUpLoopSize_ = 0;
+    uint64_t indicesUbForUpTailLoopNum_ = 0;
+    uint64_t indicesTailForUpLoopSize_ = 0;
+    uint64_t indicesTailForUpTailLoopNum_ = 0;
     uint64_t indicesCastMode_ = 0;  // 0: 不Cast；1：int32 Cast int16；2：int64 Cast int32；3：int64 Cast int16
     uint64_t indicesCastDtypeSize_ = 0;
     int32_t rowFormerNum_ = 0;

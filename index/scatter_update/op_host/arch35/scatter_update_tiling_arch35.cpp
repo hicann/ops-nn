@@ -326,6 +326,17 @@ void ScatterUpdateTiling::SetSimdTilingData(ScatterUpdateTilingData *tilingData)
     std::copy(std::begin(simdProcessColTail_), std::end(simdProcessColTail_), tilingData->simdProcessColTail);
 }
 
+void ScatterUpdateTiling::SetDeterSimdSplitCol(ScatterUpdateTilingData *tilingData)
+{
+    tilingData->updateColMany = updateColMany_;
+    tilingData->updateUbProNum = updateUbProNum_;
+    tilingData->updateOneColAlign = updateOneColAlign_;
+    tilingData->indicesUbForUpLoopSize = indicesUbForUpLoopSize_;
+    tilingData->indicesUbForUpTailLoopNum = indicesUbForUpTailLoopNum_;
+    tilingData->indicesTailForUpLoopSize = indicesTailForUpLoopSize_;
+    tilingData->indicesTailForUpTailLoopNum = indicesTailForUpTailLoopNum_;
+}
+
 void ScatterUpdateTiling::SetTilingData()
 {
     ScatterUpdateTilingData *tilingData = context_->GetTilingData<ScatterUpdateTilingData>();
@@ -374,6 +385,7 @@ void ScatterUpdateTiling::SetTilingData()
     tilingData->indicesCastMode = indicesCastMode_;
     tilingData->rowFormerNum = rowFormerNum_;
     tilingData->colFormerNum = colFormerNum_;
+    SetDeterSimdSplitCol(tilingData);
 }
 
 static uint64_t GetSortTmpSize(ge::DataType dataType, uint32_t lastAxisNum, bool isDescend)
@@ -540,6 +552,27 @@ uint64_t ScatterUpdateTiling::CalcIndicesUbFactor()
     return start;
 }
 
+void ScatterUpdateTiling::IsUpdateColMany()
+{
+    uint64_t updateColUbFactorCur = Ops::Base::FloorAlign(ubSize_ - indicesUbFactor_ * indicesDtypeSize_,  UB_AGLIN_VALUE) / varTypeSize_;
+    if (updateColUbFactorCur > 2 * updateColUbFactor_) {
+        updateColMany_ = true;
+        updateOneColAlign_ = updateColUbFactor_;
+        updateColUbFactor_ = Ops::Base::FloorAlign(updateColUbFactorCur, updateOneColAlign_);
+        updateUbProNum_ =  Ops::Base::CeilDiv(updateColUbFactor_, updateOneColAlign_);
+    }
+}
+
+void ScatterUpdateTiling::SetUpdateColManyTiling()
+{
+    if (updateColMany_) {
+        indicesUbForUpLoopSize_ = Ops::Base::CeilDiv(indicesUbFactor_, updateUbProNum_);
+        indicesUbForUpTailLoopNum_ = indicesUbFactor_ - (indicesUbForUpLoopSize_ - 1) * updateUbProNum_;
+        indicesTailForUpLoopSize_ = Ops::Base::CeilDiv(indicesTailLoopNum_, updateUbProNum_);
+        indicesTailForUpTailLoopNum_ = indicesTailLoopNum_ - (indicesTailForUpLoopSize_ - 1) * updateUbProNum_;
+    }
+}
+
 void ScatterUpdateTiling::DoDeterministicTiling()
 {
     if (isDeterministicSplitCol_) {
@@ -561,14 +594,15 @@ void ScatterUpdateTiling::DoDeterministicTiling()
             indicesUbFactor_= Ops::Base::FloorAlign(ubSize_ - updateColUbFactor_ * varTypeSize_, UB_AGLIN_VALUE) / indicesDtypeSize_;
             indicesUbFactor_ =
                 std::min(indicesUbFactor_, Ops::Base::CeilAlign(indicesSize_ * indicesDtypeSize_, UB_AGLIN_VALUE) / indicesDtypeSize_);
+            IsUpdateColMany();
         }
-
         indicesLoopSize_ = Ops::Base::CeilDiv(indicesSize_, indicesUbFactor_);
         indicesTailLoopNum_ = indicesSize_ - (indicesLoopSize_ - 1) * indicesUbFactor_;
         updatesNormBlockLoop_ = Ops::Base::CeilDiv(normBlockColNum_, updateColUbFactor_);
         updatesTailBlockLoop_ = Ops::Base::CeilDiv(tailBlockColNum_, updateColUbFactor_);
         updatesNormBlockTailLoopSize_ = normBlockColNum_ - (updatesNormBlockLoop_ - 1) * updateColUbFactor_;
         updatesTailBlockTailLoopSize_ = tailBlockColNum_ - (updatesTailBlockLoop_ - 1) * updateColUbFactor_;
+        SetUpdateColManyTiling();
     } else {
         // 按行分核
         deterministicMode_ = DETERMINISTIC_MODE_ROW;
