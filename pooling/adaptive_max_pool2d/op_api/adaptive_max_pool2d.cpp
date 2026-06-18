@@ -81,7 +81,6 @@ std::tuple<aclTensor*, aclTensor*> AdaptiveMaxPool2d(
     }
 
     auto outputOut = executor->AllocTensor(outShape, self->GetDataType(), self->GetStorageFormat());
-    
     if (outputOut == nullptr) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "outputOut is nullptr.");
         return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);

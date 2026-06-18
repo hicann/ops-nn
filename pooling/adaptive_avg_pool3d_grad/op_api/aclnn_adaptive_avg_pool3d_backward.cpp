@@ -369,10 +369,6 @@ aclnnStatus aclnnAdaptiveAvgPool3dBackwardGetWorkspaceSize(
     // 固定写法，将输入self转换成连续的tensor
     auto selfContiguous = l0op::Contiguous(self, uniqueExecutor.get());
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    op::Shape outShape = gradOutput->GetViewShape();
-
-    op::Shape selfShape = self->GetViewShape();
-    size_t dimNum = selfShape.GetDimNum();
     auto rets = SelectAdaptiveAvgPool3dBackward(gradOutputContiguous, selfContiguous, out, uniqueExecutor.get());
     CHECK_RET(rets == ACLNN_SUCCESS, rets);
 

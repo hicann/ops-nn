@@ -18,7 +18,7 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
-const aclnnStatus ThnnFusedLstmCell(
+aclnnStatus ThnnFusedLstmCell(
     const aclTensor *inputGates,
     const aclTensor *hiddenGates,
     const aclTensor *cx,

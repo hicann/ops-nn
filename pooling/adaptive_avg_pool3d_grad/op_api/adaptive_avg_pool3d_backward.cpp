@@ -51,7 +51,8 @@ const aclTensor* AdaptiveAvgPool3dGrad(const aclTensor* gradOutput, const aclTen
         outShape.SetDim(DIM_2, selfShape.GetDim(DIM_2));
         outShape.SetDim(DIM_3, selfShape.GetDim(DIM_3));
         outShape.SetDim(DIM_4, selfShape.GetDim(DIM_4));
-        if (dimNum == 5) {
+        constexpr int64_t DIM_3D = 5;
+        if (dimNum == DIM_3D) {
             outShape.SetDim(DIM_0, selfShape.GetDim(DIM_0));
         }
     } else {

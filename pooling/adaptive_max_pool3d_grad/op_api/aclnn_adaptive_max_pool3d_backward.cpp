@@ -100,7 +100,6 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
     const auto& selfDimD = selfShape.GetDim(selfDimNum + D_DIM);
     const auto& selfDimW = selfShape.GetDim(selfDimNum + W_DIM);
     const auto& selfDimH = selfShape.GetDim(selfDimNum + H_DIM);
-    
 
     const int64_t selfSize = selfDimW * selfDimH * selfDimD;
     OP_CHECK(

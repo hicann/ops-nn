@@ -430,7 +430,6 @@ static const aclTensor* OuttoNDProcess(const aclTensor* output, aclOpExecutor* e
 
 static const aclTensor* ExecMaxPoolV3(const aclTensor* self, const aclTensor* selfContiguous, const aclIntArray* kernelShape,
                                          const aclIntArray* strides, const aclIntArray* pads, const int64_t ceilMode, aclTensor* out, aclOpExecutor* executor) {
-
   // 如果self是3D，需要扩到4D再调用MaxPoolV3接口
   const bool isSelf3D = self->GetViewShape().GetDimNum() == DIMENTION_3;
   auto selfUnsqueezed = isSelf3D ? View3Das4D(selfContiguous, executor) : selfContiguous;
@@ -585,7 +584,6 @@ static inline bool ExecMaxPool3DCapable(const aclIntArray* kernelShape, const ac
 
 static const aclTensor* ExecMaxPool3DWithArgmaxV2(const aclTensor* self, const aclTensor* selfContiguous, const aclIntArray* kernelShape,
                                          const aclIntArray* strides, const aclIntArray* pads, const int64_t ceilMode, aclTensor* out, aclOpExecutor* executor) {
-
     // 如果self是3d，需要扩到5d，再调用MaxPool3DWithArgmaxV2接口
     const bool isSelf3D = self->GetViewShape().GetDimNum() == DIMENTION_3;
     auto selfUnsqueezed = isSelf3D ? View3Das5D(selfContiguous, executor) : View4Das5D(selfContiguous, executor);

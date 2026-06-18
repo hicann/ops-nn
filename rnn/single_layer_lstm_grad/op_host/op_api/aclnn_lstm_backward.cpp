@@ -63,6 +63,10 @@ constexpr int64_t WEIGHT_INPUT_INDEX = 0;
 constexpr int64_t WEIGHT_HIDDEN_INDEX = 1;
 constexpr int64_t BIAS_INPUT_INDEX = 2;
 constexpr int64_t BIAS_HIDDEN_INDEX = 3;
+constexpr int64_t LSTM_CONFIG_NO_BIAS_NO_BIDIR = 0;
+constexpr int64_t LSTM_CONFIG_BIDIR_ONLY = 1;
+constexpr int64_t LSTM_CONFIG_BIAS_ONLY = 2;
+constexpr int64_t LSTM_CONFIG_BIAS_BIDIR = 3;
 constexpr int64_t SEQUENCE_DIM = 0;
 constexpr int64_t BATCH_DIM = 1;
 constexpr int64_t HIDDEN_DIM = 2;
@@ -864,7 +868,6 @@ static bool CheckNotNull(const aclTensor *input,
                           (hasBias || bidirectional) ? NUM_WITH_B_OR_BID * numLayers :
                           NUM_NO_B_NO_BIDIR * numLayers;
     bool paramsLengthCheck = paramsLength == params->Size() && paramsLength == dparams->Size();
-
     if (!paramsLengthCheck) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
             "For tensor lists include params and dparams, the tensor quantities should follow the pattern related to the weigths.");
@@ -1261,10 +1264,10 @@ static bool CheckShapeValid(const aclTensor *input,
         const std::vector<int64_t> weightInputDim = {GATE_COUNT * hiddenSize, curInputSize};
         bool ok = true;
         switch (typeIdx) {
-            case 0: ok = ValidateLayerNoBiasNoBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
-            case 1: ok = ValidateLayerWithBidirOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
-            case 2: ok = ValidateLayerWithBiasOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
-            case 3: ok = ValidateLayerWithBiasAndBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
+            case LSTM_CONFIG_NO_BIAS_NO_BIDIR: ok = ValidateLayerNoBiasNoBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
+            case LSTM_CONFIG_BIDIR_ONLY: ok = ValidateLayerWithBidirOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim); break;
+            case LSTM_CONFIG_BIAS_ONLY: ok = ValidateLayerWithBiasOnly(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
+            case LSTM_CONFIG_BIAS_BIDIR: ok = ValidateLayerWithBiasAndBidir(params, dparams, layerIdx, weightInputDim, weightHiddenDim, biasDim); break;
         }
         if (!ok) return false;
     }
@@ -1744,10 +1747,11 @@ aclnnStatus PrepareLSTMBackwardNoneInputs(
         dcOut = ResetAndReshapeTensor((*hx)[0], dcReshapeVec, executor);
         CHECK_RET(dcOut != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
     }
+    static const int64_t HIDDEN_DIM_INDEX = 2;
     if (dy == nullptr) {
         auto dyShape = input->GetViewShape();
         auto dyType = input->GetDataType();
-        dyShape[2] = bidirectional ? dhShape[2] * 2 : dhShape[2];
+        dyShape[HIDDEN_DIM_INDEX] = bidirectional ? dhShape[HIDDEN_DIM_INDEX] * BI_DIRECTION : dhShape[HIDDEN_DIM_INDEX];
         const aclTensor* dyAlloc = executor->AllocTensor(dyShape, dyType, Format::FORMAT_ND);
         CHECK_RET(dyAlloc != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR);
         FVector<int64_t> dyReshapeVec{dyShape[0], dyShape[1], dyShape[2]};

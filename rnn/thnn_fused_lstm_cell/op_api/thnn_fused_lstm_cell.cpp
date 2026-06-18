@@ -24,7 +24,7 @@ using namespace op;
 namespace l0op {
 OP_TYPE_REGISTER(ThnnFusedLstmCell);
 
-const aclnnStatus ThnnFusedLstmCell(
+aclnnStatus ThnnFusedLstmCell(
     const aclTensor *inputGates,
     const aclTensor *hiddenGates,
     const aclTensor *cx,
@@ -45,7 +45,6 @@ const aclnnStatus ThnnFusedLstmCell(
         OP_INPUT(inputGates, hiddenGates, cx, inputBias, hiddenBias),
         OP_OUTPUT(hy, cy, storage)
     );
-
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ThnnFusedLstmCell ADD_TO_LAUNCHER_LIST_AICORE failed.");
         return ACLNN_ERR_INNER_NULLPTR;

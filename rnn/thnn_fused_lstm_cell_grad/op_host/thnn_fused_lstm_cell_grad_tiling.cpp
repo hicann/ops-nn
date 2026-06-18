@@ -77,8 +77,10 @@ bool ThnnFusedLstmCellGradTiling::CheckParamsDtype()
     // dtype support list
     std::vector<ge::DataType> supportDtype = {ge::DT_FLOAT, ge::DT_FLOAT16};
     ge::DataType baseDtype = context_->GetInputDesc(0)->GetDataType();
-    inputDSize_ = baseDtype == ge::DT_FLOAT ? FP32_BYTES : 2;
-    alignedPara_ = 32 / inputDSize_;
+    constexpr int64_t FP16_BYTES = 2;
+    constexpr int64_t FP32_ALIGNMENT = 32;
+    inputDSize_ = baseDtype == ge::DT_FLOAT ? FP32_BYTES : FP16_BYTES;
+    alignedPara_ = FP32_ALIGNMENT / inputDSize_;
 
     // input check
     for (int64_t inputIdx = 1; inputIdx < INPUT_NUM; inputIdx++) {

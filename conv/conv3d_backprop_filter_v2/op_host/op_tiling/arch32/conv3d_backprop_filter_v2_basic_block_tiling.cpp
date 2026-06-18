@@ -43,6 +43,8 @@ constexpr uint64_t KERNEL_HW_9 = 9;
 constexpr uint64_t KERNEL_HW_16 = 16;
 constexpr uint32_t NUM_HALF = 2;
 constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
+constexpr uint64_t STREAM_K_DIM_MIN = 1;
+constexpr uint64_t STREAM_K_TAIL_TOLERANCE = 2;
 constexpr uint32_t BASIC_BLOCK_SIZE_128 = 128;
 constexpr uint32_t BASIC_BLOCK_SIZE_64 = 64;
 constexpr uint32_t SPLIT_M_K = 1;
@@ -244,7 +246,6 @@ void Conv3DDWV2BasicBlockTiling::DoStreamkByHWout()
 {
     uint64_t singleShapeK = GetSingleShapeKByStreamK();
     uint64_t streamkHWoutDim = Ops::Base::CeilDiv(static_cast<uint64_t>(runInfo_.ho) * runInfo_.wo, singleShapeK);
-    
     if (streamkHWoutDim == 1) {
         blockTiling_.streamKType = NO_STREAMK_CALC;
         blockTiling_.coreStreamK = 0;
@@ -341,7 +342,7 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
                             static_cast<uint64_t>(runInfo_.batch) * runInfo_.dout;
     maxStreamKDim = std::max(maxStreamKDim, batchDoutDim);
 
-    if (maxStreamKDim <= 1 || tailCnt + 2 >= targetCoreNum) {
+    if (maxStreamKDim <= STREAM_K_DIM_MIN || tailCnt + STREAM_K_TAIL_TOLERANCE >= targetCoreNum) {
         return;
     }
     maxStreamKDim = std::min(maxStreamKDim, static_cast<uint64_t>(targetCoreNum));
@@ -350,13 +351,12 @@ void Conv3DDWV2BasicBlockTiling::AdjustSingleNForStreamK()
         newSingleCoreN = CalNewSingleCoreN(totalCntWithoutN, targetCoreNum / streamKDim);
         newNCnt = Ops::Base::CeilDiv(mmInfo_.nValue, newSingleCoreN);
         tailCnt = newNCnt * totalCntWithoutN % targetCoreNum;
-        if (tailCnt * streamKDim == targetCoreNum || tailCnt + 2 >= targetCoreNum) {
+        if (tailCnt * streamKDim == targetCoreNum || tailCnt + STREAM_K_TAIL_TOLERANCE >= targetCoreNum) {
             blockTiling_.singleCoreN = newSingleCoreN;
             blockTiling_.totalCnt = totalCntWithoutN * newNCnt;
             return;
         }
     }
-
 }
 
 uint64_t Conv3DDWV2BasicBlockTiling::CalNewSingleCoreN(uint64_t totalCntWithoutN, uint64_t targetCoreNum)
@@ -402,7 +402,6 @@ void Conv3DDWV2BasicBlockTiling::AdjustBaseNForStreamK()
 
     kernelNum = kernelNum * kernelHW <= std::max(baseBlockNum, 16U) ?
                 kernelNum : std::max(kernelNum - 1U, 1U);
-
     if (kernelNum * kernelHW <= std::max(baseBlockNum, 16U)) {
         uint64_t bL0Max = L0B_SIZE / dtypeByte_ / DB_ON;
         blockTiling_.blockBaseN = kernelNum * kernelHW * BLOCK_CUBE;
@@ -635,7 +634,7 @@ void Conv3DDWV2BasicBlockTiling::MultiCoreSplitMN()
     CheckDbL0C();
     if (blockTiling_.totalCnt < blockTiling_.usedCoreNum) {
         if (blockTiling_.coreBindDirection == SPLIT_M_N_STREAMK) {
-            blockTiling_.usedCoreNum = blockTiling_.totalCnt > blockTiling_.usedCoreNum / 2 ?
+            blockTiling_.usedCoreNum = blockTiling_.totalCnt > blockTiling_.usedCoreNum / NUM_HALF ?
                                         blockTiling_.totalCnt : blockTiling_.usedCoreNum;
         } else {
             MultiCoreSplitK();

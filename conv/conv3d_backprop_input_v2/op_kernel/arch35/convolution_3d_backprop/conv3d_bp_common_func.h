@@ -309,7 +309,6 @@ static __aicore__ inline void ComputeForBias(Intf *self, LocalTensor<typename In
         SetFlag<HardEvent::M_MTE1>(l0PingPongFlag);
         l0PingPongFlag ^= self->ctx.enableL0PingPong_;
     }
-
 }
 
 template <class Intf>
