@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and limitations under the License.
 # ----------------------------------------------------------------------------
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-	AddOpTestCase(dynamic_mx_quant "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_Y=fp8_e5m2_t -Dfloat16_t=half")
+	AddOpTestCase(dynamic_mx_quant "ascend950pr_9599" "-DDTYPE_X=float -DDTYPE_Y=fp8_e5m2_t -Dfloat16_t=half")
 endif()

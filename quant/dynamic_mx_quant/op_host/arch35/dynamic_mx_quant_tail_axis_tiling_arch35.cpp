@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "platform/platform_info.h"
 
 namespace optiling {
+using namespace DynamicMxQuant;
 using namespace ge;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
@@ -27,12 +28,10 @@ constexpr int64_t SLICE_SIZE_256 = 256;
 constexpr int64_t SLICE_SIZE_512 = 512;
 constexpr int64_t DIGIT_EIGHT = 8;
 
-constexpr int64_t BYTES_OF_INPUT_UINT16_DB_BUFFER_TYPE = 4;
 constexpr int64_t BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE = 2;
 constexpr int64_t BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE = 1;
-constexpr int64_t BYTES_OF_MAX_VALUE_TYPE = 2;
-constexpr int64_t BYTES_OF_SCALE_TYPE = 1;
-constexpr int64_t BYTES_OF_INVERSE_SCALE_TYPE = 2;
+constexpr int64_t BYTES_OF_SCALE_TYPE = sizeof(uint8_t);
+constexpr int64_t BYTES_OF_INVERSE_SCALE_TYPE = sizeof(uint16_t);
 constexpr int64_t DB_BUFFER = 2;
 constexpr float LOAD_BALANCE_THRESHOLD = 0.75; // 负载均衡的阈值
 
@@ -72,8 +71,7 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::SetTilingDataForTailAxis()
 void DynamicMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
 {
     OP_LOGI(
-        context_->GetNodeName(),
-        "tilingData is tilingKey:%ld, ubSize:%ld, roundMode:%ld, blockSize:%ld, \
+        context_->GetNodeName(), "tilingData is tilingKey:%ld, ubSize:%ld, roundMode:%ld, blockSize:%ld, \
         totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, \
         rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, \
         rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld, dstTypeMax:%f, invDstTypeMax:%f.",
@@ -159,7 +157,10 @@ void DynamicMxQuantTailAxisTiling::CalcTilingKeyForTail()
 {
     // blockSize == 32 的尾轴专用模板只区分 scaleAlg。
     // 10/11/12 分别对应 scaleAlg 0/1/2，dtype 由 kernel binary 的模板参数决定。
-    tilingParam_.tilingKey = DIGIT_TEN + tilingParam_.scaleAlg;
+    int64_t tilingKey = GET_TPL_TILING_KEY(
+        TPL_TAIL_AXIS_QUANT_OPTI, static_cast<uint64_t>(tilingParam_.scaleAlg), TPL_NOT_CARE_ROUND_MODE,
+        TPL_NOT_CARE_SCALE);
+    tilingParam_.tilingKey = tilingKey;
 }
 
 void DynamicMxQuantTailAxisTiling::CalcAxisSize(const gert::Shape& xShape)
@@ -186,9 +187,7 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
     tilingParam_.rowBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.rowNum, DIGIT_ONE);
     tilingParam_.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam_.colNum, sliceSize);
 
-    OP_CHECK_IF(
-        AutoTiling() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context_, "The auto tiling failed."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(AutoTiling() != ge::GRAPH_SUCCESS, OP_LOGE(context_, "The auto tiling failed."), return ge::GRAPH_FAILED);
 
     tilingParam_.rowNormalBlockNum = Ops::Base::CeilDiv(tilingParam_.rowBlockLoopNum, tilingParam_.rowTileNum);
     tilingParam_.colNormalBlockNum = Ops::Base::CeilDiv(tilingParam_.colBlockLoopNum, tilingParam_.colTileNum);
@@ -196,32 +195,31 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::DoTiling()
     tilingParam_.colTileNum = Ops::Base::CeilDiv(tilingParam_.colBlockLoopNum, tilingParam_.colNormalBlockNum);
     tilingParam_.colNormalBlockNum = tilingParam_.colNormalBlockNum * sliceSize / SLICE_SIZE_256;
     tilingParam_.usedCoreNum = tilingParam_.rowTileNum * tilingParam_.colTileNum;
-    tilingParam_.rowTailLen =
-        tilingParam_.rowNum - (tilingParam_.rowNormalBlockNum * DIGIT_ONE * (tilingParam_.rowTileNum - DIGIT_ONE));
-    tilingParam_.colTailLen =
-        tilingParam_.colNum - (tilingParam_.colNormalBlockNum * SLICE_SIZE_256 * (tilingParam_.colTileNum - DIGIT_ONE));
+    tilingParam_.rowTailLen = tilingParam_.rowNum - (tilingParam_.rowNormalBlockNum * DIGIT_ONE * (tilingParam_.rowTileNum - DIGIT_ONE));
+    tilingParam_.colTailLen = tilingParam_.colNum - (tilingParam_.colNormalBlockNum * SLICE_SIZE_256 * (tilingParam_.colTileNum - DIGIT_ONE));
 
     // 计算UB可以放下的block（1×256）数量
     // maxUbBlockNum * SLICE_SIZE_256 * (BYTES_OF_INPUT_TYPE * DB_BUFFER + BYTES_OF_OUTPUT_TYPE * DB_BUFFER) +
     // maxUbBlockNum * DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER +
     // BYTES_OF_INVERSE_SCALE_TYPE)
     // <= ubSize
+    // fp16/bf16 输入 DB_BUFFER 总字节数 = 2*2 = 4；fp32 输入需要 fp32 数据 4*2 = 8
+    int64_t bytesInputDbBuffer = DB_BUFFER * tilingParam_.inputDtypeSize;
+    // fp32 输入时 maxExpBuffer_ 使用 sizeof(float)=4，其余使用 sizeof(uint16_t)=2
+    int64_t bytesOfMaxValueType = tilingParam_.inputDtypeSize;
     if (tilingParam_.dstType == ge::DT_FLOAT4_E2M1 || tilingParam_.dstType == ge::DT_FLOAT4_E1M2) { // Y FP4
-        tilingParam_.maxUbBlockNum =
-            tilingParam_.ubSize /
-            (SLICE_SIZE_256 * (BYTES_OF_INPUT_UINT16_DB_BUFFER_TYPE + BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE) +
-             DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER + BYTES_OF_INVERSE_SCALE_TYPE));
+        tilingParam_.maxUbBlockNum = tilingParam_.ubSize /
+            (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP4_DB_BUFFER_TYPE) +
+             DIGIT_EIGHT * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE * DB_BUFFER + BYTES_OF_INVERSE_SCALE_TYPE));
     } else if (tilingParam_.dstType == ge::DT_FLOAT8_E5M2 || tilingParam_.dstType == ge::DT_FLOAT8_E4M3FN) { // Y FP8
-        tilingParam_.maxUbBlockNum =
-            tilingParam_.ubSize /
-            (SLICE_SIZE_256 * (BYTES_OF_INPUT_UINT16_DB_BUFFER_TYPE + BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE) +
-             DIGIT_EIGHT * (BYTES_OF_MAX_VALUE_TYPE + BYTES_OF_SCALE_TYPE * DB_BUFFER + BYTES_OF_INVERSE_SCALE_TYPE));
+        tilingParam_.maxUbBlockNum = tilingParam_.ubSize /
+            (SLICE_SIZE_256 * (bytesInputDbBuffer + BYTES_OF_OUTPUT_FP8_DB_BUFFER_TYPE) +
+             DIGIT_EIGHT * (bytesOfMaxValueType + BYTES_OF_SCALE_TYPE * DB_BUFFER + BYTES_OF_INVERSE_SCALE_TYPE));
     }
     tilingParam_.maxUbBlockNum *= DIGIT_EIGHT; // 转换成UB可以放下的block（1×32）数量
 
     CalcTilingKeyForTail();
-    OP_CHECK_IF(
-        SetTilingDataForTailAxis() != ge::GRAPH_SUCCESS,
+    OP_CHECK_IF(SetTilingDataForTailAxis() != ge::GRAPH_SUCCESS,
         OP_LOGE(context_, "DynamicMxQuantTailAxisSetTilingData set tiling data failed."), return ge::GRAPH_FAILED);
 
     context_->SetBlockDim(tilingData_.usedCoreNum);

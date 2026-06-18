@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@
 #include "gtest/gtest.h"
 #include "tikicpulib.h"
 #include "../../../op_kernel/arch35/dynamic_mx_quant_tilingdata.h"
+#include "../../../op_kernel/arch35/dynamic_mx_quant_struct.h"
 #include <cstdint>
 
 using namespace std;
 
-extern "C" __global__ __aicore__ void dynamic_mx_quant(
-    GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workspace, GM_ADDR tiling);
+#include "../../../op_kernel/dynamic_mx_quant.cpp"
 
 class dynamic_mx_quant_test : public testing::Test {
 protected:
@@ -42,7 +42,7 @@ protected:
 
 TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
 {
-    size_t inputXSize = 128 * 256 * sizeof(half);
+    size_t inputXSize = 128 * 256 * sizeof(float);
     size_t outputY = 128 * 256 * sizeof(int8_t);
     size_t outputScale = 128 * 8 * sizeof(int8_t);
     size_t tiling_data_size = sizeof(DynamicMxQuantTailAxisTilingData);
@@ -62,7 +62,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
     DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
-    tilingDatafromBin->tilingKey = 10;
+    tilingDatafromBin->tilingKey = 33;
     tilingDatafromBin->ubSize = 2048;
     tilingDatafromBin->roundMode = 4;
     tilingDatafromBin->blockSize = 32;
@@ -80,10 +80,10 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
     tilingDatafromBin->dstTypeMax = 0.0f;
     tilingDatafromBin->invDstTypeMax = 1.0f / 6.0f;
 
-    ICPU_SET_TILING_KEY(10);
+    ICPU_SET_TILING_KEY(33);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_0, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 
@@ -97,7 +97,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_fp8_e5m2)
 
 TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
 {
-    size_t inputXSize = 128 * 256 * sizeof(half);
+    size_t inputXSize = 128 * 256 * sizeof(float);
     size_t outputY = 128 * 256 * sizeof(int8_t);
     size_t outputScale = 128 * 8 * sizeof(int8_t);
     size_t tiling_data_size = sizeof(DynamicMxQuantTailAxisTilingData);
@@ -117,7 +117,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
     DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
-    tilingDatafromBin->tilingKey = 11;
+    tilingDatafromBin->tilingKey = 65;
     tilingDatafromBin->ubSize = 2048;
     tilingDatafromBin->roundMode = 4;
     tilingDatafromBin->blockSize = 32;
@@ -135,10 +135,10 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
     tilingDatafromBin->dstTypeMax = 0.0f;
     tilingDatafromBin->invDstTypeMax = 1.0f / 6.0f;
 
-    ICPU_SET_TILING_KEY(11);
+    ICPU_SET_TILING_KEY(65);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_1, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 
@@ -152,7 +152,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_one_fp8_e4m3fn)
 
 TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_two)
 {
-    size_t inputXSize = 128 * 256 * sizeof(half);
+    size_t inputXSize = 128 * 256 * sizeof(float);
     size_t outputY = 128 * 256 * sizeof(int8_t);
     size_t outputScale = 128 * 8 * sizeof(int8_t);
     size_t tiling_data_size = sizeof(DynamicMxQuantTailAxisTilingData);
@@ -172,7 +172,7 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_two)
     DynamicMxQuantTailAxisTilingData* tilingDatafromBin =
         reinterpret_cast<DynamicMxQuantTailAxisTilingData*>(tiling);
 
-    tilingDatafromBin->tilingKey = 12;
+    tilingDatafromBin->tilingKey = 97;
     tilingDatafromBin->ubSize = 2048;
     tilingDatafromBin->roundMode = 4;
     tilingDatafromBin->blockSize = 32;
@@ -190,10 +190,10 @@ TEST_F(dynamic_mx_quant_test, test_case_tail_axis_scale_alg_two)
     tilingDatafromBin->dstTypeMax = 6.0f;
     tilingDatafromBin->invDstTypeMax = 1.0f / 6.0f;
 
-    ICPU_SET_TILING_KEY(12);
+    ICPU_SET_TILING_KEY(97);
 
     auto dynamic_mx_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR mxScale, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::dynamic_mx_quant(x, y, mxScale, workSpace, tiling);
+        ::dynamic_mx_quant<TPL_TAIL_AXIS_QUANT_OPTI, TPL_SCALE_ALG_2_SPEC_DST_MAX_VALUE, TPL_NOT_CARE_ROUND_MODE, TPL_NOT_CARE_SCALE>(x, y, mxScale, workSpace, tiling);
     };
     ICPU_RUN_KF(dynamic_mx_quant_kernel, blockDim, x, y, mxScale, workSpace, tiling);
 

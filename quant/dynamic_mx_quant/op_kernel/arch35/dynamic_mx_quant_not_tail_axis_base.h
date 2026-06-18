@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -40,9 +40,7 @@ protected:
         int64_t curLoopBlockSizeNum, int64_t blockSizeNumHandled, int64_t scaleDataLen);
     __aicore__ inline int64_t BlockCountInCurCompute(int64_t blockSizeIdx);
     template <typename ComType>
-    __aicore__ inline void LoadData(
-        __ubuf__ T* xAddr, uint64_t offset, AscendC::MicroAPI::RegTensor<ComType>& xRegTensor,
-        AscendC::MicroAPI::MaskReg& mask);
+    __aicore__ inline void LoadData(__ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<ComType>& x, Reg::MaskReg& mask);
 
 protected:
     TPipe pipe_;
@@ -81,7 +79,7 @@ protected:
     using intCalcType = typename std::conditional<IsSame<T, half>::value, uint32_t, uint16_t>::type;
     constexpr static int16_t shrNum_ = GetShrNum<T>();
     constexpr static intCalcType maxExp_ = GetMaxExp<intCalcType>();
-    constexpr static intCalcType absForX_ = GetabsForX<intCalcType>();
+    constexpr static intCalcType absForX_ = GetAbsForX<intCalcType>();
     constexpr static intCalcType f4Emax_ = GetFp4MaxExp<intCalcType>();
     constexpr static intCalcType f8Emax_ = GetFp8MaxExp<intCalcType>();
     constexpr static intCalcType maxBias_ = GetMaxBias<intCalcType>();
@@ -213,23 +211,20 @@ __aicore__ inline int64_t DynamicMxQuantBase<T, U, ISTAIL>::BlockCountInCurCompu
 template <typename T, typename U, const bool ISTAIL>
 template <typename ComType>
 __aicore__ inline void DynamicMxQuantBase<T, U, ISTAIL>::LoadData(
-    __ubuf__ T* xAddr, uint64_t offset, AscendC::MicroAPI::RegTensor<ComType>& xRegTensor,
-    AscendC::MicroAPI::MaskReg& mask)
+    __ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<ComType>& x, Reg::MaskReg& mask)
 {
-    AscendC::MicroAPI::UnalignReg uReg;
+    Reg::UnalignReg uReg;
     if constexpr (IsSame<T, half>::value) {
-        AscendC::MicroAPI::RegTensor<T> fp16Tensor;
-        AscendC::MicroAPI::DataCopyUnAlignPre(uReg, xAddr + offset);
-        AscendC::MicroAPI::DataCopyUnAlign(fp16Tensor, uReg, xAddr + offset);
-        static constexpr AscendC::MicroAPI::CastTrait castTraitHalf2Fp32 = {
-            AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN,
-            AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
-        AscendC::MicroAPI::UnPack(
-            (AscendC::MicroAPI::RegTensor<uint32_t>&)fp16Tensor, (AscendC::MicroAPI::RegTensor<uint16_t>&)fp16Tensor);
-        AscendC::MicroAPI::Cast<ComType, T, castTraitHalf2Fp32>(xRegTensor, fp16Tensor, mask);
+        Reg::RegTensor<T> xFP16;
+        Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
+        Reg::DataCopyUnAlign(xFP16, uReg, xAddr + offset);
+        static constexpr Reg::CastTrait castTraitHalf2Fp32 = {
+            Reg::RegLayout::ZERO, Reg::SatMode::UNKNOWN, Reg::MaskMergeMode::ZEROING, AscendC::RoundMode::UNKNOWN};
+        Reg::UnPack((Reg::RegTensor<uint32_t>&)xFP16, (Reg::RegTensor<uint16_t>&)xFP16);
+        Reg::Cast<ComType, T, castTraitHalf2Fp32>(x, xFP16, mask);
     } else {
-        AscendC::MicroAPI::DataCopyUnAlignPre(uReg, xAddr + offset);
-        AscendC::MicroAPI::DataCopyUnAlign(xRegTensor, uReg, xAddr + offset);
+        Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
+        Reg::DataCopyUnAlign(x, uReg, xAddr + offset);
     }
 }
 

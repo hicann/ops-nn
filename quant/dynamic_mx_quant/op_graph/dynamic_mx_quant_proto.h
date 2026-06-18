@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ namespace ge {
 * Supports various 4-bit and 8-bit floating point output formats.
 
 * @par Inputs:
-* @li x: An input tensor of type float16 or bfloat16.
+* @li x: An input tensor of type float16, bfloat16 or float.
 * The shape supports at least 1 dimensions, and at most 7 dimensions.
 
 * @par Attributes:
@@ -61,12 +61,13 @@ namespace ge {
 * @li The value of dst_max_value only supports 0.0 or 6.0-12.0 and is effective when scale_alg=2.
 * The default value 0.0 means that maxType corresponds to the maximum value of the target data type.
 * If other values are provided, mxscale is calculated based on the provided value.
+* @li When x's data type is float, blocksize must be 32.
 
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
 */
 REG_OP(DynamicMxQuant)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT6_E3M2, DT_FLOAT6_E2M3, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(mxscale, TensorType({DT_FLOAT8_E8M0}))
     .ATTR(axis, Int, -1)

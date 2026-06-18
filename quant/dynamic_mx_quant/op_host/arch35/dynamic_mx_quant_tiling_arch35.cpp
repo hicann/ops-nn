@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 using namespace std;
 using namespace ge;
 using namespace AscendC;
+using namespace DynamicMxQuant;
 
 namespace optiling {
 constexpr int64_t INDEX_ATTR_AXIS = 0;
@@ -38,13 +39,14 @@ constexpr int64_t MODE_ONE = 1;
 constexpr int64_t MODE_TWO = 2;
 constexpr int64_t MODE_THREE = 3;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
+constexpr int64_t BYTES_OF_INPUT_TYPE_FP32 = 4;
+constexpr int64_t BYTES_OF_BF16_SCRATCH = 2; // fp32 输入需要的 bf16 中转 buffer，每元素 2 字节
 constexpr int64_t MAX_BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t DIGIT_TEN_THOUSAND = 10000;
 constexpr int64_t DIGIT_HUNDRED = 100;
 constexpr int64_t DIGIT_TEN = 10;
 constexpr int64_t N_ALIGN32 = 32;
-constexpr int64_t N_ALIGN64 = 64;
-constexpr int64_t N_ALIGN128 = 128;
+
 constexpr int64_t BLOCK_PER_GROUP = 2;
 constexpr int64_t UINT16_BYTES_SIZE = 2;
 constexpr int64_t UINT8_BYTES_SIZE = 1;
@@ -64,8 +66,9 @@ constexpr int64_t WORKSPACE_ALIGN_SIZE = 512;
 constexpr int64_t OPTIMISE_MAX_BLOCK_SIZE = 320;
 constexpr int64_t DYNAMIC_MX_QUANT_MAX_BLOCK_SIZE = 1024;
 constexpr int64_t RESERVED_UB_SIZE = 2 * 1024; // 预留空间
-const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
+const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 const std::set<ge::DataType> INPUT_FP16_DTYPE_SET = {ge::DT_FLOAT16};
+const std::set<ge::DataType> INPUT_FP32_DTYPE_SET = {ge::DT_FLOAT};
 // FLOATX_EYMZ: Total bit of one float is X, in which first 1 bit for sign, following Y bit for exponent and Z bit for
 // mantissa.
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {
@@ -167,11 +170,14 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     RoundModeList roundMode = GetRoundMode(roundModeStr);
     OP_CHECK_IF(
         (roundMode == RoundModeList::MODE_UNDEFINED),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundModeStr, "The value of round_mode must be [rint, round, floor]"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "round_mode", roundModeStr, "The value of round_mode must be [rint, round, floor]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         (Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0 && roundMode != RoundModeList::MODE_RINT),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter round_mode must be rint"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "round_mode", roundModeStr,
+            "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter round_mode must be rint"),
         return ge::GRAPH_FAILED);
     tilingParam.roundMode = static_cast<int64_t>(roundMode);
 
@@ -184,7 +190,10 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
             (yDtype == ge::DT_FLOAT4_E1M2 && checkDstType != ge::DT_FLOAT4_E1M2) ||
             (yDtype == ge::DT_FLOAT8_E4M3FN && checkDstType != ge::DT_FLOAT8_E4M3FN) ||
             (yDtype == ge::DT_FLOAT8_E5M2 && checkDstType != ge::DT_FLOAT8_E5M2),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "y, dst_type", ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + std::to_string(checkDstType), "The dtypes of y and dst_type must be the same"),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "y, dst_type",
+            ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + std::to_string(checkDstType),
+            "The dtypes of y and dst_type must be the same"),
         return ge::GRAPH_FAILED);
 
     auto* attrBlockSize = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE);
@@ -192,11 +201,25 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     tilingParam.blockSize = static_cast<int64_t>(*attrBlockSize);
     OP_CHECK_IF(
         tilingParam.blockSize <= 0 || tilingParam.blockSize > DYNAMIC_MX_QUANT_MAX_BLOCK_SIZE,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize), "The value of block_size must be within the range (0, 1024]"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize),
+            "The value of block_size must be within the range (0, 1024]"),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF(
         tilingParam.blockSize % ATTR_BLOCK_SIZE != 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize), "The value of block_size must be a multiple of 32"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize),
+            "The value of block_size must be a multiple of 32"),
+        return ge::GRAPH_FAILED);
+
+    auto inputXPtr = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
+    auto xDtype = inputXPtr->GetDataType();
+    OP_CHECK_IF(
+        xDtype == ge::DT_FLOAT && tilingParam.blockSize != ATTR_BLOCK_SIZE,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "block_size", std::to_string(tilingParam.blockSize),
+            "If the dtype of input x is FLOAT, parameter block_size must be 32"),
         return ge::GRAPH_FAILED);
 
     auto* attrScaleAlg = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_SCALE_ALG);
@@ -204,12 +227,16 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     tilingParam.scaleAlg = static_cast<int64_t>(*attrScaleAlg);
     OP_CHECK_IF(
         tilingParam.scaleAlg < 0 || tilingParam.scaleAlg > 2,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "The value of scale_alg must be [0, 1, 2]"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
+            "The value of scale_alg must be [0, 1, 2]"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 1 && yDtype == ge::DT_FLOAT4_E2M1,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "If the dtype of output y is FLOAT4_E2M1, parameter scale_alg must be 0 or 2"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
+            "If the dtype of output y is FLOAT4_E2M1, parameter scale_alg must be 0 or 2"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -219,7 +246,9 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
 
     OP_CHECK_IF(
         tilingParam.scaleAlg == 2 && Y_SUPPORT_DTYPE_FP8_SET.count(yDtype) != 0,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter scale_alg must be 0 or 1"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
+            "If the dtype of output y is FLOAT8_E4M3FN/FLOAT8_E5M2, parameter scale_alg must be 0 or 1"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -241,7 +270,9 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
     OP_CHECK_IF(
         tilingParam.dstTypeMax < 0 || (tilingParam.dstTypeMax > 0 && tilingParam.dstTypeMax < 6) ||
             tilingParam.dstTypeMax > 12,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax), "The value of dst_type_max must be within the range [6, 12] or equal to 0"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax),
+            "The value of dst_type_max must be within the range [6, 12] or equal to 0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -255,8 +286,8 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     OP_CHECK_IF(
         INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(),
-            "x", ge::TypeUtils::DataTypeToSerialString(xDtype), "[DT_FLOAT16, DT_BF16]"),
+            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype),
+            "[DT_FLOAT16, DT_BF16, DT_FLOAT]"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -265,8 +296,8 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     OP_CHECK_IF(
         Y_SUPPORT_DTYPE_SET.count(yDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE(
-            context->GetNodeName(),
-            "y", ge::TypeUtils::DataTypeToSerialString(yDtype), "[DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
+            context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype),
+            "[DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2]"),
         return ge::GRAPH_FAILED);
 
     auto outputMxScalePtr = context->GetOutputDesc(1);
@@ -289,7 +320,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         xShape.GetDimNum() < 1 || xShape.GetDimNum() > MAX_DIM_NUM,
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()), "The shape dim of x must be within the range [1, 7]"),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            context->GetNodeName(), "x", std::to_string(xShape.GetDimNum()),
+            "The shape dim of x must be within the range [1, 7]"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -297,7 +330,8 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
             tilingParam.axis < static_cast<int64_t>(-1 * xShape.GetDimNum()),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context->GetNodeName(), "axis", std::to_string(tilingParam.axis),
-            "The value of axis must be within the range [-" + std::to_string(xShape.GetDimNum()) + ", " + std::to_string(xShape.GetDimNum() - 1) + "]"),
+            "The value of axis must be within the range [-" + std::to_string(xShape.GetDimNum()) + ", " +
+                std::to_string(xShape.GetDimNum() - 1) + "]"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -318,7 +352,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         xShape != yShape,
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape), "The shapes of x and y must be the same"),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     auto axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
@@ -330,7 +366,7 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
 
     OP_CHECK_IF(
         mxScaleShape.GetDimNum() != xShape.GetDimNum() + 1,
-OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context->GetNodeName(), "mxscale", std::to_string(mxScaleShape.GetDimNum()),
             "The shape dim of mxscale must be the shape dim of x plus 1"),
         return ge::GRAPH_FAILED);
@@ -341,7 +377,8 @@ OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
 
     OP_CHECK_IF(
         newScaleShape != mxScaleShape,
-        OP_LOGE_FOR_INVALID_SHAPE(context->GetNodeName(), "mxscale", Shape2String(mxScaleShape), Shape2String(newScaleShape)),
+        OP_LOGE_FOR_INVALID_SHAPE(
+            context->GetNodeName(), "mxscale", Shape2String(mxScaleShape), Shape2String(newScaleShape)),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -351,18 +388,21 @@ inline static void CalcTilingKey(DataType inputType, DynamicMxQuantTilingParam& 
 {
     // dtype 不再直接参与 tilingKey 编码，这里只保留输入 dtype 对寄存器容量估算的影响，
     // 用于判断非尾轴场景走 large-tail 还是 small-tail 优化路径。
-    int64_t dtypeSize = inputType == DT_FLOAT16 ? DIGIT_FOUR : DIGIT_TWO; // float16需要转化为float32计算
+    // float16 / float32 都按 4 字节估算（fp16 升 fp32 计算，fp32 原生 4 字节）
+    int64_t dtypeSize = (inputType == DT_FLOAT16 || inputType == DT_FLOAT) ? DIGIT_FOUR : DIGIT_TWO;
     int64_t vRegSize = static_cast<int64_t>(tilingParam.vfLen) / dtypeSize / DIGIT_TWO;
-    int64_t baseKey = TILING_KEY_TAIL_AXIS;
+    uint64_t optiMode = TPL_TAIL_AXIS_QUANT_NORMAL;
     if (!tilingParam.isTailAxis) {
-        baseKey = (tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ?
-                      TILING_KEY_OTHER_AXIS_LARGE :
-                      TILING_KEY_OTHER_AXIS_SMALL;
+        optiMode = (tilingParam.postAxisSize > vRegSize || tilingParam.blockSize > OPTIMISE_MAX_BLOCK_SIZE) ?
+                       TPL_NOT_TAIL_AXIS_QUANT_NORMAL :
+                       TPL_NOT_TAIL_AXIS_QUANT_OPTI;
     }
     int64_t isOdd = tilingParam.blockSizeNumInAxis % DIGIT_TWO;
     // 尾轴且 block 数为偶数时可以直接写回 mxScale，其余情况都需要走 scale post。
-    int64_t axisScaleKey = isOdd == 0 && tilingParam.isTailAxis ? 0 : 1;
-    tilingParam.tilingKey = baseKey + axisScaleKey;
+    uint64_t isOddScale = (isOdd == 0 && tilingParam.isTailAxis) ? TPL_EVEN_SCALE : TPL_ODD_SCALE;
+    // 这里RoundMode和ScaleAlg不重要，模板从TilingData中获取。
+    int64_t tilingKey = GET_TPL_TILING_KEY(optiMode, TPL_NOT_CARE_SCALE_ALG, TPL_NOT_CARE_ROUND_MODE, isOddScale);
+    tilingParam.tilingKey = tilingKey;
 }
 
 static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMxQuantTilingParam& tilingParam)
@@ -380,7 +420,9 @@ static ge::graphStatus SetCalcMode(const gert::TilingContext* context, DynamicMx
             tilingParam.calcMode = MODE_THREE;
         }
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg), "The value of scale_alg must be [0, 1, 2]");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "scale_alg", std::to_string(tilingParam.scaleAlg),
+            "The value of scale_alg must be [0, 1, 2]");
         return ge::GRAPH_FAILED;
     }
 
@@ -431,7 +473,7 @@ static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQua
     if (tilingParam.tailBlockSize == 0) {
         tilingParam.tailBlockSize = tilingParam.blockSize;
     }
-    tilingParam.nAlignNum = tilingParam.postAxisSize == N_ALIGN64 ? N_ALIGN64 : N_ALIGN128;
+    tilingParam.nAlignNum = static_cast<int64_t>(tilingParam.vfLen) / tilingParam.inputDtypeSize;
     return ge::GRAPH_SUCCESS;
 }
 
@@ -509,6 +551,8 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
     auto inputXPtr = context->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtr);
     auto inDtype = inputXPtr->GetDataType();
+    tilingParam.isFp32Input = (inDtype == DT_FLOAT);
+    tilingParam.inputDtypeSize = tilingParam.isFp32Input ? DIGIT_FOUR : DIGIT_TWO;
     CalcTilingKey(inDtype, tilingParam);
     OP_CHECK_IF(
         SetCalcMode(context, tilingParam) != ge::GRAPH_SUCCESS,
@@ -518,8 +562,12 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
 
     CalScaleSize(xShape, tilingParam);
 
-    int64_t maxUbAvailable = (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER / BYTES_OF_INPUT_TYPE / EXIST_NODE_NUM /
-                             tilingParam.blockSize;
+    // fp32 输入：UB 需要同时存放 fp32 数据（4B）和 bf16 中转 buffer（2B），
+    // 等效 6 字节/元素；其它 dtype（fp16/bf16）保持 2 字节/元素。
+    int64_t bytesPerElem =
+        (inDtype == DT_FLOAT) ? (BYTES_OF_INPUT_TYPE_FP32 + BYTES_OF_BF16_SCRATCH) : BYTES_OF_INPUT_TYPE;
+    int64_t maxUbAvailable =
+        (tilingParam.ubSize - RESERVED_UB_SIZE) / N_BUFFER / bytesPerElem / EXIST_NODE_NUM / tilingParam.blockSize;
     // 计算ubFactor
     SpliteUB(tilingParam, maxUbAvailable);
     int64_t multiples = 1;
@@ -555,11 +603,13 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicMxQua
 static int64_t GetNotAxisGroupPerUb(const DynamicMxQuantTilingParam& tilingParam)
 {
     int64_t groupPerUb = 0;
-    uint64_t xUbSize = tilingParam.nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * BYTES_OF_INPUT_TYPE;
+    // fp32 输入需要在 UB 中额外保留一份 bf16 中转 buffer（每元素 2 字节）。
+    int64_t bytesInputAndScratch = tilingParam.inputDtypeSize + (tilingParam.isFp32Input ? BYTES_OF_BF16_SCRATCH : 0);
+    uint64_t xUbSize = tilingParam.nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * bytesInputAndScratch;
     uint64_t yUbSize = tilingParam.nAlignNum * tilingParam.blockSize * BLOCK_PER_GROUP * MAX_BYTES_OF_OUTPUT_TYPE;
     uint64_t scaleUbSize = BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT8_BYTES_SIZE; // scale is fp8
 
-    if (tilingParam.postAxisSize > N_ALIGN128) {
+    if (tilingParam.postAxisSize > tilingParam.nAlignNum) {
         uint64_t tmpBufferUbSize = BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT16_BYTES_SIZE; // for 1 / scale
         uint64_t tmpScaleBufferUbSize =
             BLOCK_PER_GROUP * tilingParam.nAlignNum * UINT8_BYTES_SIZE; // for scale interleave
@@ -574,14 +624,18 @@ static int64_t GetNotAxisGroupPerUb(const DynamicMxQuantTilingParam& tilingParam
 static bool IsOptForNotLastQuantAxis(const gert::TilingContext* context, const DynamicMxQuantTilingParam& tilingParam)
 {
     OP_LOGD(context->GetNodeName(), "Start to check input possible to be optimized.");
-
-    if (tilingParam.postAxisSize <= N_ALIGN128) { // 小尾轴
-        if (tilingParam.blockSize != N_ALIGN32 || tilingParam.postAxisSize < N_ALIGN64) {
+    if (tilingParam.isTailAxis) {
+        OP_LOGD(context->GetNodeName(), "Tail axis quantization is not supported in this optimization branch.");
+        return false;
+    }
+    if (tilingParam.postAxisSize <= tilingParam.nAlignNum) { // 小尾轴
+        // 小尾轴时，not_tail_axis_opti会多个轴一起处理，性能更好
+        if (tilingParam.blockSize != N_ALIGN32) {
             OP_LOGD(
                 context->GetNodeName(),
-                "small tail optimization template blockSize[%ld] should be 32, postAxisSize[%ld] should be no less "
-                "than 64, please check",
-                tilingParam.blockSize, tilingParam.postAxisSize);
+                "small tail optimization template blockSize[%ld] not supported in this optimization branch, only "
+                "support 32",
+                tilingParam.blockSize);
             return false;
         }
     }
@@ -669,9 +723,24 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
     tilingParam.vfLen = Ops::Base::GetVRegSize(context);
     tilingParam.workspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
 
+    auto inputXPtrEarly = context->GetInputDesc(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context, inputXPtrEarly);
+    auto inDtypeEarly = inputXPtrEarly->GetDataType();
+    tilingParam.isFp32Input = (inDtypeEarly == DT_FLOAT);
+    tilingParam.inputDtypeSize = tilingParam.isFp32Input ? DIGIT_FOUR : DIGIT_TWO;
+
     OP_CHECK_IF(
         BaseCalc(context, tilingParam) != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "The base calculation failed."), return ge::GRAPH_FAILED);
+
+    // 尾轴+block32 场景优先判断，避免被 IsOptForNotLastQuantAxis 误拦截
+    // （IsOptForNotLastQuantAxis 不检查 isTailAxis，会导致尾轴 case 路由到 optimize 路径，
+    //  产生 isTailAxisQuant=TAIL_AXIS + optiMode=SMALL_TAIL_AXIS_OPTI 的无效 tilingKey）
+    bool IsTailAnd32 = IsTailAxisAndBlockSize32(tilingParam);
+    if (IsTailAnd32) {
+        DynamicMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);
+        return tailAxisTiling.DoTiling();
+    }
 
     bool isOptimizable = IsOptForNotLastQuantAxis(context, tilingParam);
     // 进入性能优化模板判断
@@ -680,13 +749,6 @@ ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)
         tilingParam.groupPerUb = x;
         DynamicMxQuantOptimzieTiling regbaseTiling(context, tilingParam);
         return regbaseTiling.DoTiling();
-    }
-
-    bool IsTailAnd32 = IsTailAxisAndBlockSize32(tilingParam);
-    // 当量化轴是尾轴，且BlockSize为32时，进入尾轴负载均衡模板
-    if (IsTailAnd32) {
-        DynamicMxQuantTailAxisTiling tailAxisTiling(context, tilingParam);
-        return tailAxisTiling.DoTiling();
     }
 
     OP_CHECK_IF(

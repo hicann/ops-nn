@@ -24,6 +24,7 @@
 #include "util/math_util.h"
 #include "atvoss/broadcast/broadcast_tiling.h"
 #include "../../op_kernel/arch35/dynamic_mx_quant_tilingdata.h"
+#include "../../op_kernel/arch35/dynamic_mx_quant_struct.h"
 
 namespace optiling {
 using namespace Ops::NN::Optiling;
@@ -104,6 +105,9 @@ struct DynamicMxQuantTilingParam {
 
     float dstTypeMax{0.0};
     float invDstTypeMax{0.0};
+    // 输入 dtype 字节数：bf16/fp16=2, fp32=4。
+    int64_t inputDtypeSize{2};
+    bool isFp32Input{false};
 };
 
 enum class RoundModeList
@@ -136,8 +140,8 @@ private:
 
 private:
     gert::TilingContext* context_ = nullptr;
-    DynamicMxQuant4OptimizeTilingData tilingData{};
     DynamicMxQuantTilingParam tilingParam_;
+    DynamicMxQuant4OptimizeTilingData tilingData{};
 };
 
 class DynamicMxQuantTailAxisTiling {
@@ -160,8 +164,8 @@ private:
 
 private:
     gert::TilingContext* context_ = nullptr;
-    DynamicMxQuantTailAxisTilingData tilingData_{};
     DynamicMxQuantTilingParam tilingParam_;
+    DynamicMxQuantTailAxisTilingData tilingData_{};
 };
 
 } // namespace optiling

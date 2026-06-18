@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ private:
     int64_t colLoopBlockSize_ = 0;  // 行循环块大小
 
     uint16_t rowPerLoop_ = 0; // 计算单次能放下的完整行数
-    int64_t nonTailAxisTemplate = 0;
+    int64_t nonTailAxisTemplate_ = 0;
 };
 
 __aicore__ inline void DynamicMxQuantPost::Init(
@@ -112,7 +112,7 @@ __aicore__ inline void DynamicMxQuantPost::Init(
     if (isTailAxis_ == 0) {
         firstSize_ = (axisSize_ + DIGIT_TWO - 1) / DIGIT_TWO * DIGIT_TWO * preAxisSize_;
         lastSize_ = postAxisSize_;
-        lastSizeAlign_ = (lastSize_ + OUT_ELE_NUM_ONE_BLK_FP8 - 1) / OUT_ELE_NUM_ONE_BLK_FP8 * OUT_ELE_NUM_ONE_BLK_FP8;
+        lastSizeAlign_ = (lastSize_ + FP8_OUT_ELE_PER_BLK - 1) / FP8_OUT_ELE_PER_BLK * FP8_OUT_ELE_PER_BLK;
 
         rowPerLoop_ = SCALE_BUFFER_SIZE / lastSize_;
         if (rowPerLoop_ >= 1) {
@@ -132,20 +132,20 @@ __aicore__ inline void DynamicMxQuantPost::Init(
             rowLoopBlockCount_ = firstSize_ / DIGIT_TWO;                 // 每行需要分多次处理
         }
         if (axisSize_ % DIGIT_TWO == 0) {
-            nonTailAxisTemplate = NON_TAIL_AXIS_NON_ZERO;
+            nonTailAxisTemplate_ = NON_TAIL_AXIS_NON_ZERO;
         } else {
             if (rowPerLoop_ == 1) {
-                nonTailAxisTemplate = NON_TAIL_AXIS_ZERO_LARGE;
+                nonTailAxisTemplate_ = NON_TAIL_AXIS_ZERO_LARGE;
             } else if (DIGIT_TWO * rowPerLoop_ < axisSize_) {
-                nonTailAxisTemplate = NON_TAIL_AXIS_ZERO_MEDIUM;
+                nonTailAxisTemplate_ = NON_TAIL_AXIS_ZERO_MEDIUM;
             } else {
-                nonTailAxisTemplate = NON_TAIL_AXIS_ZERO_SMALL;
+                nonTailAxisTemplate_ = NON_TAIL_AXIS_ZERO_SMALL;
             }
         }
     } else {
         lastSize_ = axisSize_ * postAxisSize_;
-        lastSizeAlign_ = (axisSize_ * postAxisSize_ + OUT_ELE_NUM_ONE_BLK_FP8 - 1) / OUT_ELE_NUM_ONE_BLK_FP8 *
-                         OUT_ELE_NUM_ONE_BLK_FP8;
+        lastSizeAlign_ =
+            (axisSize_ * postAxisSize_ + FP8_OUT_ELE_PER_BLK - 1) / FP8_OUT_ELE_PER_BLK * FP8_OUT_ELE_PER_BLK;
         lastPadSize_ = (axisSize_ + DIGIT_TWO - 1) / DIGIT_TWO * DIGIT_TWO * postAxisSize_;
 
         rowPerLoop_ = SCALE_BUFFER_SIZE / lastSizeAlign_;
@@ -313,11 +313,11 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroLargeCompute()
 
 __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroMediumCompute()
 {
-    int64_t LoopNum = (axisSize_ + 1 + DIGIT_TWO * rowPerLoop_ - 1) / (DIGIT_TWO * rowPerLoop_);
-    int64_t rowTailLoop_ = ((axisSize_ + 1) - (LoopNum - 1) * DIGIT_TWO * rowPerLoop_) / DIGIT_TWO;
+    int64_t loopNum = (axisSize_ + 1 + DIGIT_TWO * rowPerLoop_ - 1) / (DIGIT_TWO * rowPerLoop_);
+    int64_t rowTailLoop_ = ((axisSize_ + 1) - (loopNum - 1) * DIGIT_TWO * rowPerLoop_) / DIGIT_TWO;
 
     for (int64_t i = 0; i < preAxisSize_; ++i) {
-        for (int64_t j = 0; j < LoopNum-1; ++j) {
+        for (int64_t j = 0; j < loopNum - 1; ++j) {
             int64_t colSize = colLoopBlockSize_;
             int64_t wsGmOffset1 = i * axisSize_ * lastSize_ + 2 * j * rowPerLoop_ * lastSize_;
             int64_t wsGmOffset2 = wsGmOffset1 + lastSize_;
@@ -329,10 +329,10 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroMediumCompute()
             CopyOut(scaleGmOffset, colSize * rowPerLoop_, DIGIT_TWO);
         }
         int64_t colSize = colLoopBlockSize_;
-        int64_t wsGmOffset1 = i * axisSize_ * lastSize_ + 2 * (LoopNum-1) * rowPerLoop_ * lastSize_;
+        int64_t wsGmOffset1 = i * axisSize_ * lastSize_ + 2 * (loopNum - 1) * rowPerLoop_ * lastSize_;
         int64_t wsGmOffset2 = wsGmOffset1 + lastSize_;
-        int64_t scaleGmOffset = i * (axisSize_ + 1) * lastSize_ + 2 * (LoopNum-1) * rowPerLoop_ * lastSize_;      
-        CopyInPaddingZero(wsGmOffset1, wsGmOffset2, colSize, rowTailLoop_, 1);       
+        int64_t scaleGmOffset = i * (axisSize_ + 1) * lastSize_ + 2 * (loopNum - 1) * rowPerLoop_ * lastSize_;
+        CopyInPaddingZero(wsGmOffset1, wsGmOffset2, colSize, rowTailLoop_, 1);
         auto scaleOut = scaleQueue.AllocTensor<uint8_t>();
         scaleQueue.EnQue(scaleOut);
         ComputeInterleave(colSize * rowPerLoop_);
@@ -343,32 +343,32 @@ __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroMediumCompute()
 __aicore__ inline void DynamicMxQuantPost::NonTailAxisZeroSmallCompute()
 {
     int64_t rowPerLoopAlign_ = (rowPerLoop_ * DIGIT_TWO) / (axisSize_ + 1) * (axisSize_ + 1);
-    int64_t LoopNum = (firstSize_ + rowPerLoopAlign_ - 1) / rowPerLoopAlign_;
+    int64_t loopNum = (firstSize_ + rowPerLoopAlign_ - 1) / rowPerLoopAlign_;
     int64_t rowPerLoop = rowPerLoopAlign_ / (axisSize_ + 1) * axisSize_;
 
-    for (int64_t i = 0; i < LoopNum; ++i) {
-        int64_t Size = (i == LoopNum - 1) ? firstSize_ - i * rowPerLoopAlign_ : rowPerLoopAlign_;
+    for (int64_t i = 0; i < loopNum; ++i) {
+        int64_t dataSize = (i == loopNum - 1) ? firstSize_ - i * rowPerLoopAlign_ : rowPerLoopAlign_;
         int64_t wsGmOffset1 = i * rowPerLoop * lastSize_;
         int64_t wsGmOffset2 = wsGmOffset1 + lastSize_;
         int64_t scaleGmOffset = i * rowPerLoopAlign_ * lastSize_;
-        CopyInPaddingZero(wsGmOffset1, wsGmOffset2, lastSize_, (axisSize_ + 1) / DIGIT_TWO, Size / (axisSize_ + 1));
+        CopyInPaddingZero(wsGmOffset1, wsGmOffset2, lastSize_, (axisSize_ + 1) / DIGIT_TWO, dataSize / (axisSize_ + 1));
 
         auto scaleOut = scaleQueue.AllocTensor<uint8_t>();
         scaleQueue.EnQue(scaleOut);
-        ComputeInterleave(lastSize_ * (Size / DIGIT_TWO));
-        CopyOut(scaleGmOffset, lastSize_, Size);
+        ComputeInterleave(lastSize_ * (dataSize / DIGIT_TWO));
+        CopyOut(scaleGmOffset, lastSize_, dataSize);
     }
 }
 
 __aicore__ inline void DynamicMxQuantPost::NonTailAxisCompute()
 {
-    if (nonTailAxisTemplate == NON_TAIL_AXIS_NON_ZERO) {
+    if (nonTailAxisTemplate_ == NON_TAIL_AXIS_NON_ZERO) {
         NonTailAxisNonZeroCompute();
-    } else if (nonTailAxisTemplate == NON_TAIL_AXIS_ZERO_LARGE) {
+    } else if (nonTailAxisTemplate_ == NON_TAIL_AXIS_ZERO_LARGE) {
         NonTailAxisZeroLargeCompute();
-    } else if (nonTailAxisTemplate == NON_TAIL_AXIS_ZERO_MEDIUM) {
+    } else if (nonTailAxisTemplate_ == NON_TAIL_AXIS_ZERO_MEDIUM) {
         NonTailAxisZeroMediumCompute();
-    } else if (nonTailAxisTemplate == NON_TAIL_AXIS_ZERO_SMALL) {
+    } else if (nonTailAxisTemplate_ == NON_TAIL_AXIS_ZERO_SMALL) {
         NonTailAxisZeroSmallCompute();
     }
 }
@@ -426,18 +426,18 @@ __aicore__ inline void DynamicMxQuantPost::CopyInPaddingZero(
 
 __aicore__ inline void DynamicMxQuantPost::ComputeInterleave(uint32_t elementNum)
 {
-    auto InBuf1 = inQueue1_.DeQue<uint8_t>();
-    auto InBuf2 = inQueue2_.DeQue<uint8_t>();
-    auto OutBuf = scaleQueue.DeQue<uint8_t>();
-    __local_mem__ uint8_t* InAddr1 = (__local_mem__ uint8_t*)InBuf1.GetPhyAddr();
-    __local_mem__ uint8_t* InAddr2 = (__local_mem__ uint8_t*)InBuf2.GetPhyAddr();
-    __local_mem__ uint8_t* OutAddr = (__local_mem__ uint8_t*)OutBuf.GetPhyAddr();
+    auto inBuf1 = inQueue1_.DeQue<uint8_t>();
+    auto inBuf2 = inQueue2_.DeQue<uint8_t>();
+    auto outBuf = scaleQueue.DeQue<uint8_t>();
+    __local_mem__ uint8_t* inAddr1 = (__local_mem__ uint8_t*)inBuf1.GetPhyAddr();
+    __local_mem__ uint8_t* inAddr2 = (__local_mem__ uint8_t*)inBuf2.GetPhyAddr();
+    __local_mem__ uint8_t* outAddr = (__local_mem__ uint8_t*)outBuf.GetPhyAddr();
 
-    ComputeInterleaveVF(InAddr1, InAddr2, OutAddr, elementNum);
+    ComputeInterleaveVF(inAddr1, inAddr2, outAddr, elementNum);
 
-    inQueue1_.FreeTensor(InBuf1);
-    inQueue2_.FreeTensor(InBuf2);
-    scaleQueue.EnQue(OutBuf);
+    inQueue1_.FreeTensor(inBuf1);
+    inQueue2_.FreeTensor(inBuf2);
+    scaleQueue.EnQue(outBuf);
 }
 
 __aicore__ inline void DynamicMxQuantPost::CopyOut(int64_t scaleGmOffset, int64_t blockLen, int64_t blockCount)
@@ -455,7 +455,7 @@ __aicore__ inline void DynamicMxQuantPost::CopyOut(int64_t scaleGmOffset, int64_
 }
 
 __aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(
-    __local_mem__ uint8_t* LocalAddr1, __local_mem__ uint8_t* LocalAddr2, __local_mem__ uint8_t* ScaleAddr,
+    __local_mem__ uint8_t* localAddr1, __local_mem__ uint8_t* localAddr2, __local_mem__ uint8_t* scaleAddr,
     uint32_t elementNum)
 {
     uint32_t dtypeSize = sizeof(uint8_t);
@@ -464,19 +464,19 @@ __aicore__ inline void DynamicMxQuantPost::ComputeInterleaveVF(
 
     __VEC_SCOPE__
     {
-        AscendC::MicroAPI::RegTensor<uint8_t, MicroAPI::RegTraitNumOne> vreg0;
-        AscendC::MicroAPI::RegTensor<uint8_t, MicroAPI::RegTraitNumOne> vreg1;
-        AscendC::MicroAPI::RegTensor<uint8_t, MicroAPI::RegTraitNumOne> vreg3;
-        AscendC::MicroAPI::RegTensor<uint8_t, MicroAPI::RegTraitNumOne> vreg4;
+        Reg::RegTensor<uint8_t, Reg::RegTraitNumOne> vreg0;
+        Reg::RegTensor<uint8_t, Reg::RegTraitNumOne> vreg1;
+        Reg::RegTensor<uint8_t, Reg::RegTraitNumOne> vreg3;
+        Reg::RegTensor<uint8_t, Reg::RegTraitNumOne> vreg4;
 
-        AscendC::MicroAPI::MaskReg mask = AscendC::MicroAPI::CreateMask<uint8_t, AscendC::MicroAPI::MaskPattern::ALL>();
+        Reg::MaskReg mask = Reg::CreateMask<uint8_t, Reg::MaskPattern::ALL>();
 
         for (uint16_t i = 0; i < vfLoopNum; i++) {
-            AscendC::MicroAPI::DataCopy(vreg0, LocalAddr1 + i * VL);
-            AscendC::MicroAPI::DataCopy(vreg1, LocalAddr2 + i * VL);
-            AscendC::MicroAPI::Interleave(vreg3, vreg4, vreg0, vreg1);
-            AscendC::MicroAPI::DataCopy(ScaleAddr + DIGIT_TWO * i * VL, vreg3, mask);
-            AscendC::MicroAPI::DataCopy(ScaleAddr + (DIGIT_TWO * i + 1) * VL, vreg4, mask);
+            Reg::DataCopy(vreg0, localAddr1 + i * VL);
+            Reg::DataCopy(vreg1, localAddr2 + i * VL);
+            Reg::Interleave(vreg3, vreg4, vreg0, vreg1);
+            Reg::DataCopy(scaleAddr + DIGIT_TWO * i * VL, vreg3, mask);
+            Reg::DataCopy(scaleAddr + (DIGIT_TWO * i + 1) * VL, vreg4, mask);
         }
     }
 }
