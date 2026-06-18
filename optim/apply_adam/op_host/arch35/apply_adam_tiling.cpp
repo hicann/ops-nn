@@ -61,11 +61,11 @@ protected:
     ge::graphStatus CheckDtype();
 
 private:
-    ge::DataType varDtype_;
+    ge::DataType varDtype_ = ge::DT_FLOAT16;
     gert::TilingContext* tilingContext_;
 
-    bool useLocking_;
-    bool useNesterov_;
+    bool useLocking_ = false;
+    bool useNesterov_ = false;
 };
 
 ge::graphStatus ApplyAdamTiling::SetTilingData()
