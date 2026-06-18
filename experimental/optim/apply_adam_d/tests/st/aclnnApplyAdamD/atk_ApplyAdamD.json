@@ -1,0 +1,4138 @@
+[
+  {
+    "id": 0,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "core_fp32_nes0"
+  },
+  {
+    "id": 1,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": true,
+        "required": true
+      }
+    ],
+    "version": "core_fp32_nes1"
+  },
+  {
+    "id": 2,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "core_fp16_nes0"
+  },
+  {
+    "id": 3,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": true,
+        "required": true
+      }
+    ],
+    "version": "core_fp16_nes1"
+  },
+  {
+    "id": 4,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "core_bf16_nes0"
+  },
+  {
+    "id": 5,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          4,
+          16
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": true,
+        "required": true
+      }
+    ],
+    "version": "core_bf16_nes1"
+  },
+  {
+    "id": 6,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "rank1_single"
+  },
+  {
+    "id": 7,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": true,
+        "required": true
+      }
+    ],
+    "version": "rank2_standard"
+  },
+  {
+    "id": 8,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          2,
+          3,
+          4,
+          5
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "rank4_highrank"
+  },
+  {
+    "id": 9,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1024
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1024
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1024
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1024
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "1d_large_multicore"
+  },
+  {
+    "id": 10,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": true,
+        "required": true
+      }
+    ],
+    "version": "fp16_large"
+  },
+  {
+    "id": 11,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "bf16",
+        "shape": [
+          2048
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "bf16_large"
+  },
+  {
+    "id": 12,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "rank0_scalar"
+  },
+  {
+    "id": 13,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          0
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          0
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          0
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          0
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "empty_tensor"
+  },
+  {
+    "id": 14,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0,
+            0
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "grad_all_zero"
+  },
+  {
+    "id": 15,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-12,
+            1e-12
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "epsilon_tiny"
+  },
+  {
+    "id": 16,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-06,
+            1e-06
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp32",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.3
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "beta1_power_near0"
+  },
+  {
+    "id": 17,
+    "name": "ApplyAdamD",
+    "kernel_name": "ApplyAdamD",
+    "api_type": "cpu_apply_adam_d",
+    "kernel_api_type": "kernel_apply_adam_d",
+    "standard": {
+      "acc": {
+        "single_bm": {
+          "type": "high_performance",
+          "fp32_error": 0.0001220703125,
+          "fp16_error": 0.0009765625,
+          "bf16_error": 0.0078125
+        }
+      },
+      "perf": "not_key"
+    },
+    "inputs": [
+      {
+        "name": "var",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -1,
+            1
+          ],
+          "std": [
+            0.1,
+            0.5
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "m",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            -0.5,
+            0.5
+          ],
+          "std": [
+            0.05,
+            0.2
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "v",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.5,
+            1.0
+          ],
+          "std": [
+            0.01,
+            0.05
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2_power",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "lr",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.001,
+            0.001
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta1",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.9,
+            0.9
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "beta2",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0.999,
+            0.999
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "epsilon",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          1
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            1e-07,
+            1e-07
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "grad",
+        "type": "tensor",
+        "dtype": "fp16",
+        "shape": [
+          64
+        ],
+        "range_values": {
+          "name": "nd",
+          "mean": [
+            0,
+            0
+          ],
+          "std": [
+            0,
+            0
+          ]
+        },
+        "required": true
+      },
+      {
+        "name": "use_nesterov",
+        "type": "attr",
+        "dtype": "bool",
+        "range_values": false,
+        "required": true
+      }
+    ],
+    "version": "fp16_grad_all_zero"
+  }
+]
