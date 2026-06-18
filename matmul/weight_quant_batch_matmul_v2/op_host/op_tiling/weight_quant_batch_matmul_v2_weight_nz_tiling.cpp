@@ -1338,10 +1338,15 @@ uint64_t WeightQuantBatchMatmulV2WeightNz::CalCubFactorTiling(uint64_t cubNz2NdC
 
 void WeightQuantBatchMatmulV2WeightNz::PrintCVTilingData(bool debugLevel)
 {
-    if (debugLevel && CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
+    if (debugLevel) {
+        OPS_LOG_D(inputParams_.opName, "%ld", PrintCVTilingDataImpl(debugLevel));
+    } else {
+        OPS_LOG_E(inputParams_.opName, "%ld", PrintCVTilingDataImpl(debugLevel));
     }
+}
 
+int64_t WeightQuantBatchMatmulV2WeightNz::PrintCVTilingDataImpl(bool debugLevel)
+{
     std::stringstream ss;
     ss << "kAlign: " << tilingData_->kAlign << " kSize: " << tilingData_->kSize
        << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
@@ -1366,6 +1371,7 @@ void WeightQuantBatchMatmulV2WeightNz::PrintCVTilingData(bool debugLevel)
     } else {
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
+    return 0;
 }
 
 ge::graphStatus WeightQuantBatchMatmulV2WeightNz::PostTiling()

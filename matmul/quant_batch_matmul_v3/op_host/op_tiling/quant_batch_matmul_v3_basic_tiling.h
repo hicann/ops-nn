@@ -75,6 +75,7 @@ protected:
     ge::graphStatus CalcUbTiling() override;
 
     void PrintBasicTiling() const;
+    int64_t PrintBasicTilingImpl() const;
     // // basic tiling
     bool CheckIfUseBasicInMix(uint64_t m, uint64_t n, uint64_t k) const;
     bool CheckNotFullLoadForMutliIterate(uint64_t m, uint64_t n, uint64_t k) const;

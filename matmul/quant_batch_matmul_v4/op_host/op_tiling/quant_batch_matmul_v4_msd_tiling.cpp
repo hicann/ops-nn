@@ -492,9 +492,11 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::DoLibApiTiling()
 
 void QuantBatchMatmulV4MsdTiling::PrintTilingData() const
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintTilingDataImpl());
+}
+
+int64_t QuantBatchMatmulV4MsdTiling::PrintTilingDataImpl() const
+{
     std::stringstream ss;
     ss << " CoreNum: " << static_cast<int32_t>(tilingData_->coreNum) << " vBaseM: " << tilingData_->vBaseM
        << " ubRestBytes: " << tilingData_->ubRestBytes << " parallNum: " << tilingData_->parallNum
@@ -503,13 +505,16 @@ void QuantBatchMatmulV4MsdTiling::PrintTilingData() const
        << " groupSize: " << tilingData_->groupSize;
     OPS_LOG_D(inputParams_.opName, "api tiling: %s", ss.str().c_str());
     PrintMatmulTilingData();
+    return 0;
 }
 
 void QuantBatchMatmulV4MsdTiling::PrintMatmulTilingData() const
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintMatmulTilingDataImpl());
+}
+
+int64_t QuantBatchMatmulV4MsdTiling::PrintMatmulTilingDataImpl() const
+{
     auto &matmulTiling = tilingData_->matmulTiling;
     std::stringstream ss;
     ss << " usedCoreNum: " << matmulTiling.usedCoreNum << " M: " << matmulTiling.M << " N: " << matmulTiling.N
@@ -527,6 +532,7 @@ void QuantBatchMatmulV4MsdTiling::PrintMatmulTilingData() const
        << " batchN: " << matmulTiling.batchN << " singleBatchM: " << matmulTiling.singleBatchM
        << " singleBatchN: " << matmulTiling.singleBatchN;
     OPS_LOG_D(inputParams_.opName, "matmulTiling: %s", ss.str().c_str());
+    return 0;
 }
 
 bool QuantBatchMatmulV4MsdTiling::IsCapable()

@@ -424,17 +424,22 @@ ge::graphStatus QuantBatchMatmulV4PerblockTiling::DoLibApiTiling()
 
 void QuantBatchMatmulV4PerblockTiling::PrintTilingData()
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintTilingDataImpl());
+}
+
+int64_t QuantBatchMatmulV4PerblockTiling::PrintTilingDataImpl()
+{
     PrintMatmulTilingData();
+    return 0;
 }
 
 void QuantBatchMatmulV4PerblockTiling::PrintMatmulTilingData()
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintMatmulTilingDataImpl());
+}
+
+int64_t QuantBatchMatmulV4PerblockTiling::PrintMatmulTilingDataImpl()
+{
     auto &matmulTiling = tilingData_->matmulTiling;
     std::stringstream ss;
     ss << " M: " << matmulTiling.M << " N: " << matmulTiling.N << " Ka: " << matmulTiling.Ka
@@ -453,6 +458,7 @@ void QuantBatchMatmulV4PerblockTiling::PrintMatmulTilingData()
        << " singleBatchN: " << matmulTiling.singleBatchN << " usedCoreNum: " << matmulTiling.usedCoreNum
        << " batchN: " << matmulTiling.batchN << " singleBatchM: " << matmulTiling.singleBatchM;
     OPS_LOG_D(inputParams_.opName, "matmulTiling: %s", ss.str().c_str());
+    return 0;
 }
 
 bool QuantBatchMatmulV4PerblockTiling::IsCapable()

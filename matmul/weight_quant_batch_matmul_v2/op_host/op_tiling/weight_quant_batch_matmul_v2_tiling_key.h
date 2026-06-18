@@ -128,9 +128,11 @@ public:
 public:
     void PrintTilingKeyLog() const
     {
-        if (CheckLogLevel(OP, DLOG_INFO) != 1) {
-            return;
-        }
+        OP_LOGI("WeightQuantBatchMatmulV2", "%ld", PrintTilingKeyLogImpl());
+    }
+
+    int64_t PrintTilingKeyLogImpl() const
+    {
         std::stringstream ss;
         ss << "socVersionType: " << static_cast<uint32_t>(this->socVersionType)
            << " quantizationScenario: " << static_cast<uint32_t>(this->quantizationScenario)
@@ -143,7 +145,7 @@ public:
            << " templateCustom: " << static_cast<uint32_t>(this->templateCustom)
            << " apiConstexpr: " << static_cast<uint32_t>(this->apiConstexpr);
         OP_LOGI("WeightQuantBatchMatmulV2", "tilingKeyConfigure: %s", ss.str().c_str());
-        return;
+        return 0;
     }
 
     uint64_t GenTilingKey() const

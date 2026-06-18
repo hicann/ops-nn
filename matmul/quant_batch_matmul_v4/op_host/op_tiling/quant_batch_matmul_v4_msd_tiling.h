@@ -61,7 +61,9 @@ protected:
     ge::graphStatus CheckContext();
     ge::graphStatus InstantiateTilingData();
     void PrintTilingData() const;
+    int64_t PrintTilingDataImpl() const;
     void PrintMatmulTilingData() const;
+    int64_t PrintMatmulTilingDataImpl() const;
     bool AnalyzeAttrs();
     bool AnalyzeDtype();
     bool AnalyzeInputs();
