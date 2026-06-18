@@ -47,11 +47,14 @@ inline ge::graphStatus GenSimplifiedKey(gert::TilingContext* context, ge::char_t
     auto x1ScaleDataType = ge::DT_FLOAT;
     auto x2ScaleDataType = ge::DT_FLOAT;
     auto biasDataType = ge::DT_FLOAT;
+    bool isHIFP8 = input0DataType == ge::DT_HIFLOAT8 && input1DataType == ge::DT_HIFLOAT8;
     if (context->GetOptionalInputDesc(BIAS_INDEX) != nullptr) {
         biasDataType = context->GetOptionalInputDesc(BIAS_INDEX)->GetDataType();
     }
     if (context->GetOptionalInputDesc(X1_SCALE_INDEX) != nullptr) {
         x1ScaleDataType = context->GetOptionalInputDesc(X1_SCALE_INDEX)->GetDataType();
+    } else if (isHIFP8) {
+        x1ScaleDataType = ge::DT_UINT64;
     }
     if (context->GetOptionalInputDesc(X2_SCALE_INDEX) != nullptr) {
         x2ScaleDataType = context->GetOptionalInputDesc(X2_SCALE_INDEX)->GetDataType();

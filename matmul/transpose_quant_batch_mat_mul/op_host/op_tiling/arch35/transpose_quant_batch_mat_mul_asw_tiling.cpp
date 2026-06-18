@@ -32,6 +32,9 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::DoOpTiling()
     if (IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_MXFP8;
         CalL1Tiling();
+    } else if (IsHIFP8(context_->GetInputDesc(X1_IDX), context_->GetInputDesc(X2_IDX))) {
+        precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_HIFP8;
+        CalL1Tiling();
     } else {
         precisionMode_ = TQBMMPrecisionMode::PRECISION_MODE_FP8;
         MatMulV3TilingHelper::CalL1Tiling(compileInfo_, args_, runInfo_);
@@ -76,7 +79,8 @@ void TransposeQuantBatchMatMulAswTiling::GetTransposeBatchMatMulInfo()
     }
     if (attrs->GetAttrNum() >= ATTR_NUM) {
         batchSplitFactor_ = std::max(*(attrs->GetAttrPointer<int32_t>(ATTR_NUM - 1)), 1);
-        batchSplitMode_ = batchSplitFactor_ > 1 ? TQBMMBatchSplit::BATCH_SPLIT_TRUE : TQBMMBatchSplit::BATCH_SPLIT_FALSE;
+        batchSplitMode_ = batchSplitFactor_ > 1 ? TQBMMBatchSplit::BATCH_SPLIT_TRUE :
+                                                  TQBMMBatchSplit::BATCH_SPLIT_FALSE;
     }
 }
 
@@ -88,10 +92,14 @@ void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
     }
     uint64_t baseASize = runInfo_.baseM * runInfo_.baseK * args_.aDtypeSize;
     uint64_t baseBSize = runInfo_.baseN * runInfo_.baseK * args_.bDtypeSize;
-    uint64_t baseScaleASize =
+    bool isMXFP8 =
+        IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX));
+    uint64_t baseScaleASize = !isMXFP8 ?
+        0 :
         ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE) *
         runInfo_.baseM * ge::GetSizeByDataType(context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
-    uint64_t baseScaleBSize =
+    uint64_t baseScaleBSize = !isMXFP8 ?
+        0 :
         ops::CeilAlign(ops::CeilDiv(static_cast<uint64_t>(runInfo_.baseK), MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE) *
         runInfo_.baseN * ge::GetSizeByDataType(context_->GetOptionalInputDesc(SCALE_X1_IDX)->GetDataType());
     uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
@@ -106,7 +114,9 @@ void TransposeQuantBatchMatMulAswTiling::CalL1Tiling()
         runInfo_.depthB1 = depthASec < depthBSec ? depthBSec : depthInit;
     }
     CalStepKs();
-    CalScaleFactors(baseASize, baseBSize, baseScaleASize, baseScaleBSize);
+    if (isMXFP8) {
+        CalScaleFactors(baseASize, baseBSize, baseScaleASize, baseScaleBSize);
+    }
     runInfo_.singleCoreM = runInfo_.baseM;
     runInfo_.singleCoreN = runInfo_.baseN;
     return;
@@ -229,7 +239,7 @@ ge::graphStatus TransposeQuantBatchMatMulAswTiling::GetTilingDataProcess(BatchMa
 {
     ge::graphStatus ret = MatMulV3BaseTiling::GetTilingDataProcess(tilingData);
     auto x1Scale = context_->GetOptionalInputDesc(SCALE_X1_IDX);
-    if (x1Scale != nullptr && x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0) {
+    if (IsMicroScaling(context_->GetOptionalInputDesc(SCALE_X1_IDX), context_->GetOptionalInputDesc(SCALE_X2_IDX))) {
         tilingData.matMulTilingData.tCubeTiling.mxTypePara =
             (SCALER_FACTOR_MIN << SCALER_FACTOR_N_BIT) + (SCALER_FACTOR_MIN << SCALER_FACTOR_M_BIT);
         if (scaleFactorA_ >= SCALER_FACTOR_MIN && scaleFactorA_ <= SCALER_FACTOR_MAX &&

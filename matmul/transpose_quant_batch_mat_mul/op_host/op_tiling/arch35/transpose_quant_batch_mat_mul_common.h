@@ -77,5 +77,10 @@ bool inline IsMicroScaling(const gert::CompileTimeTensorDesc* x1Scale, const ger
     }
     return x1Scale->GetDataType() == ge::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == ge::DT_FLOAT8_E8M0;
 }
+
+bool inline IsHIFP8(const gert::CompileTimeTensorDesc* x1, const gert::CompileTimeTensorDesc* x2)
+{
+    return x1->GetDataType() == ge::DT_HIFLOAT8 && x2->GetDataType() == ge::DT_HIFLOAT8;
+}
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

@@ -62,7 +62,7 @@ public:
     __aicore__ inline void UpdateBlockParams();
     __aicore__ inline uint64_t GetAlignedOriN() const { return alignedOriN_; }
     __aicore__ inline uint64_t GetAlignedKbSize() const { return alignedKbSize_; }
-    template <bool bTrans, CubeFormat bFormat>
+    template <bool bTrans, CubeFormat bFormat, int8_t precisionMode>
     __aicore__ inline void CalcGMOffset(bool isMxType);
 
 public:
@@ -146,7 +146,7 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::UpdateBlockParams()
     params_.singleCoreN =
         params_.nIndex != (params_.nCnt - 1UL) ? tilingData_->matMulTilingData.tCubeTiling.baseN : params_.nBaseTail;
 }
-template <bool bTrans, CubeFormat bFormat>
+template <bool bTrans, CubeFormat bFormat, int8_t precisionMode>
 __aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMxType)
 {
     uint64_t mOffset = params_.mIndex * tilingData_->matMulTilingData.tCubeTiling.baseM;
@@ -178,6 +178,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswBlock::CalcGMOffset(bool isMx
             offset_.batchOffset * tilingData_->matMulTilingData.tCubeTiling.N * MXFP_MULTI_BASE_SIZE *
                 CeilDiv(static_cast<uint64_t>(tilingData_->matMulTilingData.tCubeTiling.Ka), MXFP_DIVISOR_SIZE) +
             nOffset * scaleK;
+    } else if constexpr (precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
+        offset_.offsetScale = nOffset;
     } else {
         offset_.offsetPerTokenScale = mOffset;
         offset_.offsetScale = nOffset;

@@ -23,21 +23,21 @@ namespace ge {
 * @par Inputs:
 * Five inputs, including:
 * @li x1: A matrix tensor. Must be one of the following types:
-* float8_e4m3fn, float8_e5m2. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2, hifloat8. 3D. Has format ND.
 * @li x2: A matrix tensor. Must be one of the following types:
-* float8_e4m3fn, float8_e5m2. 3D. Has format ND.
+* float8_e4m3fn, float8_e5m2, hifloat8. 3D. Has format ND.
 * @li bias: An optional tensor. Bias for batchmatmul. Must be one of the following types:
 * float32, float16, bfloat16. 1D. Has format ND.
 * @li x1_scale: A matrix tensor, quantization parameter.
-             Must be one of the following types: float32、float8_e8m0. The format
-             supports ND. The shape is 1D (t,), with t equal to m, where m is the same as that of x1.
+             Must be one of the following types: float32、float8_e8m0、uint64_t. The format
+             supports ND. The shape is 1D (t,), with t equal to 1 or m, where m is the same as that of x1.
 * @li x2_scale: A matrix tensor, quantization parameter.
-             Must be one of the following types: float32、float8_e8m0. The format
+             Must be one of the following types: float32、float8_e8m0、uint64_t. The format
              supports ND. The shape is 1D (t,), with t equal to n, where n is the same as that of x2.
 
 * @par Attributes:
 * Six attributes, including:
-* @li dtype: An int. Declare the output type, supports  1(float16), 27(bfloat16).
+* @li dtype: An int. Declare the output type, supports  1(float16), 27(bfloat16), 34(hifloat8).
 * @li group_size: An optional int. Indicating the ratio between x1_scale/x2_scale and x1/x2 in group dequantization.
 Default to be 0.
 * @li perm_x1: A list int. "x1" is permuted to shape [B, M, K] before multiplication, the default value is [1, 0, 2].
@@ -51,12 +51,12 @@ Default to be 0.
   The format supports ND. The shape dim must be 3D. \n
 */
 REG_OP(TransposeQuantBatchMatMul)
-    .INPUT(x1, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
-    .INPUT(x2, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .INPUT(x1, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_HIFLOAT8}))
+    .INPUT(x2, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_HIFLOAT8}))
     .OPTIONAL_INPUT(bias, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-    .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
-    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
-    .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16}))
+    .OPTIONAL_INPUT(x1_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64}))
+    .OPTIONAL_INPUT(x2_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0, DT_UINT64}))
+    .OUTPUT(y, TensorType({DT_FLOAT16, DT_BF16, DT_HIFLOAT8}))
     .REQUIRED_ATTR(dtype, Int)
     .ATTR(group_size, Int, 0)
     .ATTR(perm_x1, ListInt, {1, 0, 2})
