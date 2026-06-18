@@ -98,7 +98,6 @@ private:
     uint32_t normalCoreProcessNum_{0};
     uint32_t tailCoreProcessNum_{0};
     uint32_t usedCoreNum_{1};
-    uint32_t dequantCoreNum_{1};
     uint64_t segmentNum_{1};
     uint32_t tmpBufferSize_{0};
     uint64_t curCoreProcessNum_{0};
@@ -179,7 +178,6 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::Init(GM_ADDR x, GM_ADDR seg
     normalCoreProcessNum_ = tilingData_.normalCoreProcessNum;
     tailCoreProcessNum_ = tilingData_.tailCoreProcessNum;
     usedCoreNum_ = tilingData_.usedCoreNum;
-    dequantCoreNum_ = tilingData_.dequantCoreNum;
     tmpBufferSize_ = tilingData_.tmpBufferSize;
     rowsNumInUb_ = tilingData_.rowsNumInUB;
     segmentNum_ = tilingData_.outputOuterDim;      
@@ -407,7 +405,7 @@ __aicore__ inline void KernelUSSDeterministic<T, U>::ThirdUbProcess()
 {
     asc_vf_call<Dequantize<T,U>>(dim3(MAX_THREAD), (__gm__ float*)(workspaceMValue_.GetPhyAddr()), 
         (__gm__ uint64_t*)(workspaceNValue_.GetPhyAddr()), (__gm__ int32_t*)(workspaceOutput_.GetPhyAddr()),
-        (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, dequantCoreNum_);
+        (__gm__ T*)(yGm_.GetPhyAddr()), segmentNum_, innerDim_, blockId_, GetBlockNum());
 }
 
 } // namespace UnsortedSegmentSum
