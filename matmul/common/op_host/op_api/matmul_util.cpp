@@ -117,6 +117,7 @@ static inline bool CheckMMV3NzNzNdSupport(MmOpInfo& mmOpInfo)
 {
     // 当前切换场景不支持输入self、mat2混精度场景，且输入类型只支持fp16、bf16、fp32
     if (mmOpInfo.support_info.self_dtype != mmOpInfo.support_info.mat2_dtype ||
+        mmOpInfo.support_info.self_dtype != mmOpInfo.support_info.output_dtype ||
         ALIGN_UNIT_MAP.find(mmOpInfo.support_info.self_dtype) == ALIGN_UNIT_MAP.end()) {
         return false;
     }
@@ -474,25 +475,21 @@ static const aclTensor* GetMatMulOp(
     bool enable16In32Out = NeedEnableFp32Output(
         mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_dtype,
         KEEP_DTYPE, bias);
-    bool supportNdNz = mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
-                       mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ;
-    bool isBiasDtypeFp32 = bias == nullptr ? false : bias->GetDataType() == DataType::DT_FLOAT;
-    bool addmm16In32Out = enable16In32Out && ((bias != nullptr && !isBiasDtypeFp32) || supportNdNz);
     bool isFp32Out = mmOpInfo.support_info.output_dtype == DataType::DT_FLOAT;
     bool bothMatFp16Bf16 = (mmOpInfo.support_info.self_dtype == DataType::DT_FLOAT16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
                            (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
     if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
-        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || addmm16In32Out) {
+        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo))) {
         OP_LOGI("Hit matmul_v3 scenario.");
         
         if ((enable16In32Out && IsNpuArch3510Series())) {
             const aclTensor* mmOut =
                 l0op::MatMulV3NdFp162Fp32(x1, x2, bias, transposeX1, transposeX2, offsetX, opImplModeEnum, executor);
             return mmOut;
-        } else if (enable16In32Out) {
-            if (CheckSupportInfoFormatNzNzNd(mmOpInfo) && bias == nullptr) {
+        } else if (enable16In32Out && bias == nullptr) {
+            if (CheckSupportInfoFormatNzNzNd(mmOpInfo)) {
                 OP_LOGD("check SocVersion, call MatMulV3NzNzNdFp162Fp32.");
                 x1 = l0op::ReFormat(x1, op::Format::FORMAT_FRACTAL_NZ);
                 x2 = l0op::ReFormat(x2, op::Format::FORMAT_FRACTAL_NZ);
