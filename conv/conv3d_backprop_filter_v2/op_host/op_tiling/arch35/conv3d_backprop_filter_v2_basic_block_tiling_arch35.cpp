@@ -1090,13 +1090,13 @@ bool Conv3DDWV2BasicBlockTilingArch35::CheckFormat()
     format_.filterFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(filterDesc->GetStorageFormat()));
 
     //NDHWC/DHWCN格式下D维度大于1，进行拦截
-    bool isDaxisGreaterOne = (format_.filterFormat == ge::FORMAT_NDHWC || format_.filterFormat == ge::FORMAT_DHWCN) && 
+    bool isNo2DFilterFormat= (format_.filterFormat == ge::FORMAT_NDHWC || format_.filterFormat == ge::FORMAT_DHWCN) && 
             (runInfo_.kd != 1 || runInfo_.di != 1 || runInfo_.dout != 1);
-    if (isDaxisGreaterOne){
+    if (isNo2DFilterFormat) {
         OP_LOGD(opName_, "When filterFormat is NDHWC or DHWCN , Daxis  Greater 1, no support streamK");
     }
     deterNotSupportFormat_ = (format_.fmapFormat != ge::FORMAT_NCDHW && format_.fmapFormat != ge::FORMAT_NDHWC) ||
-                             (format_.dedyFormat != ge::FORMAT_NCDHW && format_.dedyFormat != ge::FORMAT_NDHWC) || isDaxisGreaterOne;
+                             (format_.dedyFormat != ge::FORMAT_NCDHW && format_.dedyFormat != ge::FORMAT_NDHWC) || isNo2DFilterFormat;
 
     enableSplitW = (format_.fmapFormat == ge::FORMAT_NCDHW && format_.dedyFormat == ge::FORMAT_NCDHW) ||
                    (format_.fmapFormat == ge::FORMAT_NDHWC && format_.dedyFormat == ge::FORMAT_NDHWC);

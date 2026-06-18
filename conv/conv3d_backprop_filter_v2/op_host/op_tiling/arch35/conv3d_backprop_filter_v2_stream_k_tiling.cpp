@@ -320,7 +320,7 @@ void Conv3DBackpropFilterV2StreamKTiling::DoStreamKTiling()
         OP_LOGD(opName_, "The basic block streamk template does not process the tail block.");
     } else if (deterNotSupportFormat_) {
         blockTiling_.streamkType = NO_STREAMK_CALC;
-        OP_LOGD(opName_, "The basic block streamk template only processes the format of NCDHW.");
+        OP_LOGD(opName_, "The basic block streamk template only processes the format of NCDHW/NHWC/HWCN.");
     } else {
         blockTiling_.coreStreamK = platformInfo_.core_num / streamkCnt;
 

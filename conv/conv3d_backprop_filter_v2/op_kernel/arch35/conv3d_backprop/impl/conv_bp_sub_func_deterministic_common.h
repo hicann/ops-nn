@@ -431,12 +431,11 @@ static __aicore__ inline void DataCopyPadBaseNUndividedForNDHWC(
                          ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
                          self->ctx.hwK_;
     LoopModeParams loopParams;
-    DataCopyExtParams ub2GmParams;
-    uint64_t shiftBaseN = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE);
     loopParams.loop2Size = 1;
     loopParams.loop1Size = cutMNSize.curMSize;
     loopParams.loop1SrcStride = BLOCK_CUBE * srcStride * DST_DTYPE_BYTES;
     loopParams.loop1DstStride = self->ctx.tiling_->cin1G * self->ctx.dhwK_ * DST_DTYPE_BYTES;
+    DataCopyExtParams ub2GmParams;
     ub2GmParams.blockLen = self->ctx.singleShapeCin_ * DST_DTYPE_BYTES;
     ub2GmParams.dstStride = (self->ctx.tiling_->cin1G - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES;
     ub2GmParams.srcStride = (BLOCK_CUBE - self->ctx.singleShapeCin_) * DST_DTYPE_BYTES >> 5;
@@ -484,7 +483,6 @@ static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const Globa
     uint64_t wkCnt = ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) < self->ctx.hwK_ ?
                          ShiftCeilM0(self->ctx.tiling_->baseN, BLOCK_CUBE) :
                          self->ctx.hwK_;
-    DataCopyExtParams ub2GmParams;
     uint64_t dstOffset =
         (static_cast<uint64_t>(self->ctx.curMIdx_) * self->ctx.tiling_->baseM +
          static_cast<uint64_t>(cutMNSize.usedMSize)) +
@@ -499,6 +497,7 @@ static __aicore__ inline void DataCopyPadDkEqOneForDHWCN(Intf *self, const Globa
 
     uint64_t shapeCin = self->ctx.singleShapeCin_ < baseCin ? self->ctx.singleShapeCin_ : baseCin;
     uint64_t tailNSize = cutMNSize.curMSize;
+    DataCopyExtParams ub2GmParams;
     ub2GmParams.srcStride = 0;
     ub2GmParams.blockLen = tailNSize * DST_DTYPE_BYTES;
     ub2GmParams.dstStride = (self->ctx.tiling_->cout - tailNSize) * DST_DTYPE_BYTES;
@@ -530,7 +529,7 @@ static __aicore__ inline void DataCopyPadDkEqOneForNDHWC(
     if (cutMNSize.isNTail) {
         tailN = (self->ctx.singleShapeCin_ * self->ctx.hwK_ - cutMNSize.usedNSize) / self->ctx.hwK_;
     }
-    // Cin
+
     uint64_t tailNSize = tailN;
     ub2GmParams.srcStride = ((baseCin - tailNSize) * DST_DTYPE_BYTES) >> ONE_BLK_SHIFT_SIZE;
     ub2GmParams.blockLen = tailNSize * DST_DTYPE_BYTES;
