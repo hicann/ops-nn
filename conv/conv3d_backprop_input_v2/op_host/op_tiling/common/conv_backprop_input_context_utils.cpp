@@ -214,13 +214,13 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_N_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NCDHW]).c_str(),
-          FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_n", 
+          std::to_string(dilations[K_N_DIM_NCDHW]).c_str(), std::to_string(K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_C_DIM_NCDHW], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NCDHW]).c_str(),
-          FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_c", 
+          std::to_string(dilations[K_C_DIM_NCDHW]).c_str(), std::to_string(K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_D_DIM_NCDHW], kDilationLow, kDilationUpTmp),
@@ -240,13 +240,13 @@ bool CheckAttrRangeDilations(const gert::TilingContext *context, const int64_t *
     } else {
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_N_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_n", std::to_string(dilations[K_N_DIM_NDHWC]).c_str(),
-          FormatString("The value of dilation_n must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_n", 
+          std::to_string(dilations[K_N_DIM_NDHWC]).c_str(), std::to_string(K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_C_DIM_NDHWC], K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "dilation_c", std::to_string(dilations[K_C_DIM_NDHWC]).c_str(),
-          FormatString("The value of dilation_c must be range [%d, %d]", K_DEFAULT_DILATIONS, K_DEFAULT_DILATIONS).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "dilation_c", 
+          std::to_string(dilations[K_C_DIM_NDHWC]).c_str(), std::to_string(K_DEFAULT_DILATIONS).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(dilations[K_D_DIM_NDHWC], kDilationLow, kDilationUpTmp),
@@ -274,13 +274,13 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
     if (y_ori_format == ge::FORMAT_NCDHW) {
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_N_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_n", std::to_string(strides[K_N_DIM_NCDHW]).c_str(),
-          FormatString("The value of stride_n must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "stride_n", 
+          std::to_string(strides[K_N_DIM_NCDHW]).c_str(), std::to_string(K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_C_DIM_NCDHW], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_c", std::to_string(strides[K_C_DIM_NCDHW]).c_str(),
-          FormatString("The value of stride_c must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "stride_c", 
+          std::to_string(strides[K_C_DIM_NCDHW]).c_str(), std::to_string(K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_D_DIM_NCDHW], kDimLow, kDimUp),
@@ -300,13 +300,13 @@ bool CheckAttrRangeStrides(const gert::TilingContext *context, const int64_t *st
     } else {
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_N_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_n", std::to_string(strides[K_N_DIM_NDHWC]).c_str(),
-          FormatString("The value of stride_n must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "stride_n", 
+          std::to_string(strides[K_N_DIM_NDHWC]).c_str(), std::to_string(K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_C_DIM_NDHWC], K_DEFAULT_STRIDES, K_DEFAULT_STRIDES),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(op_name, "stride_c", std::to_string(strides[K_C_DIM_NDHWC]).c_str(),
-          FormatString("The value of stride_c must be range [%d, %d]", K_DEFAULT_STRIDES, K_DEFAULT_STRIDES).c_str()),
+        OP_LOGE_FOR_INVALID_VALUE(op_name, "stride_c", 
+          std::to_string(strides[K_C_DIM_NDHWC]).c_str(), std::to_string(K_DEFAULT_STRIDES).c_str()),
         return false);
       OP_CHECK_IF(
         !CheckRangeInt64(strides[K_D_DIM_NDHWC], kDimLow, kDimUp),
