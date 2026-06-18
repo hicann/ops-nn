@@ -117,7 +117,7 @@ static bool CheckDeterministic(const int64_t deterministicValue, int groups) {
     OP_CHECK(!((deterministicValue == 1) && (groups > 1)),
     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONVOLUTION_BACKWARD_NAME, "groups",
         (std::to_string(groups)).c_str(),
-        "the value of groups must be less than or equal to 1 when in deterministic calculations"),
+        "the value of groups must be equal to 1 when in deterministic calculations"),
         return false);
     return true;
 }

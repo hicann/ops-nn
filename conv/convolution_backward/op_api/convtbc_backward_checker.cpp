@@ -97,7 +97,7 @@ bool ConvTbcBackwardChecker::CheckTbcShape() {
   // pad >= 0
   OP_CHECK(params_.pad >= 0,
            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(ACLNN_CONV_TBC_BACKWARD_NAME, "pad",
-           std::to_string(params_.pad).c_str(), "the value of pad must be greater or equal to 0"),return false);
+           std::to_string(params_.pad).c_str(), "the value of pad must be greater than or equal to 0"),return false);
   // self 与input, weight shape 必须满足约束
   // 约束1：self shape必须与conv_tbc计算出的output match： self(T+2*pad+1-L,B,C0)
   auto t = inputTensor_.input->GetViewShape().GetDim(0) + 2 * params_.pad + 1 - inputTensor_.weight->GetViewShape().GetDim(0);
