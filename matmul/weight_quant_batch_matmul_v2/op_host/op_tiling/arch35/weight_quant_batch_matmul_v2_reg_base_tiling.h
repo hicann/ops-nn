@@ -56,6 +56,7 @@ private:
     void GetBubTilingA16W4ND(int64_t& nBubSize, int64_t& kBubSize) const;
     void GetBubTilingA16W8NDPerGroup(int64_t& nBubSize, int64_t& kBubSize) const;
     void SetMatmulTiling();
+    int64_t DumpCVTilingDataToLog(bool debugLevel) const;
 
     WeightQuantBatchMatmulV2BasicBlockTiling tilingSolver_;
 

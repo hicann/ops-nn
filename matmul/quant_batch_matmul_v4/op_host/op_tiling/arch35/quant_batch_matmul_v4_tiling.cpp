@@ -797,23 +797,28 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::PostTiling()
 
 void QuantBatchMatmulV4TilingBase::PrintTilingData(bool debugLevel)
 {
-    if (debugLevel && CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
+    if (debugLevel) {
+        OPS_LOG_D(inputParams_.opName, "%ld", DumpTilingDataToLog(debugLevel));
+    } else {
+        OPS_LOG_E(inputParams_.opName, "%ld", DumpTilingDataToLog(debugLevel));
     }
+}
 
+int64_t QuantBatchMatmulV4TilingBase::DumpTilingDataToLog(bool debugLevel)
+{
     std::stringstream ss;
     ss << "kAlign: " << tilingData_->kAlign << " nAlign: " << tilingData_->nAlign
        << " kSize: " << tilingData_->kSize << " nSize: " << tilingData_->nSize
        << " mSize: " << tilingData_->mSize << " groupSize: " << tilingData_->groupSize
        << " cubeNumBlocksN: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksN)
        << " cubeNumBlocksM: " << static_cast<uint32_t>(tilingData_->cubeNumBlocksM);
-
     if (debugLevel) {
         OPS_LOG_D(inputParams_.opName, "tiling data: %s", ss.str().c_str());
-    }else {
+    } else {
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
     PrintMatMulTiling();
+    return 0;
 }
 
 void QuantBatchMatmulV4TilingBase::PrintMatMulTiling() const

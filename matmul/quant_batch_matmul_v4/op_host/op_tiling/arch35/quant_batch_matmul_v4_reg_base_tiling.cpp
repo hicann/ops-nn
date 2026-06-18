@@ -403,10 +403,15 @@ void QuantBatchMatmulV4RegBase::GetBubTilingA8W4BySize(int64_t &nBubSize, int64_
 
 void QuantBatchMatmulV4RegBase::PrintCVTilingData(const bool debugLevel) const
 {
-    if (debugLevel && CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
+    if (debugLevel) {
+        OPS_LOG_D(inputParams_.opName, "%ld", DumpCVTilingDataToLog(debugLevel));
+    } else {
+        OPS_LOG_E(inputParams_.opName, "%ld", DumpCVTilingDataToLog(debugLevel));
     }
+}
 
+int64_t QuantBatchMatmulV4RegBase::DumpCVTilingDataToLog(const bool debugLevel) const
+{
     std::stringstream ss;
     ss << "kAlign: " << tilingData_->kAlign << " kSize: " << tilingData_->kSize
        << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
@@ -422,5 +427,6 @@ void QuantBatchMatmulV4RegBase::PrintCVTilingData(const bool debugLevel) const
         OPS_LOG_E(inputParams_.opName, "tiling data: %s", ss.str().c_str());
     }
     PrintMatMulTiling();
+    return 0;
 }
 }  // namespace optiling
