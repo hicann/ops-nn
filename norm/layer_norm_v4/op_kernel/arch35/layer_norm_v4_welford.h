@@ -143,7 +143,7 @@ public:
             para.abRec = 1.0f / static_cast<float>(td_->tileLength);
             para.rRec = 1.0f / static_cast<float>(td_->N);
             WelfordFinalize<true>(
-                meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], mean_, variance_, shared_,
+                meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_, shared_,
                 para);
 
             // Normalize
@@ -158,12 +158,11 @@ public:
                 ProcessNormalize(fmOffset, paramOffset, td_->welfordUpdateTail);
             }
 
+            cacheCount++;
             // check cache buffer
             if (cacheCount >= AGGREGATION_COUNT) {
                 RefreshCache();
                 ResetCache();
-            } else {
-                cacheCount++;
             }
         }
 
@@ -314,28 +313,28 @@ private:
                 ReducePattern::AR,-1,false,false,false
             };
             Normalize<U, T, false, hasGammaBetaNormalizeConfig>(
-                yTensor,rstdTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], 
+                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
                 xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else if (td_->nullptrGamma == 0 && !td_->nullptrBeta == 0) {
             constexpr static NormalizeConfig hasGammaNoBetaNormalizeConfig = {
                 ReducePattern::AR,-1,true,false,false
             };
             Normalize<U, T, false, hasGammaNoBetaNormalizeConfig>(
-                yTensor,rstdTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], 
+                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
                 xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else if (!td_->nullptrGamma == 0 && td_->nullptrBeta == 0) {
             constexpr static NormalizeConfig noGammaHasBetaNormalizeConfig = {
                 ReducePattern::AR,-1,false,true,false
             };
             Normalize<U, T, false, noGammaHasBetaNormalizeConfig>(
-                yTensor,rstdTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], 
+                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
                 xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else if (!td_->nullptrGamma == 0 && !td_->nullptrBeta == 0) {
             constexpr static NormalizeConfig noGammaNoBetaNormalizeConfig = {
                 ReducePattern::AR,-1,true,true,false
             };
             Normalize<U, T, false, noGammaNoBetaNormalizeConfig>(
-                yTensor,rstdTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], 
+                yTensor,rstdTensor[cacheCount], meanTensor[cacheCount], varianceTensor[cacheCount], 
                 xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         }
 

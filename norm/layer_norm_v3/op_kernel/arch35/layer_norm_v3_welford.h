@@ -136,11 +136,11 @@ public:
             para.rRec = 1.0f / static_cast<float>(td_->N);
             if constexpr (IsOutRstd) {
                 WelfordFinalize<true>(
-                    meanTensor[paramAddr + cacheCount], varianceTensor[paramAddr + cacheCount], mean_, variance_,
+                    meanTensor[cacheCount], varianceTensor[cacheCount], mean_, variance_,
                     shared_, para);
             } else {
                 WelfordFinalize<true>(
-                    meanTensor[paramAddr + cacheCount], lastoutTensor[paramAddr + cacheCount], mean_, variance_,
+                    meanTensor[cacheCount], lastoutTensor[cacheCount], mean_, variance_,
                     shared_, para);
             }
 
@@ -156,12 +156,11 @@ public:
                 ProcessNormalize(fmOffset, paramOffset, td_->welfordUpdateTail);
             }
 
+            cacheCount++;
             // check cache buffer
             if (cacheCount >= AGGREGATION_COUNT) {
                 RefreshCache();
                 ResetCache();
-            } else {
-                cacheCount++;
             }
         }
 
@@ -337,12 +336,12 @@ private:
         para.rLengthWithPadding = elemCnt;
         if constexpr (IsOutRstd) {
             Normalize<U, T, false>(
-                yTensor, lastoutTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount],
-                varianceTensor[paramAddr + cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+                yTensor, lastoutTensor[cacheCount], meanTensor[cacheCount],
+                varianceTensor[cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         } else {
             Normalize<U, T, false>(
-                yTensor, rstdTensor[paramAddr + cacheCount], meanTensor[paramAddr + cacheCount],
-                lastoutTensor[paramAddr + cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
+                yTensor, rstdTensor[cacheCount], meanTensor[cacheCount],
+                lastoutTensor[cacheCount], xTensor, gammaTensor, betaTensor, shared_, td_->epsilon, para);
         }
 
         inQueueX.FreeTensor(xTensor);
