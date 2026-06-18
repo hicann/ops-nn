@@ -208,3 +208,140 @@ TEST_F(l2_threshold_backward_test, ascend910B2_l2_test_relu_grad_check_max_dim) 
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
 }
+
+TEST_F(l2_threshold_backward_test, l2_test_relu_grad_uint8_success) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_UINT8, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_UINT8, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_relu_grad_int64_unsupported_on_stub) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_int64_nonzero_threshold_fail) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_INT64, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(1.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_INVALID);
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_2d_shape_success) {
+  auto gradOutputDesc = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({4, 8}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.5f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_4d_shape_success) {
+  auto gradOutputDesc = TensorDesc({2, 3, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({2, 3, 4, 5}, ACL_FLOAT16, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_8d_shape_success) {
+  auto gradOutputDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({2, 2, 2, 2, 2, 2, 2, 2}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_large_shape_success) {
+  auto gradOutputDesc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({1024, 1024}, ACL_FLOAT16, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_bf16_threshold_zero_precision) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_BF16, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_BF16, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_uint8_nonzero_threshold_success) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_UINT8, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_UINT8, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(1.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_fp32_nonzero_threshold_precision) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(2.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+  ut.TestPrecision();
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_scalar_tensor_success) {
+  auto gradOutputDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto scalarDesc = ScalarDesc(0.0f);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, scalarDesc), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+TEST_F(l2_threshold_backward_test, l2_test_threshold_nullptr) {
+  auto gradOutputDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto selfDesc = TensorDesc({10,}, ACL_FLOAT, ACL_FORMAT_ND);
+  auto outDesc = TensorDesc(selfDesc);
+  auto ut = OP_API_UT(aclnnThresholdBackward, INPUT(gradOutputDesc, selfDesc, (const aclScalar*)nullptr), OUTPUT(outDesc));
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_ERR_PARAM_NULLPTR);
+}

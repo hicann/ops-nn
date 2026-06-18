@@ -38,12 +38,12 @@ extern "C" {
  * G --> H[(out)]
  * ```
  *
- * @param [in] gradOutput: npu device侧的aclTensor，数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8，shape需要与self一致。
+ * @param [in] gradOutput: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8，shape需要与self一致。
  * 支持非连续的Tensor，数据格式支持ND，且数据格式需要与self一致。
- * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8。
+ * @param [in] self: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8。
  * 支持非连续的Tensor，数据格式支持ND。
  * @param [in] threshold: host侧的aclScalar，数据类型需要可转换成self与other推导后的数据类型。
- * @param [in] out: npu device侧的aclTensor，数据类型支持FLOAT、BFLOAT16、FLOAT16、INT32、INT8、UINT8，shape需要与self一致。
+ * @param [in] out: npu device侧的aclTensor，数据类型支持FLOAT、FLOAT16、BFLOAT16、INT32、INT8、UINT8，shape需要与self一致。
  * 支持非连续的Tensor，数据格式支持ND，且数据格式需要与self一致。
  * @param [out] workspaceSize: 返回用户需要在npu device侧申请的workspace大小。
  * @param [out] executor: 返回op执行器，包含算子计算流程。
@@ -53,10 +53,10 @@ ACLNN_API aclnnStatus aclnnThresholdBackwardGetWorkspaceSize(const aclTensor *gr
                                                              const aclScalar *threshold, aclTensor *out,
                                                              uint64_t *workspaceSize, aclOpExecutor **executor);
 /**
- * @brief aclnnAdd的第二段接口，用于执行计算。
+ * @brief aclnnThresholdBackward的第二段接口，用于执行计算。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
- * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnAddGetWorkspaceSize获取。
+ * @param [in] workspaceSize: 在npu device侧申请的workspace大小，由第一段接口aclnnThresholdBackwardGetWorkspaceSize获取。
  * @param [in] stream: acl stream流。
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。

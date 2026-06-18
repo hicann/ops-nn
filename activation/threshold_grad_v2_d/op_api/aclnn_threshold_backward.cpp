@@ -8,7 +8,7 @@
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 #include "aclnn_threshold_backward.h"
-#include "../../../relu_grad/op_api/relu_grad.h"
+#include "../../relu_grad/op_api/relu_grad.h"
 #include "threshold_grad.h"
 #include "aclnn_kernels/contiguous.h"
 #include "aclnn_kernels/common/op_error_check.h"
