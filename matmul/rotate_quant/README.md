@@ -173,7 +173,7 @@
       <td>alpha</td>
       <td>输入</td>
       <td>clamp需要限制的范围的缩放系数。</td>
-      <td>BFLOAT16、FLOAT16</td>
+      <td>BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -189,6 +189,48 @@
       <td>动态量化计算出的缩放系数。</td>
       <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
+    </tr>
+    <tr>
+      <td>y_dtype</td>
+      <td>属性</td>
+      <td>指定yOut的输出数据类型。</td>
+      <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>axis</td>
+      <td>属性</td>
+      <td>参与量化的轴。</td>
+      <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>round_mode</td>
+      <td>属性</td>
+      <td>指定量化时的取整模式，支持rint、floor、round。</td>
+      <td>STRING</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>scale_alg</td>
+      <td>属性</td>
+      <td>表示scale的计算方法。</td>
+      <td>INT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dst_type_max</td>
+      <td>属性</td>
+      <td>表示量化目标类型的最大值。</td>
+      <td>FLOAT</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>trans</td>
+      <td>属性</td>
+      <td>指定是否对输入进行转置。</td>
+      <td>BOOL</td>
+      <td>-</td>
     </tr>
   </tbody>
   </table>
