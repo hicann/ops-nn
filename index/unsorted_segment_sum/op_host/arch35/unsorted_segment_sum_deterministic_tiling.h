@@ -29,7 +29,6 @@ TILING_DATA_FIELD_DEF(uint32_t, rowsNumInUB);
 TILING_DATA_FIELD_DEF(uint32_t, normalCoreProcessNum);
 TILING_DATA_FIELD_DEF(uint32_t, tailCoreProcessNum);
 TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-TILING_DATA_FIELD_DEF(uint32_t, dequantCoreNum);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(UnsortedSegmentSum_3100, UnsortedSegmentSumDetermTilingData);
@@ -63,7 +62,6 @@ private:
     uint32_t tailSampleNum_;
     uint32_t loopIncore_;
     uint32_t usedCoreNum_;
-    uint32_t dequantCoreNum_;
     uint32_t row32BAlign_;
     uint64_t normalCoreProcessNum_;
     uint64_t tailCoreProcessNum_;
