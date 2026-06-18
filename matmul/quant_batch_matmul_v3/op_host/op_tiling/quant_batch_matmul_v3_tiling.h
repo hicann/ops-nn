@@ -72,8 +72,11 @@ protected:
     bool IsKCNetDecode() const;
     int32_t GetIteratorOrder();
     void PrintTilingData();
+    int64_t PrintTilingDataImpl();
     void PrintTbeTiling();
+    int64_t PrintTbeTilingImpl();
     void PrintTilingParams() const;
+    int64_t PrintTilingParamsImpl() const;
 
     ge::graphStatus CalcPertokenOptUbTiling();
     ge::graphStatus CalcUbTiling(uint32_t baseN, uint32_t baseM);

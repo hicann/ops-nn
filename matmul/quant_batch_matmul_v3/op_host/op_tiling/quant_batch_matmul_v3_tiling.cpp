@@ -1235,10 +1235,11 @@ int32_t QuantBatchMatmulV3Tiling::CalcND2NZSpace() const {
 
 void QuantBatchMatmulV3Tiling::PrintTilingData()
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OP_LOGD(inputParams_.opName, "%ld", PrintTilingDataImpl());
+}
 
+int64_t QuantBatchMatmulV3Tiling::PrintTilingDataImpl()
+{
     auto &tiling = tilingData_.matmulTiling;
     std::stringstream ss;
     ss << " usedCoreNum: " << tiling.usedCoreNum << " M: " << tiling.M << " N: " << tiling.N
@@ -1256,14 +1257,16 @@ void QuantBatchMatmulV3Tiling::PrintTilingData()
        << " usedUBSize: " << tiling.shareUbSize << " batchM: " << tiling.batchM
        << " batchN: " << tiling.batchN << " singleBatchM: " << tiling.singleBatchM
        << " singleBatchN: " << tiling.singleBatchN;
+    return 0;
 }
 
 void QuantBatchMatmulV3Tiling::PrintTbeTiling()
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OP_LOGD(inputParams_.opName, "%ld", PrintTbeTilingImpl());
+}
 
+int64_t QuantBatchMatmulV3Tiling::PrintTbeTilingImpl()
+{
     optiling::CacheTilingData &tiling = tbeTiling_;
     std::stringstream ss;
     ss << "tiling_id: " << tiling.tiling_id << " n_cub: " << tiling.n_cub << " db_cub: " << tiling.db_cub
@@ -1291,14 +1294,16 @@ void QuantBatchMatmulV3Tiling::PrintTbeTiling()
        << " al1_full_load: " << tiling.al1_full_load << " bl1_full_load: " << tiling.bl1_full_load
        << " hf32_flag: " << tiling.hf32_flag << " zero_flag: " << tiling.zero_flag
        << " datatype_bf16: " << tiling.datatype_bf16 << " deq_scale_var: " << tiling.deq_scale_var;
+    return 0;
 }
 
 void QuantBatchMatmulV3Tiling::PrintTilingParams() const
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintTilingParamsImpl());
+}
 
+int64_t QuantBatchMatmulV3Tiling::PrintTilingParamsImpl() const
+{
     QuantBatchMatmulV3Params& params = tilingData_.params;
     std::stringstream ss;
     ss << " batchA: " << params.batchA << " batchB: " << params.batchB << " batchC: " << params.batchC
@@ -1309,6 +1314,7 @@ void QuantBatchMatmulV3Tiling::PrintTilingParams() const
         << " realSingleCoreN: " << params.realSingleCoreN << " biasDtype: " << params.biasDtype
         << " ubSize: " << params.ubSize;
     OPS_LOG_D(inputParams_.opName, "QuantBatchMatmulV3Params params: %s", ss.str().c_str());
+    return 0;
 }
 
 void QuantBatchMatmulV3Tiling::SpiltSingleCore(int32_t &singleCoreM, int32_t &singleCoreN)

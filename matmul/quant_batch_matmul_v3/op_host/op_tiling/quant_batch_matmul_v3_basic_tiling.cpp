@@ -1379,10 +1379,11 @@ uint64_t QuantBatchMatmulV3BasicTiling::GetTilingKey() const
 
 void QuantBatchMatmulV3BasicTiling::PrintBasicTiling() const
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintBasicTilingImpl());
+}
 
+int64_t QuantBatchMatmulV3BasicTiling::PrintBasicTilingImpl() const
+{
     const BasicTiling &tiling = basicTiling_;
     std::stringstream ss;
     ss << "m_size_per_npu: " << inputParams_.mSizePerNpu << "m_size: " << inputParams_.mSize
@@ -1396,6 +1397,7 @@ void QuantBatchMatmulV3BasicTiling::PrintBasicTiling() const
        << " n_tile_block: " << tiling.nTileBlock << " cal_order: " << tiling.calOrder
        << " is_mclash: " << tiling.isMclash << " is_nclash: " << tiling.isNclash;
     OPS_LOG_D(inputParams_.opName, "basic tiling %s", ss.str().c_str());
+    return 0;
 }
 
 ge::graphStatus QuantBatchMatmulV3BasicTiling::CalcUbTiling()

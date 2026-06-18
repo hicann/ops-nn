@@ -1035,10 +1035,11 @@ uint64_t Sparse4to2QuantMatmulTiling::GetTilingKey() const
 
 void Sparse4to2QuantMatmulTiling::PrintBasicTiling() const
 {
-    if (CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
-    }
+    OPS_LOG_D(inputParams_.opName, "%ld", PrintBasicTilingImpl());
+}
 
+int64_t Sparse4to2QuantMatmulTiling::PrintBasicTilingImpl() const
+{
     const BasicTiling& tiling = basicTiling_;
     std::stringstream ss;
     ss << "m_size: " << inputParams_.mSize << " n_size: " << inputParams_.nSize << " k_size: " << inputParams_.kaSize
@@ -1051,6 +1052,7 @@ void Sparse4to2QuantMatmulTiling::PrintBasicTiling() const
        << " n_tile_block: " << tiling.nTileBlock << " cal_order: " << tiling.calOrder
        << " is_mclash: " << tiling.isMclash << " is_nclash: " << tiling.isNclash;
     OPS_LOG_D(inputParams_.opName, "Basic tiling %s", ss.str().c_str());
+    return 0;
 }
 
 ge::graphStatus Sparse4to2QuantMatmulTiling::CalcUbTiling(uint64_t& baseM, uint64_t& baseN)

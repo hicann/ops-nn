@@ -125,6 +125,7 @@ protected:
     uint64_t CalAubFactorTiling(uint64_t aubCanUseUbSize);
     uint64_t CalCubFactorTiling(uint64_t cubNz2NdCanUseSize);
     void PrintCVTilingData(bool debugLevel);
+    int64_t PrintCVTilingDataImpl(bool debugLevel);
     ge::graphStatus PostTiling() override;
     WeightQuantBatchMatmulInfo inputParams_;
     std::unique_ptr<WeightQuantBatchMatmulV2NzTilingData> tilingDataManager_;

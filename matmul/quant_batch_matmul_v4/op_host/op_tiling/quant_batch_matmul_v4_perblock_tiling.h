@@ -62,7 +62,9 @@ protected:
     ge::graphStatus CheckContext() override;
     ge::graphStatus InstantiateTilingData();
     void PrintTilingData();
+    int64_t PrintTilingDataImpl();
     void PrintMatmulTilingData();
+    int64_t PrintMatmulTilingDataImpl();
     bool AnalyzeAttrs() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;

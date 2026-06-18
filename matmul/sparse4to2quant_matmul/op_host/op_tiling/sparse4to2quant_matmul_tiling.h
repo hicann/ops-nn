@@ -120,6 +120,7 @@ protected:
     ge::graphStatus PostTiling() override;
 
     void PrintBasicTiling() const;
+    int64_t PrintBasicTilingImpl() const;
     ge::graphStatus CheckContext();
     bool AnalyzeDtype();
     bool AnalyzeInputs();
