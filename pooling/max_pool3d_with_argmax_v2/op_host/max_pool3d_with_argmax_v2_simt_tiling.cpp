@@ -40,6 +40,10 @@ static const int32_t MP_MAX_3D_DIM_THREE = 3;
 static const int32_t MP_MAX_3D_DIM_FOUR = 4;
 constexpr uint64_t H_LOCATION = 1;
 constexpr uint64_t W_LOCATION = 2;
+constexpr uint64_t DATA_TYPE_NUM = 2;
+constexpr uint64_t ONE_TEMPLATE_NUM = 4;
+constexpr uint64_t TWO_TEMPLATE_NUM = 8;
+
 
 static const gert::Shape& EnsureNotScalar(const gert::Shape &inShape) {
   if (inShape.IsScalar()) {
@@ -206,7 +210,23 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::DoOpTiling()
     tilingData_->dilationW = inputData.dilation[W_IDX_];
     tilingData_->ceilMode = inputData.ceilMode;
     outputDataCount = tilingData_->nDim * tilingData_->cDim * tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
-    int64_t threads = std::min(outputDataCount, MAX_THREAD_NUM);
+    int64_t threads = std::min(outputDataCount, DEFAULT_THREAD_NUM);
+    isThreadNum512 = tilingData_->kSizeD * tilingData_->kSizeH * tilingData_->kSizeW >= KERNEL_SIZE_THRESHOLD && outputDataCount > MAX_THREAD_NUM * coreNum;
+    bool isFp32NoOverlap = (dtype == ge::DataType::DT_FLOAT);
+    if (isFp32NoOverlap) {
+        int64_t noOverlapCount = 0;
+        for (int64_t dim = 0; dim < DHW_DIMS; dim++) {
+            if (inputData.stride[dim] >= inputData.kernelSize[dim]) {
+                noOverlapCount++;
+            }
+        }
+        isFp32NoOverlap = (noOverlapCount == DHW_DIMS);
+    }
+    isFp32NoOverlap = isFp32NoOverlap && (outputDataCount > MAX_THREAD_NUM * coreNum);
+    isThreadNum512 = isThreadNum512 || isFp32NoOverlap;
+    if (isThreadNum512) {
+        threads = MAX_THREAD_NUM;
+    }
     int64_t blockNum = Ops::Base::CeilDiv(outputDataCount, threads);
     blockNum = std::min(blockNum, static_cast<int64_t>(coreNum));
     context_->SetBlockDim(blockNum);
@@ -217,16 +237,26 @@ ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::DoOpTiling()
 
 uint64_t MaxPool3DWithArgmaxV2TilingSIMT::GetTilingKey() const
 {
-    if (inputData.data_format == "ncdhw" && outputDataCount <= MAX_INT32) {
-        return SIMT_NCDHW_TILING_KEY_INT32;
-    } else if (inputData.data_format == "ndhwc" && outputDataCount <= MAX_INT32) {
-        return SIMT_NDHWC_TILING_KEY_INT32;
-    } else if (inputData.data_format == "ncdhw" && outputDataCount > MAX_INT32) {
-        return SIMT_NCDHW_TILING_KEY_INT64;
-    } else if (inputData.data_format == "ndhwc" && outputDataCount > MAX_INT32) {
-        return SIMT_NDHWC_TILING_KEY_INT64;
-    }
-    return SIMT_NCDHW_TILING_KEY_INT32;
+    bool isNcdhw = (inputData.data_format == "ncdhw");
+    bool isInt32 = (outputDataCount <= MAX_INT32);
+    bool isThreadNum256 = !isThreadNum512;
+
+    int idx = (isNcdhw ? 0 : 1) * ONE_TEMPLATE_NUM +
+              (isInt32 ? 0 : 1) * DATA_TYPE_NUM +
+              (isThreadNum256 ? 0 : 1);
+
+    static const uint64_t keyTable[TWO_TEMPLATE_NUM] = {
+        SIMT_NCDHW_TILING_KEY_INT32_T256,  // ncdhw, int32, 256
+        SIMT_NCDHW_TILING_KEY_INT32_T512,  // ncdhw, int32, 512
+        SIMT_NCDHW_TILING_KEY_INT64_T256,  // ncdhw, int64, 256
+        SIMT_NCDHW_TILING_KEY_INT64_T256,  // ncdhw, int64, 256
+        SIMT_NDHWC_TILING_KEY_INT32_T256,  // ndhwc, int32, 256
+        SIMT_NDHWC_TILING_KEY_INT32_T512,  // ndhwc, int32, 512
+        SIMT_NDHWC_TILING_KEY_INT64_T256,  // ndhwc, int64, 256
+        SIMT_NDHWC_TILING_KEY_INT64_T256   // ndhwc, int64, 256
+    };
+
+    return keyTable[idx];
 }
 
 ge::graphStatus MaxPool3DWithArgmaxV2TilingSIMT::GetWorkspaceSize()
@@ -271,5 +301,5 @@ void MaxPool3DWithArgmaxV2TilingSIMT::DumpTilingInfo()
     str += " ceilMode:" + std::to_string(tilingData_->ceilMode);
     OP_LOGI(context_, "%s", str.c_str());
 }
-REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2TilingSIMT, 2);
+REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2TilingSIMT, 4);
 }  // namespace optiling

@@ -17,15 +17,27 @@
 #include "kernel_tiling/kernel_tiling.h"
 #if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113))
 #include "./arch35/max_pool3d_with_argmax_v2_big_kernel_regbase.h"
+#include "./arch35/max_pool3d_with_argmax_v2_ksize_one.h"
 #include "./arch35/max_pool3d_with_argmax_v2_gather.h"
 #include "./arch35/max_pool3d_with_argmax_v2_simt.h"
-#define SIMT_NCDHW_TILING_KEY_INT32 600001
-#define SIMT_NDHWC_TILING_KEY_INT32 600002
-#define SIMT_NCDHW_TILING_KEY_INT64 600011
-#define SIMT_NDHWC_TILING_KEY_INT64 600012
+#include "./arch35/max_pool3d_with_argmax_v2_nc_transpose.h"
+#define SIMT_NCDHW_TILING_KEY_INT32_T256 600001
+#define SIMT_NDHWC_TILING_KEY_INT32_T256 600002
+#define SIMT_NCDHW_TILING_KEY_INT64_T256 600011
+#define SIMT_NDHWC_TILING_KEY_INT64_T256 600012
+#define SIMT_NCDHW_TILING_KEY_INT32_T512 600101
+#define SIMT_NDHWC_TILING_KEY_INT32_T512 600102
+#define SIMT_NCDHW_TILING_KEY_INT64_T512 600111
+#define SIMT_NDHWC_TILING_KEY_INT64_T512 600112
 #define BIG_KERNEL_FORMAT_NCHW 611110
 #define GATHER_NO_PADDING_TILING_KEY 400001
 #define GATHER_PADDING_TILING_KEY 400002
+#define NC_TRANSPOSE_NO_PAD_KEY 500001
+#define GATHER_NO_PADDING_CAL16_KEY 400011
+#define GATHER_PADDING_CAL16_KEY 400012
+#define GATHER_NO_PADDING_CAL64_KEY 400021
+#define GATHER_PADDING_CAL64_KEY 400022
+#define KSIZE_ONE_TILING_KEY 700001
 #else
 #include "max_pool3d_with_argmax_v2_nosplit.h"
 #include "max_pool3d_with_argmax_v2_splitd.h"
@@ -40,8 +52,14 @@ constexpr uint32_t PAD_DISABLE = 0;
 constexpr uint32_t PAD_ENABLE = 1;
 constexpr int64_t NCDHW = 0;
 constexpr int64_t NDHWC = 1;
+constexpr uint32_t THREAD_NUM_256 = 256;
+constexpr uint32_t THREAD_NUM_512 = 512;
 
 using namespace AscendC;
+
+template <typename T>
+using UbIndexType = typename std::conditional<
+    std::is_same<T, bfloat16_t>::value || std::is_same<T, half>::value, int16_t, int32_t>::type;
 
 extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
     GM_ADDR x, GM_ADDR y, GM_ADDR indices, GM_ADDR workspace, GM_ADDR tiling)
@@ -74,55 +92,140 @@ extern "C" __global__ __aicore__ void max_pool3d_with_argmax_v2(
     using namespace MaxPool3DWithArgmaxV2WithSimt;
     using namespace MaxPool3DWithArgmaxV2WithBigKernelRegbase;
     using namespace MaxPool3DWithArgmaxV2GatherNameSpace;
-    if (TILING_KEY_IS(GATHER_NO_PADDING_TILING_KEY)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 400001", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
-        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE> op(
+    using namespace MaxPool3DWithArgmaxV2KsizeOneNameSpace;
+
+    if (TILING_KEY_IS(KSIZE_ONE_TILING_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 700001", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2KsizeOneTilingData* __restrict tilingData =
+            &tilingDataIn;
+        MaxPool3DWithArgmaxV2KsizeOneNameSpace::MaxPool3DWithArgmaxV2KsizeOneKernel<DTYPE_X, DTYPE_ARGMAX> op(
             pipe, tilingDataIn);
         op.Init(x, y, indices);
         op.Process();
-    } else if (TILING_KEY_IS(GATHER_PADDING_TILING_KEY)) {
-        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 400002", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
-        GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+    } else if (TILING_KEY_IS(GATHER_NO_PADDING_TILING_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400001", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE> op(
-            pipe, tilingDataIn);
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, UbIndexType<DTYPE_X>, int32_t>
+            op(pipe, tilingDataIn);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(GATHER_PADDING_TILING_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400002", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, UbIndexType<DTYPE_X>, int32_t>
+            op(pipe, tilingDataIn);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(GATHER_NO_PADDING_CAL16_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400011", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, UbIndexType<DTYPE_X>, int16_t>
+            op(pipe, tilingDataIn);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(GATHER_PADDING_CAL16_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400012", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, UbIndexType<DTYPE_X>, int16_t>
+            op(pipe, tilingDataIn);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(GATHER_NO_PADDING_CAL64_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400021", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE, UbIndexType<DTYPE_X>, int64_t>
+            op(pipe, tilingDataIn);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(GATHER_PADDING_CAL64_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY(
+            "TILING_KEY_VAR == 400022", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData);
+        GET_TILING_DATA_WITH_STRUCT(
+            MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2GatherNameSpace::MaxPool3DWithArgmaxV2GatherKernel<
+            DTYPE_X, DTYPE_ARGMAX, PAD_ENABLE, UbIndexType<DTYPE_X>, int64_t>
+            op(pipe, tilingDataIn);
         op.Init(x, y, indices);
         op.Process();
     } else if (TILING_KEY_IS(BIG_KERNEL_FORMAT_NCHW)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 611110", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData);
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2WithBigKernelRegbase::MaxPool3DWithArgmaxV2BigKernelRegbase<DTYPE_X, float, DTYPE_ARGMAX> op(&pipe,                                                                                            tilingData);
+        MaxPool3DWithArgmaxV2WithBigKernelRegbase::MaxPool3DWithArgmaxV2BigKernelRegbase<DTYPE_X, DTYPE_ARGMAX> op(&pipe,                                                                                            tilingData);
         op.Init(x, y, indices);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT32)) {
+    } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT32_T256)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600001", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NCDHW, false> op(tilingData);
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NCDHW, false, THREAD_NUM_256> op(tilingData);
         op.Init(x, y, indices);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_NDHWC_TILING_KEY_INT32)) {
+    } else if (TILING_KEY_IS(SIMT_NDHWC_TILING_KEY_INT32_T256)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600002", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NDHWC, false> op(tilingData);
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NDHWC, false, THREAD_NUM_256> op(tilingData);
         op.Init(x, y, indices);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT64)) {
+    } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT64_T256)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600011", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NCDHW, true> op(tilingData);
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NCDHW, true, THREAD_NUM_256> op(tilingData);
         op.Init(x, y, indices);
         op.Process();
-    } else if (TILING_KEY_IS(SIMT_NDHWC_TILING_KEY_INT64)) {
+    } else if (TILING_KEY_IS(SIMT_NDHWC_TILING_KEY_INT64_T256)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600012", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
         const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
-        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NDHWC, true> op(tilingData);
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NDHWC, true, THREAD_NUM_256> op(tilingData);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NCDHW_TILING_KEY_INT32_T512)) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600101", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NCDHW, false, THREAD_NUM_512> op(tilingData);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(SIMT_NDHWC_TILING_KEY_INT32_T512)) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 600102", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2SimtTilingData* __restrict tilingData = &tilingDataIn;
+        MaxPool3DWithArgmaxV2WithSimt::MaxPool3DWithArgmaxV2Simt<DTYPE_X, DTYPE_ARGMAX, NDHWC, false, THREAD_NUM_512> op(tilingData);
+        op.Init(x, y, indices);
+        op.Process();
+    } else if (TILING_KEY_IS(NC_TRANSPOSE_NO_PAD_KEY)) {
+        REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 500001", MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData);
+        GET_TILING_DATA_WITH_STRUCT(MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData, tilingDataIn, tiling);
+        const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2NcTransposeTilingData* __restrict tilingData = &tilingDataIn;
+        using namespace MaxPool3DWithArgmaxV2NcTransposeNameSpace;
+        MaxPool3DWithArgmaxV2NcTransposeKernel<DTYPE_X, DTYPE_ARGMAX, PAD_DISABLE> op(pipe, tilingDataIn);
         op.Init(x, y, indices);
         op.Process();
     }

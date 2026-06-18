@@ -1634,7 +1634,7 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_017_simt_test_N
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCDHW";
-    uint64_t except_tilingkey = 600001;
+    uint64_t except_tilingkey = 400002;
     std::string expect = " ";
     ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
                     data_format, except_tilingkey, expect);
@@ -1653,7 +1653,7 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_018_simt_test_N
     int64_t index_dtype = 9;
     bool ceil_mode = false;
     std::string data_format = "NDHWC";
-    uint64_t except_tilingkey = 600002;
+    uint64_t except_tilingkey = 600102;
     std::string expect = " ";
     ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
                     data_format, except_tilingkey, expect);
@@ -1716,6 +1716,82 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_little_gath
                     data_format, except_tilingkey, expect);
 }
 
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_little_gather_91095_1)
+{
+    gert::StorageShape xShape = {{3822, 6, 6, 48, 6}, {3822, 6, 6, 48, 6}};
+    gert::StorageShape yShape = {{3822, 6, 2, 9, 1}, {3822, 6, 2, 9, 1}};
+    gert::StorageShape argmaxShape = {{3822, 6, 2, 9, 1}, {3822, 6, 2, 9, 1}};
+    std::vector<int64_t> ksize = {1, 5, 6};
+    std::vector<int64_t> strides = {4, 5, 5};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 400011;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_tiling_016_little_gather_padding_int32_91095_2)
+{
+    gert::StorageShape xShape = {{1, 3687, 2, 2, 1132}, {1, 3687, 2, 2, 1132}};
+    gert::StorageShape yShape = {{1, 3687, 1, 1, 283}, {1, 3687, 1, 1, 283}};
+    gert::StorageShape argmaxShape = {{1, 3687, 1, 1, 283}, {1, 3687, 1, 1, 283}};
+    std::vector<int64_t> ksize = {5, 5, 5};
+    std::vector<int64_t> strides = {5, 4, 4};
+    std::vector<int64_t> pads = {0, 1, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_BF16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 400012;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_ksize_one_tiling_1)
+{
+    gert::StorageShape xShape = {{23, 8, 8, 9, 24}, {23, 8, 8, 9, 24}};
+    gert::StorageShape yShape = {{23, 8, 8, 9, 24}, {23, 8, 8, 9, 24}};
+    gert::StorageShape argmaxShape = {{23, 8, 8, 9, 24}, {23, 8, 8, 9, 24}};
+    std::vector<int64_t> ksize = {1, 1, 1};
+    std::vector<int64_t> strides = {1, 1, 1};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {5, 5, 2};
+    ge::DataType dtype = ge::DT_BF16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 700001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2_ksize_one_tiling_2)
+{
+    gert::StorageShape xShape = {{9, 11, 1, 25, 17}, {9, 11, 1, 25, 17}};
+    gert::StorageShape yShape = {{9, 11, 1, 25, 17}, {9, 11, 1, 25, 17}};
+    gert::StorageShape argmaxShape = {{9, 11, 1, 25, 17}, {9, 11, 1, 25, 17}};
+    std::vector<int64_t> ksize = {1, 1, 1};
+    std::vector<int64_t> strides = {1, 1, 1};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {2, 2, 2};
+    ge::DataType dtype = ge::DT_BF16;
+    int64_t index_dtype = 9;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 700001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
 TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2BigKernelRegbase_tiling)
 {
     gert::StorageShape xShape = {{3, 18, 14, 2, 256}, {3, 18, 14, 2, 256}};
@@ -1730,6 +1806,215 @@ TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2BigKernelRegbase_tiling
     bool ceil_mode = false;
     std::string data_format = "NCDHW";
     uint64_t except_tilingkey = 611110;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_float_correct)
+{
+    // Large NC (48*64=3072), small kernel (2*2*2=8), no padding, no dilation, NCDHW
+    // NC = 48*64 = 3072, outSpatial = 4*4*4 = 64 >= 32
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 500001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_float16_correct)
+{
+    // Large NC, small kernel, float16
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 500001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_bf16_correct)
+{
+    // Large NC, small kernel, bf16
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_BF16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 500001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_int64_indices)
+{
+    // Large NC, small kernel, int64 indices
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 9;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    uint64_t except_tilingkey = 500001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_dilation)
+{
+    // NC transpose should NOT be selected when dilation > 1
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {2, 2, 2};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // Should fallback to other template, NOT 500001
+    uint64_t except_tilingkey = 600101;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_padding)
+{
+    // NC transpose should NOT be selected when padding > 0
+    gert::StorageShape xShape = {{48, 64, 10, 10, 10}, {48, 64, 10, 10, 10}};
+    gert::StorageShape yShape = {{48, 64, 5, 5, 5}, {48, 64, 5, 5, 5}};
+    gert::StorageShape argmaxShape = {{48, 64, 5, 5, 5}, {48, 64, 5, 5, 5}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {1, 1, 1};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // Should fallback to other template, NOT 500001
+    uint64_t except_tilingkey = 600101;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_small_nc)
+{
+    // NC transpose should NOT be selected when NC < 3072 (MIN_NC_FOR_TRANSPOSE)
+    gert::StorageShape xShape = {{1, 8, 10, 10, 10}, {1, 8, 10, 10, 10}};
+    gert::StorageShape yShape = {{1, 8, 4, 4, 4}, {1, 8, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{1, 8, 4, 4, 4}, {1, 8, 4, 4, 4}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // Should fallback to other template, NOT 500001
+    uint64_t except_tilingkey = 600001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_large_kernel)
+{
+    // NC transpose should NOT be selected when kernel volume > 128
+    gert::StorageShape xShape = {{48, 64, 20, 20, 20}, {48, 64, 20, 20, 20}};
+    gert::StorageShape yShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    gert::StorageShape argmaxShape = {{48, 64, 4, 4, 4}, {48, 64, 4, 4, 4}};
+    std::vector<int64_t> ksize = {6, 6, 6};
+    std::vector<int64_t> strides = {4, 4, 4};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // kernel volume = 6*6*6 = 216 > 128, should fallback to BigKernel
+    uint64_t except_tilingkey = 400001;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_small_out_spatial)
+{
+    // NC transpose should NOT be selected when outSpatialSize < 32 (NC_TRANSPOSE_MIN_OUT_SPATIAL)
+    // outSpatial = 3*3*3 = 27 < 32
+    gert::StorageShape xShape = {{48, 64, 7, 7, 7}, {48, 64, 7, 7, 7}};
+    gert::StorageShape yShape = {{48, 64, 3, 3, 3}, {48, 64, 3, 3, 3}};
+    gert::StorageShape argmaxShape = {{48, 64, 3, 3, 3}, {48, 64, 3, 3, 3}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // outSpatial = 27 < 32, should fallback
+    uint64_t except_tilingkey = 600101;
+    std::string expect = " ";
+    ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
+                    data_format, except_tilingkey, expect);
+}
+
+TEST_F(MaxPool3DWithArgmaxV2Tiling, MaxPool3DWithArgmaxV2NcTranspose_tiling_fallback_delta_overflow)
+{
+    // NC transpose should NOT be selected for fp16 when maxDelta > INT16_MAX (32767)
+    // maxDelta = (kD-1)*H*W + (kH-1)*W + (kW-1) = (2-1)*200*200 + (2-1)*200 + (2-1) = 40201 > 32767
+    gert::StorageShape xShape = {{48, 64, 10, 200, 200}, {48, 64, 10, 200, 200}};
+    gert::StorageShape yShape = {{48, 64, 5, 100, 100}, {48, 64, 5, 100, 100}};
+    gert::StorageShape argmaxShape = {{48, 64, 5, 100, 100}, {48, 64, 5, 100, 100}};
+    std::vector<int64_t> ksize = {2, 2, 2};
+    std::vector<int64_t> strides = {2, 2, 2};
+    std::vector<int64_t> pads = {0, 0, 0};
+    std::vector<int64_t> dilation = {1, 1, 1};
+    ge::DataType dtype = ge::DT_FLOAT16;
+    int64_t index_dtype = 3;
+    bool ceil_mode = false;
+    std::string data_format = "NCDHW";
+    // fp16: maxDelta = 40201 > 32767, should fallback
+    uint64_t except_tilingkey = 400001;
     std::string expect = " ";
     ExecuteTestCase(xShape, yShape, argmaxShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,
                     data_format, except_tilingkey, expect);

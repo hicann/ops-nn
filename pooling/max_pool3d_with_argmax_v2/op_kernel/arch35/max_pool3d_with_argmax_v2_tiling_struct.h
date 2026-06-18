@@ -86,6 +86,30 @@ public:
     int64_t isSigOut = 0;
 };
 
+class MaxPool3DWithArgmaxV2KsizeOneTilingData {
+public:
+    int64_t dInput = 0;
+    int64_t hInput = 0;
+    int64_t wInput = 0;
+    int64_t dOutput = 0;
+    int64_t hOutput = 0;
+    int64_t wOutput = 0;
+    int64_t padD = 0;
+    int64_t padH = 0;
+    int64_t padW = 0;
+    int64_t ncTotal = 0;
+    int64_t usedCoreNum = 0;
+    int64_t blockFactor = 0;
+    int64_t tailBlockFactor = 0;
+    int64_t coreLoop = 0;
+    int64_t tailCoreLoop = 0;
+    int64_t ubFactor = 0;
+    int64_t tailUbFactor = 0;
+    int64_t tailCoreTailUbFactor = 0;
+    int64_t inputBufferSize = 0;
+    int64_t argmaxBufferSize = 0;
+};
+
 class MaxPool3DWithArgmaxV2SimtTilingData {
 public:
     int64_t threadNums = 1;
@@ -111,6 +135,47 @@ public:
     int64_t dilationH = 0;
     int64_t dilationW = 0;
     int64_t ceilMode = 0;
+};
+
+class MaxPool3DWithArgmaxV2NcTransposeTilingData {
+public:
+    int64_t dInput = 0;
+    int64_t hInput = 0;
+    int64_t wInput = 0;
+    int64_t dOutput = 0;
+    int64_t hOutput = 0;
+    int64_t wOutput = 0;
+    int64_t dKernel = 0;
+    int64_t hKernel = 0;
+    int64_t wKernel = 0;
+    int64_t dStride = 0;
+    int64_t hStride = 0;
+    int64_t wStride = 0;
+    int64_t padFront = 0;
+    int64_t padLeft = 0;
+    int64_t padTop = 0;
+    int64_t ncInner = 0;       // NC channels processed together per tile
+    int64_t ncTail = 0;        // NC channels in the last tile
+    int64_t ncOuter = 0;       // number of NC tiles
+    int64_t dOutputInner = 0;
+    int64_t dOutputTail = 0;
+    int64_t dOutputOuter = 0;
+    int64_t hOutputInner = 0;
+    int64_t hOutputTail = 0;
+    int64_t hOutputOuter = 0;
+    int64_t wOutputInner = 0;
+    int64_t wOutputTail = 0;
+    int64_t wOutputOuter = 0;
+    int64_t normalCoreProcessNum = 0;
+    int64_t tailCoreProcessNum = 0;
+    int64_t usedCoreNum = 0;
+    int64_t inputBufferSize = 0;
+    int64_t transBufferSize = 0;
+    int64_t maxValueBufferSize = 0;
+    int64_t argmaxBufferSize = 0;
+    int64_t isPad = 0;
+    int64_t deltaIndexBufferSize = 0;
+    int64_t castBufferSize = 0;
 };
 }
 

@@ -50,6 +50,8 @@ static constexpr int64_t BYTES_FOUR = 4;
 static constexpr int64_t BYTES_EIGHT = 8;
 static constexpr int64_t KW_THRESHOLD = 128;
 static constexpr int64_t THREE = 3;
+constexpr int64_t MAX_INT16 = 32767;
+
 
 struct BigKernelInputInfo {
     uint64_t batches;

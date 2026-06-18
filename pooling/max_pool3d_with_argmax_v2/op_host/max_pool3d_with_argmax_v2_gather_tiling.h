@@ -195,6 +195,12 @@ private:
     void DoBlockTiling();
     void DoBufferCalculate();
     bool IsCapable() override;
+    bool IsBasicConfigUnsupported() const;
+    bool IsExcludedByDegenerateCheck(
+        int64_t noOverlapCount, int64_t degenerateCount, bool wDegenerate, int64_t kernelElements) const;
+    bool IsExcludedByKernelHeuristics(
+        int64_t noOverlapCount, int64_t strictNoOverlap, int64_t kernelElements, bool allNonOverlap,
+        int64_t degenerateCount) const;
     ge::graphStatus GetPlatformInfo() override;
     ge::graphStatus DoOpTiling() override;
     ge::graphStatus PostTiling() override;
@@ -204,6 +210,7 @@ private:
         context_->GetTilingData<MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2GatherTilingData>();
     MaxPool3DWithArgmaxV2GatherBaseInfo baseData_;
     MaxPool3DWithArgmaxV2GatherSplitInfo splitData_;
+    int64_t calIndexType_ = 0;
 };
 
 }  // namespace optiling

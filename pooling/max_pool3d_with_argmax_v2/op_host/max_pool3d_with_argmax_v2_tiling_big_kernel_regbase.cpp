@@ -104,6 +104,13 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
         array<uint64_t, DHW_DIMS>{uint64_t(inputShape.GetDim(d_dim)), uint64_t(inputShape.GetDim(h_dim)), uint64_t(inputShape.GetDim(w_dim))};
     inputData.outShape = array<uint64_t, DHW_DIMS>{uint64_t(outShape.GetDim(d_dim)), uint64_t(outShape.GetDim(h_dim)), uint64_t(outShape.GetDim(w_dim))};
 
+    auto outputIndicesDesc = context_->GetOutputDesc(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outputIndicesDesc);
+    auto indicesDtype = outputIndicesDesc->GetDataType();
+    OP_CHECK_IF(
+        inputShape.GetDim(d_dim) * inputShape.GetDim(h_dim) * inputShape.GetDim(w_dim) > static_cast<int64_t>(std::numeric_limits<int32_t>::max()) && indicesDtype != ge::DT_INT64,
+        OP_LOGI(context_->GetNodeName(), "The value of D*H*W exceeds INT32_MAX, the data type of indices should be DT_INT64"), return ge::GRAPH_FAILED);
+
     int32_t dValue = 0;
     int32_t hValue = 0;
     int32_t wValue = 0;
@@ -232,6 +239,10 @@ bool MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::IsCapable()
     if (dtypeSize != 0) {
         maxCount_ = maxCount_ / dtypeSize;
     }
+    if (dtype == ge::DataType::DT_FLOAT16) {
+        maxCount_ = std::min(maxCount_, MAX_INT16);
+    }
+
     if (inputData.dilation[D_DIM] == 1 && inputData.dilation[H_DIM] == 1 && inputData.dilation[W_DIM] == 1 && maxCount_ > MIN_COUNT &&
         inputData.inputFormat == ge::Format::FORMAT_NCDHW && inputData.kernelSize[W_DIM] * dtypeSize >= KW_THRESHOLD) {
         return true;
@@ -340,6 +351,6 @@ void MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::DumpTilingInfo()
     OP_LOGI(context_, "%s", str.c_str());
 }
 
-REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2BigKernelRegbaseTiling, 1);
+REGISTER_TILING_TEMPLATE("MaxPool3DWithArgmaxV2", MaxPool3DWithArgmaxV2BigKernelRegbaseTiling, 3);
 
 }

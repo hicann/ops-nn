@@ -30,7 +30,7 @@
 namespace MaxPool3DWithArgmaxV2WithSimt{
     using namespace AscendC;
 
-    constexpr uint32_t THREAD_DIM = 256; 
+    constexpr uint32_t DEFAULT_THREAD_DIM = 256;
     constexpr uint32_t DIM_0 = 0;
     constexpr uint32_t DIM_1 = 1;
     constexpr uint32_t DIM_2 = 2;
@@ -45,7 +45,7 @@ namespace MaxPool3DWithArgmaxV2WithSimt{
         }
     }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index>
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index, uint32_t threadDim = DEFAULT_THREAD_DIM>
 class MaxPool3DWithArgmaxV2Simt
 {
 public:
@@ -67,22 +67,22 @@ private:
     uint32_t blockNum_ = 1;    
 };
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index>
-__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices)
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index, uint32_t threadDim>
+__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index, threadDim>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices)
 {
     x_.SetGlobalBuffer((__gm__ VALUE_T*)(x));
     y_.SetGlobalBuffer((__gm__ VALUE_T*)(y));
     indices_.SetGlobalBuffer((__gm__ INDICES_T*)(indices));
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index>
-__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index>::Process()
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index, uint32_t threadDim>
+__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index, threadDim>::Process()
 {
     Compute();
 }
 
-template <typename VAL_T, typename IDX_T, typename PROCESS_T, typename FASTDIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNcdhw(const int64_t count, const __gm__ VAL_T* bottomData, const int64_t dSize,
+template <typename VAL_T, typename IDX_T, typename PROCESS_T, typename FASTDIV_T, uint32_t threadDim>
+__simt_vf__ __aicore__ LAUNCH_BOUND(threadDim) inline void MaxPool3DNcdhw(const int64_t count, const __gm__ VAL_T* bottomData, const int64_t dSize,
                                                                                const int64_t height, const int64_t width, const int32_t outputDi, const int32_t outputHeight, const int32_t outputWidth, 
                                                                                const int32_t kernelD, const int32_t kernelH, const int32_t kernelW, const int32_t strideD, const int32_t strideH, const int32_t strideW, 
                                                                                const int32_t padD, const int32_t padH, const int32_t padW, const int32_t dilationD, const int32_t dilationH, const int32_t dilationW,
@@ -130,8 +130,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNcdhw(const
     }
 }
 
-template <typename VAL_T, typename IDX_T, typename PROCESS_T, typename FASTDIV_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNdhwc(const int64_t count, const __gm__ VAL_T* bottomData, const int64_t channels, const int64_t dSize,
+template <typename VAL_T, typename IDX_T, typename PROCESS_T, typename FASTDIV_T, uint32_t threadDim>
+__simt_vf__ __aicore__ LAUNCH_BOUND(threadDim) inline void MaxPool3DNdhwc(const int64_t count, const __gm__ VAL_T* bottomData, const int64_t channels, const int64_t dSize,
                                                                                const int64_t height, const int64_t width, const int32_t outputDi, const int32_t outputHeight, const int32_t outputWidth, 
                                                                                const int32_t kernelD, const int32_t kernelH, const int32_t kernelW, const int32_t strideD, const int32_t strideH, const int32_t strideW, 
                                                                                const int32_t padD, const int32_t padH, const int32_t padW, const int32_t dilationD, const int32_t dilationH, const int32_t dilationW,
@@ -180,8 +180,8 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DNdhwc(const
     }
 }
 
-template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index>
-__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index>::Compute() const
+template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index, uint32_t threadDim>
+__aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, useINT64Index, threadDim>::Compute() const
 {
     const int32_t kD = tilingData_->kSizeD;
     const int32_t kH = tilingData_->kSizeH;
@@ -219,7 +219,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint32_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(outputDi));
-        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t>>(dim3(THREAD_DIM),
+        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(Simt::Dim3(threadDim),
                                                                         totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
                                                                         outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, 
                                                                         dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_,
@@ -231,7 +231,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint32_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint32_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint32_t>(outputDi));
-        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t>>(dim3(THREAD_DIM),
+        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int32_t, uint32_t, threadDim>>(Simt::Dim3(threadDim),
                                                                         totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
                                                                         outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, 
                                                                         dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0],
@@ -242,7 +242,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_0], shift_[DIM_0], static_cast<uint64_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(outputDi));
-        asc_vf_call<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t>>(dim3(THREAD_DIM),
+        Simt::VF_CALL<MaxPool3DNcdhw<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(Simt::Dim3(threadDim),
                                                                         totalSize, inputData, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
                                                                         outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, 
                                                                         dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_,
@@ -254,7 +254,7 @@ __aicore__ inline void MaxPool3DWithArgmaxV2Simt<VALUE_T, INDICES_T, Format_T, u
         GetUintDivMagicAndShift(m_[DIM_1], shift_[DIM_1], static_cast<uint64_t>(outputWidth));
         GetUintDivMagicAndShift(m_[DIM_2], shift_[DIM_2], static_cast<uint64_t>(outputHeight));
         GetUintDivMagicAndShift(m_[DIM_3], shift_[DIM_3], static_cast<uint64_t>(outputDi));
-        asc_vf_call<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t>>(dim3(THREAD_DIM),
+        Simt::VF_CALL<MaxPool3DNdhwc<VALUE_T, INDICES_T, int64_t, uint64_t, threadDim>>(Simt::Dim3(threadDim),
                                                                         totalSize, inputData, inputChannel, inputDi, inputHeight, inputWidth, outputDi, outputHeight,
                                                                         outputWidth, kD, kH, kW, dD, dH, dW, padD, padH, padW, dilationD, 
                                                                         dilationH, dilationW, outputData, indicesData, blockIdx_, blockNum_, m_[DIM_0], shift_[DIM_0],

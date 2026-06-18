@@ -53,10 +53,8 @@ __aicore__ inline void StoreOneNum(const __local_mem__ void* output, MicroAPI::R
                                        MicroAPI::MaskReg& preg, uint32_t offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        MicroAPI::Cast<half, float, castB42B2>(xFp16, src, preg);
-        MicroAPI::DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>((__local_mem__ half*)(output) + offset,
-                                                                              xFp16, preg);
+        MicroAPI::DataCopy<half, MicroAPI::StoreDist::DIST_FIRST_ELEMENT_B16>(((__local_mem__ half*)(output)) + offset,
+                                                                              (MicroAPI::RegTensor<half>&)src, preg);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         MicroAPI::Cast<bfloat16_t, float, castB42B2>(xBf16, src, preg);
@@ -83,9 +81,7 @@ __aicore__ inline void LoadOneNum(const __local_mem__ void* input, MicroAPI::Reg
                                                                          (__local_mem__ bfloat16_t*)(input) + offset);
         MicroAPI::Cast<float, bfloat16_t, castB22B4>(dst, xBf16, preg);
     } else if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_BRC_B16>(xFp16, (__local_mem__ half*)(input) + offset);
-        MicroAPI::Cast<float, half, castB22B4>(dst, xFp16, preg);
+        MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_BRC_B16>(dst, (__local_mem__ half*)(input) + offset);
     } else if constexpr (sizeof(T) == FOUR) {
         MicroAPI::DataCopy<T, MicroAPI::LoadDist::DIST_BRC_B32>(dst, ((__local_mem__ T*)(input)) + offset);
     } else {
@@ -96,14 +92,12 @@ __aicore__ inline void LoadOneNum(const __local_mem__ void* input, MicroAPI::Reg
     }
 }
 
-template <typename T>
-__aicore__ inline void LoadOneRegTensor(const __local_mem__ void* input, MicroAPI::RegTensor<float>& dst,
+template <typename T, typename U>
+__aicore__ inline void LoadOneRegTensor(const __local_mem__ void* input, MicroAPI::RegTensor<U>& dst,
                                      MicroAPI::MaskReg& preg, MicroAPI::AddrReg& offset)
 {
     if constexpr (IsSameType<T, half>::value) {
-        MicroAPI::RegTensor<half> xFp16;
-        MicroAPI::DataCopy<half, MicroAPI::LoadDist::DIST_UNPACK_B16>(xFp16, (__local_mem__ half*)(input), offset);
-        Cast<float, half, castB22B4>(dst, xFp16, preg);
+        MicroAPI::DataCopy<half>(dst, (__local_mem__ half*)(input), offset);
     } else if constexpr (IsSameType<T, bfloat16_t>::value) {
         MicroAPI::RegTensor<bfloat16_t> xBf16;
         MicroAPI::DataCopy<bfloat16_t, MicroAPI::LoadDist::DIST_UNPACK_B16>(xBf16, (__local_mem__ bfloat16_t*)(input),
@@ -140,10 +134,10 @@ __aicore__ inline void SetNegInfLocalMem(const __local_mem__ void* dstAddr, uint
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_STORE, MicroAPI::MemType::VEC_LOAD>();
 }
 
-template <typename T>
-__aicore__ inline void GetMaxAndIndex(MicroAPI::RegTensor<T>& dst, MicroAPI::RegTensor<int32_t>& dstIndex,
-                                          MicroAPI::RegTensor<T>& src, MicroAPI::RegTensor<int32_t>& srcIndex,
-                                          int32_t indexPadValue)
+template <typename T, typename MIDINDEX>
+__aicore__ inline void GetMaxAndIndex(MicroAPI::RegTensor<T>& dst, MicroAPI::RegTensor<MIDINDEX>& dstIndex,
+                                          MicroAPI::RegTensor<T>& src, MicroAPI::RegTensor<MIDINDEX>& srcIndex,
+                                          MIDINDEX indexPadValue)
 {
     // select first max value or last nan from one reg
     MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T, MicroAPI::MaskPattern::ALL>();
@@ -151,24 +145,24 @@ __aicore__ inline void GetMaxAndIndex(MicroAPI::RegTensor<T>& dst, MicroAPI::Reg
     MicroAPI::MaskReg nanMaskReg;
     MicroAPI::RegTensor<T> vd1;
     MicroAPI::RegTensor<T> vd2;
-    MicroAPI::RegTensor<int32_t> nanIndex;
+    MicroAPI::RegTensor<MIDINDEX> nanIndex;
     MicroAPI::Duplicate(nanIndex, indexPadValue);
     MicroAPI::Compare<T, CMPMODE::NE>(nanMaskReg, src, src, maskAll);                             // nan mask
     MicroAPI::MaskNot(notNanMaskReg, nanMaskReg, maskAll);                                        // not nan mask
     MicroAPI::Select(nanIndex, srcIndex, nanIndex, nanMaskReg);                                   // nan index
-    MicroAPI::ReduceMax(nanIndex, nanIndex, maskAll);                                             // max nan index wsunmoon
+    MicroAPI::ReduceMax(nanIndex, nanIndex, maskAll);                                             // max nan index
     MicroAPI::ReduceMax(vd1, src, notNanMaskReg);                                                 // max value
     MicroAPI::Duplicate(vd2, vd1, maskAll);                                                       // max value
     MicroAPI::Compare<T, CMPMODE::EQ>(notNanMaskReg, src, vd2, maskAll);                          // nan mask, all max value index
     MicroAPI::ReduceMin(dstIndex, srcIndex, notNanMaskReg);                                       // not nan max index
-    MicroAPI::CompareScalar<int32_t, CMPMODE::NE>(nanMaskReg, nanIndex, indexPadValue, maskAll);
+    MicroAPI::CompareScalar<MIDINDEX, CMPMODE::NE>(nanMaskReg, nanIndex, indexPadValue, maskAll);
     MicroAPI::Select(dstIndex, nanIndex, dstIndex, nanMaskReg);
     MicroAPI::Duplicate(dstIndex, dstIndex, maskAll);
-    MicroAPI::Compare<int32_t, CMPMODE::EQ>(notNanMaskReg, dstIndex, srcIndex, maskAll);
+    MicroAPI::Compare<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, srcIndex, maskAll);
     MicroAPI::ReduceMax(dst, src, notNanMaskReg);
     // all value in the kernel is -inf
-    MicroAPI::CompareScalar<int32_t, CMPMODE::EQ>(notNanMaskReg, dstIndex, indexPadValue, maskAll);
-    MicroAPI::Duplicate(nanIndex, static_cast<int32_t>(0));
+    MicroAPI::CompareScalar<MIDINDEX, CMPMODE::EQ>(notNanMaskReg, dstIndex, indexPadValue, maskAll);
+    MicroAPI::Duplicate(nanIndex, static_cast<MIDINDEX>(0));
     MicroAPI::Select(dstIndex, nanIndex, dstIndex, notNanMaskReg);
 }
 
@@ -196,7 +190,7 @@ __aicore__ inline void MergeMaxAndIndex(MicroAPI::RegTensor<U>& res, MicroAPI::R
     MicroAPI::LocalMemBar<MicroAPI::MemType::VEC_LOAD, MicroAPI::MemType::VEC_STORE>();
 }
 
-template <typename T1, typename T2, typename TINDEX>
+template <typename T1, typename TINDEX>
 class MaxPool3DWithArgmaxV2BigKernelRegbase
 {
 public:
@@ -210,17 +204,19 @@ private:
     __aicore__ inline void CalcRealKernelSize(int64_t curIdx, int64_t& curkD, int64_t& curkH, int64_t& curkW, int64_t& curInOffset);
     template <bool SPLIT_KERNEL>
     __aicore__ inline void BaseCompute(int64_t beginIdx, int64_t endIdx, int64_t maxCount);
-    template <typename T, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-    __aicore__ inline void CalcRealIndex(MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<int32_t>& index,
-                                     int64_t curkW, int64_t curkH, int64_t inputH, int64_t inputW, int64_t offset);
-    __aicore__ inline void CopyInCube(int64_t offset, int64_t blockLen, int64_t blockCount, int64_t loopCount);
+    template <typename T, typename MIDINDEX, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
+    __aicore__ inline void CalcRealIndex(MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<MIDINDEX>& index,
+                                     int64_t curkW, int64_t curkH, int64_t curkHW, int64_t inputH, int64_t inputW, int64_t offset);
+    __aicore__ inline void CopyInLine(int64_t offset, int64_t blockLen);
+    __aicore__ inline void CopyInPlane(int64_t offset, int64_t blockLen, int64_t blockCount);
+    __aicore__ inline void CopyInCube(int64_t offset, int64_t blockLen, int64_t curkHWAlign, int64_t curkHW, int64_t blockCount, int64_t dFactor);
     __aicore__ inline void CopyOut(int64_t curIdx);
     __aicore__ inline void NoSplitKernelProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW, int64_t curInOffset,
                                                 int64_t maxCount);
     __aicore__ inline void SplitKernelProcess(int32_t localCurIdx, int64_t curkD, int64_t curkH, int64_t curkW, int64_t curInOffset,
                                               int64_t maxCount);
     template <bool MERGE, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-    __aicore__ inline void ComputeSingleBlock(int32_t localCurIdx, int64_t dataCount, int64_t offset, int64_t curkW, int64_t curkH);
+    __aicore__ inline void ComputeSingleBlock(int32_t localCurIdx, int64_t dataCount, int64_t offset, int64_t curkW, int64_t curkH, int64_t curkHW);
     template <bool CLEAR>
     __aicore__ inline void InitOutBuffer(int32_t localCurIdx);
     __aicore__ inline int64_t min(int64_t a, int64_t b)
@@ -239,6 +235,9 @@ private:
 
     const MaxPool3DWithArgmaxV2Tiling::MaxPool3DWithArgmaxV2BigKernelRegbaseTilingData* tilingData_;
 
+    uint32_t ubBlockSize = platform::GetUbBlockSize();
+    int64_t ubAlignNum = ubBlockSize / sizeof(T1);
+    int64_t kwAlign = ops::CeilAlign(tilingData_->kW, ubAlignNum);
     int64_t inDHW_ = 1;
     int64_t inHW_ = 1;
     int64_t outDHW_ = tilingData_->dOutDim * tilingData_->hOutDim * tilingData_->wOutDim;
@@ -251,11 +250,11 @@ private:
     int64_t endIdx_ = 0;
 };
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices)
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::Init(GM_ADDR x, GM_ADDR y, GM_ADDR indices)
 {
-    inDHW_ = tilingData_->dInDim * tilingData_->hInDim * tilingData_->wInDim;
     inHW_ = tilingData_->hInDim * tilingData_->wInDim;
+    inDHW_ = tilingData_->dInDim * inHW_;
     if (GetBlockIdx() < tilingData_->blockTail) {
         beginIdx_ = GetBlockIdx() * (tilingData_->blockFactor + 1);
         endIdx_ = beginIdx_ + tilingData_->blockFactor + 1;
@@ -272,8 +271,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::In
     pipe_->InitBuffer(indexUBOutput_, OUT_BUFFER_LEN * sizeof(TINDEX));
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Process()
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::Process()
 {
     if (tilingData_->kD * tilingData_->kH * tilingData_->kW <= tilingData_->maxCount) {
         BaseCompute<false>(beginIdx_, endIdx_, tilingData_->maxCount);
@@ -283,8 +282,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Pr
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::CalcRealKernelSize(int64_t curIdx, int64_t& curkD, int64_t& curkH,
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CalcRealKernelSize(int64_t curIdx, int64_t& curkD, int64_t& curkH,
                                                                                     int64_t& curkW,
                                                                                     int64_t& curInOffset)
 {
@@ -329,23 +328,29 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Ca
     curInOffset = curNc * inDHW_ + curOriginIndex_;
 }
 
-template <typename T1, typename T2, typename TINDEX>
-template <typename T, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::CalcRealIndex(MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<int32_t>& index,
-                                     int64_t curkW, int64_t curkH, int64_t inputH, int64_t inputW, int64_t offset)
+template <typename T1, typename TINDEX>
+template <typename T, typename MIDINDEX, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CalcRealIndex(MicroAPI::RegTensor<T>& resIndex, MicroAPI::RegTensor<MIDINDEX>& index,
+                                     int64_t curkW, int64_t curkH, int64_t curkHW, int64_t inputH, int64_t inputW, int64_t offset)
 {
-    MicroAPI::MaskReg pregOneIndex = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::VL1>();
+    MicroAPI::MaskReg pregOneIndex = MicroAPI::CreateMask<MIDINDEX, MicroAPI::MaskPattern::VL1>();
+    MicroAPI::MaskReg pregOneIndexB4 = MicroAPI::CreateMask<int32_t, MicroAPI::MaskPattern::VL1>();
     MicroAPI::RegTensor<T> indexCast;
-    if constexpr (IsSameType<T, int64_t>::value) {
-        MicroAPI::Cast<int64_t, int32_t, castB42B8>(indexCast, index, pregOneIndex);
+    MicroAPI::RegTensor<int32_t> indexCast32;
+    if constexpr (IsSameType<MIDINDEX, int16_t>::value && IsSameType<T, int32_t>::value) {
+        MicroAPI::Cast<int32_t, MIDINDEX, castB22B4>(indexCast, index, pregOneIndex);
+    } else if constexpr (IsSameType<MIDINDEX, int16_t>::value && IsSameType<T, int64_t>::value) {
+        MicroAPI::Cast<int32_t, MIDINDEX, castB22B4>(indexCast32, index, pregOneIndex);
+        MicroAPI::Cast<int64_t, int32_t, castB42B8>(indexCast, indexCast32, pregOneIndexB4);
+
+    } else if constexpr (IsSameType<MIDINDEX, int32_t>::value && IsSameType<T, int64_t>::value) {
+        MicroAPI::Cast<int64_t, MIDINDEX, castB42B8>(indexCast, index, pregOneIndex);
     } else {
         MicroAPI::Copy(indexCast, index, pregOneIndex);
     }
     if constexpr (SPLITKDHW) {
-        MicroAPI::RegTensor<T> hLen;
         MicroAPI::RegTensor<T> tempHW;
-        MicroAPI::Duplicate(hLen, (T)curkH, pregOneIndex);
-        MicroAPI::Muls(tempHW, hLen, curkW, pregOneIndex);
+        MicroAPI::Duplicate(tempHW, (T)curkHW, pregOneIndex);
         MicroAPI::RegTensor<T> d;
         MicroAPI::Div(d, indexCast, tempHW, pregOneIndex);
         MicroAPI::RegTensor<T> prod;
@@ -388,9 +393,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Ca
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
+template <typename T1, typename TINDEX>
 template <bool SPLIT_KERNEL>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::BaseCompute(int64_t beginIdx, int64_t endIdx,
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::BaseCompute(int64_t beginIdx, int64_t endIdx,
                                                                                  int64_t maxCount)
 {
     int64_t curkD = 1;
@@ -413,32 +418,87 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Ba
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::CopyInCube(int64_t offset, int64_t blockLen,
-                                                                          int64_t blockCount, int64_t loopCount)
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CopyInLine(int64_t offset, int64_t blockLen)
 {
     LocalTensor<T1> xLocal = inputQue_.AllocTensor<T1>();
-    MultiCopyLoopInfo<THREE> loopInfo;
-    loopInfo.loopSize[ZERO] = blockLen;
-    loopInfo.loopSize[ONE] = blockCount;
-    loopInfo.loopSize[TWO] = loopCount;
 
-    loopInfo.loopSrcStride[ZERO] = ONE;
-    loopInfo.loopSrcStride[ONE] = tilingData_->wInDim;
-    loopInfo.loopSrcStride[TWO] = tilingData_->hInDim * tilingData_->wInDim;
+    DataCopyPadExtParams<T1> padExtParams;
+    padExtParams.isPad = false;
+    padExtParams.leftPadding = 0;
+    padExtParams.rightPadding = 0;
+    padExtParams.paddingValue = 0;
 
-    loopInfo.loopDstStride[ZERO] = ONE;
-    loopInfo.loopDstStride[ONE] = blockLen;
-    loopInfo.loopDstStride[TWO] = blockLen * blockCount;
-
-    static constexpr MultiCopyConfig config = {false};
-    MultiCopyParams<T1, THREE> paramsMain = {loopInfo};
-    DataCopy<T1, THREE, config>(xLocal, xGm_[offset], paramsMain);
+    DataCopyExtParams extParams;
+    extParams.blockCount = 1;
+    extParams.blockLen = blockLen * sizeof(T1);
+    extParams.srcStride = 0;
+    extParams.dstStride = 0;
+    DataCopyPad(xLocal, xGm_[offset], extParams, padExtParams);
     inputQue_.EnQue(xLocal);
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::CopyOut(int64_t curIdx)
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CopyInPlane(
+    int64_t offset, int64_t blockLen, int64_t blockCount)
+{
+    LocalTensor<T1> xLocal = inputQue_.AllocTensor<T1>();
+
+    DataCopyPadExtParams<T1> padExtParams;
+    padExtParams.isPad = false;
+    padExtParams.leftPadding = 0;
+    padExtParams.rightPadding = 0;
+    padExtParams.paddingValue = 0;
+
+    DataCopyExtParams extParams;
+    extParams.blockCount = blockCount;
+    extParams.blockLen = blockLen * sizeof(T1);
+    extParams.srcStride = (tilingData_->wInDim - blockLen) * sizeof(T1);
+    extParams.dstStride = 0;
+    DataCopyPad<T1, PaddingMode::Compact>(xLocal, xGm_[offset], extParams, padExtParams);
+    inputQue_.EnQue(xLocal);
+}
+
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CopyInCube(
+    int64_t offset, int64_t blockLen, int64_t curkHWAlign, int64_t curkHW, int64_t blockCount, int64_t dFactor)
+{
+    LocalTensor<T1> xLocal = inputQue_.AllocTensor<T1>();
+    union {
+    T1 f;
+    uint32_t i;
+    } minValue;
+    if constexpr (IsSameType<T1, half>::value) {
+        minValue.i = FLOAT16_NEG_INF;
+    } else if constexpr (IsSameType<T1, float>::value){
+        minValue.i = FLOAT32_NEG_INF;
+    } else {
+        minValue.i = BFLOAT16_NEG_INF;
+    }
+
+    DataCopyPadExtParams<T1> padExtParams;
+    padExtParams.isPad = true;
+    padExtParams.leftPadding = 0;
+    padExtParams.rightPadding = curkHWAlign - curkHW;
+    padExtParams.paddingValue = minValue.f;
+
+    DataCopyExtParams extParams;
+    extParams.blockCount = blockCount;
+    extParams.blockLen = blockLen * sizeof(T1);
+    extParams.srcStride = (tilingData_->wInDim - blockLen) * sizeof(T1);
+    extParams.dstStride = 0;
+    for (int64_t d = 0; d < dFactor; d++){
+        int64_t xLocalOffset = d * curkHWAlign;
+        DataCopyPad<T1, PaddingMode::Compact>(
+            xLocal[xLocalOffset], 
+            xGm_[offset + d * inHW_], 
+            extParams, padExtParams);
+    }
+    inputQue_.EnQue(xLocal);
+}
+
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::CopyOut(int64_t curIdx)
 {
     constexpr int32_t maxLocalLen = OUT_BUFFER_LEN;
     int32_t localCurIdx = (curIdx - beginIdx_) % maxLocalLen;
@@ -461,8 +521,8 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Co
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::NoSplitKernelProcess(int32_t localCurIdx,
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::NoSplitKernelProcess(int32_t localCurIdx,
                                                                                           int64_t curkD, int64_t curkH, int64_t curkW,
                                                                                           int64_t curInOffset,
                                                                                           int64_t maxCount)
@@ -470,12 +530,17 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::No
     if (curkD * curkH * curkW == 0) {
         return;
     }
-    CopyInCube(curInOffset, curkW, curkH, curkD);
-    ComputeSingleBlock<false, false, false, true>(localCurIdx, curkD * curkH * curkW, curOriginIndex_, curkW, curkH);
+    int64_t inputOffset = curInOffset;
+    int64_t kernelOffset = curOriginIndex_;
+    int64_t curkHW = curkH * curkW;
+    int64_t curkHWAlign = ops::CeilAlign(curkHW, ubAlignNum);
+
+    CopyInCube(inputOffset, curkW, curkHWAlign, curkHW, curkH, curkD);
+    ComputeSingleBlock<false, false, false, true>(localCurIdx, curkD * curkHWAlign, kernelOffset, curkW, curkH, curkHWAlign);
 }
 
-template <typename T1, typename T2, typename TINDEX>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::SplitKernelProcess(int32_t localCurIdx, int64_t curkD,
+template <typename T1, typename TINDEX>
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::SplitKernelProcess(int32_t localCurIdx, int64_t curkD,
                                                                                         int64_t curkH, int64_t curkW,
                                                                                         int64_t curInOffset,
                                                                                         int64_t maxCount)
@@ -487,17 +552,28 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Sp
     int64_t inputOffset = curInOffset;
     int64_t kernelOffset = curOriginIndex_;
     int64_t maxIndex = 0;
+    int64_t curkHW = curkH * curkW;
+    int64_t curkHWAlign = ops::CeilAlign(curkHW, ubAlignNum);
 
     if (curkH * curkW <= maxCount) {
-        int64_t dFactor = maxCount / (curkH * curkW);
-        int64_t dLoops = (curkD + dFactor - 1) / dFactor;
-        int64_t dTail = curkD - (dLoops - 1) * dFactor;
-        for(int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
-            int64_t curdFactor = dLoop == dLoops - 1 ? dTail : dFactor;
-            inputOffset = curInOffset + dLoop * dFactor * tilingData_->hInDim * tilingData_->wInDim;
-            kernelOffset = curOriginIndex_ + dLoop * dFactor * tilingData_->hInDim * tilingData_->wInDim;
-            CopyInCube(inputOffset, curkW, curkH, curdFactor);
-            ComputeSingleBlock<true, false, false, true>(localCurIdx, curdFactor * curkH * curkW, kernelOffset, curkW, curkH);           
+        if (curkHWAlign <= maxCount) {
+            int64_t dFactor = maxCount / curkHWAlign;
+            int64_t dLoops = (curkD + dFactor - 1) / dFactor;
+            int64_t dTail = curkD - (dLoops - 1) * dFactor;
+            for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
+                int64_t curdFactor = dLoop == dLoops - 1 ? dTail : dFactor;
+                inputOffset = curInOffset + dLoop * dFactor * inHW_;
+                kernelOffset = curOriginIndex_ + dLoop * dFactor * inHW_;
+                CopyInCube(inputOffset, curkW, curkHWAlign, curkHW, curkH, curdFactor);
+                ComputeSingleBlock<true, false, false, true>(localCurIdx, curdFactor * curkHWAlign, kernelOffset, curkW, curkH, curkHWAlign);
+            }
+        } else {
+            for (int64_t dLoop = 0; dLoop < curkD; dLoop++) {
+                inputOffset = curInOffset + dLoop * inHW_;
+                kernelOffset = curOriginIndex_ + dLoop * inHW_;
+                CopyInPlane(inputOffset, curkW, curkH);
+                ComputeSingleBlock<true, false, true, false>(localCurIdx, curkHW, kernelOffset, curkW, curkH, curkHW);
+            }
         }
     } else if(curkW <= maxCount) {
         int64_t dLoops = curkD;
@@ -505,12 +581,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Sp
         int64_t hLoops = (curkH + hFactor - 1) / hFactor;
         int64_t hTail = curkH  - (hLoops - 1) * hFactor;
         for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
-            inputOffset = curInOffset + dLoop * tilingData_->hInDim * tilingData_->wInDim;
-            kernelOffset = curOriginIndex_ + dLoop * tilingData_->hInDim * tilingData_->wInDim;
+            inputOffset = curInOffset + dLoop * inHW_;
+            kernelOffset = curOriginIndex_ + dLoop * inHW_;
             for (int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
                 int32_t curhFactor = hLoop == hLoops - 1 ? hTail : hFactor;
-                CopyInCube(inputOffset, curkW, curhFactor, 1);
-                ComputeSingleBlock<true, false, true, false>(localCurIdx, curkW * curhFactor, kernelOffset, curkW, curkH);
+                CopyInPlane(inputOffset, curkW, curhFactor);
+                ComputeSingleBlock<true, false, true, false>(localCurIdx, curkW * curhFactor, kernelOffset, curkW, curkH, curkHW);
                 inputOffset += hFactor * tilingData_->wInDim;
                 kernelOffset += hFactor * tilingData_->wInDim;
             }
@@ -523,12 +599,12 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Sp
         int64_t wTail = curkW - (wLoops - 1) * wFactor;
         for (int64_t dLoop = 0; dLoop < dLoops; dLoop++) {
             for(int64_t hLoop = 0; hLoop < hLoops; hLoop++) {
-                inputOffset = curInOffset + dLoop * tilingData_->hInDim * tilingData_->wInDim + hLoop * tilingData_->wInDim;
-                kernelOffset = curOriginIndex_ + dLoop * tilingData_->hInDim * tilingData_->wInDim + hLoop * tilingData_->wInDim;
+                inputOffset = curInOffset + dLoop * inHW_ + hLoop * tilingData_->wInDim;
+                kernelOffset = curOriginIndex_ + dLoop * inHW_ + hLoop * tilingData_->wInDim;
                 for (int64_t wLoop = 0; wLoop < wLoops; wLoop++) {
                     int32_t curFactor = wLoop == wLoops - 1 ? wTail : wFactor;
-                    CopyInCube(inputOffset, curFactor, 1, 1);
-                    ComputeSingleBlock<true, true, false, false>(localCurIdx, curFactor, kernelOffset, curkW, curkH);
+                    CopyInLine(inputOffset, curFactor);
+                    ComputeSingleBlock<true, true, false, false>(localCurIdx, curFactor, kernelOffset, curkW, curkH, curkHW);
                     inputOffset += wFactor;
                     kernelOffset += wFactor;
                 }
@@ -537,9 +613,9 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Sp
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
+template <typename T1, typename TINDEX>
 template <bool CLEAR>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::InitOutBuffer(int32_t localCurIdx)
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::InitOutBuffer(int32_t localCurIdx)
 {
     if (localCurIdx != 0) {
         return;
@@ -582,26 +658,32 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::In
     }
 }
 
-template <typename T1, typename T2, typename TINDEX>
+template <typename T1, typename TINDEX>
 template <bool MERGE, bool SPLITKW, bool SPLITKHW, bool SPLITKDHW>
-__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::ComputeSingleBlock(int32_t localCurIdx,
+__aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, TINDEX>::ComputeSingleBlock(int32_t localCurIdx,
                                                                                    int64_t dataCount, int64_t offset,
-                                                                                   int64_t curkW, int64_t curkH)
+                                                                                   int64_t curkW, int64_t curkH, int64_t curkHW)
 {
+    using calculateType = std::conditional_t<std::is_same<T1, half>::value, half, float>;
+    using calIndexType = std::conditional_t<std::is_same<T1, half>::value, int16_t, int32_t>;
     LocalTensor<T1> maxOutLocal = maxUBOutput_.Get<T1>();
     LocalTensor<TINDEX> indexLocal = indexUBOutput_.Get<TINDEX>();
     LocalTensor<T1> xLocal = inputQue_.DeQue<T1>();
     union {
-        T2 f;
-        unsigned int i;
+        calculateType f;
+        uint32_t i;
     } minValue;
-    minValue.i = FLOAT32_NEG_INF;
+    if constexpr (IsSameType<T1, half>::value) {
+        minValue.i = FLOAT16_NEG_INF;
+    } else {
+        minValue.i = FLOAT32_NEG_INF;
+    }
     __local_mem__ T1* xLocalAddr = (__local_mem__ T1*)xLocal.GetPhyAddr();
     __local_mem__ T1* dstLocalAddr = (__local_mem__ T1*)maxOutLocal.GetPhyAddr();
     __local_mem__ TINDEX* indexLocalAddr = (__local_mem__ TINDEX*)indexLocal.GetPhyAddr();
-    constexpr int32_t padIndex = -1;
+    constexpr calIndexType padIndex = -1;
 
-    constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(T2);
+    constexpr uint32_t repeatElm = platform::GetVRegSize() / sizeof(calculateType);
     uint16_t repeatTimes = (dataCount + repeatElm - 1) / repeatElm;
     uint32_t num = repeatTimes * repeatElm;
     uint32_t padNum = num - dataCount;
@@ -611,37 +693,37 @@ __aicore__ inline void MaxPool3DWithArgmaxV2BigKernelRegbase<T1, T2, TINDEX>::Co
     {
         SetNegInfLocalMem<T1>(xLocalAddr, padNum, dataCount);
         
-        MicroAPI::RegTensor<T2> vd0;
-        MicroAPI::RegTensor<T2> res;
-        MicroAPI::RegTensor<int32_t> resIndex;
-        MicroAPI::RegTensor<int32_t> index;
+        MicroAPI::RegTensor<calculateType> vd0;
+        MicroAPI::RegTensor<calculateType> res;
+        MicroAPI::RegTensor<calIndexType> resIndex;
+        MicroAPI::RegTensor<calIndexType> index;
         MicroAPI::MaskReg cmpMaskNanReg;
         MicroAPI::MaskReg cmpMaskReg;
-        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::MaskReg maskAll = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::ALL>();
 
         MicroAPI::Duplicate(resIndex, padIndex);
         MicroAPI::Duplicate(res, minValue.f);
         MicroAPI::Arange(index, 0);
         for (uint16_t i = 0; i < repeatTimes; i++) {
-            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<T2>(num);
+            MicroAPI::MaskReg p0 = MicroAPI::UpdateMask<calculateType>(num);
             MicroAPI::AddrReg offset = MicroAPI::CreateAddrReg<T1>(i, repeatElm);
-            LoadOneRegTensor<T1>(xLocalAddr, vd0, p0, offset);
-            MicroAPI::Compare<T2, CMPMODE::NE>(cmpMaskNanReg, vd0, vd0, maskAll);
-            MicroAPI::Compare<T2, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll); 
+            LoadOneRegTensor<T1, calculateType>(xLocalAddr, vd0, p0, offset);
+            MicroAPI::Compare<calculateType, CMPMODE::NE>(cmpMaskNanReg, vd0, vd0, maskAll);
+            MicroAPI::Compare<calculateType, CMPMODE::GT>(cmpMaskReg, vd0, res, maskAll); 
             MicroAPI::MaskXor(cmpMaskReg, cmpMaskReg, cmpMaskNanReg, maskAll);
             MicroAPI::Select(res, vd0, res, cmpMaskReg);
             MicroAPI::Select(resIndex, index, resIndex, cmpMaskReg);
             MicroAPI::Adds(index, index, repeatElm, maskAll);
         }
-        GetMaxAndIndex<T2>(res, index, res, resIndex, padIndex);
-        MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<T2, MicroAPI::MaskPattern::VL1>();    
+        GetMaxAndIndex<calculateType, calIndexType>(res, index, res, resIndex, padIndex);
+        MicroAPI::MaskReg pregOne = MicroAPI::CreateMask<calculateType, MicroAPI::MaskPattern::VL1>();    
         MicroAPI::RegTensor<TINDEX> realResIndex;
-        CalcRealIndex<TINDEX, SPLITKW, SPLITKHW, SPLITKDHW>(realResIndex, index, curkW, curkH, inputH, inputW, offset);
+        CalcRealIndex<TINDEX, calIndexType, SPLITKW, SPLITKHW, SPLITKDHW>(realResIndex, index, curkW, curkH, curkHW, inputH, inputW, offset);
         if constexpr (MERGE) {
-            MergeMaxAndIndex<T1, T2, TINDEX>(res, realResIndex, dstLocalAddr, indexLocalAddr, localCurIdx, padIndex);
+            MergeMaxAndIndex<T1, calculateType, TINDEX>(res, realResIndex, dstLocalAddr, indexLocalAddr, localCurIdx, padIndex);
         }
         StoreOneNum<TINDEX, TINDEX>(indexLocalAddr, realResIndex, pregOne, localCurIdx);
-        StoreOneNum<T1, T2>(dstLocalAddr, res, pregOne, localCurIdx);
+        StoreOneNum<T1, calculateType>(dstLocalAddr, res, pregOne, localCurIdx);
     }
     inputQue_.FreeTensor<T1>(xLocal);
 }

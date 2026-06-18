@@ -40,11 +40,17 @@ const int64_t DOUB = 2;
 const int64_t FIRPOS = 0;
 const int64_t SECPOS = 1;
 constexpr int64_t MAX_INT32 = 2147483647;
-constexpr uint64_t SIMT_NCDHW_TILING_KEY_INT32 = 600001;
-constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT32 = 600002;
-constexpr uint64_t SIMT_NCDHW_TILING_KEY_INT64 = 600011;
-constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT64 = 600012;
-constexpr int64_t MAX_THREAD_NUM = 256;
+constexpr uint64_t SIMT_NCDHW_TILING_KEY_INT32_T256 = 600001;
+constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT32_T256 = 600002;
+constexpr uint64_t SIMT_NCDHW_TILING_KEY_INT64_T256 = 600011;
+constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT64_T256 = 600012;
+constexpr uint64_t SIMT_NCDHW_TILING_KEY_INT32_T512 = 600101;
+constexpr uint64_t SIMT_NDHWC_TILING_KEY_INT32_T512 = 600102;
+constexpr int64_t MAX_THREAD_NUM = 512;
+constexpr int64_t DEFAULT_THREAD_NUM = 256;
+constexpr int64_t KERNEL_SIZE_THRESHOLD = 64;
+
+
 constexpr size_t SYS_WORKSPACE_SIZE = 16 * 1024 * 1024;
 
 struct InputSIMTInfo {
@@ -96,6 +102,7 @@ private:
     int hDimPos = 3;
     int wDimPos = 4;
     int64_t outputDataCount = 0;
+    bool isThreadNum512 = false;
 };
 
 }  // namespace optiling
