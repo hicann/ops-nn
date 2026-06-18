@@ -485,7 +485,10 @@ static ge::graphStatus Tiling4RmsNormGrad(gert::TilingContext* context)
     platform_ascendc::SocVersion curSocVersion = ascendc_platform.GetSocVersion();
     OP_CHECK_IF(
         curSocVersion == platform_ascendc::SocVersion::ASCEND910 && col_val % COL_VAL_MULTIPLE_910 != 0,
-        OP_LOGE(context, "The input shape is not supported on the 910 chip."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context->GetNodeName(), "gamma",
+            std::to_string(col_val).c_str(),
+            "The shape size of input gamma must be divisible by 64 when the soc version of chip is 910"),
+        return ge::GRAPH_FAILED);
     bool isRegbase_ = IsRegbaseSocVersion(context) ? true : false;
     if (isRegbase_) {
         if (isEmptyTensor) {

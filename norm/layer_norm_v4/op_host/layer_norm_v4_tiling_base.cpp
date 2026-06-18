@@ -157,18 +157,17 @@ ge::graphStatus LayerNormV4TilingBase::GetShapeAttrsInfo()
     normalizedShapeLen = normalizedShape.IsScalar() ? 1 : normalizedShape.GetDim(0);
     if (static_cast<uint64_t>(xShape.GetDimNum()) < normalizedShapeLen) {
         std::string reasonMsg =
-            "The shape dim of input x must be greater than or equal to the " +
-            std::to_string(normalizedShapeLen) + " of input normalized_shape, "
-            "where the elements of normalized_shape indicates the number of axes that require normalization computation";
+            "The shape dim of input x must be greater than or equal to " +
+            std::to_string(normalizedShapeLen) + " (the number of elements of input normalized_shape), "
+            "which indicates the number of trailing axes input x that require normalization";
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
             context_->GetNodeName(), "x", std::to_string(xShape.GetDimNum()).c_str(), reasonMsg.c_str());
         return ge::GRAPH_FAILED;
     }
     OP_CHECK_IF(
         static_cast<int64_t>(normalizedShapeLen) < 0,
-        OP_LOGE(
-            context_->GetNodeName(), "normalizedShapeLen must be greater than 0, normalizedShapeLen: %u",
-            static_cast<uint32_t>(normalizedShapeLen)),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "normalized_shape",
+            ToString(normalizedShape).c_str(), "The 0th dimension of input normalized_shape must be greater than 0"),
         return ge::GRAPH_FAILED);
 
     // fuse axis

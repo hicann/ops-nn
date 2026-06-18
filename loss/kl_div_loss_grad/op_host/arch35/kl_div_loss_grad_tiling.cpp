@@ -165,21 +165,23 @@ float KlDivLossGradTiling::CalcReductionCof(const gert::Shape& inputLabelShape)
                 return negReductionCof;
             }
         }
+        OP_CHECK_IF(dimVal <= 0,
+            OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(context_->GetNodeName(), "input",
+                std::to_string(dimVal).c_str(),
+                "The shape size of parameter input must be greater than 0 when the attribute reduction is mean"),
+            return negReductionCof);
     } else if (strcmp(this->reducationStr, "batchmean") == 0){
-        if (inputLabelShape.GetDim(0) != 0) {
+        if (inputLabelShape.GetDim(0) > 0) {
             dimVal = dimVal * inputLabelShape.GetDim(0);
         } else {
             std::string reasonMsg = 
-                "The N-dimension of parameter input cannot be 0 when the attribute reduction is batchmean, "
-                "where N is the 0th dim";
+                "The N-dimension of parameter input must be greater than 0 "
+                "when the attribute reduction is batchmean, where N is the 0th dim";
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "input",
                 ToString(inputLabelShape).c_str(), reasonMsg.c_str());
             return negReductionCof;
         }
     }
-    OP_CHECK_IF(dimVal <= 0,
-        OP_LOGE(context_->GetNodeName(), "dimVal must greater 0, but is %ld", dimVal),
-        return negReductionCof);
     OP_LOGD(context_->GetNodeName(), "[dimVal] : dimVal = %ld", dimVal);
     reducationCof = static_cast<float>(reducationCof / static_cast<double>(dimVal));
     OP_LOGD(context_->GetNodeName(), "[TilingData] : reducationCof = %f", reducationCof);
@@ -222,11 +224,13 @@ ge::graphStatus KlDivLossGradTiling::DoOpTiling()
         OP_LOGE(context_->GetNodeName(), "reducationCof must > 0"), return ge::GRAPH_FAILED);
     if (input0DType == ge::DT_FLOAT16 || input0DType == ge::DT_BF16) {
         OP_CHECK_IF(RunFp16BroadcastTiling(this->reducationCof_) == ge::GRAPH_FAILED,
-                        OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
+                        OP_LOGE(context_->GetNodeName(),
+                            "RunFp16BroadcastTiling failed. Please check the detailed log."),
                         return ge::GRAPH_FAILED);
     }  else if (input0DType == ge::DT_FLOAT) {
         OP_CHECK_IF(RunFp32BroadcastTiling(this->reducationCof_) == ge::GRAPH_FAILED,
-                        OP_LOGE(context_->GetNodeName(), "get input dtype failed"),
+                        OP_LOGE(context_->GetNodeName(),
+                            "RunFp32BroadcastTiling failed. Please check the detailed log."),
                         return ge::GRAPH_FAILED);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "grad",

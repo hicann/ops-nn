@@ -575,7 +575,9 @@ static bool setEpsTiling(const gert::TilingContext* context)
     const float* epsilon = attrs->GetFloat(0);
     OP_CHECK_NULL_WITH_CONTEXT(context, epsilon);
     OP_TILING_CHECK(
-        *epsilon < 0, OPS_REPORT_VECTOR_INNER_ERR(context, "Epsilon less than zero, please check."),
+        *epsilon < 0,
+        OP_LOGE_FOR_INVALID_VALUE(context->GetNodeName(), "epsilon",
+            std::to_string(*epsilon).c_str(), "greater than 0"),
         return ge::GRAPH_FAILED);
     tilingData.set_epsilon(*epsilon);
 
