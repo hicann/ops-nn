@@ -45,7 +45,7 @@ class BinaryCrossEntropyTiling
 public:
     explicit BinaryCrossEntropyTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling(const BinaryCrossEntropyCompileInfo *compileInfo);
-    BinaryCrossEntropyTilingData* tiling;
+    BinaryCrossEntropyTilingData* tiling = nullptr;
 
 protected:
     ge::graphStatus CalcOutputDtype();
@@ -58,10 +58,10 @@ protected:
     ge::graphStatus RunFp16ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo *compileInfo);
     ge::graphStatus RunFp32ReduceTiling(ReduceOpInputParam& opInput, const BinaryCrossEntropyCompileInfo *compileInfo);
 private:
-    gert::TilingContext* tilingContext;
-    ge::DataType outputDtype;
-    ge::DataType inputXDtype;
-    ge::DataType inputYDtype;
+    gert::TilingContext* tilingContext = nullptr;
+    ge::DataType outputDtype = ge::DT_UNDEFINED;
+    ge::DataType inputXDtype = ge::DT_UNDEFINED;
+    ge::DataType inputYDtype = ge::DT_UNDEFINED;
     const char *reductionStr = "";
     bool isReductionNone = false;
     bool isReductionMean = false;
