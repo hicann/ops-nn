@@ -50,9 +50,9 @@ protected:
         const gert::Shape& mat2Shape = context_->GetInputShape(1)->GetOriginShape();
         if (args_.kValue == 0UL && args_.hasBias) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
-                args_.opName, "mat1", Ops::Base::ToString(selfShape).c_str(),
+                args_.opName, "a", Ops::Base::ToString(selfShape).c_str(),
                 Ops::NN::FormatString(
-                    "When optional parameter %s exists, %s of %s must be a positive number", "self", "k-axis", "mat1")
+                    "When optional parameter %s exists, %s of %s must be a positive number", "bias", "k-axis", "a")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -64,11 +64,13 @@ protected:
         };
         if (!isValidDimValue(args_.mValue) || !isValidDimValueK(args_.kValue) || !isValidDimValue(args_.nValue)) {
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-                args_.opName, "self, mat2",
+                args_.opName, "a, b",
                 Ops::NN::FormatString(
                     "%s, %s", Ops::Base::ToString(selfShape).c_str(), Ops::Base::ToString(mat2Shape).c_str())
                     .c_str(),
-                Ops::NN::FormatString("%s of %s must be within the range %s", "m, k, n", "self, mat2", "[0, INT32_MAX]")
+                Ops::NN::FormatString(
+                    "%s of %s must be within the range %s, %s of %s must be within the range %s", "m, n", "a, b",
+                    "(0, INT32_MAX]", "k", "a, b", "[0, INT32_MAX]")
                     .c_str());
             return ge::GRAPH_FAILED;
         }
@@ -236,14 +238,14 @@ protected:
             }
         } catch (const std::out_of_range &e) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-                args_.opName, "mat1, mat2, out, self",
+                args_.opName, "a, b, c, bias",
                 Ops::NN::FormatString(
                     "%s, %s, %s, %s", Ops::Base::ToString(args_.aType).c_str(),
                     Ops::Base::ToString(args_.bType).c_str(), Ops::Base::ToString(args_.cType).c_str(),
                     Ops::Base::ToString(args_.biasType).c_str())
                     .c_str(),
                 Ops::NN::FormatString(
-                    "The dtypes of %s must be within the range %s", "mat1, mat2, out, self", "matmul_tiling dtypeMap")
+                    "The dtypes of %s must be within the range %s", "a, b, c, bias", "matmul_tiling dtypeMap")
                     .c_str());
             return ge::GRAPH_FAILED;
         }

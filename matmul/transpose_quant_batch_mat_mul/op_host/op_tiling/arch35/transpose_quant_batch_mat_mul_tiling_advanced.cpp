@@ -50,7 +50,7 @@ static inline void TQBMMGetFormat(const gert::TilingContext& context, MatMulV3Ar
 static inline ge::graphStatus CheckWeightNz(const gert::TilingContext& context, MatMulV3Args& args, bool isMxFp)
 {
     if (!isMxFp) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             args.opName, "x2", "FRACTAL_NZ",
             Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
                                   "non-mxfp8 mode", "x2", "FRACTAL_NZ").c_str());
@@ -247,13 +247,13 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
         }
     }
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-        args.opName, "x1, x2, x1Scale, x2Scale, out",
+        args.opName, "x1, x2, x1Scale, x2Scale, y",
         Ops::NN::FormatString(
             "%s, %s, %s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
             Ops::Base::ToString(scaleX1Dtype).c_str(), Ops::Base::ToString(scaleX2Dtype).c_str(),
             Ops::Base::ToString(args.cType).c_str())
             .c_str(),
-        Ops::NN::FormatString("The dtypes of %s must be in the supported combinations", "x1, x2, x1Scale, x2Scale, out")
+        Ops::NN::FormatString("The dtypes of %s must be in the supported combinations", "x1, x2, x1Scale, x2Scale, y")
             .c_str());
     return ge::GRAPH_FAILED;
 }
@@ -264,12 +264,12 @@ ge::graphStatus IsValidFormat(const gert::TilingContext& context, const MatMulV3
         IsMicroScaling(context.GetOptionalInputDesc(SCALE_X1_IDX), context.GetOptionalInputDesc(SCALE_X2_IDX));
     if (args.aFormat == ge::FORMAT_FRACTAL_NZ || args.outFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            args.opName, "x1, out",
+            args.opName, "x1, y",
             Ops::NN::FormatString(
                 "%s, %s", ge::TypeUtils::FormatToSerialString(args.aFormat).c_str(),
                 ge::TypeUtils::FormatToSerialString(args.outFormat).c_str())
                 .c_str(),
-            Ops::NN::FormatString("The formats of %s cannot be %s", "x1, out", "FRACTAL_NZ").c_str());
+            Ops::NN::FormatString("The formats of %s cannot be %s", "x1, y", "FRACTAL_NZ").c_str());
         return ge::GRAPH_FAILED;
     }
     if (args.bFormat == ge::FORMAT_FRACTAL_NZ && !isMxfp8) {
@@ -414,8 +414,8 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::CheckArgs()
     const size_t cDimNum = cShape.GetDimNum();
     if ((aDimNum != ALLOW_DIM) || (bDimNum != ALLOW_DIM) || (cDimNum != ALLOW_DIM)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            args_.opName, "x1, x2, out", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, out", static_cast<int>(ALLOW_DIM))
+            args_.opName, "x1, x2, y", Ops::NN::FormatString("%zu, %zu, %zu", aDimNum, bDimNum, cDimNum).c_str(),
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, y", static_cast<int>(ALLOW_DIM))
                 .c_str());
         return ge::GRAPH_FAILED;
     }

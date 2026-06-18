@@ -66,9 +66,9 @@ static inline ge::graphStatus TBMMCheckPermAndShapeDim(const gert::TilingContext
     const gert::Shape& cShape = context.GetOutputShape(0)->GetOriginShape();
     if ((aShape.GetDimNum() != ALLOW_DIM) || (bShape.GetDimNum() != ALLOW_DIM) || (cShape.GetDimNum() != ALLOW_DIM)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            opName, "x1, x2, out",
+            opName, "x1, x2, y",
             Ops::NN::FormatString("%zu, %zu, %zu", aShape.GetDimNum(), bShape.GetDimNum(), cShape.GetDimNum()).c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, out", ALLOW_DIM).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %d", "x1, x2, y", ALLOW_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     auto attrs = context.GetAttrs();
@@ -76,12 +76,12 @@ static inline ge::graphStatus TBMMCheckPermAndShapeDim(const gert::TilingContext
         (attrs->GetAttrPointer<gert::ContinuousVector>(1)->GetSize() != ALLOW_DIM) ||
         (attrs->GetAttrPointer<gert::ContinuousVector>(NUM_TWO)->GetSize() != ALLOW_DIM)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            opName, "perm_x1, perm_x2, perm_y",
+            opName, "permX1, permX2, permY",
             Ops::NN::FormatString("%zu, %zu, %zu", attrs->GetAttrPointer<gert::ContinuousVector>(0)->GetSize(),
                                   attrs->GetAttrPointer<gert::ContinuousVector>(1)->GetSize(),
                                   attrs->GetAttrPointer<gert::ContinuousVector>(NUM_TWO)->GetSize())
                 .c_str(),
-            Ops::NN::FormatString("The shape dims of %s must be %d", "perm_x1, perm_x2, perm_y", ALLOW_DIM).c_str());
+            Ops::NN::FormatString("The shape dims of %s must be %d", "permX1, permX2, permY", ALLOW_DIM).c_str());
         return ge::GRAPH_FAILED;
     }
     return ge::GRAPH_SUCCESS;
@@ -130,13 +130,13 @@ ge::graphStatus IsValidDtype(const MatMulV3Args &args)
         }
     }
     OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-        args.opName, "x1, x2, out",
+        args.opName, "x1, x2, y",
         Ops::NN::FormatString(
             "%s, %s, %s", Ops::Base::ToString(args.aType).c_str(), Ops::Base::ToString(args.bType).c_str(),
             Ops::Base::ToString(args.cType).c_str())
             .c_str(),
         Ops::NN::FormatString(
-            "The dtypes of %s must be within the range %s", "x1, x2, out",
+            "The dtypes of %s must be within the range %s", "x1, x2, y",
             "(FLOAT16,FLOAT16,FLOAT16), (FLOAT16,FLOAT16,INT8), (FLOAT,FLOAT,FLOAT), (BF16,BF16,BF16)")
             .c_str());
     return ge::GRAPH_FAILED;
@@ -147,12 +147,12 @@ ge::graphStatus TBMMOpSpecificCheck(MatMulV3Args &args)
     // format check
     if ((args.aFormat == ge::FORMAT_FRACTAL_NZ) || (args.outFormat == ge::FORMAT_FRACTAL_NZ)) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            args.opName, "x1, out",
+            args.opName, "x1, y",
             Ops::NN::FormatString(
                 "%s, %s", (args.aFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND",
                 (args.outFormat == ge::FORMAT_FRACTAL_NZ) ? "FRACTAL_NZ" : "ND")
                 .c_str(),
-            Ops::NN::FormatString("The formats of %s must be %s", "x1, out", "ND").c_str());
+            Ops::NN::FormatString("The formats of %s must be %s", "x1, y", "ND").c_str());
         return ge::GRAPH_FAILED;
     }
 
@@ -257,7 +257,7 @@ ge::graphStatus TBMMGetShape(const gert::TilingContext &context, MatMulV3Args &a
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 args.opName, "x1", Ops::Base::ToString(aShape).c_str(),
                 Ops::NN::FormatString("%s of %s must be exactly divisible by attribute %s (%u)", "Batch-axis", "x1",
-                                      "batch_split_factor", batchSplitFactor)
+                                      "batchSplitFactor", batchSplitFactor)
                     .c_str());
             return ge::GRAPH_FAILED;
         }
