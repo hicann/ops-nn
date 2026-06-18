@@ -19,10 +19,16 @@
 #include "log/log.h"
 #include "op_host/tiling_base.h"
 #include "op_host/tiling_templates_registry.h"
+#include "op_host/tiling_util.h"
 #include "util/math_util.h"
 
 namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
+using Ops::NN::OpTiling::IsRegbaseSocVersion;
+
+/* Forward declarations for arch35 regbase wrappers (in dequant_bias_tiling_arch35.cpp) */
+ge::graphStatus Arch35DequantBiasTilingImpl(gert::TilingContext* context);
+ge::graphStatus Arch35DequantBiasTilingParseImpl(gert::TilingParseContext* context);
 const static int64_t MAX_BINARY_ADD_BUFFER_CNT = 64;
 const static int64_t MAX_BINARY_ADD_BUFFER_CNT_WITHOUT_DROPLESS = 8;
 const static int64_t MAX_EXPONENT_OF_BINARY = 6;
@@ -458,13 +464,20 @@ ge::graphStatus DequantBiasTiling::TilingGradCompute()
 
 ge::graphStatus TilingForDequantBias(gert::TilingContext* context)
 {
+    if (context == nullptr) return ge::GRAPH_FAILED;
+    if (IsRegbaseSocVersion(context)) {
+        return Arch35DequantBiasTilingImpl(context);
+    }
     DequantBiasTiling tiling(context);
     return tiling.DoTiling();
 }
 
 ge::graphStatus TilingPrepareForDequantBias(gert::TilingParseContext* context)
 {
-    OP_LOGD(context, "Enter TilingPrepare4RmsNormGrad");
+    if (context == nullptr) return ge::GRAPH_FAILED;
+    if (IsRegbaseSocVersion(context)) {
+        return Arch35DequantBiasTilingParseImpl(context);
+    }
     return ge::GRAPH_SUCCESS;
 }
 

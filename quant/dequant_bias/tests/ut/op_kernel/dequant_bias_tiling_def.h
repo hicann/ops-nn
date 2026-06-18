@@ -33,11 +33,11 @@
 
 
 struct DequantBiasTilingData {
-  int64_t M = 40;
+  int64_t M = 20;
   int64_t N = 256;
   int64_t nAlign = 256;
   int64_t asExist = 1;
-  int64_t needCoreNum = 40;
+  int64_t needCoreNum = 20;
   int64_t perCoreRow = 1;
   int64_t tailCoreRow = 1;
   int64_t inBufferSize = 2048;

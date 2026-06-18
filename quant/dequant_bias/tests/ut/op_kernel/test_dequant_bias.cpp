@@ -36,7 +36,7 @@ class dequant_bias_test : public testing::Test {
 
 TEST_F(dequant_bias_test, test_dequant_bias_0)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 256;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -55,7 +55,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_0)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10111;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -80,7 +80,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_0)
 
 TEST_F(dequant_bias_test, test_dequant_bias_1)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 256;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -99,7 +99,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_1)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10110;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -124,7 +124,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_1)
 
 TEST_F(dequant_bias_test, test_dequant_bias_2)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 256;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -143,7 +143,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_2)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10112;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -168,7 +168,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_2)
 
 TEST_F(dequant_bias_test, test_dequant_bias_3)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 256;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -187,7 +187,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_3)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10113;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -212,7 +212,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_3)
 
 TEST_F(dequant_bias_test, test_dequant_bias_4)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 8193;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -231,7 +231,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_4)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10111;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -257,7 +257,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_4)
 
 TEST_F(dequant_bias_test, test_dequant_bias_5)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 8193;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -276,7 +276,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_5)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10110;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -302,7 +302,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_5)
 
 TEST_F(dequant_bias_test, test_dequant_bias_6)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 8193;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -321,7 +321,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_6)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10112;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);
@@ -347,7 +347,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_6)
 
 TEST_F(dequant_bias_test, test_dequant_bias_7)
 {
-    size_t M = 40;
+    size_t M = 20;
     size_t N = 8193;
     
     size_t xFileSize = M * N * sizeof(int32_t);
@@ -366,7 +366,7 @@ TEST_F(dequant_bias_test, test_dequant_bias_7)
     uint8_t *y = (uint8_t *)AscendC::GmAlloc(yFileSize);
 
     uint64_t tilingKey = 10113;
-    uint32_t blockDim = 40;
+    uint32_t blockDim = 20;
     size_t workspaceFileSize = 16781184;
     size_t tilingDataSize = sizeof(DequantBiasTilingData);
     uint8_t *workspace = (uint8_t *)AscendC::GmAlloc(workspaceFileSize);

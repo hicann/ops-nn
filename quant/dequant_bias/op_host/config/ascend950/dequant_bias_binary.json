@@ -1,0 +1,109 @@
+{
+    "op_type": "DequantBias",
+    "op_list": [
+        {
+            "bin_filename": "DequantBias_wsbf16_bbf16_ybf16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "bfloat16", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsbf16_bfp16_ybf16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "float16", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsbf16_bfp32_ybf16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsbf16_bi32_ybf16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "int32", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "bfloat16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsfp32_bbf16_yfp16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "bfloat16", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsfp32_bfp16_yfp16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "float16", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsfp32_bfp32_yfp16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        },
+        {
+            "bin_filename": "DequantBias_wsfp32_bi32_yfp16",
+            "inputs": [
+                {"name": "x", "index": 0, "dtype": "int32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "weight_scale", "index": 1, "dtype": "float32", "format": "ND", "paramType": "required", "shape": [-2]},
+                {"name": "activate_scale", "index": 2, "dtype": "float32", "format": "ND", "paramType": "optional", "shape": [-2]},
+                {"name": "bias", "index": 3, "dtype": "int32", "format": "ND", "paramType": "optional", "shape": [-2]}
+            ],
+            "outputs": [
+                {"name": "y", "index": 0, "dtype": "float16", "format": "ND", "paramType": "required", "shape": [-2]}
+            ],
+            "attrs": [{"name": "output_dtype", "dtype": "int", "value": 0}]
+        }
+    ]
+}

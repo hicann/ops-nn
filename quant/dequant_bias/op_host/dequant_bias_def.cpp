@@ -48,6 +48,13 @@ public:
     this->Attr("output_dtype").AttrType(REQUIRED).Int();//输出类型，传入
     this->AICore().AddConfig("ascend910b");
     this->AICore().AddConfig("ascend910_93");
+    OpAICoreConfig config_950;
+    config_950.DynamicCompileStaticFlag(true)
+        .DynamicRankSupportFlag(true)
+        .DynamicShapeSupportFlag(true)
+        .NeedCheckSupportFlag(false)
+        .ExtendCfgInfo("opFile.value", "dequant_bias_apt");
+    this->AICore().AddConfig("ascend950", config_950);
 
     OpAICoreConfig config_kirin = GetKirinCoreConfig();
     this->AICore().AddConfig("kirinx90", config_kirin);
@@ -55,6 +62,7 @@ public:
   }
 
 private:
+
   OpAICoreConfig GetKirinCoreConfig() const
   {
     OpAICoreConfig config_kirin;
