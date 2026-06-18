@@ -483,6 +483,7 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self, MmadParams &mmadParams)
 
     if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
         mmadParams.m = self->ctx.innerBatch * currentML0;
+        mmadParams.disableGemv = true;
     } else {
         mmadParams.m = self->ctx.currentML0Align;
     }
