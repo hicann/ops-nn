@@ -347,10 +347,15 @@ void WeightQuantBatchMatmulV2RegBase::SetAdditionalParam()
 
 void WeightQuantBatchMatmulV2RegBase::PrintCVTilingData(bool debugLevel) const
 {
-    if (debugLevel && CheckLogLevel(OP, DLOG_DEBUG) != 1) {
-        return;
+    if (debugLevel) {
+        OPS_LOG_D(opName_, "%ld", DumpCVTilingDataToLog(debugLevel));
+    } else {
+        OPS_LOG_E(opName_, "%ld", DumpCVTilingDataToLog(debugLevel));
     }
+}
 
+int64_t WeightQuantBatchMatmulV2RegBase::DumpCVTilingDataToLog(bool debugLevel) const
+{
     std::stringstream ss;
     ss << " kSize: " << tilingData_->kSize << " groupSize: " << tilingData_->groupSize
        << " nSize: " << tilingData_->nSize << " mSize: " << tilingData_->mSize
@@ -359,12 +364,12 @@ void WeightQuantBatchMatmulV2RegBase::PrintCVTilingData(bool debugLevel) const
        << " vecCoreParallel: " << static_cast<uint32_t>(tilingData_->vecCoreParallel)
        << " nBubSize: " << tilingData_->nBubSize << " kBubSize: " << tilingData_->kBubSize
        << " AL1Pingpong: " << tilingData_->AL1Pingpong << " BL1Pingpong: " << tilingData_->BL1Pingpong;
-    // OP_LOG_FULL
     if (debugLevel) {
         OPS_LOG_D(opName_, "tiling data: %s", ss.str().c_str());
     } else {
         OPS_LOG_E(opName_, "tiling data: %s", ss.str().c_str());
     }
+    return 0;
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(

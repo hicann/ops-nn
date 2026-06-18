@@ -212,6 +212,7 @@ protected:
                               const gert::StorageShape *antiQuantOffsetShape) = 0;
     virtual bool CalcUBSize(uint64_t vecSingleN, uint64_t vecSingleK) const = 0;
     void PrintTilingData(bool debugLevel);
+    int64_t DumpTilingDataToLog(bool debugLevel);
     virtual void PrintMatMulTiling() const;
     virtual bool GetTilingFromCache();
 
@@ -286,6 +287,7 @@ protected:
     uint64_t GetGroupNumBub(uint64_t kDimSzie) const;
     uint64_t GetBubSize(uint64_t bubN, uint64_t bubD, bool isWeightNz) const;
     void PrintCVTilingData(const bool debugLevel) const;
+    int64_t DumpCVTilingDataToLog(const bool debugLevel) const;
     ge::graphStatus PostTiling() override;
     bool CheckCoreNum() const override;
 
