@@ -15,6 +15,8 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
+#include <cstring>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_add_layer_norm_quant_v2.h"
 
@@ -36,6 +38,39 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape) {
     shapeSize *= i;
   }
   return shapeSize;
+}
+
+uint16_t FloatToFp16(float value) {
+  uint32_t x;
+  memcpy(&x, &value, sizeof(x));
+  uint16_t sign = (x >> 16) & 0x8000;
+  int32_t exp = ((x >> 23) & 0xFF) - 127 + 15;
+  uint32_t mantissa = x & 0x7FFFFF;
+  if (exp <= 0) return sign;
+  if (exp >= 31) return sign | 0x7C00;
+  return sign | (exp << 10) | (mantissa >> 13);
+}
+
+float Fp16ToFloat(uint16_t h) {
+  uint32_t sign = (h & 0x8000) << 16;
+  uint32_t exp = (h >> 10) & 0x1F;
+  uint32_t mantissa = h & 0x3FF;
+  uint32_t f;
+  if (exp == 0) {
+    f = sign;
+  } else if (exp == 31) {
+    f = sign | 0x7F800000 | (mantissa << 13);
+  } else {
+    f = sign | ((exp - 15 + 127) << 23) | (mantissa << 13);
+  }
+  float result;
+  memcpy(&result, &f, sizeof(result));
+  return result;
+}
+
+std::vector<uint16_t> MakeFp16Data(size_t size, float value) {
+  uint16_t fp16Val = FloatToFp16(value);
+  return std::vector<uint16_t>(size, fp16Val);
 }
 
 int Init(int32_t deviceId, aclrtStream *stream) {
@@ -91,7 +126,7 @@ int main() {
   std::vector<int64_t> gammaShape = {1, 32};
   std::vector<int64_t> scaleShape = {1};
 
-  std::vector<int64_t> reduceShape = {1, 32};
+  std::vector<int64_t> reduceShape = {1};
 
   void *x1DeviceAddr = nullptr;
   void *x2DeviceAddr = nullptr;
@@ -130,20 +165,20 @@ int main() {
   int64_t scaleShapeSize = GetShapeSize(scaleShape);
   int64_t reduceShapeSize = GetShapeSize(reduceShape);
 
-  std::vector<float> x1HostData(xShapeSize, 0x3C00);
-  std::vector<float> x2HostData(xShapeSize, 0x3C00);
-  std::vector<float> gammaHostData(gammaShapeSize, 0x3C00);
-  std::vector<float> betaHostData(gammaShapeSize, 0x3C00);
-  std::vector<float> biasHostData(gammaShapeSize, 0x3C00);
+  std::vector<uint16_t> x1HostData = MakeFp16Data(xShapeSize, 1.0f);
+  std::vector<uint16_t> x2HostData = MakeFp16Data(xShapeSize, 1.0f);
+  std::vector<uint16_t> gammaHostData = MakeFp16Data(gammaShapeSize, 1.0f);
+  std::vector<uint16_t> betaHostData = MakeFp16Data(gammaShapeSize, 1.0f);
+  std::vector<uint16_t> biasHostData = MakeFp16Data(gammaShapeSize, 1.0f);
 
-  std::vector<float> s1HostData(scaleShapeSize, 0x3C00);
-  std::vector<float> z1HostData(scaleShapeSize, 0x3C00);
+  std::vector<uint16_t> s1HostData = MakeFp16Data(scaleShapeSize, 1.0f);
+  std::vector<uint16_t> z1HostData = MakeFp16Data(scaleShapeSize, 1.0f);
 
   // 用于不带bias的HostData
   std::vector<int8_t> y1HostData(xShapeSize, 0);
   std::vector<int8_t> y2HostData(xShapeSize, 0);
-  std::vector<float> xHostData(xShapeSize, 0);
-  std::vector<float> layernormResHostData(xShapeSize, 0);
+  std::vector<uint16_t> xHostData(xShapeSize, 0);
+  std::vector<uint16_t> layernormResHostData(xShapeSize, 0);
   std::vector<float> outScales1HostData(reduceShapeSize, 0);
   std::vector<float> outScales2HostData(reduceShapeSize, 0);
 
@@ -206,7 +241,7 @@ int main() {
   std::vector<int8_t> resultDataY1(y1Size, 0);
   ret = aclrtMemcpy(resultDataY1.data(), resultDataY1.size() * sizeof(resultDataY1[0]), y1DeviceAddr, y1Size * sizeof(resultDataY1[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 y1 output");
+  LOG_PRINT("==== AddLayerNormQuantV2 y1 output\n");
   for (int64_t i = 0; i < y1Size; i++) {
     LOG_PRINT("result[%ld] is: %d\n", i, resultDataY1[i]);
   }
@@ -215,24 +250,27 @@ int main() {
   std::vector<int8_t> resultDataY2(y2Size, 0);
   ret = aclrtMemcpy(resultDataY2.data(), resultDataY2.size() * sizeof(resultDataY2[0]), y2DeviceAddr, y2Size * sizeof(resultDataY2[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 y2 output");
+  LOG_PRINT("==== AddLayerNormQuantV2 y2 output\n");
+  for (int64_t i = 0; i < y2Size; i++) {
+    LOG_PRINT("result[%ld] is: %d\n", i, resultDataY2[i]);
+  }
 
   auto xSize = GetShapeSize(xShape);
-  std::vector<float> resultDataX(xSize, 0);
+  std::vector<uint16_t> resultDataX(xSize, 0);
   ret = aclrtMemcpy(resultDataX.data(), resultDataX.size() * sizeof(resultDataX[0]), xDeviceAddr, xSize * sizeof(resultDataX[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 x output");
+  LOG_PRINT("==== AddLayerNormQuantV2 x output\n");
   for (int64_t i = 0; i < xSize; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultDataX[i]);
+    LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataX[i]));
   }
 
   auto layernormResSize = GetShapeSize(xShape);
-  std::vector<float> resultDataLayernormRes(layernormResSize, 0);
+  std::vector<uint16_t> resultDataLayernormRes(layernormResSize, 0);
   ret = aclrtMemcpy(resultDataLayernormRes.data(), resultDataLayernormRes.size() * sizeof(resultDataLayernormRes[0]), layernormResDeviceAddr, layernormResSize * sizeof(resultDataLayernormRes[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 layernormRes output");
+  LOG_PRINT("==== AddLayerNormQuantV2 layernormRes output\n");
   for (int64_t i = 0; i < layernormResSize; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultDataLayernormRes[i]);
+    LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataLayernormRes[i]));
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
