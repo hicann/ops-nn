@@ -689,6 +689,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_group_quant_grad/README.md">swiglu_group_quant_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成SwiGLU激活函数分组量化的反向梯度计算。用于计算输入x梯度和输入权重weight梯度。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swish/README.md">swish</a></td>
     <td>✓</td>
     <td>✓</td>
