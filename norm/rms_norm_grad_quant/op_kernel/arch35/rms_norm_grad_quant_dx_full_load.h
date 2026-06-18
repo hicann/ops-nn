@@ -50,11 +50,14 @@ public:
 
         colsAlignBlock_ =
             IsSameType<T_X, float>::value ? AlignUp(cols_, FLOAT_NUM_BLOCK) : AlignUp(cols_, HALF_NUM_BLOCK);
-        colsAlignB8_ = AlignUp(cols_, HIFP8_NUM_BLOCK);
-        colsAlignB32_ = AlignUp(cols_, FLOAT_NUM_BLOCK);
+        if constexpr (IsSameType<T_DX, hifloat8_t>::value || IsSameType<T_DX, int8_t>::value) {
+            colsAlignHiFP8_ = AlignUp(cols_, HIFP8_NUM_BLOCK);
+        }
+        colsAlign2VL_ = AlignUp(cols_, FLOAT_NUM_2VL);
 
-        ubFactor_ = tiling_->ubFactor;
-        colFlodFactor_ = tiling_->bodyPart;
+        ubFactor_ = UB_FACTOR_DX_FULL_LOAD;
+        ubFactorD_ = colsAlign2VL_;
+        ubFactorN_ = ubFactor_ / ubFactorD_;
         avgFactor1_ = 1.0f / cols_;
 
         dyGm_.SetGlobalBuffer((__gm__ T_DY*)dy + coreIdx * blockFactor_ * cols_);
@@ -63,21 +66,13 @@ public:
         gammaGm_.SetGlobalBuffer((__gm__ T_GAMMA*)gamma);
         dxGm_.SetGlobalBuffer((__gm__ T_DX*)dx + coreIdx * blockFactor_ * cols_);
 
-        Ppipe_->InitBuffer(inQueueDy_, DB_NUM, ubFactor_ * colsAlignBlock_ * sizeof(T_DY));
-        Ppipe_->InitBuffer(inQueueX_, DB_NUM, ubFactor_ * colsAlignBlock_ * sizeof(T_X));
-        Ppipe_->InitBuffer(inQueueRstd_, DB_NUM, AlignUp(ubFactor_, V_LENGTH) * sizeof(float));
-        Ppipe_->InitBuffer(outQueueDx_, DB_NUM, ubFactor_ * colsAlignB8_ * sizeof(T_DX));
-        Ppipe_->InitBuffer(inQueueGamma_, 1, colsAlignBlock_ * sizeof(T_GAMMA));
-        Ppipe_->InitBuffer(reduceBuf_, ubFactor_ * colsAlignB32_ * sizeof(float));
-        Ppipe_->InitBuffer(tmpSumBuf_, AlignUp(ubFactor_, V_LENGTH) * sizeof(float));
-        
-        // init tmp buffer
-        uint64_t firstVcaddResult =
-            ubFactor_ *
-            (((colFlodFactor_ + V_LENGTH - 1) / V_LENGTH + BLOCKSIZEB32 - 1) / BLOCKSIZEB32 * BLOCKSIZEB32) *
-            sizeof(float);
-        Ppipe_->InitBuffer(reduceTmpBuf_, firstVcaddResult);
-
+        Ppipe_->InitBuffer(inQueueDy_, DB_NUM, ubFactor_ * sizeof(float));
+        Ppipe_->InitBuffer(inQueueX_, DB_NUM, ubFactor_ * sizeof(float));
+        Ppipe_->InitBuffer(inQueueRstd_, DB_NUM, AlignUp(ubFactorN_, V_LENGTH) * sizeof(float));
+        Ppipe_->InitBuffer(outQueueDx_, DB_NUM, ubFactor_ * sizeof(float));
+        Ppipe_->InitBuffer(inQueueGamma_, 1, ubFactor_ * sizeof(float));
+        Ppipe_->InitBuffer(reduceBuf_, ubFactorN_ * colsAlign2VL_ * sizeof(float));
+        Ppipe_->InitBuffer(tmpSumBuf_, AlignUp(ubFactorN_, V_LENGTH) * sizeof(float));
         scalesXGm_.SetGlobalBuffer((__gm__ T_SCALES_X*)scales_x);
         Ppipe_->InitBuffer(inQueueScalesX_, 1, sizeof(T_SCALES_X));
         if constexpr (HAS_OFFSET_X) {
@@ -99,10 +94,10 @@ public:
         int64_t blockTail = rows_ - (usedCoreNum_ - 1) * blockFactor_;
         int64_t calcRowNum = coreIdx == usedCoreNum_ - 1 ? blockTail : blockFactor_;
         int64_t calcRowNumRemain = calcRowNum;
-        for (int64_t rowIdx = 0; rowIdx < calcRowNum; rowIdx += ubFactor_) {
-            int64_t calcRowNumSub = Min(ubFactor_, calcRowNumRemain);
+        for (int64_t rowIdx = 0; rowIdx < calcRowNum; rowIdx += ubFactorN_) {
+            int64_t calcRowNumSub = Min(ubFactorN_, calcRowNumRemain);
             SubProcess(rowIdx, calcRowNumSub);
-            calcRowNumRemain -= ubFactor_;
+            calcRowNumRemain -= ubFactorN_;
         }
         if (calcRowNum > 0) {
             inQueueGamma_.FreeTensor(gammaLocal_);
@@ -119,20 +114,19 @@ public:
             CopyInGamma();
         }
         CopyInDy(rowIdx, calcRowNumSub);
-        LocalTensor<T_DY> dyLocal = inQueueDy_.DeQue<T_DY>();
+        LocalTensor<float> dyLocal = inQueueDy_.DeQue<float>();
         CopyInX(rowIdx, calcRowNumSub);
-        LocalTensor<T_X> xLocal = inQueueX_.DeQue<T_X>();
+        LocalTensor<float> xLocal = inQueueX_.DeQue<float>();
         CopyInRstd(rowIdx, calcRowNumSub);
         LocalTensor<float> rstdLocal = inQueueRstd_.DeQue<float>();
         LocalTensor<T_GAMMA> gammaLocal = gammaLocal_;
         LocalTensor<float> tmpSumLocal = tmpSumBuf_.Get<float>();
+
         LocalTensor<float> reduceLocal = reduceBuf_.Get<float>();
-        LocalTensor<float> reduceTmpLocal = reduceTmpBuf_.Get<float>();
         uint16_t loopRow = calcRowNumSub;
+
         constexpr uint32_t oneRepeat = V_LENGTH;
-        uint32_t cols = static_cast<uint32_t>(colsAlignBlock_);
-        uint32_t colsAlignB32 = static_cast<uint32_t>(colsAlignB32_);
-        uint32_t colsReal = static_cast<uint32_t>(cols_);
+        int64_t cols = colsAlignBlock_;
         uint16_t repeatCount = DivCeil(cols_, oneRepeat);
         __local_mem__ T_GAMMA* gammaAddr = (__ubuf__ T_GAMMA*)gammaLocal.GetPhyAddr();
         __local_mem__ T_DY* dyAddr = (__ubuf__ T_DY*)dyLocal.GetPhyAddr();
@@ -143,9 +137,9 @@ public:
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, mulReg0, mulReg2, mulReg3;
             for (uint16_t r = 0; r < loopRow; r++) {
-                uint32_t sreg = colsReal;
+                uint32_t sreg = cols_;
                 MaskReg maskReg = CreateMask<float, MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + r);
+                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
                     LoadAndCast(gammaReg, gammaAddr, maskReg, i * oneRepeat);
@@ -154,13 +148,12 @@ public:
                     LoadAndCast(xReg, xAddr, maskReg, r * cols + i * oneRepeat);
                     Mul(mulReg0, xReg, rstdReg, maskReg);
                     Mul(mulReg3, mulReg2, mulReg0, maskReg);
-                    DataCopy(reduceAddr + (r * colsAlignB32 + i * oneRepeat), mulReg3, maskReg);
+                    DataCopy(reduceAddr + static_cast<uint32_t>(r * colsAlign2VL_ + i * oneRepeat), mulReg3, maskReg);
                 }
             }
         }
 
-        ComputeReduceSum(reduceLocal, reduceTmpLocal, tmpSumLocal, calcRowNumSub);
-
+        MultiReduceSum(tmpSumLocal, reduceLocal, calcRowNumSub);
         LocalTensor<T_DX> dxLocal = outQueueDx_.AllocTensor<T_DX>();
         LocalTensor<T_SCALES_X> scalesXLocal;
         LocalTensor<T_OFFSET_X> offsetXLocal;
@@ -176,17 +169,17 @@ public:
             offsetXAddr = (__ubuf__ T_OFFSET_X*)offsetXLocal.GetPhyAddr();
         }
 
-        uint32_t colsAlignHiFP8 = static_cast<uint32_t>(colsAlignB8_);
-
         __VEC_SCOPE__
         {
             RegTensor<float> gammaReg, dyReg, xReg, rstdReg, meanReg, dxReg, mulReg0, mulReg2, mulReg4, subReg;
             RegTensor<float> scalesXReg, scalesXResultReg, offsetXReg;
             for (uint16_t r = 0; r < loopRow; r++) {
-                uint32_t sreg = colsReal;
+                uint32_t sreg = cols_;
+                int64_t cols = colsAlignBlock_;
+                int64_t colsAlignHiFP8 = colsAlignHiFP8_;
                 MaskReg maskReg = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
-                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + (r));
-                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + (r));
+                DataCopy<float, LoadDist::DIST_BRC_B32>(rstdReg, rstdAddr + static_cast<uint32_t>(r));
+                DataCopy<float, LoadDist::DIST_BRC_B32>(meanReg, meanAddr + static_cast<uint32_t>(r));
                 Muls(meanReg, meanReg, avgFactor1_, maskReg);
                 for (uint16_t i = 0; i < repeatCount; i++) {
                     maskReg = UpdateMask<float>(sreg);
@@ -214,7 +207,7 @@ public:
                     if constexpr(IsSameType<T_DX, hifloat8_t>::value){
                         RegTensor<T_DX> dxRegHif8;
                         Cast<T_DX, float, castTraitFp322Hifp8>(dxRegHif8, scalesXResultReg, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + (r * colsAlignHiFP8 + i * oneRepeat), dxRegHif8, maskReg);
+                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegHif8, maskReg);
                     } else if constexpr(IsSameType<T_DX, int8_t>::value){
                         RegTensor<T_DX> dxRegInt8;
                         RegTensor<half> dxRegFp16;
@@ -223,7 +216,7 @@ public:
                         Cast<float, int32_t, castTraitInt322Fp32>(scalesXResultReg, dxRegInt32, maskReg);
                         Cast<half, float, castTraitFp322Fp16>(dxRegFp16, scalesXResultReg, maskReg);
                         Cast<T_DX, half, castTraitFp162Int8>(dxRegInt8, dxRegFp16, maskReg);
-                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + (r * colsAlignHiFP8 + i * oneRepeat), dxRegInt8, maskReg);
+                        DataCopy<T_DX, StoreDist::DIST_PACK4_B32>(dxAddr + static_cast<uint32_t>(r * colsAlignHiFP8 + i * oneRepeat), dxRegInt8, maskReg);
                     }
                 }
             }
@@ -327,175 +320,67 @@ public:
         inQueueX_.EnQue(xLocal);
     }
 
-    __aicore__ inline void ComputeReduceSum(
-        LocalTensor<float> xLocal, LocalTensor<float> xTmpLocal, LocalTensor<float> xReduceTmpLocal, uint64_t curUbFactor)
+    __aicore__ inline void MultiReduceSum(LocalTensor<float>& dstLocal, LocalTensor<float>& srcLocal, int64_t rows)
     {
-        __local_mem__ float* xLocalAddr = (__local_mem__ float*)xLocal.GetPhyAddr();
-        __local_mem__ float* xTmpLocalUbAddr = (__local_mem__ float*)xTmpLocal.GetPhyAddr();
-        __local_mem__ float* xReduceTmpLocalUbAddr = (__local_mem__ float*)xReduceTmpLocal.GetPhyAddr();
-
-        if (colsAlignB32_ <= V_LENGTH) {
-            CalculateReduceSumRLessThanVL(xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, cols_, colsAlignB32_);
-        } else if (colsAlignB32_ <= (V_LENGTH + V_LENGTH)) {
-            CalculateReduceSumRLessThanTwoVL(xLocalAddr, xReduceTmpLocalUbAddr, curUbFactor, cols_, colsAlignB32_);
-        } else if (colsAlignB32_ <= V_LENGTH * V_LENGTH * NUM_TWO) {
-            CalculateReduceSumRCommon<NUM_ONE>(
-                xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, cols_, colsAlignB32_, colFlodFactor_);
-        } else {
-            CalculateReduceSumRCommon<NUM_TWO>(
-                xLocalAddr, xTmpLocalUbAddr, xReduceTmpLocalUbAddr, curUbFactor, cols_, colsAlignB32_, colFlodFactor_);
-        }
-    }
-
-    __aicore__ inline void CalculateReduceSumRLessThanVL(
-        __local_mem__ float* xLocalAddr, __local_mem__ float* xReduceTmpLocalUbAddr, uint64_t curUbFactor, uint64_t numCol,
-        uint64_t numColAlign)
-    {
-        uint32_t colNum = static_cast<uint32_t>(numCol);
-        uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
-        uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xReg;
-            RegTensor<float> sumReg;
-
-            // rstd cal
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            uint32_t colCountSreg = colNum;
-            MaskReg pregLoop = UpdateMask<float>(colCountSreg);
-            for (uint16_t i = 0; i < curAloops; i++) {
-                LoadAndCast(xReg, xLocalAddr, pregLoop, (i * colNumAlign));
-                ReduceSum(sumReg, xReg, pregLoop);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceTmpLocalUbAddr + i, sumReg, pregOne);
-            }
-        }
-    }
-
-    __aicore__ inline void CalculateReduceSumRLessThanTwoVL(
-        __local_mem__ float* xLocalAddr, __local_mem__ float* xReduceTmpLocalUbAddr, uint64_t curUbFactor, uint64_t numCol,
-        uint64_t numColAlign)
-    {
-        uint32_t colNum = static_cast<uint32_t>(numCol);
-        uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
-        uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
-
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xReg;
-            RegTensor<float> xTailReg;
-            RegTensor<float> addReg;
-            RegTensor<float> sumReg;
-            RegTensor<float> xTailRegshiftLeft;
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-
-            uint32_t colTailSreg = colNum - V_LENGTH;
-            MaskReg pregTail = UpdateMask<float>(colTailSreg);
-            for (uint16_t i = 0; i < curAloops; i++) {
-                LoadAndCast(xReg, xLocalAddr, pregFull, (i * colNumAlign));
-                LoadAndCast(xTailReg, xLocalAddr + V_LENGTH, pregTail, (i * colNumAlign));
-                ShiftLefts(
-                    (RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg, static_cast<int16_t>(0),
-                    pregTail);
-                Add(addReg, xReg, xTailRegshiftLeft, pregFull);
-                ReduceSum(sumReg, addReg, pregFull);
-                DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceTmpLocalUbAddr + i, sumReg, pregOne);
-            }
-        }
-    }
-
-    template <int32_t LAST_LOOP_NUMS>
-    __aicore__ inline void CalculateReduceSumRCommon(
-        __local_mem__ float* xLocalAddr, __local_mem__ float* xTmpLocalUbAddr, __local_mem__ float* xReduceTmpLocalUbAddr,
-        uint64_t curUbFactor, uint64_t numCol, uint64_t numColAlign, uint64_t colFlodFactor_)
-    {
-        uint32_t colNum = static_cast<uint32_t>(numCol);
-        uint32_t colNumAlign = static_cast<uint32_t>(numColAlign);
-        uint32_t colFlodNum = static_cast<uint32_t>(colFlodFactor_);
-        uint16_t curAloops = static_cast<uint16_t>(curUbFactor);
-
-        // first flod
-        uint32_t firstFlodTial = static_cast<uint32_t>(colNum - colFlodFactor_);
-        uint16_t firstFlodAddLoops = static_cast<uint16_t>((firstFlodTial + V_LENGTH - 1) / V_LENGTH);
-        uint16_t firstFlodWithOutAddLoops =
-            static_cast<uint16_t>((colFlodNum + V_LENGTH - 1) / V_LENGTH) - firstFlodAddLoops;
-
-        // first vcadd
-        uint32_t firstVcaddNum = static_cast<uint32_t>((colFlodFactor_ + V_LENGTH - 1) / V_LENGTH);
-        uint32_t firstVcaddNumCeilAlign =
-            static_cast<uint32_t>((firstVcaddNum + BLOCKSIZEB32 - 1) / BLOCKSIZEB32 * BLOCKSIZEB32);
-
-        // second flod
-        // rstd cal
-        uint16_t elewiseLoop = static_cast<uint16_t>((curUbFactor + V_LENGTH - 1) / V_LENGTH);
-
-        __VEC_SCOPE__
-        {
-            RegTensor<float> xReg1;
-            RegTensor<float> xReg2;
-            RegTensor<float> xReg2shiftLeft;
-            RegTensor<float> addReg;
-            RegTensor<float> sumReg;
-
-            RegTensor<float> xReg3;
-            RegTensor<float> sumReg3;
-
-            MaskReg pregFull = CreateMask<float, MaskPattern::ALL>();
-            MaskReg pregOne = CreateMask<float, MaskPattern::VL1>();
-            MaskReg pregLoop;
-
-            for (uint16_t i = 0; i < curAloops; i++) {
-                uint32_t sregfirstFlodTial = firstFlodTial;
-                for (uint16_t j = 0; j < firstFlodAddLoops; j++) {
-                    pregLoop = UpdateMask<float>(sregfirstFlodTial);
-                    LoadAndCast(xReg1, xLocalAddr, pregFull, (i * colNumAlign + j * V_LENGTH));
-                    LoadAndCast(
-                        xReg2, xLocalAddr + colFlodNum, pregFull, (i * colNumAlign + j * V_LENGTH));
+        __local_mem__ float* srcAddr = (__ubuf__ float*)srcLocal.GetPhyAddr();
+        uint32_t colsTail = colsAlign2VL_ - cols_;
+        if (colsTail > V_LENGTH) {
+            // 当要补的个数大于64时，需要两个寄存器进行填充（一个完整的全0 regtensor 加上 利用shiftleft将非对齐位置补0）
+            uint32_t colsStartLastTwoVL = colsAlign2VL_ - V_LENGTH * NUM_TWO;
+            uint32_t colsStartLastOneVL = colsAlign2VL_ - V_LENGTH;
+            uint32_t colsValidLastTwoVL = V_LENGTH * NUM_TWO - colsTail;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> xTailReg;
+                RegTensor<float> xTailRegshiftLeft;
+                RegTensor<float> srcReg;
+                MaskReg pregTail = UpdateMask<float>(colsValidLastTwoVL);
+                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                Duplicate(srcReg, 0.0f, maskRegAll);
+                for (uint16_t r = 0; r < (uint16_t)rows; r++) {
+                    DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL));
+                    // 利用shiftleft将非对齐位置补0
                     ShiftLefts(
-                        (RegTensor<uint32_t>&)xReg2shiftLeft, (RegTensor<uint32_t>&)xReg2, static_cast<int16_t>(0),
-                        pregLoop);
-                    Add(addReg, xReg1, xReg2shiftLeft, pregFull);
-                    ReduceSum(sumReg, addReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        xTmpLocalUbAddr + (i * firstVcaddNumCeilAlign + j), sumReg, pregOne);
-                }
-                for (uint16_t j = 0; j < static_cast<uint16_t>(firstFlodWithOutAddLoops); j++) {
-                    LoadAndCast(
-                        xReg3, xLocalAddr + firstFlodAddLoops * V_LENGTH, pregFull,
-                        (i * colNumAlign + j * V_LENGTH));
-                    ReduceSum(sumReg3, xReg3, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
-                        xTmpLocalUbAddr + (i * firstVcaddNumCeilAlign + firstFlodAddLoops + j),
-                        sumReg3, pregOne);
+                        (RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg, static_cast<int16_t>(0),
+                        pregTail);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastTwoVL), xTailRegshiftLeft, maskRegAll);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg, maskRegAll);
                 }
             }
-
-            // if need a add to last repeat
-            LocalMemBar<MemType::VEC_STORE, MemType::VEC_LOAD>();
-            if constexpr (LAST_LOOP_NUMS == 1) {
-                uint32_t sregSecondReduce = firstVcaddNum;
-                MaskReg pregLast = UpdateMask<float>(sregSecondReduce);
-                for (uint16_t i = 0; i < curAloops; i++) {
-                    DataCopy(xReg1, xTmpLocalUbAddr + (i * firstVcaddNumCeilAlign));
-                    ReduceSum(sumReg, xReg1, pregLast);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceTmpLocalUbAddr + i, sumReg, pregOne);
+        } else if (colsTail == V_LENGTH) {
+            // 当要补的个数等于64时，直接dup一个全0的regtensor进行填充
+            uint32_t colsStartLastOneVL = colsAlign2VL_ - V_LENGTH;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> srcReg;
+                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                Duplicate(srcReg, 0.0f, maskRegAll);
+                for (uint16_t r = 0; r < (uint16_t)rows; r++) {
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), srcReg, maskRegAll);
                 }
-            } else if constexpr (LAST_LOOP_NUMS == 2) {
-                uint32_t sregSecondReduce = firstVcaddNum - V_LENGTH;
-                MaskReg pregLast = UpdateMask<float>(sregSecondReduce);
-                RegTensor<float> shiftLeft;
-                for (uint16_t i = 0; i < curAloops; i++) {
-                    DataCopy(xReg1, xTmpLocalUbAddr + (i * firstVcaddNumCeilAlign));
-                    DataCopy(xReg2, xTmpLocalUbAddr + (i * firstVcaddNumCeilAlign + V_LENGTH));
+            }
+        } else if (colsTail > 0) {
+            // 当要补的个数小于64时，利用shiftleft将非对齐位置补0
+            uint32_t colsStartLastOneVL = colsAlign2VL_ - V_LENGTH;
+            uint32_t colsValidLastOneVL = V_LENGTH - colsTail;
+            __VEC_SCOPE__
+            {
+                RegTensor<float> xTailReg;
+                RegTensor<float> xTailRegshiftLeft;
+                MaskReg pregTail = UpdateMask<float>(colsValidLastOneVL);
+                MaskReg maskRegAll = CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
+                for (uint16_t r = 0; r < (uint16_t)rows; r++) {
+                    DataCopy(xTailReg, srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL));
+                    // 利用shiftleft将非对齐位置补0
                     ShiftLefts(
-                        (RegTensor<uint32_t>&)shiftLeft, (RegTensor<uint32_t>&)xReg2, static_cast<int16_t>(0),
-                        pregLast);
-                    Add(addReg, xReg1, shiftLeft, pregFull);
-                    ReduceSum(sumReg, addReg, pregFull);
-                    DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(xReduceTmpLocalUbAddr + i, sumReg, pregOne);
+                        (RegTensor<uint32_t>&)xTailRegshiftLeft, (RegTensor<uint32_t>&)xTailReg, static_cast<int16_t>(0),
+                        pregTail);
+                    DataCopy(srcAddr + static_cast<uint32_t>(r * colsAlign2VL_ + colsStartLastOneVL), xTailRegshiftLeft, maskRegAll);
                 }
             }
         }
+        uint32_t srcShape[2] = {uint32_t(rows), uint32_t(colsAlign2VL_)};
+        AscendC::ReduceSum<float, AscendC::Pattern::Reduce::AR, true>(dstLocal, srcLocal, srcShape, false);
     }
 
     template <typename T_IN>
@@ -546,7 +431,6 @@ private:
     TQue<QuePosition::VECIN, DEPTH_TWO> inQueueGamma_;
     TQue<QuePosition::VECIN, DEPTH_TWO> inQueueScalesX_;
     TQue<QuePosition::VECIN, DEPTH_TWO> inQueueOffsetX_;
-    TBuf<TPosition::VECCALC> reduceTmpBuf_;
     TBuf<TPosition::VECCALC> reduceBuf_;
     TBuf<TPosition::VECCALC> tmpSumBuf_;
     LocalTensor<T_GAMMA> gammaLocal_;
@@ -557,11 +441,12 @@ private:
     int64_t rows_;
     int64_t cols_;
     int64_t colsAlignBlock_;
-    int64_t colsAlignB32_;
-    int64_t colsAlignB8_;
+    int64_t colsAlign2VL_;
+    int64_t colsAlignHiFP8_;
     int64_t blockFactor_;
     int64_t ubFactor_;
-    int64_t colFlodFactor_;
+    int64_t ubFactorN_;
+    int64_t ubFactorD_;
     float avgFactor1_;
 };
 } // namespace RmsNormGradQuant

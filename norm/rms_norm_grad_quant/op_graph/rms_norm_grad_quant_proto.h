@@ -25,16 +25,22 @@ namespace ge {
 * @par Inputs
 * @li dy: The gradient returned backward.
 *         A Tensor. Support dtype: float32/float16/bfloat16, support format: ND.
+*         Support shape: 2-8 dimensions.
 * @li x: The input of the forward operator.
 *        A Tensor. Support dtype: float32/float16/bfloat16, support format: ND.
+*        Support shape: 2-8 dimensions.
 * @li rstd: The intermediate computation result of the forward operator.
 *           A Tensor. Support dtype: float32, support format: ND.
+*           Support shape: 1-7 dimensions.
 * @li gamma: The input of the forward operator.
 *            A Tensor. Support dtype: float32/float16/bfloat16, support format: ND.
+*            Support shape: 1-7 dimensions.
 * @li scales_x: A required input tensor. Describing the weight of the quant operation.
 *              Support dtype: float32/float16/bfloat16, support format: ND.
+*              Support shape: 1 dimension.
 * @li offset_x: An optional input tensor. Describing the bias of the quant operation.
 *               Support dtype: int32, support format: ND.
+*               Support shape: 1 dimension.
 * @par Attributes
 * @li quant_mode: Required string parameter. Which formula used for quantized computation.
 *                 The type is String. Only support static.
@@ -45,8 +51,10 @@ namespace ge {
 * @par Outputs
 * @li dx: The gradient of input "x" after quantization, Has the same type and shape as "x".
 *         A Tensor. Support dtype: hifloat8/int8, support format: ND.
+*         Support shape: 2-8 dimensions.
 * @li dgamma: The gradient of input "gamma". Has the same type and shape as "gamma".
 *             A Tensor. Support dtype: float32, support format: ND.
+*             Support shape: 1-7 dimensions.
 */
 REG_OP(RmsNormGradQuant)
     .INPUT(dy, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
