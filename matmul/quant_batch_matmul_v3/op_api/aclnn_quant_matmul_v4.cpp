@@ -1820,7 +1820,8 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
     bool &transposeX2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(boolsTrans);
     bool isA8W4F = isA8W4Float(x1, x2);
     bool isA8W4I = isA8W4Int(x1, x2);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
+    bool isPseudoQuant = isA8W4F || isA8W4I;
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && !isPseudoQuant) {
         auto x1DimNum = x1->GetViewShape().GetDimNum();
         auto inputSizeM = transposeX1 ? x1->GetViewShape().GetDim(x1DimNum - 1) :
                                         x1->GetViewShape().GetDim(x1DimNum - PENULTIMATE_DIM);
