@@ -97,9 +97,9 @@ __aicore__ inline void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
         return;
     }
 
-    #if (__NPU_ARCH__ == 3510)
-        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
-    #endif
+#if (__NPU_ARCH__ == 3510) && (DTYPE_Y != DT_INT8)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+#endif
     infValue_ = FP32_INF_VALUE;
     // Compute BlockOffset
     int32_t coreRowIdx = blockIdx_ / tilingData_->colTileNum;
@@ -164,18 +164,7 @@ inline __aicore__ void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
         return;
     }
 
-    if constexpr (IsSameType<OUT_TYPE, fp8_e5m2_t>::value) {
-        fp8MaxValue_ = FP8_E5M2_MAX_VALUE;
-    } else if constexpr (IsSameType<OUT_TYPE, fp8_e4m3fn_t>::value) {
-        fp8MaxValue_ = FP8_E4M3_MAX_VALUE;
-    } else if constexpr (IsSameType<OUT_TYPE, hifloat8_t>::value) {
-        if (tilingData_->dstTypeMax != 0) {
-            fp8MaxValue_ = tilingData_->dstTypeMax;
-        }
-        else {
-            fp8MaxValue_ = HIFP8_MAX_VALUE;
-        }
-    }
+    fp8MaxValue_ = GetDstTypeMaxValue<OUT_TYPE>(tilingData_->dstTypeMax);
     uint64_t rowBaseOffset = 0;
     uint64_t rowScaleBaseOffset = 0;
     uint64_t rowLoopNum = rowCoreNum_ / rowUbNum_;
@@ -314,6 +303,8 @@ inline __aicore__ void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
         AscendC::MicroAPI::RegTensor<float> vReg14;
         AscendC::MicroAPI::RegTensor<float> vReg17;
         AscendC::MicroAPI::RegTensor<float> vReg18;
+        AscendC::MicroAPI::RegTensor<int16_t> vReg19;
+        AscendC::MicroAPI::RegTensor<half> vReg20;
         AscendC::MicroAPI::RegTensor<OUT_TYPE> vReg15;
         AscendC::MicroAPI::RegTensor<OUT_TYPE> vReg16;
         AscendC::MicroAPI::MaskReg maskReg1;
@@ -389,6 +380,13 @@ inline __aicore__ void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
                     if constexpr (IsSameType<OUT_TYPE, hifloat8_t>::value) {
                         AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32toh8Zero>(vReg15, vReg13, defaultMaskReg);
                         AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32toh8Zero>(vReg16, vReg14, defaultMaskReg);
+                    } else if constexpr (IsSameType<OUT_TYPE, int8_t>::value) {
+                        AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vReg19, vReg13, defaultMaskReg);
+                        AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vReg20, vReg19, defaultMaskReg);
+                        AscendC::MicroAPI::Cast<OUT_TYPE, half, castTraitF16ToI8>(vReg15, vReg20, defaultMaskReg);
+                        AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vReg19, vReg14, defaultMaskReg);
+                        AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vReg20, vReg19, defaultMaskReg);
+                        AscendC::MicroAPI::Cast<OUT_TYPE, half, castTraitF16ToI8>(vReg16, vReg20, defaultMaskReg);
                     } else {
                         AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32tofp8>(vReg15, vReg13, defaultMaskReg);
                         AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32tofp8>(vReg16, vReg14, defaultMaskReg);
@@ -448,6 +446,13 @@ inline __aicore__ void DynamicBlockQuantSingleRow<IN_TYPE, OUT_TYPE, ROUND_MODE>
                 if constexpr (IsSameType<OUT_TYPE, hifloat8_t>::value) {
                     AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32toh8Zero>(vReg15, vReg13, defaultMaskReg);
                     AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32toh8Zero>(vReg16, vReg14, defaultMaskReg);
+                } else if constexpr (IsSameType<OUT_TYPE, int8_t>::value) {
+                    AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vReg19, vReg13, defaultMaskReg);
+                    AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vReg20, vReg19, defaultMaskReg);
+                    AscendC::MicroAPI::Cast<OUT_TYPE, half, castTraitF16ToI8>(vReg15, vReg20, defaultMaskReg);
+                    AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(vReg19, vReg14, defaultMaskReg);
+                    AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(vReg20, vReg19, defaultMaskReg);
+                    AscendC::MicroAPI::Cast<OUT_TYPE, half, castTraitF16ToI8>(vReg16, vReg20, defaultMaskReg);
                 } else {
                     AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32tofp8>(vReg15, vReg13, defaultMaskReg);
                     AscendC::MicroAPI::Cast<OUT_TYPE, float, castTrait32tofp8>(vReg16, vReg14, defaultMaskReg);

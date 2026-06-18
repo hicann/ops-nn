@@ -54,7 +54,8 @@ constexpr int64_t AXIS_NUM_AFTER_MERGE = 3;
 constexpr int64_t NEW_SHAPE_INDEX_TWO = 2;
 constexpr int64_t WORKSPACE_SIZE = 0;
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
-const std::set<int64_t> DST_SUPPORT_DTYPE_SET = {34, 35, 36};
+const std::set<int64_t> DST_SUPPORT_DTYPE_SET = {ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN,
+    ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> OUTPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT};
 constexpr int64_t DIM1_BLOCK_COUNT = 8;
@@ -160,6 +161,47 @@ static ge::graphStatus CheckBlockSizeAndDstTypeMax(
     return ge::GRAPH_SUCCESS;
 }
 
+static ge::graphStatus CheckDstType(const gert::TilingContext* context,
+    const DynamicBlockQuantTilingParam& tilingParam, ge::DataType yDtype)
+{
+    OP_CHECK_IF(
+        (DST_SUPPORT_DTYPE_SET.count(tilingParam.dstType) == 0),
+         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            context->GetNodeName(), "dst_type", std::to_string(tilingParam.dstType), "The dtype of dst_type must be DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        tilingParam.dstType != static_cast<int64_t>(yDtype),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+            context->GetNodeName(), "y, dst_type",
+            ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + std::to_string(tilingParam.dstType),
+            "The dtypes of y and dst_type must be the same"),
+        return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+static ge::graphStatus CheckRoundMode(const gert::TilingContext* context,
+    const DynamicBlockQuantTilingParam& tilingParam, RoundModeList roundMode, const char* attrRoundMode)
+{
+    std::string roundModeStr = attrRoundMode;
+    OP_CHECK_IF(
+        (tilingParam.dstType == ge::DT_HIFLOAT8 && roundMode != RoundModeList::MODE_ROUND),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is DT_HIFLOAT8, parameter round_mode must be round"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        ((tilingParam.dstType == ge::DT_INT8 || tilingParam.dstType == ge::DT_FLOAT8_E4M3FN ||
+          tilingParam.dstType == ge::DT_FLOAT8_E5M2) &&
+         roundMode != RoundModeList::MODE_RINT),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is DT_INT8/DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2, parameter round_mode must be rint"),
+        return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
 static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQuantTilingParam& tilingParam)
 {
     auto* attrs = context->GetAttrs();
@@ -188,33 +230,12 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQ
     RoundModeList roundMode = GetRoundMode(roundModeStr);
     tilingParam.roundMode = static_cast<int64_t>(roundMode);
 
-    OP_CHECK_IF(
-        (tilingParam.dstType != ge::DT_HIFLOAT8 && tilingParam.dstType != ge::DT_FLOAT8_E4M3FN &&
-         tilingParam.dstType != ge::DT_FLOAT8_E5M2),
-        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context->GetNodeName(), "dst_type", std::to_string(tilingParam.dstType), "The dtype of dst_type must be DT_HIFLOAT8, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
-        return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(
-        tilingParam.dstType != static_cast<int64_t>(yDtype),
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            context->GetNodeName(), "y, dst_type",
-            ge::TypeUtils::DataTypeToSerialString(yDtype) + ", " + std::to_string(tilingParam.dstType),
-            "The dtypes of y and dst_type must be the same"),
-        return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(
-        (tilingParam.dstType == ge::DT_HIFLOAT8 && roundMode != RoundModeList::MODE_ROUND),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is DT_HIFLOAT8, parameter round_mode must be round"),
-        return ge::GRAPH_FAILED);
-
-    OP_CHECK_IF(
-        ((tilingParam.dstType == ge::DT_FLOAT8_E4M3FN || tilingParam.dstType == ge::DT_FLOAT8_E5M2) &&
-         roundMode != RoundModeList::MODE_RINT),
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "round_mode", roundModeStr, "If the dtype of output y is DT_FLOAT8_E4M3FN/DT_FLOAT8_E5M2, parameter round_mode must be rint"),
-        return ge::GRAPH_FAILED);
+    if (CheckDstType(context, tilingParam, yDtype) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckRoundMode(context, tilingParam, roundMode, attrRoundMode) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
 
     return CheckBlockSizeAndDstTypeMax(context, tilingParam);
 }
@@ -236,7 +257,7 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     OP_CHECK_IF(
         DST_SUPPORT_DTYPE_SET.count(yDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype), "The dtype of y must be DT_HIFLOAT8, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
+            context->GetNodeName(), "y", ge::TypeUtils::DataTypeToSerialString(yDtype), "The dtype of y must be DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, or DT_FLOAT8_E5M2"),
         return ge::GRAPH_FAILED);
 
     auto outputScalePtr = context->GetOutputDesc(1);
@@ -316,13 +337,15 @@ inline static void CalcTilingKey(
     int64_t thousandDigit = tilingParam.roundMode;
     // 百位数为1、2，分别表示输入类型是float16、bfloat16;
     int64_t hundredDigit = inputType == DT_FLOAT16 ? 1 : DIGIT_TWO;
-    // 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8
+    // 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8、int8
     // 前面已做过Dtype校验
     int64_t tenDigit = 0;
     if (outputType == ge::DT_FLOAT8_E4M3FN) {
         tenDigit = 1;
     } else if (outputType == ge::DT_HIFLOAT8) {
         tenDigit = DIGIT_TWO;
+    } else if (outputType == ge::DT_INT8) {
+        tenDigit = 3;
     }
     int64_t digit = KERNEL_TYPE_NORMAL;
     if (tilingParam.blockSizeRow == 1) {

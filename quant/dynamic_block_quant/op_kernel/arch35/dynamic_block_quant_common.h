@@ -30,6 +30,7 @@ constexpr uint16_t BLOCK_BYTE_32 = 32;
 constexpr float FP8_E5M2_MAX_VALUE = 57344.0f;
 constexpr float FP8_E4M3_MAX_VALUE = 448.0f;
 constexpr float HIFP8_MAX_VALUE = 32768.0f;
+constexpr float INT8_MAX_VALUE = 127.0f;
 constexpr uint32_t FP32_INF_VALUE = 0x7f800000;
 constexpr uint16_t FP16_INF_VALUE = 0x7c00;
 constexpr uint16_t BF16_INF_VALUE = 0x7f80;
@@ -38,6 +39,21 @@ constexpr uint32_t INV_FP8_E5M2_MAX_VALUE = 0x37924925;
 constexpr uint32_t INV_FP8_E4M3_MAX_VALUE = 0x3b124925;
 constexpr uint32_t INV_HIFP8_MAX_VALUE = 0x38000000;
 
+template <typename OUT_TYPE>
+__aicore__ inline float GetDstTypeMaxValue(float dstTypeMax)
+{
+    if constexpr (IsSameType<OUT_TYPE, fp8_e5m2_t>::value) {
+        return FP8_E5M2_MAX_VALUE;
+    } else if constexpr (IsSameType<OUT_TYPE, fp8_e4m3fn_t>::value) {
+        return FP8_E4M3_MAX_VALUE;
+    } else if constexpr (IsSameType<OUT_TYPE, hifloat8_t>::value) {
+        return dstTypeMax != 0 ? dstTypeMax : HIFP8_MAX_VALUE;
+    } else if constexpr (IsSameType<OUT_TYPE, int8_t>::value) {
+        return INT8_MAX_VALUE;
+    }
+    return 0.0f;
+}
+
 constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
     AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::UNKNOWN, AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::UNKNOWN};
@@ -45,5 +61,17 @@ constexpr static AscendC::MicroAPI::CastTrait castTrait0 = {
 constexpr static AscendC::MicroAPI::CastTrait castTrait32tofp8 = {
     AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT, AscendC::MicroAPI::MaskMergeMode::ZEROING,
     AscendC::RoundMode::CAST_RINT};
+
+constexpr static AscendC::MicroAPI::CastTrait castTraitF32ToI16 = {
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_RINT};
+
+constexpr static AscendC::MicroAPI::CastTrait castTraitI16ToF16 = {
+    AscendC::MicroAPI::RegLayout::UNKNOWN, AscendC::MicroAPI::SatMode::SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_FLOOR};
+
+constexpr static AscendC::MicroAPI::CastTrait castTraitF16ToI8 = {
+    AscendC::MicroAPI::RegLayout::ZERO, AscendC::MicroAPI::SatMode::SAT,
+    AscendC::MicroAPI::MaskMergeMode::ZEROING, AscendC::RoundMode::CAST_FLOOR};
 } // namespace DynamicBlockQuant
 #endif // DYNAMIC_BLOCK_QUANT_COMMON_H

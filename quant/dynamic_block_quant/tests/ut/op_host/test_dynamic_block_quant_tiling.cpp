@@ -321,6 +321,34 @@ TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_hifloa
     ExecuteTestCase(ge::DT_BF16, ge::DT_HIFLOAT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize, dstTypeMax, expectTilingData);
 }
 
+TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_int8) {
+    gert::StorageShape shape = {{128, 256}, {128, 256}};
+    gert::StorageShape scaleShape = {{128, 2}, {128, 2}};
+    float minScale = 0.0;
+    string roundMode = "rint";
+    int64_t rowBlockSize = 1;
+    int64_t colBlockSize = 128;
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1131 64 253952 256 0 1 2 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+
+    ExecuteTestCase(ge::DT_FLOAT16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    dstTypeMax, expectTilingData);
+}
+
+TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_bfloat16_int8) {
+    gert::StorageShape shape = {{128, 256}, {128, 256}};
+    gert::StorageShape scaleShape = {{128, 2}, {128, 2}};
+    float minScale = 0.0;
+    string roundMode = "rint";
+    int64_t rowBlockSize = 1;
+    int64_t colBlockSize = 128;
+    float dstTypeMax = 0.0;
+    string expectTilingData = "1231 64 253952 256 0 1 2 1 128 0 1 128 256 128 128 2 4 1 4 128 64 32 2 4 1 4 1 32 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ";
+
+    ExecuteTestCase(ge::DT_BF16, ge::DT_INT8, shape, scaleShape, minScale, roundMode, rowBlockSize, colBlockSize,
+                    dstTypeMax, expectTilingData);
+}
+
 TEST_F(DynamicBlockQuantTiling, DynamicBlockQuant_tiling_ascendc_float16_fp8e5m2_one_row) {
     gert::StorageShape shape = {{128, 256}, {128, 256}};
     gert::StorageShape scaleShape = {{128, 2}, {128, 2}};

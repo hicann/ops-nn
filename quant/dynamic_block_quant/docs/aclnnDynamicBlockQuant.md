@@ -119,7 +119,7 @@ aclnnStatus aclnnDynamicBlockQuant(
       <td>dstType（int64_t）</td>
       <td>输入</td>
       <td>指定输出yOut的数据类型。</td>
-      <td>支持取值2、34、35、36，分别代表ACL_INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
+      <td>支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -190,7 +190,7 @@ aclnnStatus aclnnDynamicBlockQuant(
 
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`roundModeOptional`只支持rint。
-    - 参数`dstType`仅支持取值2，代表ACL_INT8。
+    - 参数`dstType`仅支持取值2，代表INT8。
     - 参数`rowBlockSize`仅支持取值1。
     - 参数`colBlockSize`仅支持取值128。
     - 参数`yOut`的数据类型仅支持INT8。
@@ -198,9 +198,9 @@ aclnnStatus aclnnDynamicBlockQuant(
     - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维或3维。
     - 参数`roundModeOptional`的取值与参数`yOut`的数据类型存在对应关系：
       - 当输出`yOut`的数据类型是HIFLOAT8时，参数`roundModeOptional`支持设置为round。
-      - 当输出`yOut`的数据类型是FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`roundModeOptional`支持设置为rint。
-    - 参数`dstType`支持取值34、35、36，分别代表HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
-    - 参数`yOut`的数据类型不支持INT8。
+      - 当输出`yOut`的数据类型是INT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`roundModeOptional`支持设置为rint。
+    - 参数`dstType`支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
+    - 参数`yOut`的数据类型支持INT8、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2。
   
 - **返回值**
 
@@ -433,11 +433,10 @@ aclnnStatus aclnnDynamicBlockQuant(
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
-  
+
     return 0;
   }
   ```
-  
 - <term>Ascend 950PR/Ascend 950DT</term>：
 
   ```Cpp
@@ -587,8 +586,7 @@ aclnnStatus aclnnDynamicBlockQuant(
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
-  
+
     return 0;
   }
   ```
-  

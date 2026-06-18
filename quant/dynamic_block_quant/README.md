@@ -73,7 +73,7 @@
     <tr>
       <td>dst_type</td>
       <td>可选属性</td>
-      <td><ul><li>指定输出y的数据类型。支持取值2、34、35、36，分别代表ACL_INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</li><li>默认值为35，对应的数据类型为FLOAT8_E5M2。</li></ul></td>
+      <td><ul><li>指定输出y的数据类型。支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。</li><li>默认值为35，对应的数据类型为FLOAT8_E5M2。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -117,7 +117,7 @@
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
     - 参数`x`、`y`、`scale`的shape仅支持2维
     - 参数`round_mode`只支持rint。
-    - 参数`dst_type`仅支持取值2，代表ACL_INT8。
+    - 参数`dst_type`仅支持取值2，代表INT8。
     - 参数`row_block_size`仅支持取值1或128。
     - 参数`col_block_size`仅支持取值1。
     - 参数`dst_type_max`仅支持取值0。
@@ -127,9 +127,9 @@
     - 参数`x`、`y`、`scale`的shape仅支持2维或3维。
     - 参数`round_mode`的取值与参数`y`的数据类型存在对应关系：
       - 当输出`y`的数据类型是HIFLOAT8时，参数`round_mode`支持设置为round。
-      - 当输出`y`的数据类型是FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`round_mode`支持设置为rint。
-    - 参数`dst_type`支持取值34、35、36，分别代表HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
-    - 参数`y`的数据类型不支持INT8。
+      - 当输出`y`的数据类型是INT8、FLOAT8_E4M3FN、FLOAT8_E5M2时，参数`round_mode`支持设置为rint。
+    - 参数`dst_type`支持取值2、34、35、36，分别代表INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN。
+    - 参数`y`的数据类型支持INT8、HIFLOAT8、FLOAT8_E4M3FN、FLOAT8_E5M2。
 
 ## 约束说明
 

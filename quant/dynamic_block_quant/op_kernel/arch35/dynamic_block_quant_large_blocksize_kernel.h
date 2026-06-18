@@ -147,9 +147,9 @@ __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::Init(
     if (blockIdx_ >= usedCoreNum_) {
         return;
     }
-    #if (__NPU_ARCH__ == 3510)
-        AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
-    #endif
+#if (__NPU_ARCH__ == 3510) && (DTYPE_Y != DT_INT8)
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(0);
+#endif
     
     rowCoreIdx_ = blockIdx_ / colTileNum_;
     colCoreIdx_ = blockIdx_ % colTileNum_;
@@ -221,18 +221,7 @@ __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::InitGmOffse
 template <typename T, typename U, int64_t RMode>
 __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::InitBuffer() {
     int64_t perBlockSize = 0;
-    if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
-        fp8MaxValue_ = FP8_E4M3_MAX_VALUE;
-    } else if constexpr (IsSameType<U, fp8_e5m2_t>::value) {
-        fp8MaxValue_ = FP8_E5M2_MAX_VALUE;
-    } else if constexpr (IsSameType<U, hifloat8_t>::value) {
-        if (dstTypeMax_ != 0) {
-            fp8MaxValue_ = dstTypeMax_;
-        }
-        else {
-            fp8MaxValue_ = HIFP8_MAX_VALUE;
-        }
-    }
+    fp8MaxValue_ = GetDstTypeMaxValue<U>(dstTypeMax_);
 
     infValue_ = FP32_INF_VALUE;
     // 单个block最大的col列数
@@ -486,6 +475,8 @@ __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::ComputeOutV
         AscendC::MicroAPI::RegTensor<float> vreg2;
         AscendC::MicroAPI::RegTensor<float> vreg4;
         AscendC::MicroAPI::RegTensor<float> vreg5;
+        AscendC::MicroAPI::RegTensor<int16_t> int16Reg;
+        AscendC::MicroAPI::RegTensor<half> halfReg;
         AscendC::MicroAPI::RegTensor<U> outReg;
 
         AscendC::MicroAPI::MaskReg preg0;
@@ -503,6 +494,10 @@ __aicore__ inline void DynamicBlockQuantLargeBlockSize<T, U, RMode>::ComputeOutV
 
             if constexpr (IsSameType<U, hifloat8_t>::value) {
                 AscendC::MicroAPI::Cast<U, float, castTrait32toh8>(outReg, vreg5, preg0);
+            } else if constexpr (IsSameType<U, int8_t>::value) {
+                AscendC::MicroAPI::Cast<int16_t, float, castTraitF32ToI16>(int16Reg, vreg5, preg0);
+                AscendC::MicroAPI::Cast<half, int16_t, castTraitI16ToF16>(halfReg, int16Reg, preg0);
+                AscendC::MicroAPI::Cast<U, half, castTraitF16ToI8>(outReg, halfReg, preg0);
             } else {
                 AscendC::MicroAPI::Cast<U, float, castTrait32tofp8>(outReg, vreg5, preg0);
             }

@@ -32,6 +32,7 @@ namespace ge {
 *   - "round": Supported for HIFLOAT8 only
 *   Defaults to "rint".
 - dst_type: (Optional) Target data type enum value:
+*   - 2: INT8
 *   - 34: HIFLOAT8
 *   - 35: FLOAT8_E5M2
 *   - 36: FLOAT8_E4M3FN
@@ -52,7 +53,7 @@ namespace ge {
 */
 REG_OP(DynamicBlockQuant)
     .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
-    .OUTPUT(y, TensorType({DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
+    .OUTPUT(y, TensorType({DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(scale, TensorType({DT_FLOAT}))
     .ATTR(min_scale, Float, 0.0)
     .ATTR(round_mode, String, "rint")

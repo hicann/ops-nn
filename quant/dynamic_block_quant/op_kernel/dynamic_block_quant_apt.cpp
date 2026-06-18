@@ -26,6 +26,8 @@
 #define TILING_KEY_ROUND_BF16_FIFLOAT8_NORMAL 4220
 #define TILING_KEY_HYBRID_FP16_FIFLOAT8_NORMAL 7120
 #define TILING_KEY_HYBRID_BF16_FIFLOAT8_NORMAL 7220
+#define TILING_KEY_RINT_FP16_INT8_NORMAL 1130
+#define TILING_KEY_RINT_BF16_INT8_NORMAL 1230
 
 #define TILING_KEY_RINT_FP16_FP8E5M2_SINGLE 1101
 #define TILING_KEY_RINT_BF16_FP8E5M2_SINGLE 1201
@@ -35,6 +37,8 @@
 #define TILING_KEY_ROUND_BF16_FIFLOAT8_SINGLE 4221
 #define TILING_KEY_HYBRID_FP16_FIFLOAT8_SINGLE 7121
 #define TILING_KEY_HYBRID_BF16_FIFLOAT8_SINGLE 7221
+#define TILING_KEY_RINT_FP16_INT8_SINGLE 1131
+#define TILING_KEY_RINT_BF16_INT8_SINGLE 1231
 
 #define TILING_KEY_RINT_FP16_FP8E5M2_LARGE 1102
 #define TILING_KEY_RINT_BF16_FP8E5M2_LARGE 1202
@@ -44,13 +48,15 @@
 #define TILING_KEY_ROUND_BF16_FIFLOAT8_LARGE 4222
 #define TILING_KEY_HYBRID_FP16_FIFLOAT8_LARGE 7122
 #define TILING_KEY_HYBRID_BF16_FIFLOAT8_LARGE 7222
+#define TILING_KEY_RINT_FP16_INT8_LARGE 1132
+#define TILING_KEY_RINT_BF16_INT8_LARGE 1232
 
 #define MODE_RINT 1
 #define MODE_ROUND 4
 #define MODE_HYBRID 7
 // 千分位表示 RoundMode 1,4,7 分别是MODE_RINT、MODE_ROUND、MODE_HYBRID
 // 百位数为1、2，分别表示输入类型是float16、bfloat16;
-// 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8
+// 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8、int8
 // 个位数为0、1，2 分别基础模板和特化模板和大blocksize模板
 
 using namespace DynamicBlockQuant;
@@ -88,6 +94,14 @@ __aicore__ inline void SingleUB(
         op.Process();
     } else if (TILING_KEY_IS(TILING_KEY_HYBRID_BF16_FIFLOAT8_NORMAL)) {
         DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, hifloat8_t, MODE_HYBRID> op(&pipe);
+        op.Init(x, y, scale, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_FP16_INT8_NORMAL)) {
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<half, int8_t, MODE_RINT> op(&pipe);
+        op.Init(x, y, scale, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_BF16_INT8_NORMAL)) {
+        DynamicBlockQuant::DynamicBlockQuantSmallBlockSize<bfloat16_t, int8_t, MODE_RINT> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
     }
@@ -128,6 +142,14 @@ __aicore__ inline void SingleRow(
         DynamicBlockQuant::DynamicBlockQuantSingleRow<bfloat16_t, hifloat8_t, MODE_HYBRID> op(&pipe);
         op.Init(x, y, scale, &tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_FP16_INT8_SINGLE)) {
+        DynamicBlockQuant::DynamicBlockQuantSingleRow<half, int8_t, MODE_RINT> op(&pipe);
+        op.Init(x, y, scale, &tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_BF16_INT8_SINGLE)) {
+        DynamicBlockQuant::DynamicBlockQuantSingleRow<bfloat16_t, int8_t, MODE_RINT> op(&pipe);
+        op.Init(x, y, scale, &tilingData);
+        op.Process();
     }
 }
 
@@ -166,6 +188,14 @@ __aicore__ inline void LargeBlockSize(
         DynamicBlockQuant::DynamicBlockQuantLargeBlockSize<bfloat16_t, hifloat8_t, MODE_HYBRID> op(&pipe);
         op.Init(x, y, scale, tilingData);
         op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_FP16_INT8_LARGE)) {
+        DynamicBlockQuant::DynamicBlockQuantLargeBlockSize<half, int8_t, MODE_RINT> op(&pipe);
+        op.Init(x, y, scale, tilingData);
+        op.Process();
+    } else if (TILING_KEY_IS(TILING_KEY_RINT_BF16_INT8_LARGE)) {
+        DynamicBlockQuant::DynamicBlockQuantLargeBlockSize<bfloat16_t, int8_t, MODE_RINT> op(&pipe);
+        op.Init(x, y, scale, tilingData);
+        op.Process();
     }
 }
 
@@ -176,7 +206,7 @@ extern "C" __global__ __aicore__ void dynamic_block_quant(
     TPipe pipe;
     GET_TILING_DATA(tilingData, tiling);
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) && (DTYPE_Y != DT_INT8)
     int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
 #endif
 
@@ -184,7 +214,7 @@ extern "C" __global__ __aicore__ void dynamic_block_quant(
     SingleRow(x, y, scale, tilingData, pipe);
     LargeBlockSize(x, y, scale, tilingData, pipe);
 
-#if (__NPU_ARCH__ == 3510)
+#if (__NPU_ARCH__ == 3510) && (DTYPE_Y != DT_INT8)
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 #endif
 }
