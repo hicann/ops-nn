@@ -5,8 +5,8 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品</term>    |     ×    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
@@ -48,21 +48,21 @@
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>表示输入张量，支持1D-8D维度</td>
+      <td>表示输入张量，支持1D-8D维度。</td>
       <td>FLOAT16、FLOAT、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>表示输出张量，与输入x具有相同的类型、形状和格式</td>
+      <td>表示输出张量，与输入x具有相同的类型、形状和格式。</td>
       <td>与x一致</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scale</td>
       <td>属性</td>
-      <td>表示缩放参数，用于调整Swish函数的形状。默认值为1.0</td>
+      <td>表示缩放参数，用于调整Swish函数的形状。默认值为1.0。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>

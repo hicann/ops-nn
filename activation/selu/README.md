@@ -5,11 +5,11 @@
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
 |  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
-|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
-|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
+|  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     ×    |
+|  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     ×    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品</term>    |     ×    |
-|  <term>Atlas 训练系列产品</term>    |     √    |
+|  <term>Atlas 训练系列产品</term>    |     ×    |
 
 ## 功能说明
 
@@ -27,8 +27,8 @@
 
   分段行为：
 
-  - 当 $x > 0$ 时：$\text{SELU}(x) = \text{scale} \times x$（线性区）
-  - 当 $x \le 0$ 时：$\text{SELU}(x) = \text{scale} \times \alpha \times (e^x - 1)$（指数饱和区）
+  - 当$x > 0$时：$\text{SELU}(x) = \text{scale} \times x$（线性区）
+  - 当$x \le 0$时：$\text{SELU}(x) = \text{scale} \times \alpha \times (e^x - 1)$（指数饱和区）
 
 ## 参数说明
 
