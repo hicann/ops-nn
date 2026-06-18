@@ -22,9 +22,9 @@
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"
 
+namespace optiling {
 using SyncBatchNormBackwardElemtNs::SyncBatchNormBackwardElemtTilingData;
 
-namespace optiling {
 class SyncBatchNormBackwardElemtTiling {
 public:
     explicit SyncBatchNormBackwardElemtTiling(gert::TilingContext *context) : tilingContext(context){};

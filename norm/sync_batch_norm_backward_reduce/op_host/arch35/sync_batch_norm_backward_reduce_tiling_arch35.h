@@ -22,9 +22,9 @@
 #include "tiling/tiling_api.h"
 #include "op_host/tiling_base.h"
 
+namespace optiling {
 using SyncBatchNormBackwardReduceNs::SyncBatchNormBackwardReduceTilingData;
 
-namespace optiling {
 class SyncBatchNormBackwardReduceTiling
 {
 public:
