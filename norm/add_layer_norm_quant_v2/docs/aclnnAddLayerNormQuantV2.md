@@ -178,7 +178,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
       <td>表示层归一化中的gamma参数。对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>数据维度需要和`x1`的最后几维相同。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>数据维度需要和`x1`的最后几维相同或者为[1, x1的最后一维]，perTensor模式下shape为[1, x1的最后一维]。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -188,7 +188,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>beta（aclTensor*）</td>
       <td>输入</td>
       <td>对应LayerNorm计算公式中的beta，表示层归一化中的beta参数。对应公式中的`beta`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`gamma`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -198,7 +198,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>biasOptional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，可以传入满足下述约束的aclTensor，或使用nullptr占为表示该可选输入不存在。表示AddLayerNorm中加法计算的输入，将会在算子内做x1 + x2 + biasOptional的计算并对计算结果做层归一化。对应公式中的`biasOptional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>shape可以和`gamma`/`beta`或`x1`/`x2`一致。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>当quantMode = "static"时，shape支持1-8维度。</li><li>当quantMode = "dynamic"时，shape支持2-8维度。</li><li>数据类型需要与`x1`保持一致。</li><li>shape可以和`gamma`或`x1`一致，perTensor模式下shape与`x1`一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -208,7 +208,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>scales1Optional（aclTensor*）</td>
       <td>输入</td>
       <td>可选输入参数，表示第一个被融合的量化计算子中的scale/smooth输入。对应公式中的`scales1Optional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`gamma`保持一致。</li><li>可选输入参数传入时，数据类型以及取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape可以与`gamma`保持一致或为[1]，perTensor模式下shape为[1]。</li><li>可选输入参数传入时，数据类型以及取值约束参见<a href="#约束说明">约束说明</a>。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -410,7 +410,7 @@ aclnnStatus aclnnAddLayerNormQuantV2(
       <td>全部输入tensor的shape满足以下任一等量关系：
       <ol>
       <li>x1、x2、xOut、layernormRes、y1的shape不相同；当scales2Optional可选输入存在时，该条件严格化为x1、x2、xOut、layernormRes、y1、y2的shape不相同。</li>
-      <li>gamma、beta的shape不相同；当可选输入scales1Optional、scales2Optional、zeroPoints1Optional、zeroPoints2Optional存在时，它们的shape和gamma相异。</li>
+      <li>gamma、beta的shape不相同。</li>
       <li>当biasOptional存在时，它的shape既和gamma相异，也和x1相异。</li>
       <li>当量化模式为动态，即输入quantMode的值为"dynamic"，且在此同时scales2Optional可选输入存在时，outScales1Out的shape和outScales2Out的shape相异。</li>
       </ol>
@@ -468,15 +468,15 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 
 - 支持产品约束：
   - <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>、<term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>：
-    - 当前场景仅支持`quantMode`取值为`static`。
-    - 当前场景仅支持`additionalOutput`、`divMode`取值为`true`。
+    - 当前场景仅支持`quantMode`、`additionalOutput`、`divMode`分别取值为`static`、`false`、`false`。
     - 当前场景仅支持`scales2Optional`、`zeroPoints2Optional`为空。
+    - 当前场景仅支持perTensor量化模式，即`scales1Optional`、`zeroPoints1Optional`的shape为[1]，`gamma`、`beta`的shape为[1，x1的最后一维]。
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
 
   - <term>Atlas 推理系列产品</term>：
-    - 当前场景仅支持`quantMode`取值为`static`。
-    - 当前场景仅支持`additionalOutput`、`divMode`取值为`true`。
+    - 当前场景仅支持`quantMode`、`additionalOutput`、`divMode`分别取值为`static`、`false`、`false`。
     - 当前场景仅支持`scales2Optional`、`zeroPoints2Optional`为空。
+    - 当前场景仅支持perTensor量化模式，即`scales1Optional`、`zeroPoints1Optional`的shape为[1]，`gamma`、`beta`的shape为[1，x1的最后一维]。
     - 当前场景仅支持`scales1Optional`、`zeroPoints1Optional`数据类型与`x1`保持一致。
     - 当前场景不支持BFLOAT16类型。
     - 入参`x1`、`x2`的norm轴长度必须大于等于32Bytes。
@@ -538,6 +538,8 @@ aclnnStatus aclnnAddLayerNormQuantV2(
 ```Cpp
 #include <iostream>
 #include <vector>
+#include <cmath>
+#include <cstring>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_add_layer_norm_quant_v2.h"
 
@@ -559,6 +561,39 @@ int64_t GetShapeSize(const std::vector<int64_t> &shape) {
     shapeSize *= i;
   }
   return shapeSize;
+}
+
+uint16_t FloatToFp16(float value) {
+  uint32_t x;
+  memcpy(&x, &value, sizeof(x));
+  uint16_t sign = (x >> 16) & 0x8000;
+  int32_t exp = ((x >> 23) & 0xFF) - 127 + 15;
+  uint32_t mantissa = x & 0x7FFFFF;
+  if (exp <= 0) return sign;
+  if (exp >= 31) return sign | 0x7C00;
+  return sign | (exp << 10) | (mantissa >> 13);
+}
+
+float Fp16ToFloat(uint16_t h) {
+  uint32_t sign = (h & 0x8000) << 16;
+  uint32_t exp = (h >> 10) & 0x1F;
+  uint32_t mantissa = h & 0x3FF;
+  uint32_t f;
+  if (exp == 0) {
+    f = sign;
+  } else if (exp == 31) {
+    f = sign | 0x7F800000 | (mantissa << 13);
+  } else {
+    f = sign | ((exp - 15 + 127) << 23) | (mantissa << 13);
+  }
+  float result;
+  memcpy(&result, &f, sizeof(result));
+  return result;
+}
+
+std::vector<uint16_t> MakeFp16Data(size_t size, float value) {
+  uint16_t fp16Val = FloatToFp16(value);
+  return std::vector<uint16_t>(size, fp16Val);
 }
 
 int Init(int32_t deviceId, aclrtStream *stream) {
@@ -612,8 +647,9 @@ int main() {
 
   std::vector<int64_t> xShape = {1, 32};
   std::vector<int64_t> gammaShape = {1, 32};
+  std::vector<int64_t> scaleShape = {1};
 
-  std::vector<int64_t> reduceShape = {1, 32};
+  std::vector<int64_t> reduceShape = {1};
 
   void *x1DeviceAddr = nullptr;
   void *x2DeviceAddr = nullptr;
@@ -621,9 +657,7 @@ int main() {
   void *gammaDeviceAddr = nullptr;
   void *biasDeviceAddr = nullptr;
   void *s1DeviceAddr = nullptr;
-  void *s2DeviceAddr = nullptr;
   void *z1DeviceAddr = nullptr;
-  void *z2DeviceAddr = nullptr;
 
   // 用于不带bias的输出 Device地址
   void *y1DeviceAddr = nullptr;
@@ -639,9 +673,7 @@ int main() {
   aclTensor *gamma = nullptr;
   aclTensor *bias = nullptr;
   aclTensor *s1 = nullptr;
-  aclTensor *s2 = nullptr;
   aclTensor *z1 = nullptr;
-  aclTensor *z2 = nullptr;
 
   // 用于不带bias的aclTensor
   aclTensor *y1 = nullptr;
@@ -653,24 +685,23 @@ int main() {
 
   int64_t xShapeSize = GetShapeSize(xShape);
   int64_t gammaShapeSize = GetShapeSize(gammaShape);
+  int64_t scaleShapeSize = GetShapeSize(scaleShape);
   int64_t reduceShapeSize = GetShapeSize(reduceShape);
 
-  std::vector<float> x1HostData(xShapeSize, 0x3C00);
-  std::vector<float> x2HostData(xShapeSize, 0x3C00);
-  std::vector<float> gammaHostData(gammaShapeSize, 0x3C00);
-  std::vector<float> betaHostData(gammaShapeSize, 0x3C00);
-  std::vector<float> biasHostData(gammaShapeSize, 0x3C00);
+  std::vector<uint16_t> x1HostData = MakeFp16Data(xShapeSize, 1.0f);
+  std::vector<uint16_t> x2HostData = MakeFp16Data(xShapeSize, 1.0f);
+  std::vector<uint16_t> gammaHostData = MakeFp16Data(gammaShapeSize, 1.0f);
+  std::vector<uint16_t> betaHostData = MakeFp16Data(gammaShapeSize, 1.0f);
+  std::vector<uint16_t> biasHostData = MakeFp16Data(gammaShapeSize, 1.0f);
 
-  std::vector<float> s1HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> s2HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> z1HostData(gammaShapeSize, 0x3C00);
-  std::vector<float> z2HostData(gammaShapeSize, 0x3C00);
+  std::vector<uint16_t> s1HostData = MakeFp16Data(scaleShapeSize, 1.0f);
+  std::vector<uint16_t> z1HostData = MakeFp16Data(scaleShapeSize, 1.0f);
 
   // 用于不带bias的HostData
   std::vector<int8_t> y1HostData(xShapeSize, 0);
   std::vector<int8_t> y2HostData(xShapeSize, 0);
-  std::vector<float> xHostData(xShapeSize, 0);
-  std::vector<float> layernormResHostData(xShapeSize, 0);
+  std::vector<uint16_t> xHostData(xShapeSize, 0);
+  std::vector<uint16_t> layernormResHostData(xShapeSize, 0);
   std::vector<float> outScales1HostData(reduceShapeSize, 0);
   std::vector<float> outScales2HostData(reduceShapeSize, 0);
 
@@ -685,13 +716,9 @@ int main() {
   CHECK_RET(ret == ACL_SUCCESS, return ret);
   ret = CreateAclTensor(biasHostData, gammaShape, &biasDeviceAddr, aclDataType::ACL_FLOAT16, &bias);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s1HostData, gammaShape, &s1DeviceAddr, aclDataType::ACL_FLOAT16, &s1);
+  ret = CreateAclTensor(s1HostData, scaleShape, &s1DeviceAddr, aclDataType::ACL_FLOAT16, &s1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(s2HostData, gammaShape, &s2DeviceAddr, aclDataType::ACL_FLOAT16, &s2);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z1HostData, gammaShape, &z1DeviceAddr, aclDataType::ACL_FLOAT16, &z1);
-  CHECK_RET(ret == ACL_SUCCESS, return ret);
-  ret = CreateAclTensor(z2HostData, gammaShape, &z2DeviceAddr, aclDataType::ACL_FLOAT16, &z2);
+  ret = CreateAclTensor(z1HostData, scaleShape, &z1DeviceAddr, aclDataType::ACL_FLOAT16, &z1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建不带 bias 的 aclTensor
@@ -714,7 +741,7 @@ int main() {
   // 调用aclnnAddLayerNormQuantV2第一段接口
   uint64_t workspaceSize = 0;
   aclOpExecutor *executor;
-  ret = aclnnAddLayerNormQuantV2GetWorkspaceSize(x1, x2, gamma, beta, nullptr, s1, nullptr, nullptr, nullptr, quantMode, eps, additionalOut, divMode, y1, y2, x, layernormRes, outScales1, outScales2, &workspaceSize, &executor);
+  ret = aclnnAddLayerNormQuantV2GetWorkspaceSize(x1, x2, gamma, beta, nullptr, s1, nullptr, z1, nullptr, quantMode, eps, additionalOut, divMode, y1, y2, x, layernormRes, outScales1, outScales2, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddLayerNormQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
   // 2. 根据第一段接口计算出的workspaceSize申请device内存
@@ -737,7 +764,7 @@ int main() {
   std::vector<int8_t> resultDataY1(y1Size, 0);
   ret = aclrtMemcpy(resultDataY1.data(), resultDataY1.size() * sizeof(resultDataY1[0]), y1DeviceAddr, y1Size * sizeof(resultDataY1[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 y1 output");
+  LOG_PRINT("==== AddLayerNormQuantV2 y1 output\n");
   for (int64_t i = 0; i < y1Size; i++) {
     LOG_PRINT("result[%ld] is: %d\n", i, resultDataY1[i]);
   }
@@ -746,24 +773,27 @@ int main() {
   std::vector<int8_t> resultDataY2(y2Size, 0);
   ret = aclrtMemcpy(resultDataY2.data(), resultDataY2.size() * sizeof(resultDataY2[0]), y2DeviceAddr, y2Size * sizeof(resultDataY2[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 y2 output");
+  LOG_PRINT("==== AddLayerNormQuantV2 y2 output\n");
+  for (int64_t i = 0; i < y2Size; i++) {
+    LOG_PRINT("result[%ld] is: %d\n", i, resultDataY2[i]);
+  }
 
   auto xSize = GetShapeSize(xShape);
-  std::vector<float> resultDataX(xSize, 0);
+  std::vector<uint16_t> resultDataX(xSize, 0);
   ret = aclrtMemcpy(resultDataX.data(), resultDataX.size() * sizeof(resultDataX[0]), xDeviceAddr, xSize * sizeof(resultDataX[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 x output");
+  LOG_PRINT("==== AddLayerNormQuantV2 x output\n");
   for (int64_t i = 0; i < xSize; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultDataX[i]);
+    LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataX[i]));
   }
 
   auto layernormResSize = GetShapeSize(xShape);
-  std::vector<float> resultDataLayernormRes(layernormResSize, 0);
+  std::vector<uint16_t> resultDataLayernormRes(layernormResSize, 0);
   ret = aclrtMemcpy(resultDataLayernormRes.data(), resultDataLayernormRes.size() * sizeof(resultDataLayernormRes[0]), layernormResDeviceAddr, layernormResSize * sizeof(resultDataLayernormRes[0]), ACL_MEMCPY_DEVICE_TO_HOST);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from Deviceto host failed. ERROR: %d\n", ret); return ret);
-  LOG_PRINT("==== AddLayerNormQuantV2 layernormRes output");
+  LOG_PRINT("==== AddLayerNormQuantV2 layernormRes output\n");
   for (int64_t i = 0; i < layernormResSize; i++) {
-    LOG_PRINT("result[%ld] is: %f\n", i, resultDataLayernormRes[i]);
+    LOG_PRINT("result[%ld] is: %f\n", i, Fp16ToFloat(resultDataLayernormRes[i]));
   }
 
   // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
@@ -773,9 +803,7 @@ int main() {
   aclDestroyTensor(gamma);
   aclDestroyTensor(bias);
   aclDestroyTensor(s1);
-  aclDestroyTensor(s2);
   aclDestroyTensor(z1);
-  aclDestroyTensor(z2);
 
   aclDestroyTensor(y1);
   aclDestroyTensor(y2);
@@ -791,9 +819,7 @@ int main() {
   aclrtFree(betaDeviceAddr);
   aclrtFree(biasDeviceAddr);
   aclrtFree(s1DeviceAddr);
-  aclrtFree(s2DeviceAddr);
   aclrtFree(z1DeviceAddr);
-  aclrtFree(z2DeviceAddr);
 
   aclrtFree(y1DeviceAddr);
   aclrtFree(y2DeviceAddr);
