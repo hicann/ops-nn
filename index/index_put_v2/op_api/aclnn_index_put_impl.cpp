@@ -1279,7 +1279,8 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
       FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
       for (size_t i = 0; i < dimMask.size(); i++) {
         if (dimMask[i]) {
-          boundsVec.emplace_back(selfRef->GetViewShape().GetDim(i));
+          int64_t bound = (selfRef->GetViewShape().GetDimNum() == 0) ? 1 : selfRef->GetViewShape().GetDim(i);
+          boundsVec.emplace_back(bound);
         }
       }
       aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());

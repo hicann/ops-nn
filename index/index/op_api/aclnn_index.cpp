@@ -511,7 +511,8 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
             FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
             for (size_t i = 0; i < dimMask.size(); i++) {
                 if (dimMask[i]) {
-                    boundsVec.emplace_back(self->GetViewShape().GetDim(i));
+                    int64_t bound = (self->GetViewShape().GetDimNum() == 0) ? 1 : self->GetViewShape().GetDim(i);
+                    boundsVec.emplace_back(bound);
                 }
             }
             aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
