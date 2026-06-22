@@ -52,8 +52,7 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true)
-            .ExtendCfgInfo("opFile.value", "adaptive_avg_pool3d_apt");
+            .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aicore_config_950);
         
         OpAICoreConfig ascend310p_config;

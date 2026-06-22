@@ -7,23 +7,22 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
 /*!
- * \file avg_pool_apt.cpp
+ * \file avg_pool_v2.cpp
  * \brief avg_pool implied
  */
 
 #include <cstdint>
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
-#include "arch35/avg_pool_nhwc_small_kernel.h"
-#include "arch35/avg_pool_nhwc_small_kernel_pad.h"
-#include "arch35/avg_pool_nchw_small_kernel.h"
-#include "arch35/avg_pool_simt.h"
-#include "arch35/avg_pool_nchw_small_kernel_pad.h"
-#include "arch35/avg_pool_big_kernel_nhwc.h"
-#include "arch35/avg_pool_big_kernel.h"
-#include "arch35/avg_pool_struct.h"
+#include "../avg_pool/arch35/avg_pool_nhwc_small_kernel.h"
+#include "../avg_pool/arch35/avg_pool_nhwc_small_kernel_pad.h"
+#include "../avg_pool/arch35/avg_pool_nchw_small_kernel_pad.h"
+#include "../avg_pool/arch35/avg_pool_simt.h"
+#include "../avg_pool/arch35/avg_pool_nchw_small_kernel.h"
+#include "../avg_pool/arch35/avg_pool_big_kernel_nhwc.h"
+#include "../avg_pool/arch35/avg_pool_big_kernel.h"
+#include "../avg_pool/arch35/avg_pool_struct.h"
 
 #define AVG_POOL_TILING_KEY_SIMT_NCHW_INT32 911100
 #define AVG_POOL_TILING_KEY_SIMT_NHWC_INT32 911101
@@ -48,7 +47,7 @@ using namespace AvgPool;
 constexpr int32_t NCHW = 0;
 constexpr int32_t NHWC = 1;
 
-extern "C" __global__ __aicore__ void avg_pool(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void avg_pool_v2(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     AscendC::TPipe pipeBase;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);

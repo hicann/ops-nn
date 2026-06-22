@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file avg_pool_v2_grad.cpp
+ * \file avg_pool_grad.cpp
  * \brief
  */
 #include "../avg_pool_v2_grad/arch35/avg_pool_v2_grad_simt.h"

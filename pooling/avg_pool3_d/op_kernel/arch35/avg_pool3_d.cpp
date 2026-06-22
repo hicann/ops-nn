@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file avg_pool3_d_apt.cpp
+ * \file avg_pool3_d.cpp
  * \brief pool_3d implied
  */
 

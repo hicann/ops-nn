@@ -1,10 +1,10 @@
 /**
- * This program is free software, you can redistribute it and/or modify.
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- * This file is a part of the CANN Open Software.
- * Licensed under CANN Open Software License Agreement Version 2.0 (the "License").
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+ * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+ * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -12,11 +12,11 @@
  * \file avg_pool_v2_grad.cpp
  * \brief
  */
-#include "arch35/avg_pool_v2_grad_simt.h"
-#include "arch35/avg_pool_v2_grad_nhwc_kernel.h"
-#include "arch35/avg_pool_v2_grad_nchw_kernel.h"
-#include "arch35/avg_pool_v2_grad_tiling_data.h"
-#include "arch35/avg_pool_v2_grad_tiling_key.h"
+#include "avg_pool_v2_grad_simt.h"
+#include "avg_pool_v2_grad_nhwc_kernel.h"
+#include "avg_pool_v2_grad_nchw_kernel.h"
+#include "avg_pool_v2_grad_tiling_data.h"
+#include "avg_pool_v2_grad_tiling_key.h"
 using namespace AscendC;
 using namespace AvgPoolV2Grad;
 using namespace AvgPoolV2GradNHWCNameSpace;

@@ -9,14 +9,14 @@
  */
 
 /* !
- * \file adaptive_avg_pool2d_apt.cpp
+ * \file adaptive_avg_pool2d.cpp
  * \brief
  */
 
-#include "arch35/adaptive_avg_pool2d_big_kernel.h"
-#include "arch35/adaptive_avg_pool2d_simt.h"
-#include "arch35/adaptive_avg_pool2d_small_kernel.h"
-#include "arch35/adaptive_avg_pool2d_struct.h"
+#include "adaptive_avg_pool2d_big_kernel.h"
+#include "adaptive_avg_pool2d_simt.h"
+#include "adaptive_avg_pool2d_small_kernel.h"
+#include "adaptive_avg_pool2d_struct.h"
 
 using namespace AdaptiveAvgPool2dOp;
 template <uint64_t TEMPLATE_MODE = TPL_SIMT_KERNEL, uint64_t DTYPE_MODE = TPL_INT32_UINT32, uint64_t NC_FACTOR,

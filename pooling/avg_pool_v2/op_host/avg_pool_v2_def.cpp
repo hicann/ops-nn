@@ -67,8 +67,7 @@ public:
               .DynamicRankSupportFlag(true)
               .DynamicShapeSupportFlag(true)
               .NeedCheckSupportFlag(false)
-              .PrecisionReduceFlag(true)
-              .ExtendCfgInfo("opFile.value", "avg_pool_v2_apt");
+              .PrecisionReduceFlag(true);
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
