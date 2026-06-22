@@ -68,7 +68,7 @@
 | [aclnnApplyAdamWV2](../../optim/apply_adam_w_v2/docs/aclnnApplyAdamWV2.md) | 实现adamW优化器功能。 | - | 默认确定性实现 |
 | [aclnnApplyFusedEmaAdam](../../optim/apply_fused_ema_adam/docs/aclnnApplyFusedEmaAdam.md) | 实现FusedEmaAdam融合优化器功能。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnApplyTopKTopP](../../index/apply_top_k_top_p_with_sorted/docs/aclnnApplyTopKTopP.md) | 对原始输入logits进行top-k和top-p采样过滤。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md) | 根据输入的scale和offset对输入x进行反量化。 | 默认确定性实现 | 默认确定性实现  |
+| [aclnnAscendAntiQuant](../../quant/ascend_anti_quant_v2/docs/aclnnAscendAntiQuant.md) | 根据输入的scale和offset对输入x进行反量化。 | 默认确定性实现 | -  |
 | [aclnnAscendQuant](../../quant/ascend_quant_v2/docs/aclnnAscendQuant.md) | 根据输入的scale和offset对输入x进行量化，且scale和offset的size需要是x的最后一维或1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAscendQuantV3](../../quant/ascend_quant_v2/docs/aclnnAscendQuantV3.md) | 对输入x进行量化操作，支持设置axis以指定scale和offset对应的轴，scale和offset的shape需要满足和axis指定x的轴相等或1。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAvgPool2d](../../pooling/avg_pool3_d/docs/aclnnAvgPool2d.md) | 对输入Tensor进行窗口为$kH * kW$、步长为$sH * sW$的二维平均池化操作。 | 默认确定性实现 | 默认确定性实现 |
@@ -245,7 +245,7 @@
 | [aclnnGemmaRmsNorm](../../norm/gemma_rms_norm/docs/aclnnGemmaRmsNorm.md) | GemmaRmsNorm算子是大模型常用的归一化操作，相比RmsNorm算子，在计算时对gamma执行了+1操作。 | 默认确定性实现 | - |
 | [aclnnGlu](../../activation/glu/docs/aclnnGlu.md) | GLU是一个门控线性单元函数，它将输入张量沿着指定的维度dim平均分成两个张量，并将其前部分张量与后部分张量的Sigmoid函数输出的结果逐元素相乘。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGluBackward](../../activation/sigmoid/docs/aclnnGluBackward.md) | 完成aclnnGlu的反向。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 确定性实现 |
+| [aclnnHardshrink](../../activation/hard_shrink/docs/aclnnHardshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | - |
 | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md) | 计算输入self的组归一化结果out，均值meanOut，标准差的倒数rstdOut。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnGroupNormBackward](../../norm/group_norm_grad/docs/aclnnGroupNormBackward.md) | [aclnnGroupNorm](../../norm/group_norm/docs/aclnnGroupNorm.md)的反向计算。用于计算输入张量的梯度，以便在反向传播过程中更新模型参数。 | 默认非确定性实现，支持配置开启 | 默认非确定性实现，支持配置开启 |
 | [aclnnGroupNormSilu](../../norm/group_norm_silu/docs/aclnnGroupNormSilu.md)|计算输入self的组归一化结果groupnormOut，均值meanOut，标准差的倒数rstdOut，将groupnormOut进行silu运算得到最终的输出out。|默认确定性实现| 默认确定性实现|
@@ -372,7 +372,7 @@
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 | - |
-| [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入Tensor逐元素计算SELU（Scaled Exponential Linear Unit）激活函数。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnSelu&aclnnInplaceSelu](../../activation/selu/docs/aclnnSelu&aclnnInplaceSelu.md) | 对输入Tensor逐元素计算SELU（Scaled Exponential Linear Unit）激活函数。 | 默认确定性实现 | - |
 | [aclnnSeluBackward](../../activation/selu_grad/docs/aclnnSeluBackward.md) | 完成aclnnSelu的反向。 | 默认确定性实现 | - |
 | [aclnnShrink](../../activation/shrink/docs/aclnnShrink.md) | 对输入张量进行非线性变换，根据输入值self与阈值lambd的关系，对输入通过偏移量bias进行缩放和偏移处理。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSigmoid&aclnnInplaceSigmoid](../../activation/sigmoid/docs/aclnnSigmoid&aclnnInplaceSigmoid.md) | 对输入Tensor完成sigmoid运算。 | 默认确定性实现 | 默认确定性实现 |
@@ -386,7 +386,7 @@
 | [aclnnSoftmax](../../activation/softmax_v2/docs/aclnnSoftmax.md) | 对输入张量计算softmax值。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftmaxBackward](../../activation/softmax_grad/docs/aclnnSoftmaxBackward.md) | 完成softmax的反向传播。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftmaxCrossEntropyWithLogits](../../activation/softmax_cross_entropy_with_logits/docs/aclnnSoftmaxCrossEntropyWithLogits.md) | 计算softmax和cross entropy的交叉熵损失，并给出对输入logits的反向梯度。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnSoftplus](../../activation/softplus_v2/docs/aclnnSoftplus.md) | 激活函数softplus。 | 默认确定性实现 | - |
 | [aclnnSoftplusBackward](../../activation/softplus_v2_grad/docs/aclnnSoftplusBackward.md) | aclnnSoftplus的反向传播。 | 默认确定性实现 | - |
 | [aclnnSoftshrink](../../activation/softshrink/docs/aclnnSoftshrink.md) | 以元素为单位，强制收缩λ范围内的元素。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSoftshrinkBackward](../../activation/softshrink_grad/docs/aclnnSoftshrinkBackward.md) | 完成Softshrink函数的反向接口。 | 默认确定性实现 | 默认确定性实现 |
