@@ -59,6 +59,16 @@ void IndexCheck(
         return;
     }
 
+    if (indices->Size() == 0) {
+        OP_LOGD("available indices is empty, skip IndexCheck.");
+        return;
+    }
+
+    if (bounds->Size() != indices->Size()) {
+        OP_LOGW("bounds size %d not equal indices size %d, skip IndexCheck.", bounds->Size(), indices->Size());
+        return;
+    }
+
     L0_DFX(IndexCheck, bounds, indices);
 
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(

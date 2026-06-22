@@ -492,17 +492,27 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
         if (indicesSize <= MAX_SUPPORT_DIMS_NUMS) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
+            FVector<bool, MAX_SUPPORT_DIMS_NUMS> dimMask;
             for (int64_t i = 0; i < indicesSize; ++i) {
                 const aclTensor* curIndices = (*indices)[i];
-                const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
-                CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-                indicesTensors.emplace_back(curIndicesTensor);
+                op::DataType curDataType = curIndices->GetDataType();
+                if (!curIndices->IsEmpty() && (curDataType == op::DataType::DT_INT64 || curDataType == op::DataType::DT_INT32)) {
+                    const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
+                    CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+                    indicesTensors.emplace_back(curIndicesTensor);
+                    dimMask.emplace_back(true);
+                }
+                else{
+                    dimMask.emplace_back(false);
+                }
             }
-            aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesSize);
+            aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesTensors.size());
             CHECK_RET(IndicesTensorList != nullptr, ACLNN_ERR_INNER_NULLPTR);
             FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-            for (size_t i = 0; i < self->GetViewShape().GetDimNum(); i++) {
-                boundsVec.emplace_back(self->GetViewShape().GetDim(i));
+            for (size_t i = 0; i < dimMask.size(); i++) {
+                if (dimMask[i]) {
+                    boundsVec.emplace_back(self->GetViewShape().GetDim(i));
+                }
             }
             aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
             const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
