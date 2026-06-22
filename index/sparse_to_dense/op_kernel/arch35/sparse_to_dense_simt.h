@@ -19,6 +19,7 @@
 #include "kernel_operator.h"
 #include "sparse_to_dense_struct.h"
 
+#include "simt_api/asc_simt.h"
 namespace SparseToDense {
 using namespace AscendC;
 
@@ -100,8 +101,8 @@ __aicore__ inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::Process(
         sparseDataNum = tilingData_.tailCoreHandleSparses;
     }
     COMP_T sparseBlockOffset = blockIdx_ * normCoreSparses;
-    AscendC::Simt::VF_CALL<SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SparseToDenseSimtCompute>(
-        AscendC::Simt::Dim3(USED_THREAD), numDims, sparseBlockOffset, sparseDataNum,
+    asc_vf_call<SparseToDenseSimt<IDX_T, Y_T, COMP_T, isScalar>::SparseToDenseSimtCompute>(
+        dim3(USED_THREAD), numDims, sparseBlockOffset, sparseDataNum,
         (__gm__ IDX_T*)(indices_.GetPhyAddr()), (__gm__ IDX_T*)(outputShape_.GetPhyAddr()),
         (__gm__ Y_T*)(values_.GetPhyAddr()), (__gm__ Y_T*)(y_.GetPhyAddr()));
 }
@@ -139,8 +140,8 @@ LAUNCH_BOUND(USED_THREAD) inline void SparseToDenseSimt<IDX_T, Y_T, COMP_T, isSc
     __gm__ IDX_T* indices, __gm__ IDX_T* outputShape, __gm__ Y_T* values, __gm__ Y_T* y)
 {
     COMP_T sparseBlockMax = sparseBlockOffset + sparseDataNum;
-    for (COMP_T idx = sparseBlockOffset + Simt::GetThreadIdx(); idx < sparseBlockMax;
-         idx += Simt::GetThreadNum()) {
+    for (COMP_T idx = sparseBlockOffset + threadIdx.x; idx < sparseBlockMax;
+         idx += blockDim.x) {
         COMP_T outputIdx = indices[idx * numDims + numDims - 1]; //  idx索引的坐标的最后一个值
         COMP_T strides = 1;                                      //  每个维度对应的偏移步长
         for (int i = numDims - DIMENSION_OFFSET_FROM_LAST; i >= 0; i--) {
