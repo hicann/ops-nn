@@ -6,7 +6,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -238,7 +238,7 @@ aclnnStatus aclnnGemmaRmsNorm(
   - 当输入是Inf时，输出为Inf。
   - 当输入是NaN时，输出为NaN。
 - 各平台支持数据类型说明：
-    
+
     | `x`数据类型 | `gamma`数据类型 | `yOut`数据类型 | `rstdOut`数据类型 |
     | -------- | -------- | -------- | -------- |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 |

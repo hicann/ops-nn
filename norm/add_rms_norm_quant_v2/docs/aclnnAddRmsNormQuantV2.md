@@ -145,7 +145,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
       <td><ul><li>支持空Tensor。</li><li>shape需要与`gamma`保持一致。</li><li>当参数divMode的值为True时，该参数的值不能为0。</li></ul></td>
-      <td>FLOAT32、BFLOAT16</td>
+      <td>FLOAT32、BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>数据类型需要与`scales1`保持如下对应关系：<ul><li>当scales1数据类型为FLOAT16时，scales2Optional的数据类型必须为FLOAT32。</li><li>当scales1数据类型为FLOAT32、BFLOAT16时，scales2Optional的数据类型与`scales1`保持一致。</li></ul></li><li>shape需要与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
       <td>FLOAT32、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
