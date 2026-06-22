@@ -1,17 +1,15 @@
 # ReluGradV2
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/relu_grad_v2)
-
 ## 产品支持情况
 
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
-| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |    ×     |
-| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>     |     √     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term> |     √     |
 | <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
-| <term>Atlas 推理系列产品</term>    |     ×    |
-| <term>Atlas 训练系列产品</term>    |     ×    |
+| <term>Atlas 推理系列产品</term>    |      √    |
+| <term>Atlas 训练系列产品</term>    |      √    |
 
 ## 功能说明
 
@@ -47,25 +45,29 @@
     <tr>
       <td>gradients</td>
       <td>输入</td>
-      <td>传递给对应Relu操作的反向传播梯度</td>
+      <td>传递给对应Relu操作的反向传播梯度。</td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT8、INT32、UINT8</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>mask</td>
       <td>输入</td>
-      <td>作为输入传递给对应ReluV2操作的特征</td>
+      <td>作为输入传递给对应ReluV2操作的特征。</td>
       <td>UINT1</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>backprops</td>
       <td>输出</td>
-      <td>公式中的输出张量</td>
+      <td>公式中的输出张量。</td>
       <td>BFLOAT16、FLOAT16、FLOAT、INT8、INT32、UINT8</td>
       <td>ND</td>
     </tr>
   </tbody></table>
+
+## 约束说明
+
+无
 
 ## 调用说明
 
