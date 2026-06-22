@@ -19,7 +19,7 @@
 - 计算公式：
 
   $$
-  output = 
+  output =
   \begin{cases}
   gradOutput(i) & \text{if } self(i) > threshold \\
   0 & \text{otherwise}
@@ -104,7 +104,7 @@ aclnnStatus aclnnThresholdBackward(
       <td>0-8</td>
       <td>√</td>
     </tr>
-    
+
     <tr>
       <td>out（aclTensor*）</td>
       <td>输出</td>
