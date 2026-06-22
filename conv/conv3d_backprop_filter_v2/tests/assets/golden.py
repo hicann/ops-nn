@@ -135,12 +135,24 @@ def parse_pads(pads):
         return val, val, val, val, val, val
 
 
-def parse_strides_dilations(param):
-    """Parse strides or dilations parameter for 3D convolution."""
+def parse_strides_dilations(param, data_format=NDHWC_FORMAT):
+    """Parse strides or dilations parameter for 3D convolution based on data_format.
+
+    5-element layout depends on data_format:
+    - NCDHW: (N, C, D, H, W) → D=2, H=3, W=4
+    - NDHWC: (N, D, H, W, C) → D=1, H=2, W=3
+    - DHWCN: (D, H, W, C, N) → D=0, H=1, W=2
+    """
     if isinstance(param, (list, tuple)):
         if len(param) == 5:
-            # N, C, D, H, W format - use D, H, W positions
-            return int(param[2]), int(param[3]), int(param[4])
+            if data_format == NDHWC_FORMAT:
+                return int(param[1]), int(param[2]), int(param[3])
+            elif data_format == DHWCN_FORMAT:
+                return int(param[0]), int(param[1]), int(param[2])
+            elif data_format == NCDHW_FORMAT:
+                return int(param[2]), int(param[3]), int(param[4])
+            else:
+                raise ValueError(f"Unsupported data_format for strides/dilations: {data_format}, expected NCDHW/NDHWC/DHWCN")
         elif len(param) == 3:
             return int(param[0]), int(param[1]), int(param[2])
         else:
@@ -167,12 +179,24 @@ def to_NCDHW_from_NDC1HWC0(data, ori_shape):
 
 
 def process_format_to_ncdhw(data, data_format, ori_shape=None):
-    """Convert data from original format to NCDHW for computation."""
+    """Convert data from original format to NCDHW for computation.
+
+    Supported conversions:
+    - NDHWC: (N, D, H, W, C) -> NCDHW: (N, C, D, H, W)  transpose(0,4,1,2,3)
+    - DHWCN: (D, H, W, C, N) -> NCDHW: (N, C, D, H, W)  transpose(4,3,0,1,2)
+    - NDC1HWC0 -> NCDHW (6D special format for Ascend910B)
+    - NCDHW: no conversion needed
+    """
     if data_format == NDHWC_FORMAT:
-        # NDHWC: (N, D, H, W, C) -> NCDHW: (N, C, D, H, W)
         data = data.transpose(0, 4, 1, 2, 3)
+    elif data_format == DHWCN_FORMAT:
+        data = data.transpose(4, 3, 0, 1, 2)
     elif data_format == "NDC1HWC0" and ori_shape is not None:
         data = to_NCDHW_from_NDC1HWC0(data, ori_shape)
+    elif data_format == NCDHW_FORMAT:
+        pass
+    else:
+        raise ValueError(f"Unsupported input format: {data_format}, expected NCDHW/NDHWC/DHWCN/NDC1HWC0")
     return data
 
 
@@ -225,24 +249,50 @@ def to_FRACTAL_Z_3D_from_NCDHW(data, filter_ori_shape, groups=1):
     return weight_group
 
 
+def normalize_5d_shape_to_ncdhw(shape, data_format):
+    """Convert a 5-element shape tuple from given format to NCDHW order (N, C, D, H, W).
+
+    Mapping (consistent with GetNCDHWShape in tiling code):
+    - NCDHW: (N=0, C=1, D=2, H=3, W=4) → no reorder
+    - NDHWC: (N=0, D=1, H=2, W=3, C=4) → (shape[0], shape[4], shape[1], shape[2], shape[3])
+    - DHWCN: (D=0, H=1, W=2, C=3, N=4) → (shape[4], shape[3], shape[0], shape[1], shape[2])
+    """
+    if len(shape) != 5:
+        return shape
+    if data_format == NDHWC_FORMAT:
+        return (shape[0], shape[4], shape[1], shape[2], shape[3])
+    elif data_format == DHWCN_FORMAT:
+        return (shape[4], shape[3], shape[0], shape[1], shape[2])
+    elif data_format == NCDHW_FORMAT:
+        return tuple(shape)
+    else:
+        raise ValueError(f"Unsupported format for shape normalization: {data_format}, expected NCDHW/NDHWC/DHWCN")
+
+
 def is_ascend950(short_soc_version):
     """Check if the target is Ascend 950PR/950DT"""
     return short_soc_version == "Ascend950"
 
 
 def process_output_format(data, output_format, input_format, short_soc_version=None,
-                           output_ori_shape=None, groups=1):
+                           output_ori_shape=None, output_ori_format=NCDHW_FORMAT, groups=1):
     """Convert output from NCDHW to target output format."""
     if output_format == "FRACTAL_Z_3D":
         # For Ascend910B series, output weight in FRACTAL_Z_3D format
+        # to_FRACTAL_Z_3D_from_NCDHW expects NCDHW-ordered shape (c_out, c_in_per_group, kd, kh, kw)
         if output_ori_shape is not None:
-            data = to_FRACTAL_Z_3D_from_NCDHW(data, output_ori_shape, groups)
+            ncdhw_shape = normalize_5d_shape_to_ncdhw(output_ori_shape, output_ori_format)
+            data = to_FRACTAL_Z_3D_from_NCDHW(data, ncdhw_shape, groups)
     elif output_format == NDHWC_FORMAT:
         # NCDHW: (N, C, D, H, W) -> NDHWC: (N, D, H, W, C)
         data = data.transpose(0, 2, 3, 4, 1)
     elif output_format == DHWCN_FORMAT:
         # NCDHW: (N, C, D, H, W) -> DHWCN: (D, H, W, C, N)
-        data = data.transpose(1, 2, 3, 4, 0)
+        data = data.transpose(2, 3, 4, 1, 0)
+    elif output_format == NCDHW_FORMAT:
+        pass
+    else:
+        raise ValueError(f"Unsupported output format: {output_format}, expected NCDHW/NDHWC/DHWCN/FRACTAL_Z_3D")
     return data
 
 
@@ -309,20 +359,33 @@ def conv3d_backprop_filter_v2_golden(x, filter_size, out_backprop,
             if output_ori_shapes and len(output_ori_shapes) > 0:
                 filter_shape = tuple(output_ori_shapes[0])
 
-    # filter_size should be 5-element: (C_out, C_in/groups, kD, kH, kW) for NCDHW
-    # or (C_out, kD, kH, kW, C_in/groups) for DHWCN
-    c_out = filter_shape[0]
     if len(filter_shape) == 5:
-        c_in_per_group = filter_shape[1]
-        kd = filter_shape[2]
-        kh = filter_shape[3]
-        kw = filter_shape[4]
+        if output_format == NDHWC_FORMAT:
+            c_out = filter_shape[0]
+            c_in_per_group = filter_shape[4]
+            kd = filter_shape[1]
+            kh = filter_shape[2]
+            kw = filter_shape[3]
+        elif output_format == DHWCN_FORMAT:
+            c_out = filter_shape[4]
+            c_in_per_group = filter_shape[3]
+            kd = filter_shape[0]
+            kh = filter_shape[1]
+            kw = filter_shape[2]
+        elif output_format == NCDHW_FORMAT or output_format == "FRACTAL_Z_3D":
+            c_out = filter_shape[0]
+            c_in_per_group = filter_shape[1]
+            kd = filter_shape[2]
+            kh = filter_shape[3]
+            kw = filter_shape[4]
+        else:
+            raise ValueError(f"Unsupported output_format for filter_size parsing: {output_format}, expected NCDHW/NDHWC/DHWCN/FRACTAL_Z_3D")
     else:
         raise ValueError(f"filter_size must be 5-element tuple/list, got {filter_shape}")
 
     # Parse convolution parameters
-    stride_d, stride_h, stride_w = parse_strides_dilations(strides)
-    dilation_d, dilation_h, dilation_w = parse_strides_dilations(dilations)
+    stride_d, stride_h, stride_w = parse_strides_dilations(strides, data_format)
+    dilation_d, dilation_h, dilation_w = parse_strides_dilations(dilations, data_format)
     pad_d_front, pad_d_back, pad_top, pad_bottom, pad_left, pad_right = parse_pads(pads)
 
     # Use float64 for better precision in gradient computation
@@ -396,9 +459,10 @@ def conv3d_backprop_filter_v2_golden(x, filter_size, out_backprop,
     # Output format for weight gradient: NCDHW, NDHWC, DHWCN, or FRACTAL_Z_3D
     # grad_weight is always in NCDHW format (C_out, C_in/groups, kD, kH, kW) from PyTorch
     output_ori_shape = output_ori_shapes[0] if output_ori_shapes and len(output_ori_shapes) > 0 else None
+    output_ori_format = output_formats[0] if output_formats and len(output_formats) > 0 else NCDHW_FORMAT
     grad_weight_result = process_output_format(
         grad_weight_result, output_format, x_format,
-        short_soc_version, output_ori_shape, groups
+        short_soc_version, output_ori_shape, output_ori_format, groups
     )
 
     return grad_weight_result
