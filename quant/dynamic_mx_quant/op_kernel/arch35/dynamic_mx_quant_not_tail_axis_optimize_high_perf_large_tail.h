@@ -1017,7 +1017,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::MaskReg pregAll16 = Reg::CreateMask<uint16_t, Reg::MaskPattern::ALL>();
         Reg::MaskReg pregAll32 = Reg::CreateMask<uint32_t, Reg::MaskPattern::ALL>();
 
-        uint32_t dataLen = dataLen32Align_;
+        uint32_t maskLen = dataLen32Align_;
         static constexpr Reg::CastTrait castTraitBf16toFp4 = {
             Reg::RegLayout::ZERO, Reg::SatMode::SAT, Reg::MaskMergeMode::ZEROING, roundMode};
         static constexpr Reg::CastTrait castTraitXdtypetoFp32Zero = {
@@ -1038,8 +1038,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         for (uint16_t j = 0; j < blockCount; j++) {
             DataCopy<xDtype, Reg::LoadDist::DIST_NORM>(x0FP32, xAddr + j * dataLen8Align_);
             if constexpr (IsSame<yDtype, fp4x2_e2m1_t>::value || IsSame<yDtype, fp4x2_e1m2_t>::value) {
-                dataLen = dataLen64Align_ * DIGIT_TWO;
-                pregAll8 = Reg::UpdateMask<uint8_t>(dataLen);
+                maskLen = dataLen64Align_ * DIGIT_TWO;
+                pregAll8 = Reg::UpdateMask<uint8_t>(maskLen);
                 Reg::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
                 ComputeFP4FromHalf(x0FP32);
                 Reg::Cast<bfloat16_t, float, castTraitFp32toBF16Zero>(x0BF16, x0FP32, pregAll32);
@@ -1051,8 +1051,8 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
                 DataCopy<uint8_t, Reg::StoreDist::DIST_PACK4_B32>(
                     yAddr + (j * dataLen64Align_ / DIGIT_TWO), (Reg::RegTensor<uint8_t>&)yZeroFP4, pregAll8);
             } else {
-                dataLen = dataLen32Align_;
-                pregAll8 = Reg::UpdateMask<uint8_t>(dataLen);
+                maskLen = dataLen32Align_;
+                pregAll8 = Reg::UpdateMask<uint8_t>(maskLen);
                 Reg::Mul(x0FP32, x0FP32, reversedShareExp0FP32, pregAll32);
                 Reg::Cast<yDtype, float, castTraitFp32toYdtype>((Reg::RegTensor<yDtype>&)yZeroU32, x0FP32, pregAll32);
                 Reg::Pack<uint16_t, uint32_t, Reg::HighLowPart::LOWEST>(yZeroU16, yZeroU32);
