@@ -67,7 +67,7 @@ const int64_t ANTIQUANT_GRP_SIZE128 = 128;
 const int64_t N_ALIGN_VALUE = 64;
 const uint64_t INPUT_DIM_WITHOUT_BATCH = 2;
 
-static constexpr const char* kOpName = "aclnnWeightQuantBatchMatmulV2";
+static constexpr const char* kOpName = "aclnnWeightQuantBatchMatmulV2GetWorkspaceSize";
 
 static const std::initializer_list<DataType> ASCEND910B_AQSCALE_DTYPE_SUPPORT_LIST = {
     DataType::DT_FLOAT16, DataType::DT_BF16, DataType::DT_UINT64, DataType::DT_INT64};
@@ -849,7 +849,8 @@ static bool CheckWeightFormat(const aclTensor* weight)
 
 static bool CheckOptionalNotNull(const aclTensor* quantScaleOptional, const aclTensor* quantOffsetOptional)
 {
-    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
+    if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P ||
+        op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
         if (quantScaleOptional != nullptr || quantOffsetOptional != nullptr) {
             OP_LOGE(ACLNN_ERR_PARAM_NULLPTR, "Current Soc do not support quantScaleOptional or quantOffsetOptional");
             return false;
@@ -921,7 +922,8 @@ static bool CheckXYDtypeValidForFixpipe(
 }
 
 static bool CheckXDtypeValidForNormal(
-    const aclTensor* x, const aclTensor* antiquantScale, const aclTensor* antiquantOffsetOptional)
+    const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale,
+    const aclTensor* antiquantOffsetOptional)
 {
     if (antiquantScale->GetDataType() != DataType::DT_FLOAT8_E8M0 &&
         x->GetDataType() != antiquantScale->GetDataType()) {
@@ -931,6 +933,17 @@ static bool CheckXDtypeValidForNormal(
             "dtype is [%s], antiquantScale's dtype is [%s].",
             op::ToString(x->GetDataType()).GetString(), op::ToString(antiquantScale->GetDataType()).GetString());
         return false;
+    }
+
+    if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510 && antiquantOffsetOptional != nullptr) {
+        bool unsupportOffsetFlag =
+            weight->GetDataType() == DataType::DT_FLOAT4_E2M1 || weight->GetDataType() == DataType::DT_FLOAT8_E4M3FN ||
+            weight->GetDataType() == DataType::DT_HIFLOAT8 || weight->GetDataType() == DataType::DT_FLOAT;
+        OP_CHECK(!unsupportOffsetFlag,
+                 OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantOffsetOptional", "not null",
+                                                       "When the weight dtype is FP32/FP4_E2M1/FP8_E4M3/HIFLOAT8, the "
+                                                       "value of antiquantOffsetOptional must be null"),
+                 return false);
     }
 
     if (antiquantOffsetOptional != nullptr && antiquantOffsetOptional->GetDataType() != antiquantScale->GetDataType()) {
@@ -1014,7 +1027,7 @@ static bool CheckScaleDtypeValid(
         (antiquantScale->GetDataType() == DataType::DT_INT64)) {
         CHECK_RET(CheckXYDtypeValidForFixpipe(x, antiquantOffsetOptional, weight, y), false);
     } else {
-        CHECK_RET(CheckXDtypeValidForNormal(x, antiquantScale, antiquantOffsetOptional), false);
+        CHECK_RET(CheckXDtypeValidForNormal(x, weight, antiquantScale, antiquantOffsetOptional), false);
     }
 
     return true;
@@ -1850,6 +1863,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNzGetWorkspaceSize(
     aclnnStatus socRes = CheckNzSocValid();
     CHECK_RET(socRes == ACLNN_SUCCESS, socRes);
     CHECK_RET(CheckNotNull(x, weight, antiquantScale, y), ACLNN_ERR_PARAM_NULLPTR);
+    CHECK_RET(CheckOptionalNotNull(quantScaleOptional, quantOffsetOptional), ACLNN_ERR_PARAM_NULLPTR);
     OP_CHECK(
         IsNzFormat(weight),
         OP_LOGE_FOR_INVALID_FORMAT(
