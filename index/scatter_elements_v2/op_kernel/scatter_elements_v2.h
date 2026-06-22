@@ -16,6 +16,7 @@
 #define SCATTER_ELEMENTS_V2_H
 #include "kernel_operator.h"
 
+#define IS_CAST_FLOAT (((is_same<T, half>::value) || (is_same<T, bfloat16_t>::value)) && MODE == 2)
 #define IS_CAST_INT (is_same<U, int64_t>::value)
 using namespace AscendC;
 
@@ -36,7 +37,7 @@ constexpr int INT32_OFFSET = 31;
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t SMALL_MODE = 1;
 
-template <typename T, typename U>
+template <typename T, typename U, const uint32_t MODE>
 class KernelScatterElementsV2
 {
 public:
@@ -50,16 +51,99 @@ public:
 
         pipe = tmpPipe;
         coreId = GetBlockIdx();
-        LoadTilingData(tiling_data);
-        InitGlobalBuffers(input, indices, updates);
+        usedCoreNum = tiling_data->usedCoreNum;
+        eachNum = tiling_data->eachNum;
+        uint32_t extraTaskCore = tiling_data->extraTaskCore;
+        inputCount = tiling_data->inputCount;
+        indicesCount = tiling_data->indicesCount;
+        updatesCount = tiling_data->updatesCount;
+        inputOneTime = tiling_data->inputOneTime;
+        indicesOneTime = tiling_data->indicesOneTime;
+        updatesOneTime = tiling_data->updatesOneTime;
+        inputLoop = tiling_data->inputLoop;
+        indicesLoop = tiling_data->indicesLoop;
+        inputEach = tiling_data->inputEach;
+        indicesEach = tiling_data->indicesEach;
+        inputLast = tiling_data->inputLast;
+        indicesLast = tiling_data->indicesLast;
+        inputAlign = tiling_data->inputAlign;
+        indicesAlign = tiling_data->indicesAlign;
+        updatesAlign = tiling_data->updatesAlign;
+        inputOnePiece = tiling_data->inputOnePiece;
+        modeFlag = tiling_data->modeFlag;
+        lastIndicesLoop = tiling_data->lastIndicesLoop;
+        lastIndicesEach = tiling_data->lastIndicesEach;
+        lastIndicesLast = tiling_data->lastIndicesLast;
+        oneTime = tiling_data->oneTime;
+
+        inputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(input), inputCount);
+        indicesGm.SetGlobalBuffer(reinterpret_cast<__gm__ U*>(indices), indicesCount);
+        updatesGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(updates), updatesCount);
 
         if (modeFlag == SMALL_MODE) {
-            InitSmallModeBuffers();
+            indicesLoop = coreId == (usedCoreNum - 1) ? lastIndicesLoop : indicesLoop;
+            indicesEach = coreId == (usedCoreNum - 1) ? lastIndicesEach : indicesEach;
+            indicesLast = coreId == (usedCoreNum - 1) ? lastIndicesLast : indicesLast;
+
+            inputAlign = (indicesEach * inputOneTime + dataAlign - 1) / dataAlign * dataAlign;
+            indicesAlign = (indicesEach * indicesOneTime + dataAlign - 1) / dataAlign * dataAlign;
+            updatesAlign = (indicesEach * updatesOneTime + dataAlign - 1) / dataAlign * dataAlign;
+
+            pipe->InitBuffer(inQueueSelf, BUFFER_NUM, inputAlign * sizeof(T));
+            if constexpr (IS_CAST_INT) {
+                pipe->InitBuffer(inQueueIndics, BUFFER_NUM, indicesAlign * sizeof(U));
+            }
+            pipe->InitBuffer(inQueueUpdates, BUFFER_NUM, updatesAlign * sizeof(T));
+            if constexpr (IS_CAST_FLOAT) {
+                pipe->InitBuffer(calcSelfBuf, inputAlign * sizeof(float));
+                pipe->InitBuffer(calcUpdatesBuf, updatesAlign * sizeof(float));
+                inputTemp = calcSelfBuf.Get<float>();
+                updatesTemp = calcUpdatesBuf.Get<float>();
+            }
         } else {
-            InitScatterModeBuffers(tiling_data);
+            pieceEach = inputEach;
+            pieceLast = inputLast;
+            if (eachNum == 0) {
+                uint32_t eachPiece = tiling_data->eachPiece;
+                start = coreId / eachPiece;
+                currentPiece = coreId % eachPiece;
+                currentNum = 1;
+                if (currentPiece == eachPiece - 1) {
+                    auto tmpOnePiece = inputOneTime - inputOnePiece * (eachPiece - 1);
+                    pieceEach = (tmpOnePiece + inputLoop - 1) / inputLoop;
+                    pieceLast = tmpOnePiece - pieceEach * (inputLoop - 1);
+                }
+            } else {
+                currentPiece = 0;
+                currentNum = coreId < extraTaskCore ? (eachNum + 1) : eachNum;
+                start = coreId * eachNum + (coreId < extraTaskCore ? coreId : extraTaskCore);
+            }
+
+            if constexpr (IS_CAST_FLOAT) {
+                pipe->InitBuffer(calcSelfBuf, inputAlign * sizeof(float));
+                pipe->InitBuffer(calcUpdatesBuf, updatesAlign * sizeof(float));
+                inputTemp = calcSelfBuf.Get<float>();
+                updatesTemp = calcUpdatesBuf.Get<float>();
+            }
+
+            pipe->InitBuffer(inQueueSelf, BUFFER_NUM, inputAlign * sizeof(T));
+            if constexpr (IS_CAST_INT) {
+                pipe->InitBuffer(inQueueIndics, BUFFER_NUM, indicesAlign * sizeof(U));
+            }
+            pipe->InitBuffer(inQueueUpdates, BUFFER_NUM, updatesAlign * sizeof(T));
         }
 
-        InitLocalTensors();
+        pipe->InitBuffer(calcIndices32Buf, indicesAlign * sizeof(int));
+        indices32Local = calcIndices32Buf.Get<int>();
+        inputLocal = inQueueSelf.AllocTensor<T>();
+        if constexpr (IS_CAST_INT) {
+            indicesLocal = inQueueIndics.AllocTensor<U>();
+        }
+        updatesLocal = inQueueUpdates.AllocTensor<T>();
+
+        padParams = {false, 0, 0, 0};
+        tPadParams = {false, 0, 0, static_cast<T>(0)};
+        uPadParams = {false, 0, 0, static_cast<U>(0)};
     }
 
     __aicore__ inline void CopyInIndex(int indicesIndex)
@@ -75,56 +159,12 @@ public:
 
     __aicore__ inline void ScatterSetValue(int k, int kIndex)
     {
-        if (mode == 1) {
+        if constexpr (MODE == 1) {
             inputLocal.SetValue(kIndex, updatesLocal.GetValue(k));
-            return;
-        }
-        int hitCount = countLocal.GetValue(kIndex);
-        countLocal.SetValue(kIndex, hitCount + 1);
-        bool useUpdateOnly = includeSelf == 0 && hitCount == 0;
-        if constexpr (IsCastFloatType()) {
-            if (IsCastFloat()) {
-                float inputValue = inputTemp.GetValue(kIndex);
-                float updateValue = updatesTemp.GetValue(k);
-                inputTemp.SetValue(kIndex, ReduceValue<float>(inputValue, updateValue, useUpdateOnly));
-                return;
-            }
-            return;
-        }
-        if constexpr (!IsCastFloatType()) {
-            T inputValue = inputLocal.GetValue(kIndex);
-            T updateValue = updatesLocal.GetValue(k);
-            inputLocal.SetValue(kIndex, ReduceValue<T>(inputValue, updateValue, useUpdateOnly));
-        }
-    }
-
-    __aicore__ inline void InitHitCount(uint64_t count)
-    {
-        if (NeedHitCount()) {
-            for (uint64_t i = 0; i < count; ++i) {
-                countLocal.SetValue(i, 0);
-            }
-        }
-    }
-
-    __aicore__ inline void CalcMeanValue(uint64_t count)
-    {
-        if (mode == 6) {
-            for (uint64_t i = 0; i < count; ++i) {
-                int hitCount = countLocal.GetValue(i);
-                if (hitCount == 0) {
-                    continue;
-                }
-                int divisor = includeSelf != 0 ? hitCount + 1 : hitCount;
-                if constexpr (IsCastFloatType()) {
-                    if (IsCastFloat()) {
-                        inputTemp.SetValue(i, inputTemp.GetValue(i) / static_cast<float>(divisor));
-                        continue;
-                    }
-                } else {
-                    inputLocal.SetValue(i, inputLocal.GetValue(i) / static_cast<T>(divisor));
-                }
-            }
+        } else if constexpr (IS_CAST_FLOAT) {
+            inputTemp.SetValue(kIndex, inputTemp.GetValue(kIndex) + updatesTemp.GetValue(k));
+        } else {
+            inputLocal.SetValue(kIndex, inputLocal.GetValue(kIndex) + updatesLocal.GetValue(k));
         }
     }
 
@@ -148,13 +188,15 @@ public:
             CopyInIndex(indicesIndex);
             DataCopyPad(updatesLocal, updatesGm[updatesIndex], updatesExtParams, tPadParams);
             DataCopyPad(inputLocal, inputGm[inputIndex], inputExtParams, tPadParams);
-            CastInputToFloat(inputAlign);
-            CastUpdatesToFloat(updatesAlign);
+            if constexpr (IS_CAST_FLOAT) {
+                PIPE_MTE2_V();
+                Cast(inputTemp, inputLocal, RoundMode::CAST_NONE, inputAlign);
+                Cast(updatesTemp, updatesLocal, RoundMode::CAST_NONE, updatesAlign);
+            }
             if constexpr (IS_CAST_INT) {
                 PIPE_MTE2_V();
                 Cast<int, U>(indices32Local, indicesLocal, RoundMode::CAST_NONE, indicesAlign);
             }
-            InitHitCount(inputAlign);
             PipeBarrier<PIPE_ALL>();
             for (uint64_t j = 0; j < currentIndices; ++j) {
                 for (uint64_t k = 0; k < indicesOneTime; ++k) {
@@ -164,18 +206,25 @@ public:
                 }
             }
             PipeBarrier<PIPE_ALL>();
-            CalcMeanValue(inputAlign);
-            CastFloatToInput(inputAlign);
+            if constexpr (IS_CAST_FLOAT) {
+                Cast(inputLocal, inputTemp, RoundMode::CAST_RINT, inputAlign);
+                PIPE_V_MTE3();
+            }
             DataCopyPad(inputGm[inputIndex], inputLocal, inputExtParams);
         }
-        FreeLocalTensors();
+        inQueueSelf.FreeTensor(inputLocal);
+        if constexpr (IS_CAST_INT) {
+            inQueueIndics.FreeTensor(indicesLocal);
+        }
+        inQueueUpdates.FreeTensor(updatesLocal);
     }
 
     __aicore__ inline void ProcessScatter()
     {
         for (uint64_t index = start; index < start + currentNum; ++index) {
             uint64_t inputIndex = index * inputOneTime + currentPiece * inputOnePiece;
-            uint64_t indicesIndex = index * indicesOneTime, updatesIndex = index * updatesOneTime;
+            uint64_t indicesIndex = index * indicesOneTime;
+            uint64_t updatesIndex = index * updatesOneTime;
 
             for (uint64_t i = 0; i < inputLoop; ++i) {
                 PIPE_MTE3_MTE2();
@@ -186,8 +235,10 @@ public:
                 inputExtParams = {(uint16_t)1, static_cast<uint32_t>(currentInput * sizeof(T)), 0, 0, 0};
                 DataCopyPad(inputLocal, inputGm[inputIndex + i * pieceEach], inputExtParams, tPadParams);
 
-                CastInputToFloat(inputAlign);
-                InitHitCount(inputAlign);
+                if constexpr (IS_CAST_FLOAT) {
+                    PIPE_MTE2_V();
+                    Cast(inputTemp, inputLocal, RoundMode::CAST_NONE, inputAlign);
+                }
 
                 for (uint64_t j = 0; j < indicesLoop; ++j) {
                     uint64_t currentIndices = indicesEach;
@@ -203,7 +254,9 @@ public:
                         Cast<int, U>(indices32Local, indicesLocal, RoundMode::CAST_NONE, indicesAlign);
                         PipeBarrier<PIPE_V>();
                     }
-                    CastUpdatesToFloat(updatesAlign);
+                    if constexpr (IS_CAST_FLOAT) {
+                        Cast(updatesTemp, updatesLocal, RoundMode::CAST_NONE, updatesAlign);
+                    }
                     Adds(
                         indices32Local, indices32Local, static_cast<int>(-i * pieceEach - currentPiece * inputOnePiece),
                         static_cast<int>(indicesAlign));
@@ -217,12 +270,18 @@ public:
                     }
                 }
                 PipeBarrier<PIPE_ALL>();
-                CalcMeanValue(inputAlign);
-                CastFloatToInput(inputAlign);
+                if constexpr (IS_CAST_FLOAT) {
+                    Cast(inputLocal, inputTemp, RoundMode::CAST_RINT, inputAlign);
+                    PIPE_V_MTE3();
+                }
                 DataCopyPad(inputGm[inputIndex + i * pieceEach], inputLocal, inputExtParams);
             }
         }
-        FreeLocalTensors();
+        inQueueSelf.FreeTensor(inputLocal);
+        if constexpr (IS_CAST_INT) {
+            inQueueIndics.FreeTensor(indicesLocal);
+        }
+        inQueueUpdates.FreeTensor(updatesLocal);
     }
 
     __aicore__ inline void PIPE_MTE3_MTE2() {
@@ -250,198 +309,13 @@ public:
     }
 
 private:
-    __aicore__ inline void LoadTilingData(const ScatterElementsV2TilingData* __restrict tiling_data)
-    {
-        usedCoreNum = tiling_data->usedCoreNum;
-        eachNum = tiling_data->eachNum;
-        inputCount = tiling_data->inputCount;
-        indicesCount = tiling_data->indicesCount;
-        updatesCount = tiling_data->updatesCount;
-        inputOneTime = tiling_data->inputOneTime;
-        indicesOneTime = tiling_data->indicesOneTime;
-        updatesOneTime = tiling_data->updatesOneTime;
-        inputLoop = tiling_data->inputLoop;
-        indicesLoop = tiling_data->indicesLoop;
-        inputEach = tiling_data->inputEach;
-        indicesEach = tiling_data->indicesEach;
-        inputLast = tiling_data->inputLast;
-        indicesLast = tiling_data->indicesLast;
-        inputAlign = tiling_data->inputAlign;
-        indicesAlign = tiling_data->indicesAlign;
-        updatesAlign = tiling_data->updatesAlign;
-        inputOnePiece = tiling_data->inputOnePiece;
-        modeFlag = tiling_data->modeFlag;
-        mode = tiling_data->mode;
-        includeSelf = tiling_data->includeSelf;
-        lastIndicesLoop = tiling_data->lastIndicesLoop;
-        lastIndicesEach = tiling_data->lastIndicesEach;
-        lastIndicesLast = tiling_data->lastIndicesLast;
-        oneTime = tiling_data->oneTime;
-    }
-
-    __aicore__ inline void InitGlobalBuffers(GM_ADDR input, GM_ADDR indices, GM_ADDR updates)
-    {
-        inputGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(input), inputCount);
-        indicesGm.SetGlobalBuffer(reinterpret_cast<__gm__ U*>(indices), indicesCount);
-        updatesGm.SetGlobalBuffer(reinterpret_cast<__gm__ T*>(updates), updatesCount);
-    }
-
-    __aicore__ inline void InitIoBuffers()
-    {
-        pipe->InitBuffer(inQueueSelf, BUFFER_NUM, inputAlign * sizeof(T));
-        if constexpr (IS_CAST_INT) {
-            pipe->InitBuffer(inQueueIndics, BUFFER_NUM, indicesAlign * sizeof(U));
-        }
-        pipe->InitBuffer(inQueueUpdates, BUFFER_NUM, updatesAlign * sizeof(T));
-    }
-
-    __aicore__ inline void InitCalcBuffers()
-    {
-        if constexpr (IsCastFloatType()) {
-            if (IsCastFloat()) {
-                pipe->InitBuffer(calcSelfBuf, inputAlign * sizeof(float));
-                pipe->InitBuffer(calcUpdatesBuf, updatesAlign * sizeof(float));
-                inputTemp = calcSelfBuf.Get<float>();
-                updatesTemp = calcUpdatesBuf.Get<float>();
-            }
-        }
-        if (NeedHitCount()) {
-            pipe->InitBuffer(calcCountBuf, inputAlign * sizeof(int));
-            countLocal = calcCountBuf.Get<int>();
-        }
-    }
-
-    __aicore__ inline void InitSmallModeBuffers()
-    {
-        indicesLoop = coreId == (usedCoreNum - 1) ? lastIndicesLoop : indicesLoop;
-        indicesEach = coreId == (usedCoreNum - 1) ? lastIndicesEach : indicesEach;
-        indicesLast = coreId == (usedCoreNum - 1) ? lastIndicesLast : indicesLast;
-        inputAlign = (indicesEach * inputOneTime + dataAlign - 1) / dataAlign * dataAlign;
-        indicesAlign = (indicesEach * indicesOneTime + dataAlign - 1) / dataAlign * dataAlign;
-        updatesAlign = (indicesEach * updatesOneTime + dataAlign - 1) / dataAlign * dataAlign;
-        InitIoBuffers();
-        InitCalcBuffers();
-    }
-
-    __aicore__ inline void InitScatterModeBuffers(const ScatterElementsV2TilingData* __restrict tiling_data)
-    {
-        pieceEach = inputEach;
-        pieceLast = inputLast;
-        if (eachNum == 0) {
-            uint32_t eachPiece = tiling_data->eachPiece;
-            start = coreId / eachPiece;
-            currentPiece = coreId % eachPiece;
-            currentNum = 1;
-            if (currentPiece == eachPiece - 1) {
-                auto tmpOnePiece = inputOneTime - inputOnePiece * (eachPiece - 1);
-                pieceEach = (tmpOnePiece + inputLoop - 1) / inputLoop;
-                pieceLast = tmpOnePiece - pieceEach * (inputLoop - 1);
-            }
-        } else {
-            uint32_t extraTaskCore = tiling_data->extraTaskCore;
-            currentPiece = 0;
-            currentNum = coreId < extraTaskCore ? (eachNum + 1) : eachNum;
-            start = coreId * eachNum + (coreId < extraTaskCore ? coreId : extraTaskCore);
-        }
-        InitCalcBuffers();
-        InitIoBuffers();
-    }
-
-    __aicore__ inline void InitLocalTensors()
-    {
-        pipe->InitBuffer(calcIndices32Buf, indicesAlign * sizeof(int));
-        indices32Local = calcIndices32Buf.Get<int>();
-        inputLocal = inQueueSelf.AllocTensor<T>();
-        if constexpr (IS_CAST_INT) {
-            indicesLocal = inQueueIndics.AllocTensor<U>();
-        }
-        updatesLocal = inQueueUpdates.AllocTensor<T>();
-        padParams = {false, 0, 0, 0};
-        tPadParams = {false, 0, 0, static_cast<T>(0)};
-        uPadParams = {false, 0, 0, static_cast<U>(0)};
-    }
-
-    __aicore__ inline void CastInputToFloat(uint64_t count)
-    {
-        if constexpr (IsCastFloatType()) {
-            if (IsCastFloat()) {
-                PIPE_MTE2_V();
-                Cast(inputTemp, inputLocal, RoundMode::CAST_NONE, count);
-            }
-        }
-    }
-
-    __aicore__ inline void CastUpdatesToFloat(uint64_t count)
-    {
-        if constexpr (IsCastFloatType()) {
-            if (IsCastFloat()) {
-                Cast(updatesTemp, updatesLocal, RoundMode::CAST_NONE, count);
-            }
-        }
-    }
-
-    __aicore__ inline void CastFloatToInput(uint64_t count)
-    {
-        if constexpr (IsCastFloatType()) {
-            if (IsCastFloat()) {
-                Cast(inputLocal, inputTemp, RoundMode::CAST_RINT, count);
-                PIPE_V_MTE3();
-            }
-        }
-    }
-
-    __aicore__ inline void FreeLocalTensors()
-    {
-        inQueueSelf.FreeTensor(inputLocal);
-        if constexpr (IS_CAST_INT) {
-            inQueueIndics.FreeTensor(indicesLocal);
-        }
-        inQueueUpdates.FreeTensor(updatesLocal);
-    }
-
-    __aicore__ inline bool NeedHitCount() const
-    {
-        return mode >= 2 && mode <= 6;
-    }
-
-    __aicore__ inline bool IsCastFloat() const
-    {
-        return IsCastFloatType() && NeedHitCount();
-    }
-
-    __aicore__ static constexpr bool IsCastFloatType()
-    {
-        return is_same<T, half>::value || is_same<T, bfloat16_t>::value;
-    }
-
-    template <typename DataType>
-    __aicore__ inline DataType ReduceValue(DataType inputValue, DataType updateValue, bool useUpdateOnly) const
-    {
-        if (useUpdateOnly) {
-            return updateValue;
-        }
-        if (mode == 2 || mode == 6) {
-            return static_cast<DataType>(inputValue + updateValue);
-        }
-        if (mode == 3) {
-            return static_cast<DataType>(inputValue * updateValue);
-        }
-        if (mode == 4) {
-            return inputValue < updateValue ? inputValue : updateValue;
-        }
-        if (mode == 5) {
-            return inputValue > updateValue ? inputValue : updateValue;
-        }
-        return updateValue;
-    }
-
     TPipe* pipe;
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueSelf, inQueueIndics, inQueueUpdates;
-    TBuf<QuePosition::VECCALC> calcSelfBuf, calcUpdatesBuf, calcIndices32Buf, calcCountBuf;
+    TBuf<QuePosition::VECCALC> calcSelfBuf, calcUpdatesBuf, calcIndices32Buf;
     GlobalTensor<T> inputGm, updatesGm;
     GlobalTensor<U> indicesGm;
     LocalTensor<float> inputTemp, updatesTemp;
-    LocalTensor<int> indicesTemp, indices32Local, countLocal;
+    LocalTensor<int> indicesTemp, indices32Local;
     LocalTensor<U> indicesLocal;
     LocalTensor<T> inputLocal, updatesLocal;
     DataCopyPadExtParams<uint32_t> padParams;
@@ -451,8 +325,6 @@ private:
     uint32_t coreId;
     uint64_t usedCoreNum;
     uint64_t modeFlag;
-    uint64_t mode;
-    uint64_t includeSelf;
     uint64_t currentNum;
     uint64_t eachNum;
     uint64_t start;

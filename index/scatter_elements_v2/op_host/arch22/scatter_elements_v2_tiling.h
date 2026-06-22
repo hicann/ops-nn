@@ -45,8 +45,6 @@ TILING_DATA_FIELD_DEF(uint64_t, lastIndicesLast);
 TILING_DATA_FIELD_DEF(uint64_t, oneTime);
 TILING_DATA_FIELD_DEF(uint64_t, lastOneTime);
 TILING_DATA_FIELD_DEF(uint64_t, modeFlag);
-TILING_DATA_FIELD_DEF(uint64_t, includeSelf);
-TILING_DATA_FIELD_DEF(uint64_t, mode);
 // 310P tiling parameter
 TILING_DATA_FIELD_DEF(uint64_t, M); //indices行数
 TILING_DATA_FIELD_DEF(uint64_t, varN);
@@ -75,7 +73,6 @@ struct ScatterElementsV2CompileInfo {
     int32_t totalCoreNum = 30;
     uint64_t ubSizePlatForm = 0;
     uint64_t workspaceSize = 0;
-    bool is_regbase = false;
 };
 } // namespace optiling
 

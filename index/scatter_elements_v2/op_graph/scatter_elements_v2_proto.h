@@ -36,7 +36,6 @@ namespace ge {
 * @li axis: An optional int. Defaults to 0.
 * @li reduction: An optional string. Defaults to string "none" and can be
 * "add" or "mul". \n
-* @li include_self: An optional bool. Defaults to true. It controls whether var participates in mean reduction. \n
 
 * @attention Constraints:
 * @li In non-last axis scenarios, you are advised to convert x, indices, and updates to the last axes,
@@ -54,7 +53,6 @@ REG_OP(ScatterElementsV2)
     .OUTPUT(var, TensorType({DT_FLOAT,DT_FLOAT16,DT_INT16,DT_INT32,DT_INT64,DT_INT8,DT_UINT8,DT_BF16}))
     .ATTR(axis, Int, 0)
     .ATTR(reduction, String, "none")
-    .ATTR(include_self, Bool, true)
     .OP_END_FACTORY_REG(ScatterElementsV2) // namespace ge
 }
 #endif // OPS_OP_PROTO_INC_SCATTER_ELEMENTS_V2_H_

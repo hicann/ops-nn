@@ -57,11 +57,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -121,11 +116,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -185,11 +175,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -249,11 +234,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -313,11 +293,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -377,11 +352,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -441,11 +411,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -505,11 +470,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -569,11 +529,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -633,11 +588,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -697,11 +647,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -761,11 +706,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -825,11 +765,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     },
@@ -889,11 +824,6 @@
           "name": "reduction",
           "dtype": "string",
           "value": "none"
-        },
-        {
-          "name": "include_self",
-          "dtype": "bool",
-          "value": true
         }
       ]
     }

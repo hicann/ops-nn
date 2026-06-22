@@ -22,7 +22,7 @@ using namespace AscendC;
 using namespace std;
 
 
-template <typename T>
+template <typename T, const uint32_t MODE=0>
 class InitGatherOffset {
 public:
     __aicore__ inline InitGatherOffset() {}
@@ -36,10 +36,6 @@ public:
 
     __aicore__ inline void SetCoreNums(int32_t coreNums) {
         this->coreNums = coreNums;
-    }
-
-    __aicore__ inline void SetCastFloat(bool castFloat) {
-        this->castFloat = castFloat;
     }
 
     __aicore__ inline void ProcessAggIndices(uint64_t xDim1) {
@@ -73,12 +69,8 @@ public:
                 auto offsetUbLocal = this->allUbLocal.template ReinterpretCast<int32_t>();
                 CreateVecIndex(offsetUbLocal, (int32_t)(i * updatesRowLengthUb), this->dimValue);
                 PipeBarrier<PIPE_V>();
-                if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
-                    if (this->castFloat) {
-                        Muls(offsetUbLocal, offsetUbLocal, (int32_t)(sizeof(float)), this->dimValue);
-                    } else {
-                        Muls(offsetUbLocal, offsetUbLocal, (int32_t)(sizeof(T)), this->dimValue);
-                    }
+                if constexpr ((std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) && MODE == 1) {
+                    Muls(offsetUbLocal, offsetUbLocal, (int32_t)(sizeof(float)), this->dimValue);
                 } else {
                     Muls(offsetUbLocal, offsetUbLocal, (int32_t)(sizeof(T)), this->dimValue);
                 }
@@ -228,7 +220,6 @@ private:
     int32_t coreNums = 0;
     uint64_t dimValue = 0;
     uint64_t dimValueAlign = 0;
-    bool castFloat = false;
 };
 }
 #endif

@@ -66,7 +66,6 @@ public:
                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND});
         this->Attr("axis").AttrType(OPTIONAL).Int(0);
         this->Attr("reduction").AttrType(OPTIONAL).String("none");
-        this->Attr("include_self").AttrType(OPTIONAL).Bool(true);
         OpAICoreConfig aicore_config;
         aicore_config.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(true)

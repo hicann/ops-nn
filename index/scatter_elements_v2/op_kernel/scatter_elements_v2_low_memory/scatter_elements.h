@@ -21,7 +21,7 @@ namespace ScatterElementsV2NS {
 using namespace AscendC;
 using namespace std;
 
-template <typename T, typename U, const bool IsScalar>
+template <typename T, typename U, const uint32_t MODE, const bool IsScalar>
 class ScatterElements {
 public:
     __aicore__ inline ScatterElements() {}
@@ -54,42 +54,29 @@ public:
         this->updatesDim1 = updatesDim1;
     }
 
-    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf) {
-        this->mode = mode;
-        this->includeSelf = includeSelf;
-    }
-
     __aicore__ inline void Process() {
         if (this->xDim1 < X_LOCAL_LENGTH) {
-            if constexpr (std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) {
-                if (NeedCastFloat()) {
-                    this->ProcessWithUbType<float>();
-                } else {
-                    this->ProcessWithUbType<T>();
-                }
+            if constexpr ((std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value) && MODE == 1) {
+                ScatterElementsCacheOp<T, U, float, MODE, IsScalar> op;
+                op.Init(this->xGm, this->indicesGm, this->updatesGm, this->allUbLocal, this->workspace);
+                op.SetXInfo(this->xDim0, this->xDim1);
+                op.SetIndicesInfo(this->indicesDim0, this->indicesDim1);
+                op.SetUpdatesInfo(this->updatesDim0, this->updatesDim1);
+                op.SetCoreNums(this->coreNums);
+                op.Process();
             } else {
-                this->ProcessWithUbType<T>();
+                ScatterElementsCacheOp<T, U, T, MODE, IsScalar> op;
+                op.Init(this->xGm, this->indicesGm, this->updatesGm, this->allUbLocal, this->workspace);
+                op.SetXInfo(this->xDim0, this->xDim1);
+                op.SetIndicesInfo(this->indicesDim0, this->indicesDim1);
+                op.SetUpdatesInfo(this->updatesDim0, this->updatesDim1);
+                op.SetCoreNums(this->coreNums);
+                op.Process();
             }
         }
     }
 
 private:
-    template <typename V>
-    __aicore__ inline void ProcessWithUbType() {
-        ScatterElementsCacheOp<T, U, V, IsScalar> op;
-        op.SetModeInfo(this->mode, this->includeSelf);
-        op.Init(this->xGm, this->indicesGm, this->updatesGm, this->allUbLocal, this->workspace);
-        op.SetXInfo(this->xDim0, this->xDim1);
-        op.SetIndicesInfo(this->indicesDim0, this->indicesDim1);
-        op.SetUpdatesInfo(this->updatesDim0, this->updatesDim1);
-        op.SetCoreNums(this->coreNums);
-        op.Process();
-    }
-
-    __aicore__ inline bool NeedCastFloat() const {
-        return mode >= 2 && mode <= 6;
-    }
-
     LocalTensor<uint8_t> allUbLocal;
     GlobalTensor<U> indicesGm;
     GlobalTensor<T> xGm;
@@ -103,8 +90,6 @@ private:
     uint64_t updatesDim1 = 0;
     uint64_t indicesDim0 = 0;
     uint64_t indicesDim1 = 0;
-    uint64_t mode = 1;
-    uint64_t includeSelf = 1;
 };
 }
 #endif

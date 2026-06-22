@@ -18,15 +18,11 @@
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_info.h"
 #include "op_host/tiling_util.h"
-#include "op_host/tiling_templates_registry.h"
 #include "scatter_elements_v2_tiling.h"
 
 using namespace std;
-using Ops::NN::Optiling::TilingRegistry;
 
 namespace {
-const int INPUT_TYPE = 100;
-const int INDIC_TYPE = 10;
 const int OPERATOR_TYPE = 1;
 
 const int SIZE_OF_FP16 = 2;
@@ -37,21 +33,9 @@ const int SIZE_OF_UINT8 = 1;
 const int SIZE_OF_INT8 = 1;
 const int SIZE_OF_BF16 = 2;
 
-const int DT_FLOAT32_TYPE = 1;
-const int DT_FLOAT16_TYPE = 2;
-const int DT_INT32_TYPE = 3;
-const int DT_UINT8_TYPE = 4;
-const int DT_INT8_TYPE = 5;
-const int DT_BF16_TYPE = 6;
-const int DT_INT32_INDEX_TYPE = 1;
-const int DT_INT64_INDEX_TYPE = 2;
-
 const int NONE = 1;
 const int ADD = 2;
 const int MUL = 3;
-const int MIN = 4;
-const int MAX = 5;
-const int MEAN = 6;
 const int BUFFER_NUM = 1;
 const int HALF_UB = 2;
 
@@ -76,33 +60,6 @@ const uint32_t AGG_INDICES_NUM = 1024;
 namespace optiling {
 using namespace Ops::NN::OpTiling;
 
-bool IsRegbaseSocVersion4Scatter(const gert::TilingParseContext* context)
-{
-    return Ops::NN::OpTiling::IsRegbaseSocVersion(context);
-}
-
-static bool IsArch22DeterministicReduction(const char* reduce)
-{
-    return reduce != nullptr &&
-           (strcmp(reduce, "none") == 0 || strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 ||
-            strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0);
-}
-
-static bool IsArch22DeterministicMode(const gert::TilingContext* context, const char* reduce)
-{
-    if (context == nullptr || !context->GetDeterministic() || !IsArch22DeterministicReduction(reduce)) {
-        return false;
-    }
-    auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
-    auto socVersion = ascendcPlatform.GetSocVersion();
-    return socVersion == platform_ascendc::SocVersion::ASCEND910B ||
-           socVersion == platform_ascendc::SocVersion::ASCEND910_93;
-}
-
-bool IsRegbaseSocVersion4Scatter(const gert::TilingContext* context)
-{
-    return Ops::NN::OpTiling::IsRegbaseSocVersion(context);
-}
 struct TilingDataStructScatterElementsV2310P{
   uint64_t M = 0;
   uint64_t varN = 0;
@@ -281,9 +238,6 @@ private:
                             const gert::Shape& updatesShape, size_t inputDimNum);
     void SetDimsByAxisType(const gert::Shape& inputShape, const gert::Shape& indicesShape, 
                            const gert::Shape& updatesShape, size_t inputDimNum);
-    bool CheckCacheOpShapeLimit(const gert::Shape& xShape, const char* reduce) const;
-    bool CheckCacheOpDtype(ge::DataType inputDtype, const char* reduce) const;
-    bool CheckLastAxisCacheOp(size_t inputDimNum, ge::DataType inputDtype, const char* reduce) const;
     ScatterElementsV2TilingData tilingData;
     gert::TilingContext* tilingContext = nullptr;
     int32_t mode = 0;
@@ -318,7 +272,6 @@ private:
     uint64_t updatesAlign = 8;
     uint64_t inputOnePiece = 0;
     uint64_t modeFlag = 0;
-    uint64_t includeSelf = 1;
     uint64_t lastIndicesLoop = 1;
     uint64_t lastIndicesEach = 1;
     uint64_t lastIndicesLast = 1;
@@ -326,7 +279,6 @@ private:
     uint64_t lastOneTime = 1;
     uint64_t workspaceSize = 1024 * 1024 * 16;
     uint64_t max_ub = 20480;
-    bool isDeterministic = false;
 };
 
 ge::graphStatus ScatterElementsV2Tiling::Init()
@@ -338,7 +290,7 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
 
     auto compileInfo = tilingContext->GetCompileInfo<ScatterElementsV2CompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, compileInfo);
-    uint32_t coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
+    static uint32_t coreNum = static_cast<uint32_t>(compileInfo->totalCoreNum);
     if (coreNum == 0) {
         OP_LOGE(tilingContext, "coreNum must greater than 0.");
         return ge::GRAPH_FAILED;
@@ -358,22 +310,16 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
     uint32_t inputSize = 0;
     if (ge::DT_FLOAT == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_FLOAT32_TYPE;
         inputSize = SIZE_OF_FP32;
     } else if (ge::DT_FLOAT16 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_FLOAT16_TYPE;
         inputSize = SIZE_OF_FP16;
     } else if (ge::DT_INT32 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_INT32_TYPE;
         inputSize = SIZE_OF_INT32;
     } else if (ge::DT_UINT8 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_UINT8_TYPE;
         inputSize = SIZE_OF_UINT8;
     } else if (ge::DT_INT8 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_INT8_TYPE;
         inputSize = SIZE_OF_INT8;
     } else if (ge::DT_BF16 == inputDtype) {
-        tilingKey += INPUT_TYPE * DT_BF16_TYPE;
         inputSize = SIZE_OF_BF16;
     } else {
         OP_LOGE(tilingContext, "var only support float, float16, int32, uint8, int8, bf16.");
@@ -382,10 +328,8 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     uint32_t indicesSize = 0;
     auto indicesDtype = tilingContext->GetInputDesc(1)->GetDataType();
     if (ge::DT_INT32 == indicesDtype) {
-        tilingKey += INDIC_TYPE * DT_INT32_INDEX_TYPE;
         indicesSize = SIZE_OF_INT32;
     } else if (ge::DT_INT64 == indicesDtype) {
-        tilingKey += INDIC_TYPE * DT_INT64_INDEX_TYPE;
         indicesSize = SIZE_OF_INT64;
     } else {
         OP_LOGE(tilingContext, "indices only support int64, int32.");
@@ -396,31 +340,24 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     uint32_t inputDataAlign = dataAlign / inputSize;
     uint32_t indexDataAlign = dataAlign / indicesSize;
 
-    const int* dim = (attrs->GetAttrPointer<int>(0));
+    const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
     const char* reduce = attrs->GetAttrPointer<char>(1);
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, reduce);
-    isDeterministic = IsArch22DeterministicMode(tilingContext, reduce);
-    const bool* includeSelfAttr = attrs->GetAttrPointer<bool>(2);
-    includeSelf = includeSelfAttr == nullptr ? 1 : static_cast<uint64_t>(*includeSelfAttr);
     auto inputShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
     auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
     auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
     auto inputDimNum = inputShape.GetDimNum();
     if (strcmp(reduce, "none") == 0) {
-        mode = NONE;
+        tilingKey += OPERATOR_TYPE * NONE;
     } else if (strcmp(reduce, "add") == 0) {
-        mode = ADD;
-    } else if (strcmp(reduce, "min") == 0) {
-        mode = MIN;
-    } else if (strcmp(reduce, "max") == 0) {
-        mode = MAX;
-    } else if (strcmp(reduce, "mean") == 0) {
-        mode = MEAN;
+        tilingKey += OPERATOR_TYPE * ADD;
     } else if (strcmp(reduce, "mul") == 0) {
-        mode = MUL;
+        tilingKey += OPERATOR_TYPE * MUL;
+        OP_LOGE(tilingContext, "scatter_elements_v2 not support mul.");
+        return ge::GRAPH_FAILED;
     } else {
-        OP_LOGE(tilingContext, "scatter_elements_v2 only support none, add, prod, min, max, mean.");
+        OP_LOGE(tilingContext, "scatter_elements_v2 only support none, add.");
         return ge::GRAPH_FAILED;
     }
 
@@ -468,20 +405,9 @@ ge::graphStatus ScatterElementsV2Tiling::Init()
     if (ge::DT_INT64 == indicesDtype) {
         indicesSize += SIZE_OF_INT32;
     }
-    if ((strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 || strcmp(reduce, "mean") == 0) &&
-        (ge::DT_FLOAT16 == inputDtype || ge::DT_BF16 == inputDtype)) {
+    if ((strcmp(reduce, "add") == 0) && (ge::DT_FLOAT16 == inputDtype || ge::DT_BF16 == inputDtype)) {
         inputSize += sizeof(float) / BUFFER_NUM;
         indicesSize += sizeof(float) / BUFFER_NUM;
-    }
-    if (strcmp(reduce, "add") == 0 || strcmp(reduce, "mul") == 0 || strcmp(reduce, "min") == 0 || strcmp(reduce, "max") == 0 ||
-        strcmp(reduce, "mean") == 0) {
-        inputSize += sizeof(int) / BUFFER_NUM;
-    }
-
-    if (isDeterministic) {
-        OP_LOGD(tilingContext,
-                "ScatterElementsV2 arch22 deterministic mode enabled, force legacy kernel and single-core schedule.");
-        coreNum = 1;
     }
 
     uint32_t times = indicesCount / indicesOneTime;
@@ -598,8 +524,6 @@ ge::graphStatus ScatterElementsV2Tiling::RunKernelTiling()
     tilingData.set_indicesLoop(indicesLoop);
     tilingData.set_inputOnePiece(inputOnePiece);
     tilingData.set_modeFlag(modeFlag);
-    tilingData.set_includeSelf(includeSelf);
-    tilingData.set_mode(static_cast<uint64_t>(mode));
     tilingData.set_lastIndicesLoop(lastIndicesLoop);
     tilingData.set_lastIndicesEach(lastIndicesEach);
     tilingData.set_lastIndicesLast(lastIndicesLast);
@@ -640,8 +564,6 @@ void ScatterElementsV2Tiling::TilingDataPrint() const
     OP_LOGD(tilingContext, "indicesLoop: %lu.", indicesLoop);
     OP_LOGD(tilingContext, "inputOnePiece: %lu.", inputOnePiece);
     OP_LOGD(tilingContext, "modeFlag: %lu.", modeFlag);
-    OP_LOGD(tilingContext, "includeSelf: %lu.", includeSelf);
-    OP_LOGD(tilingContext, "mode: %d.", mode);
     OP_LOGD(tilingContext, "lastIndicesLoop: %lu.", lastIndicesLoop);
     OP_LOGD(tilingContext, "lastIndicesEach: %lu.", lastIndicesEach);
     OP_LOGD(tilingContext, "lastIndicesLast: %lu.", lastIndicesLast);
@@ -659,42 +581,28 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
 
     auto attrs = tilingContext->GetAttrs();
     auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
+
     const int64_t* dim = (attrs->GetAttrPointer<int64_t>(0));
     OP_CHECK_NULL_WITH_CONTEXT(tilingContext, dim);
     auto indicesShape = tilingContext->GetInputShape(INPUT_1)->GetStorageShape();
     auto inputDimNum = indicesShape.GetDimNum();
     realDim = (*dim < 0 ? *dim + inputDimNum : *dim);
-
+    // 尾轴场景任务数小于coreNums，不支持
+    size_t tasks = 1;
+    for (uint32_t i = 0; i < inputDimNum; ++i) {
+        if (i != realDim) {
+            tasks *= indicesShape.GetDim(i);
+        }
+    }
+    // x dim轴大于40000不支持
     auto xShape = tilingContext->GetInputShape(INPUT_0)->GetStorageShape();
-    const char* reduce = attrs->GetAttrPointer<char>(1);
-    if (IsArch22DeterministicMode(tilingContext, reduce)) {
-        OP_LOGD("ScatterElementsV2", "cache-op disabled in deterministic mode on arch22.");
-        return false;
-    }
-    if (!CheckCacheOpShapeLimit(xShape, reduce) || !CheckCacheOpDtype(inputDtype, reduce)) {
-        return false;
-    }
-
-    return CheckLastAxisCacheOp(inputDimNum, inputDtype, reduce);
-}
-
-bool ScatterElementsV2Tiling::CheckCacheOpShapeLimit(const gert::Shape& xShape, const char* reduce) const
-{
     if (xShape.GetDim(realDim) > 40000) {
         OP_LOGD("ScatterElementsV2", "new kernel only support x dim <= 40000.");
         return false;
     }
-    bool needHitCount = reduce != nullptr && strcmp(reduce, "none") != 0;
-    if (needHitCount && xShape.GetDim(realDim) > 20480) {
-        OP_LOGD("ScatterElementsV2", "new kernel reduce mode only support x dim <= 20480.");
-        return false;
-    }
-    return true;
-}
-
-bool ScatterElementsV2Tiling::CheckCacheOpDtype(ge::DataType inputDtype, const char* reduce) const
-{
+    // x数据类型是bool int8 uint8时只支持替换模式
     if (inputDtype == ge::DT_BOOL || inputDtype == ge::DT_INT8 || inputDtype == ge::DT_UINT8) {
+        const char* reduce = attrs->GetAttrPointer<char>(1);
         if (reduce == nullptr) {
             return false;
         }
@@ -703,23 +611,13 @@ bool ScatterElementsV2Tiling::CheckCacheOpDtype(ge::DataType inputDtype, const c
             return false;
         }
     }
-    return true;
-}
 
-bool ScatterElementsV2Tiling::CheckLastAxisCacheOp(size_t inputDimNum, ge::DataType inputDtype,
-                                                   const char* reduce) const
-{
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(tilingContext->GetPlatformInfo());
+    auto platfCoreNums = ascendcPlatform.GetCoreNumAiv();
     auto updatesShape = tilingContext->GetInputShape(INPUT_2)->GetStorageShape();
     if (realDim == inputDimNum - 1 && updatesShape.GetDimNum() != 0 && inputDtype != ge::DT_BOOL) {
-        bool allowLastAxisNonScalarFloat =
-            (inputDtype == ge::DT_FLOAT) &&
-            (reduce != nullptr) &&
-            (strcmp(reduce, "min") == 0 || strcmp(reduce, "mean") == 0);
-        if (!allowLastAxisNonScalarFloat) {
-            OP_LOGD("ScatterElementsV2",
-                    "when realDim = -1 and updates not scalar, only bool or float min/mean will use new kernel.");
-            return false;
-        }
+        OP_LOGD("ScatterElementsV2", "when realDim = -1 and updates not scalar, only dtype is bool will use new kernel.");
+        return false;
     }
     return true;
 }
@@ -728,8 +626,6 @@ void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling)
     tiling.set_batchSize(batchSize);
     tiling.set_realDim(realDim);
     tiling.set_coreNums(usedCoreNum);
-    tiling.set_includeSelf(includeSelf);
-    tiling.set_mode(static_cast<uint64_t>(mode));
     tiling.set_xDim0(xDim0);
     tiling.set_xDim1(xDim1);
     tiling.set_indicesDim0(indicesDim0);
@@ -744,7 +640,6 @@ void ScatterElementsV2Tiling::LogTilingData() {
     OP_LOGD(tilingContext, "mode: %d.", mode);
     OP_LOGD(tilingContext, "coreNums: %d.", usedCoreNum);
     OP_LOGD(tilingContext, "updatesIsScalar: %d.", updatesIsScalar);
-    OP_LOGD(tilingContext, "includeSelf: %lu.", includeSelf);
     OP_LOGD(tilingContext, "xDim0: %lu.", xDim0);
     OP_LOGD(tilingContext, "xDim1: %lu.", xDim1);
     OP_LOGD(tilingContext, "indicesDim0: %lu.", indicesDim0);
@@ -811,29 +706,19 @@ ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
     currentWorkSpace[0] = calculateResult;
     
     tilingContext->SetBlockDim(usedCoreNum);
-    auto inputDtype = tilingContext->GetInputDesc(INPUT_0)->GetDataType();
-    auto indicesDtype = tilingContext->GetInputDesc(INPUT_1)->GetDataType();
-    uint32_t cacheTilingKey = 0;
-    if (ge::DT_FLOAT == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_FLOAT32_TYPE;
-    } else if (ge::DT_FLOAT16 == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_FLOAT16_TYPE;
-    } else if (ge::DT_INT32 == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_INT32_TYPE;
-    } else if (ge::DT_UINT8 == inputDtype || ge::DT_BOOL == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_UINT8_TYPE;
-    } else if (ge::DT_INT8 == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_INT8_TYPE;
-    } else if (ge::DT_BF16 == inputDtype) {
-        cacheTilingKey += INPUT_TYPE * DT_BF16_TYPE;
+    if (mode == 0 && !updatesIsScalar) {
+        tilingContext->SetTilingKey(0);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 0); // 000
+    } else if (mode == 1 && !updatesIsScalar) {
+        tilingContext->SetTilingKey(100);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 100); // 100
+    } else if (mode == 0 && updatesIsScalar) {
+        tilingContext->SetTilingKey(10);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 10); // 010
+    } else if (mode == 1 && updatesIsScalar) {
+        tilingContext->SetTilingKey(110);
+        OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %lu.", 110); // 110
     }
-    if (ge::DT_INT32 == indicesDtype) {
-        cacheTilingKey += INDIC_TYPE * DT_INT32_INDEX_TYPE;
-    } else if (ge::DT_INT64 == indicesDtype) {
-        cacheTilingKey += INDIC_TYPE * DT_INT64_INDEX_TYPE;
-    }
-    tilingContext->SetTilingKey(cacheTilingKey);
-    OP_LOGD(tilingContext, "scatterElementsV2 tilingKey: %u.", cacheTilingKey);
     tilingContext->SetScheduleMode(1); // kernel内涉及SyncAll()
     tiling.SaveToBuffer(tilingContext->GetRawTilingData()->GetData(), tilingContext->GetRawTilingData()->GetCapacity());
     tilingContext->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
@@ -843,22 +728,10 @@ ge::graphStatus ScatterElementsV2Tiling::SetCacheOpTiling() {
 void ScatterElementsV2Tiling::ParseAttrs() {
     auto attrs = tilingContext->GetAttrs();
     const char* reduce = attrs->GetAttrPointer<char>(1);
-    const bool* includeSelfAttr = attrs->GetAttrPointer<bool>(2);
-    includeSelf = includeSelfAttr == nullptr ? 1 : static_cast<uint64_t>(*includeSelfAttr);
     if (strcmp(reduce, "none") == 0) {
-        mode = 1;
-    } else if (strcmp(reduce, "add") == 0) {
-        mode = 2;
-    } else if (strcmp(reduce, "mul") == 0) {
-        mode = 3;
-    } else if (strcmp(reduce, "min") == 0) {
-        mode = 4;
-    } else if (strcmp(reduce, "max") == 0) {
-        mode = 5;
-    } else if (strcmp(reduce, "mean") == 0) {
-        mode = 6;
+        mode = 0;
     } else {
-        mode = 2;
+        mode = 1;
     }
 }
 
@@ -960,9 +833,6 @@ ge::graphStatus TilingScatterElementsV2(gert::TilingContext* context)
 {
     auto compile_info = reinterpret_cast<const ScatterElementsV2CompileInfo*>(context->GetCompileInfo());
     OP_CHECK_NULL_WITH_CONTEXT(context, compile_info);
-    if (compile_info->is_regbase) {
-        return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
-    }
 
     auto platformInfo = context->GetPlatformInfo();
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
@@ -1001,7 +871,6 @@ ge::graphStatus TilingPrepareForScatterElementsV2(gert::TilingParseContext* cont
     OP_LOGD(context, "ub_size_platform is %lu.", compileInfo->ubSizePlatForm);
     uint64_t totalUbSize = 0;
     platformInfo->GetLocalMemSize(fe::LocalMemType::UB, totalUbSize);
-    compileInfo->is_regbase = IsRegbaseSocVersion4Scatter(context);
     OP_LOGD(context, "total_ub_size is %lu.", totalUbSize);
     OP_LOGD(context, "TilingPrepareForScatterElementsV2 end.");
     return ge::GRAPH_SUCCESS;
