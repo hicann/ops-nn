@@ -817,8 +817,8 @@ __aicore__ inline void AdaptiveAvgPool3dGradNCDHWBigKernel<T, INDEX>::DoGradInpu
                         AscendC::MicroAPI::DataCopyUnAlignPre(u0, yAddrUnalign);
                         AscendC::MicroAPI::DataCopyUnAlign(gradOutputUbValue, u0, yAddrUnalign);
                         DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, wloopCountTail);
-                        AscendC::MicroAPI::DataCopyUnAlign(yAddrUnalign, gradOutputUbValue, u0, wloopCountTail);
-                        AscendC::MicroAPI::DataCopyUnAlignPost(yAddrUnalign, u0, wloopCountTail);
+                        AscendC::MicroAPI::DataCopyUnAlign(yAddrUnalign, gradOutputUbValue, u1, wloopCountTail);
+                        AscendC::MicroAPI::DataCopyUnAlignPost(yAddrUnalign, u1, wloopCountTail);
                     }
                 }
             }

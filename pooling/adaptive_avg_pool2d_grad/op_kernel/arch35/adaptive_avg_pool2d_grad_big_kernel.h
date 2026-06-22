@@ -631,8 +631,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradBigKernel<T, INDEX>::DoGradInputAccU
                     AscendC::MicroAPI::DataCopyUnAlignPre(u0, yAddrUnalign);
                     AscendC::MicroAPI::DataCopyUnAlign(gradOutputUbValue, u0, yAddrUnalign);
                     DoGradRegAdds(gradOutputUbValue, gradInputValue, yAddr, wloopCountTail);
-                    AscendC::MicroAPI::DataCopyUnAlign(yAddrUnalign, gradOutputUbValue, u0, wloopCountTail);
-                    AscendC::MicroAPI::DataCopyUnAlignPost(yAddrUnalign, u0, wloopCountTail);
+                    AscendC::MicroAPI::DataCopyUnAlign(yAddrUnalign, gradOutputUbValue, u1, wloopCountTail);
+                    AscendC::MicroAPI::DataCopyUnAlignPost(yAddrUnalign, u1, wloopCountTail);
                 }
             }
         } else if (gradKernelH * gradKernelW * DOUBLE * sizeof(COMPUTE_TYPE) > V_REG_SIZE) {
