@@ -213,6 +213,12 @@ static double GetBalanceRateWithTail(const MatMulV3Args& args, uint64_t usedCore
         batch * MathUtil::CeilDivision(args.mValue, baseM) * MathUtil::CeilDivision(args.nValue, baseN);
     uint64_t mainRound = MathUtil::CeilDivision(totalRound, usedCoreNum) - 1;
     uint64_t totalTailSplit = ops::FloorDiv(usedCoreNum, (totalRound - usedCoreNum * mainRound));
+    if (args.mValue <= BASIC_BLOCK_SIZE_16) {
+        baseM = args.mValue;
+    }
+    if (args.nValue <= BASIC_BLOCK_SIZE_16) {
+        baseN = args.nValue;
+    }
     if (mainRound == 0 || ops::FloorDiv(baseM * baseN, totalTailSplit) < MIN_TATL_BLOCK_SIZE ||
         args.batchInfo != nullptr) {
         return (static_cast<double>(batch) * args.mValue * args.nValue / usedCoreNum) /
@@ -370,6 +376,10 @@ void MatMulV3TilingHelper::GetRebalanceBlock(const MatmulV3CompileInfo& compileI
     double hbmBW = GetHbmBW(platformInfo);
     double l2BW = GetL2BW(platformInfo);
     double singleCoreComputePower = GetCoreFreq(platformInfo) * NUM_EIGHT;
+    bool isFP32 = args.aType == ge::DT_FLOAT && !args.isHf32;
+    if (compileInfo.npuArch == NpuArch::DAV_3510 && isFP32) {
+        singleCoreComputePower /= BASIC_BLOCK_SIZE_16;
+    }
     // balanceRateEdge用于判断是否取得最优解，进行减枝, 默认0.9
     double balanceRateEdge = 0.9;
     double cmr = (static_cast<double>(args.mValue) + args.nValue) / (static_cast<double>(args.mValue) * args.nValue);
