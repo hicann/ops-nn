@@ -89,6 +89,23 @@ namespace l0op {
 OP_TYPE_REGISTER(ScatterElements);
 OP_TYPE_REGISTER(ScatterElementsV2);
 
+static bool IsArch22SocVersion()
+{
+    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    return socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93;
+}
+
+static bool IsArch22ScatterElementsV2Reduction(const std::string& reduction)
+{
+    return reduction == "none" || reduction == "add" || reduction == "mul" ||
+           reduction == "min" || reduction == "max" || reduction == "mean";
+}
+
+static bool ShouldPreferScatterElementsV2OnArch22(const std::string& reduction)
+{
+    return IsArch22SocVersion() && IsArch22ScatterElementsV2Reduction(reduction);
+}
+
 // 判断是否可以合轴： 当data_shape和indices_shape仅在axis取值不一致时可以合轴
 bool CanCombineAxis(const aclTensor* data, const aclTensor* indices, int64_t axis)
 {
@@ -221,13 +238,9 @@ static bool CompareTensorShape(const aclTensor* a, const aclTensor* b)
 }
 
 bool UseAicore310P(const aclTensor* data, const aclTensor* indices, int64_t axis,
-                   int64_t dataDimSize, const std::string& reduction) {
+                   int64_t dataDimSize, const std::string&) {
     // aicore数据类型校验
     if (!CheckType(data->GetDataType(), AICORE_310P_DTYPE_SUPPORT_LIST)) {
-        return false;
-    }
-    // 不支持mul模式
-    if (reduction == "mul") {
         return false;
     }
     // 只支持尾轴
@@ -261,6 +274,9 @@ bool UseScatterElementsV2(
 {
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (Ops::NN::AclnnUtil::IsRegbase()) {
+        if (REGBASE_DTYPE_SUPPORT_LIST.count(reduction) == 0) {
+            return false;
+        }
         return CheckType(data->GetDataType(), REGBASE_DTYPE_SUPPORT_LIST.at(reduction));
     }
 
@@ -277,16 +293,17 @@ bool UseScatterElementsV2(
         return false;
     }
 
-    if (reduction == "mul") {
-        return false;
-    }
-
     if (axis != dataDimSize - 1 && axis != 0) {
         return false;
     }
 
     if (!CanCombineAxisV2(data, indices, updates, axis, dataDimSize)) {
         return false;
+    }
+
+    if (ShouldPreferScatterElementsV2OnArch22(reduction)) {
+        OP_LOGD("ScatterElementsV2 preferred on arch22, deterministic selection will be handled in tiling.");
+        return true;
     }
 
     return IsScatterElementsV2Better(data, indices, axis);
@@ -318,10 +335,6 @@ bool UseScatterElements(
 
     // 如果index.shape < src.shape  aicore功能不支持
     if (CompareTensorShape(indices, updates)) {
-        return false;
-    }
-
-    if (reduction == "mul") {
         return false;
     }
 
@@ -521,7 +534,7 @@ static bool CheckMultiDimFirstAxis(const gert::Shape& dataShape, const gert::Sha
     return true;
 }
 
-static bool CheckMultiDimLastAxis(const aclTensor* data, const gert::Shape& dataShape, 
+static bool CheckMultiDimLastAxis(const aclTensor*, const gert::Shape& dataShape,
                                    const gert::Shape& indicesShape, const gert::Shape& updatesShape, 
                                    size_t dataDimNum) {
     if (!CheckDimsEqualInRange(dataShape, indicesShape, updatesShape, 1, dataDimNum - 1)) {
@@ -622,6 +635,10 @@ static bool BaseCheck(const aclTensor* data, const aclTensor* indices, const acl
         OP_LOGD("ScatterElementsV2 No Transpose only support for DAV_2201");
         return false;
     }
+    if (ShouldPreferScatterElementsV2OnArch22(reduction)) {
+        OP_LOGD("ScatterElementsV2 No Transpose disabled on arch22 to keep deterministic decisions in tiling");
+        return false;
+    }
     // 仅支持none和add模式
     if (reduction != "none" && reduction != "add") {
         OP_LOGD("ScatterElementsV2 No Transpose only support for none and add");
@@ -670,33 +687,39 @@ bool SupportNoTranspose(const aclTensor* data, const aclTensor* indices, const a
 
 const aclTensor* ScatterElements(
     const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-    const std::string& reduction, aclOpExecutor* executor)
+    const std::string& reduction, aclOpExecutor* executor, bool includeSelf)
 {
     L0_DFX(ScatterElements, data, indices, updates, axis, reduction);
     auto dataDimSize = static_cast<int64_t>(data->GetViewShape().GetDimNum());
     axis = axis >= 0 ? axis : axis + dataDimSize; // axis保证为非负数
+    bool useScatterElementsV2 = UseScatterElementsV2(data, indices, updates, axis, dataDimSize, reduction);
+    bool isBaseReduction = (reduction == "none" || reduction == "add" || reduction == "mul");
+    bool isExtendedV2Reduction = (reduction == "min" || reduction == "max" || reduction == "mean");
     if (dataDimSize > AXIS_LIMIT) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID, "Tensor data dimension size must be in range [0, 8]. Current size is %ld.",
             dataDimSize);
     }
-    if (reduction != "none" && reduction != "add" && reduction != "mul") {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "reduction must be one of [none, add, mul]");
+    if (!isBaseReduction && !isExtendedV2Reduction) {
+        OP_LOGE(
+            ACLNN_ERR_PARAM_INVALID,
+            "reduction must be one of [none, add, mul, min, max, mean].");
+        return nullptr;
     }
 
     auto out = executor->AllocTensor(data->GetViewShape(), data->GetDataType(), data->GetViewFormat());
     CHECK_RET(out != nullptr, nullptr);
-    if (UseScatterElementsV2(data, indices, updates, axis, dataDimSize, reduction)) {
-        OP_LOGD("Use AICORE for ScatterElementsV2.");
+    if (useScatterElementsV2) {
         auto selfOut = const_cast<aclTensor*>(data);
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-            ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut), OP_ATTR(axis, reduction));
+            ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut),
+            OP_ATTR(axis, reduction, includeSelf));
         OP_CHECK(
             ret == ACLNN_SUCCESS,
             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
             return nullptr);
         return selfOut;
-    } else if (UseScatterElements(data, indices, updates, axis, reduction)) {
+    } else if (includeSelf && isBaseReduction && UseScatterElements(data, indices, updates, axis, reduction)) {
         OP_LOGD("Use AICORE for ScatterElements.");
         auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
             ScatterElements, OP_INPUT(data, indices, updates), OP_OUTPUT(out), OP_ATTR(axis, reduction));
@@ -708,8 +731,8 @@ const aclTensor* ScatterElements(
         OP_LOGD("Use AICPU for ScatterElements.");
         static internal::AicpuTaskSpace space("ScatterElements");
         auto ret = ADD_TO_LAUNCHER_LIST_AICPU(
-            ScatterElements, OP_ATTR_NAMES({"axis", "reduction"}), OP_INPUT(data, indices, updates), OP_OUTPUT(out),
-            OP_ATTR(axis, reduction));
+            ScatterElements, OP_ATTR_NAMES({"axis", "reduction", "include_self"}), OP_INPUT(data, indices, updates), OP_OUTPUT(out),
+            OP_ATTR(axis, reduction, includeSelf));
         CHECK_RET(ret == ACLNN_SUCCESS, nullptr);
     }
 
@@ -718,13 +741,13 @@ const aclTensor* ScatterElements(
 
 const aclTensor* ScatterElementsNoTranspose(
     const aclTensor* data, const aclTensor* indices, const aclTensor* updates, int64_t axis,
-    const std::string& reduction, aclOpExecutor* executor)
+    const std::string& reduction, aclOpExecutor* executor, bool includeSelf)
 {
     OP_LOGD("Use AICORE for ScatterElementsV2 with No Transpose.");
     L0_DFX(ScatterElementsNoTranspose, data, indices, updates, axis, reduction);
     auto selfOut = const_cast<aclTensor*>(data);
     auto ret = ADD_TO_LAUNCHER_LIST_AICORE(
-        ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut), OP_ATTR(axis, reduction));
+        ScatterElementsV2, OP_INPUT(data, indices, updates), OP_OUTPUT(selfOut), OP_ATTR(axis, reduction, includeSelf));
     OP_CHECK(
         ret == ACLNN_SUCCESS,
         OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "ScatterElementsV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),

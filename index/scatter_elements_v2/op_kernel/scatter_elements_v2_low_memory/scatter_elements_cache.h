@@ -27,15 +27,13 @@ using namespace std;
  * \tparam T: dtype of x
  * \tparam U: dtype of indices
  * \tparam V: dtype of x in ub
- * \tparam MODE: scatter_elements mode, 0: scatter_elements, 1: scatter_add_elements
+ * \tparam MODE: scatter_elements mode, 1: none/set, 2: add, 3: mul, 4: min, 5: max, 6: mean
  * \tparam IsScalar: whether updates is scalar
- *  MODE = 1
+ *  MODE = 2/3/4/5/6
  *  T: half/bfloat16 V: float
- *  T: float32/int32/uint8/int8/bool V: T
- *  MODE = 0
- *  T = V
+ *  other cases: T = V
  */
-template <typename T, typename U, typename V, const uint32_t MODE, const bool IsScalar>
+template <typename T, typename U, typename V, const bool IsScalar>
 class ScatterElementsCacheOp {
 public:
     __aicore__ inline ScatterElementsCacheOp() {}
@@ -46,15 +44,24 @@ public:
         this->indicesGm = indices;
         this->updatesGm = updates;
         this->workspace = workspace;
-        // ub内存分配
+        uint64_t xBytes = X_LOCAL_LENGTH * sizeof(V);
+        if (NeedHitCount()) {
+            uint64_t tailBytes = INDICES_LOCAL_LENGTH * sizeof(int64_t) + INDICES_LOCAL_LENGTH * sizeof(V) +
+                                 AGG_INDICES_NUM * sizeof(int32_t) + AGG_INDICES_NUM * sizeof(uint32_t);
+            this->xLocalLength = (ALL_UB_SIZE - tailBytes) / (sizeof(V) + sizeof(int32_t));
+            xBytes = this->xLocalLength * sizeof(V);
+            this->hitCountLocal = allUbLocal[xBytes].template ReinterpretCast<int32_t>();
+            xBytes += this->xLocalLength * sizeof(int32_t);
+        }
+
         this->xLocalTensor = allUbLocal.ReinterpretCast<V>();
-        this->indicesLocalTensor = allUbLocal[X_LOCAL_LENGTH * sizeof(V)].ReinterpretCast<U>();
-        this->updatesLocalTensor = allUbLocal[X_LOCAL_LENGTH * sizeof(V) + INDICES_LOCAL_LENGTH * sizeof(int64_t)].ReinterpretCast<V>();
-        this->aggIndicesOffset = allUbLocal[X_LOCAL_LENGTH * sizeof(V) + INDICES_LOCAL_LENGTH * sizeof(int64_t) +
-                                            INDICES_LOCAL_LENGTH * sizeof(int32_t)].template ReinterpretCast<int32_t>();
-        this->aggUpdatesOffset = allUbLocal[X_LOCAL_LENGTH * sizeof(V) + INDICES_LOCAL_LENGTH * sizeof(int64_t) + 
-                                            INDICES_LOCAL_LENGTH * sizeof(int32_t) + AGG_INDICES_NUM * sizeof(int32_t)].template ReinterpretCast<uint32_t>();
-        
+        this->indicesLocalTensor = allUbLocal[xBytes].ReinterpretCast<U>();
+        this->updatesLocalTensor = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t)].ReinterpretCast<V>();
+        this->aggIndicesOffset = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t) +
+                                            INDICES_LOCAL_LENGTH * sizeof(V)].template ReinterpretCast<int32_t>();
+        this->aggUpdatesOffset = allUbLocal[xBytes + INDICES_LOCAL_LENGTH * sizeof(int64_t) +
+                                            INDICES_LOCAL_LENGTH * sizeof(V) +
+                                            AGG_INDICES_NUM * sizeof(int32_t)].template ReinterpretCast<uint32_t>();
     }
 
     __aicore__ inline void SetXInfo(uint64_t xDim0, uint64_t xDim1) {
@@ -74,6 +81,11 @@ public:
 
     __aicore__ inline void SetCoreNums(int32_t coreNums) {
         this->coreNums = coreNums;
+    }
+
+    __aicore__ inline void SetModeInfo(uint64_t mode, uint64_t includeSelf) {
+        this->mode = mode;
+        this->includeSelf = includeSelf;
     }
 
     __aicore__ inline void Process() {
@@ -188,7 +200,7 @@ private:
         if constexpr (std::is_same<T, V>::value) {
             dstUbLocal = this->xLocalTensor;
         } else {
-            dstUbLocal = this->xLocalTensor[X_LOCAL_LENGTH / 2].template ReinterpretCast<T>();
+            dstUbLocal = this->xLocalTensor[this->xLocalLength / 2].template ReinterpretCast<T>();
         }
         DataCopyPad(dstUbLocal, this->xGm[src], copyParams, padParams);
         PIPE_MTE2_S();
@@ -196,6 +208,7 @@ private:
             Cast(this->xLocalTensor, dstUbLocal, RoundMode::CAST_NONE, tasks * this->xDim1);
             PIPE_V_S();
         }
+        this->InitHitCount(tasks * this->xDim1);
     }
 
     __aicore__ inline void CopyOutXRows(uint64_t startTask, uint64_t tasks) {
@@ -296,7 +309,10 @@ private:
     }
 
     __aicore__ inline void DoRowsScatterElements() {
-        this->aggTasks = X_LOCAL_LENGTH / this->xDim1;
+        this->aggTasks = this->xLocalLength / this->xDim1;
+        if (this->aggTasks == 0) {
+            return;
+        }
         this->aggTimes = this->coreTasks / this->aggTasks;
         this->aggLeftTasks = this->coreTasks - this->aggTimes * this->aggTasks;
 
@@ -315,6 +331,7 @@ private:
             PIPE_V_S();
             PIPE_S_MTE3();
             PIPE_S_V();
+            this->CalcMeanValue(tasks * this->xDim1);
             this->CopyOutXRows(startTask, tasks);
         }
         PIPE_MTE3_S();
@@ -358,10 +375,64 @@ private:
         cache[idx++] = *(ubAddress + baseOffset + off++);
     }
 
+    __aicore__ inline void InitHitCount(uint64_t count) {
+        if (NeedHitCount()) {
+            for (uint64_t i = 0; i < count; i++) {
+                this->hitCountLocal.SetValue(i, 0);
+            }
+        }
+    }
+
+    __aicore__ inline void CalcMeanValue(uint64_t count) {
+        if constexpr (!(std::is_same<V, half>::value || std::is_same<V, bfloat16_t>::value)) {
+            if (this->mode == 6) {
+                for (uint64_t i = 0; i < count; i++) {
+                    int32_t hitCount = this->hitCountLocal.GetValue(i);
+                    if (hitCount == 0) {
+                        continue;
+                    }
+                    int32_t divisor = this->includeSelf != 0 ? hitCount + 1 : hitCount;
+                    this->xLocalTensor.SetValue(i, this->xLocalTensor.GetValue(i) / static_cast<V>(divisor));
+                }
+            }
+        }
+    }
+
+    __aicore__ inline void ScatterSetValue(__ubuf__ V* xUbAddress, __ubuf__ int32_t* hitCountAddress,
+                                           int32_t indexValue, V value) {
+        if (this->mode == 1) {
+            *(xUbAddress + indexValue) = value;
+        } else {
+            if constexpr (std::is_same<V, half>::value || std::is_same<V, bfloat16_t>::value) {
+                return;
+            } else {
+                int32_t hitCount = *(hitCountAddress + indexValue);
+                *(hitCountAddress + indexValue) = hitCount + 1;
+                bool useUpdateOnly = this->includeSelf == 0 && hitCount == 0;
+                V inputValue = *(xUbAddress + indexValue);
+                if (useUpdateOnly) {
+                    *(xUbAddress + indexValue) = value;
+                } else if (this->mode == 2 || this->mode == 6) {
+                    *(xUbAddress + indexValue) = static_cast<V>(inputValue + value);
+                } else if (this->mode == 3) {
+                    *(xUbAddress + indexValue) = static_cast<V>(inputValue * value);
+                } else if (this->mode == 4) {
+                    *(xUbAddress + indexValue) = inputValue < value ? inputValue : value;
+                } else if (this->mode == 5) {
+                    *(xUbAddress + indexValue) = inputValue > value ? inputValue : value;
+                }
+            }
+        }
+    }
+
     __aicore__ inline void DoScatterElementsOneByOne(uint64_t indicesStart, uint64_t indicesNums, uint64_t updatesStart, uint64_t xStart) {
         auto indicesUbAddress = reinterpret_cast<__ubuf__ U *>(this->indicesLocalTensor.GetPhyAddr(indicesStart));
         auto updatesUbAddress = reinterpret_cast<__ubuf__ V *>(this->updatesLocalTensor.GetPhyAddr(updatesStart));
         auto xUbAddress = reinterpret_cast<__ubuf__ V *>(this->xLocalTensor.GetPhyAddr(xStart));
+        __ubuf__ int32_t* hitCountAddress = nullptr;
+        if (NeedHitCount()) {
+            hitCountAddress = reinterpret_cast<__ubuf__ int32_t *>(this->hitCountLocal.GetPhyAddr(xStart));
+        }
         U indicesCache[LOOP_UNROLL_SIZE];
         V updatesCache[LOOP_UNROLL_SIZE];
         uint64_t staticTimes = indicesNums / LOOP_UNROLL_SIZE;
@@ -377,11 +448,7 @@ private:
                 if constexpr (!IsScalar) {
                     value = updatesCache[k];
                 }
-                if constexpr (MODE == 0) {
-                    *(xUbAddress + indexValue) = value;
-                } else {
-                    *(xUbAddress + indexValue) += value;
-                }
+                this->ScatterSetValue(xUbAddress, hitCountAddress, indexValue, value);
             }
         }
         
@@ -391,11 +458,7 @@ private:
             if constexpr (!IsScalar) {
                 value = *(updatesUbAddress + i);
             }
-            if constexpr (MODE == 0) {
-                *(xUbAddress + indexValue) = value;
-            } else {
-                *(xUbAddress + indexValue) += value;
-            }
+            this->ScatterSetValue(xUbAddress, hitCountAddress, indexValue, value);
         }
     }
 
@@ -498,32 +561,31 @@ private:
         }
     }
 
+    __aicore__ inline bool NeedHitCount() const {
+        return this->mode >= 2 && this->mode <= 6;
+    }
+
 private:
     LocalTensor<U> indicesLocalTensor;
-    LocalTensor<V> updatesLocalTensor;
-    LocalTensor<V> xLocalTensor;
-    LocalTensor<int32_t> aggIndicesOffset;
+    LocalTensor<V> updatesLocalTensor, xLocalTensor;
+    LocalTensor<int32_t> hitCountLocal, aggIndicesOffset;
     LocalTensor<uint32_t> aggUpdatesOffset;
 
     GlobalTensor<U> indicesGm;
-    GlobalTensor<T> updatesGm;
-    GlobalTensor<T> xGm;
+    GlobalTensor<T> updatesGm, xGm;
     GM_ADDR workspace;
 
     int32_t coreNums = 0; // 传入的可用核数
-    uint64_t xDim0 = 0; // x.shape[0]
-    uint64_t xDim1 = 0; // x.shape[1]
-    uint64_t indicesDim0 = 0; // indices.shape[0]
-    uint64_t indicesDim1 = 0; // indices.shape[1]
-    uint64_t updatesDim0 = 0; // updates.shape[0]
-    uint64_t updatesDim1 = 0; // updates.shape[1]
-    uint64_t coreStartTask = 0; // 核分到的起始任务，每个任务为1行或1列
-    uint64_t coreTasks = 0; // 核分到的行数
-    uint64_t aggTasks = 0; // 一次搬入的任务
-    uint64_t aggTimes = 0; // coreTasks行，需要聚集多少次
-    uint64_t aggLeftTasks = 0; // 剩余的任务行
+    uint64_t xDim0 = 0, xDim1 = 0;
+    uint64_t indicesDim0 = 0, indicesDim1 = 0;
+    uint64_t updatesDim0 = 0, updatesDim1 = 0;
+    uint64_t coreStartTask = 0, coreTasks = 0;
+    uint64_t aggTasks = 0, aggTimes = 0, aggLeftTasks = 0;
+    uint64_t mode = 1;
+    uint64_t includeSelf = 1;
 
     V updatesValue = 0;
+    uint64_t xLocalLength = X_LOCAL_LENGTH;
 };
 }
 #endif

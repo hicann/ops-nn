@@ -40,6 +40,17 @@ class TEST_SCATTER_ELEMENTS_UT : public testing::Test {};
       .Attr("reduction", reduction)                                     \
       .Output({"y", data_types[3], shapes[3], datas[3]})
 
+#define CREATE_NODEDEF_WITH_INCLUDE_SELF(shapes, data_types, datas, axis, reduction, include_self) \
+  auto node_def = CpuKernelUtils::CreateNodeDef();                                                   \
+  NodeDefBuilder(node_def.get(), "ScatterElements", "ScatterElements")                               \
+      .Input({"data", data_types[0], shapes[0], datas[0]})                                           \
+      .Input({"indices", data_types[1], shapes[1], datas[1]})                                        \
+      .Input({"updates", data_types[2], shapes[2], datas[2]})                                        \
+      .Attr("axis", axis)                                                                            \
+      .Attr("reduction", reduction)                                                                  \
+      .Attr("include_self", include_self)                                                            \
+      .Output({"y", data_types[3], shapes[3], datas[3]})
+
 template <typename T, typename Index>
 void RunScatterElementsKernel(const vector<vector<int64_t>> &shapes, const vector<DataType> &data_types, const T *input_data,
                               const Index *input_indices, const T *input_updates, T *expect_output, int64_t axis,
@@ -73,6 +84,44 @@ void RunScatterElementsKernel(const vector<vector<int64_t>> &shapes, const vecto
   vector<void *> datas = {static_cast<void *>(data.get()), static_cast<void *>(indices.get()),
                           static_cast<void *>(updates.get()), static_cast<void *>(output.get())};
   CREATE_NODEDEF(shapes, data_types, datas, axis, reduction);
+  RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);
+  EXPECT_TRUE(CompareResult(output.get(), expect_output, output_size));
+}
+
+template <typename T, typename Index>
+void RunScatterElementsKernelWithIncludeSelf(const vector<vector<int64_t>> &shapes, const vector<DataType> &data_types,
+                                             const T *input_data, const Index *input_indices, const T *input_updates,
+                                             T *expect_output, int64_t axis, const string &reduction,
+                                             bool include_self) {
+  auto calc_size = [](const vector<int64_t> &shape) -> uint64_t {
+    return shape.empty() ? 0 : accumulate(shape.begin(), shape.end(), 1LL, multiplies<int64_t>());
+  };
+
+  const uint64_t data_size = calc_size(shapes[0]);
+  const uint64_t indices_size = calc_size(shapes[1]);
+  const uint64_t updates_size = calc_size(shapes[2]);
+  const uint64_t output_size = calc_size(shapes[3]);
+  auto data = make_unique<T[]>(data_size);
+  auto indices = make_unique<Index[]>(indices_size);
+  auto updates = make_unique<T[]>(updates_size);
+  auto output = make_unique<T[]>(output_size);
+
+  for (uint64_t i = 0; i < data_size; ++i) {
+    data[i] = input_data[i];
+  }
+  for (uint64_t i = 0; i < indices_size; ++i) {
+    indices[i] = input_indices[i];
+  }
+  for (uint64_t i = 0; i < updates_size; ++i) {
+    updates[i] = input_updates[i];
+  }
+  for (uint64_t i = 0; i < output_size; ++i) {
+    output[i] = T();
+  }
+
+  vector<void *> datas = {static_cast<void *>(data.get()), static_cast<void *>(indices.get()),
+                          static_cast<void *>(updates.get()), static_cast<void *>(output.get())};
+  CREATE_NODEDEF_WITH_INCLUDE_SELF(shapes, data_types, datas, axis, reduction, include_self);
   RUN_KERNEL(node_def, HOST, KERNEL_STATUS_OK);
   EXPECT_TRUE(CompareResult(output.get(), expect_output, output_size));
 }
@@ -118,4 +167,103 @@ TEST_F(TEST_SCATTER_ELEMENTS_UT, FAILED_OUT_OF_BOUND_INDEX) {
                           static_cast<void *>(input_updates), static_cast<void *>(output)};
   CREATE_NODEDEF(shapes, data_types, datas, 1, "none");
   RUN_KERNEL(node_def, HOST, KERNEL_STATUS_PARAM_INVALID);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_FLOAT_ADD_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_FLOAT, DT_INT32, DT_FLOAT, DT_FLOAT};
+  vector<vector<int64_t>> shapes = {{1, 5}, {1, 3}, {1, 3}, {1, 5}};
+  float input_data[5] = {1, 2, 3, 4, 5};
+  int32_t input_indices[3] = {0, 0, 4};
+  float input_updates[3] = {10, 20, 30};
+  float expect_output_with_self[5] = {31, 2, 3, 4, 35};
+  float expect_output_without_self[5] = {30, 2, 3, 4, 30};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_with_self, 1, "add", true);
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_without_self, 1, "add", false);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_INT32_MAX_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_INT32, DT_INT32, DT_INT32, DT_INT32};
+  vector<vector<int64_t>> shapes = {{1, 3}, {1, 2}, {1, 2}, {1, 3}};
+  int32_t input_data[3] = {5, 1, 8};
+  int32_t input_indices[2] = {0, 2};
+  int32_t input_updates[2] = {3, 10};
+  int32_t expect_output_with_self[3] = {5, 1, 10};
+  int32_t expect_output_without_self[3] = {3, 1, 10};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_with_self, 1, "max", true);
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_without_self, 1, "max", false);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_INT32_MIN_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_INT32, DT_INT32, DT_INT32, DT_INT32};
+  vector<vector<int64_t>> shapes = {{1, 3}, {1, 2}, {1, 2}, {1, 3}};
+  int32_t input_data[3] = {5, 1, 8};
+  int32_t input_indices[2] = {0, 2};
+  int32_t input_updates[2] = {10, 3};
+  int32_t expect_output_with_self[3] = {5, 1, 3};
+  int32_t expect_output_without_self[3] = {10, 1, 3};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_with_self, 1, "min", true);
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_without_self, 1, "min", false);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_DOUBLE_MEAN_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_DOUBLE, DT_INT64, DT_DOUBLE, DT_DOUBLE};
+  vector<vector<int64_t>> shapes = {{1, 3}, {1, 3}, {1, 3}, {1, 3}};
+  double input_data[3] = {2, 4, 6};
+  int64_t input_indices[3] = {0, 0, 2};
+  double input_updates[3] = {4, 6, 8};
+  double expect_output_with_self[3] = {4, 4, 7};
+  double expect_output_without_self[3] = {5, 4, 8};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_with_self, 1, "mean", true);
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_without_self, 1, "mean", false);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_INT16_MEAN_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_INT16, DT_INT64, DT_INT16, DT_INT16};
+  vector<vector<int64_t>> shapes = {{1}, {1}, {1}, {1}};
+  int16_t input_data[1] = {-5};
+  int64_t input_indices[1] = {0};
+  int16_t input_updates[1] = {2};
+  int16_t expect_output[1] = {-2};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output, 0, "mean", true);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_INT64_ADD_WITHOUT_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_INT64, DT_INT64, DT_INT64, DT_INT64};
+  vector<vector<int64_t>> shapes = {{1}, {1}, {1}, {1}};
+  int64_t input_data[1] = {5};
+  int64_t input_indices[1] = {0};
+  int64_t input_updates[1] = {2};
+  int64_t expect_output[1] = {2};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output, 0, "add", false);
+}
+
+TEST_F(TEST_SCATTER_ELEMENTS_UT, DATA_TYPE_DT_FLOAT_MUL_INCLUDE_SELF_COMPARE_SUCC) {
+  vector<DataType> data_types = {DT_FLOAT, DT_INT32, DT_FLOAT, DT_FLOAT};
+  vector<vector<int64_t>> shapes = {{1, 5}, {1, 3}, {1, 3}, {1, 5}};
+  float input_data[5] = {2, 3, 4, 5, 6};
+  int32_t input_indices[3] = {0, 0, 4};
+  float input_updates[3] = {3, 4, 7};
+  float expect_output_with_self[5] = {24, 3, 4, 5, 42};
+  float expect_output_without_self[5] = {12, 3, 4, 5, 7};
+
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_with_self, 1, "mul", true);
+  RunScatterElementsKernelWithIncludeSelf(shapes, data_types, input_data, input_indices, input_updates,
+                                          expect_output_without_self, 1, "mul", false);
 }

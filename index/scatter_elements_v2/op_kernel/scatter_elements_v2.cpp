@@ -18,28 +18,69 @@
 #include "scatter_elements_v2.h"
 #include "scatter_elements_v2_low_memory/exec_transpose_and_scatter_elements.h"
 
-template <typename T, typename U, uint32_t MODE, bool IsScalar>
-__aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
-                                      ScatterElementsV2TilingData* tiling_data,
-                                      AscendC::TPipe* pipe, GM_ADDR workspace) {
-    if constexpr (MODE == 1) {
-        if constexpr (!(std::is_same<T, int32_t>::value || std::is_same<T, float>::value ||
-                        std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value)) {
-            return;
-        }
+__aicore__ inline bool IsCacheOpTiling(const ScatterElementsV2TilingData* tiling_data)
+{
+    return tiling_data->coreNums != 0 || tiling_data->xDim0 != 0 || tiling_data->xDim1 != 0 ||
+           tiling_data->indicesDim0 != 0 || tiling_data->indicesDim1 != 0 ||
+           tiling_data->updatesDim0 != 0 || tiling_data->updatesDim1 != 0;
+}
+
+template <typename T, typename U, bool IsScalar>
+__aicore__ inline void ExecCacheScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                          ScatterElementsV2TilingData* tiling_data,
+                                          AscendC::TPipe* pipe, GM_ADDR workspace) {
+    if (tiling_data->mode == 1 &&
+        !(std::is_same<T, int32_t>::value || std::is_same<T, float>::value ||
+          std::is_same<T, half>::value || std::is_same<T, bfloat16_t>::value)) {
+        return;
     }
-    GM_ADDR userspace = GetUserWorkspace(workspace);
-    ScatterElementsV2NS::ExecTransposeAndScatterElements<T, U, MODE, IsScalar> op;
-    op.Init(var, indices, updates, tiling_data, pipe, userspace);
+    ScatterElementsV2NS::ExecTransposeAndScatterElements<T, U, IsScalar> op;
+    op.Init(var, indices, updates, tiling_data, pipe, GetUserWorkspace(workspace));
     op.Process();
 }
+
+template <typename T, typename U>
+__aicore__ inline void ExecLegacyScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                           ScatterElementsV2TilingData* tiling_data,
+                                           AscendC::TPipe* pipe) {
+    KernelScatterElementsV2<T, U> op;
+    op.Init(tiling_data, pipe, var, indices, updates);
+    if (tiling_data->modeFlag == SMALL_MODE) {
+        op.ProcessSmall();
+    } else {
+        op.ProcessScatter();
+    }
+}
+
+template <typename T, typename U, bool IsScalar>
+__aicore__ inline void ExecScatterOpImpl(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                         ScatterElementsV2TilingData* tiling_data,
+                                         AscendC::TPipe* pipe, GM_ADDR workspace) {
+    if (IsCacheOpTiling(tiling_data)) {
+        ExecCacheScatterOp<T, U, IsScalar>(var, indices, updates, tiling_data, pipe, workspace);
+    } else {
+        ExecLegacyScatterOp<T, U>(var, indices, updates, tiling_data, pipe);
+    }
+}
+
+template <typename T, typename U, bool IsScalar>
+__aicore__ inline void ExecScatterOp(GM_ADDR var, GM_ADDR indices, GM_ADDR updates,
+                                     ScatterElementsV2TilingData* tiling_data,
+                                     AscendC::TPipe* pipe, GM_ADDR workspace) {
+    ExecScatterOpImpl<T, U, IsScalar>(var, indices, updates, tiling_data, pipe, workspace);
+}
 #endif
+
+#define CALL_OP_IMPL(T, U)                                                             \
+    do {                                                                               \
+        ExecScatterOp<T, U, false>(var, indices, updates, tilingDevice, &pipe, workspace); \
+    } while (0)
 
 extern "C" __global__ __aicore__ void scatter_elements_v2(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling)
 {
     GET_TILING_DATA(tiling_data, tiling);
-    const ScatterElementsV2TilingData* __restrict tilingDevice = &tiling_data;
+    ScatterElementsV2TilingData* __restrict tilingDevice = &tiling_data;
     AscendC::TPipe pipe;
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ < 220
 #if (defined(DTYPE_VAR))
@@ -50,32 +91,30 @@ extern "C" __global__ __aicore__ void scatter_elements_v2(
     }
 #endif
 #else
-    if (TILING_KEY_IS(0)) {
-        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 0, false>(var, indices, updates, &tiling_data, &pipe, workspace);
-    } else if (TILING_KEY_IS(10)) {
-        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 0, true>(var, indices, updates, &tiling_data, &pipe, workspace);
-    } else if (TILING_KEY_IS(100)) {
-        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 1, false>(var, indices, updates, &tiling_data, &pipe, workspace);
-    } else if (TILING_KEY_IS(110)) {
-        ExecScatterOp<DTYPE_VAR, DTYPE_INDICES, 1, true>(var, indices, updates, &tiling_data, &pipe, workspace);
-    } else if (TILING_KEY_IS(1)) {
-        // 原始分支，仅支持尾轴场景，需要在算子外部做transpose
-        KernelScatterElementsV2<DTYPE_VAR, DTYPE_INDICES, 1> op;
-        op.Init(tilingDevice, &pipe, var, indices, updates);
-        if (tilingDevice->modeFlag == 1) {
-            op.ProcessSmall();
-        } else {
-            op.ProcessScatter();
-        }
-    } else if (TILING_KEY_IS(2)) {
-        // 原始分支，仅支持尾轴场景，需要在算子外部做transpose
-        KernelScatterElementsV2<DTYPE_VAR, DTYPE_INDICES, 2> op;
-        op.Init(tilingDevice, &pipe, var, indices, updates);
-        if (tilingDevice->modeFlag == 1) {
-            op.ProcessSmall();
-        } else {
-            op.ProcessScatter();
-        }
+    if (TILING_KEY_IS(110)) {
+        CALL_OP_IMPL(float, int);
+    } else if (TILING_KEY_IS(120)) {
+        CALL_OP_IMPL(float, long);
+    } else if (TILING_KEY_IS(210)) {
+        CALL_OP_IMPL(half, int);
+    } else if (TILING_KEY_IS(220)) {
+        CALL_OP_IMPL(half, long);
+    } else if (TILING_KEY_IS(310)) {
+        CALL_OP_IMPL(int, int);
+    } else if (TILING_KEY_IS(320)) {
+        CALL_OP_IMPL(int, long);
+    } else if (TILING_KEY_IS(410)) {
+        CALL_OP_IMPL(uint8_t, int);
+    } else if (TILING_KEY_IS(420)) {
+        CALL_OP_IMPL(uint8_t, long);
+    } else if (TILING_KEY_IS(510)) {
+        CALL_OP_IMPL(int8_t, int);
+    } else if (TILING_KEY_IS(520)) {
+        CALL_OP_IMPL(int8_t, long);
+    } else if (TILING_KEY_IS(610)) {
+        CALL_OP_IMPL(bfloat16_t, int);
+    } else if (TILING_KEY_IS(620)) {
+        CALL_OP_IMPL(bfloat16_t, long);
     }
 #endif
 }

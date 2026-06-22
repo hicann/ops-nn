@@ -25,7 +25,12 @@ public:
         this->Input("updates").ParamType(REQUIRED).DataType(data_types);
         this->Output("y").ParamType(REQUIRED).DataType(data_types);
 
+        this->Attr("axis").AttrType(OPTIONAL).Int(0);
+        this->Attr("reduction").AttrType(OPTIONAL).String("none");
+        this->Attr("include_self").AttrType(OPTIONAL).Bool(true);
+
         ApplyNnAicpuDefaultCfg(*this);
+        this->AICPU().ExtendCfgInfo(OP_INFO_OPS_FLAG.c_str(), OPEN_OPS_FLAG.c_str());
     }
 };
 

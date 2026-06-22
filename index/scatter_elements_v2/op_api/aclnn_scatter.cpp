@@ -13,6 +13,7 @@
  * \brief
  */
 #include "aclnn_scatter.h"
+#include "aclnn_scatter_reduce.h"
 #include "aclnn_scatter_add.h"
 #include "level0/broadcast_to.h"
 #include "aclnn_kernels/contiguous.h"
@@ -113,10 +114,12 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     }
 }
 
+static const int64_t REDUCE_NONE = 0;
 static const int64_t REDUCE_ADD = 1;
 static const int64_t REDUCE_MUL = 2;
 static const int64_t REDUCE_MAX = 3;
 static const int64_t REDUCE_MIN = 4;
+static const int64_t REDUCE_MEAN = 5;
 static const int64_t NEG_ONE = -1;
 static const int64_t NEG_TWO = -2;
 static const int64_t TWO_DIM = 2;
@@ -127,10 +130,18 @@ static const std::string REDUCTION_ADD = "add";
 static const std::string REDUCTION_MUL = "mul";
 static const std::string REDUCTION_MAX = "max";
 static const std::string REDUCTION_MIN = "min";
+static const std::string REDUCTION_MEAN = "mean";
+
+static bool IsValidScatterReduce(int64_t reduce)
+{
+    return reduce >= REDUCE_NONE && reduce <= REDUCE_MEAN;
+}
 
 static const std::string& GetReduceStr(int64_t reduce)
 {
-    if (reduce == REDUCE_ADD) {
+    if (reduce == REDUCE_NONE) {
+        return REDUCTION_NONE;
+    } else if (reduce == REDUCE_ADD) {
         return REDUCTION_ADD;
     } else if (reduce == REDUCE_MUL) {
         return REDUCTION_MUL;
@@ -140,8 +151,11 @@ static const std::string& GetReduceStr(int64_t reduce)
     } else if (reduce == REDUCE_MIN) {
         OP_LOGW("Minimum mode is experimental!");
         return REDUCTION_MIN;
+    } else if (reduce == REDUCE_MEAN) {
+        OP_LOGW("Mean mode is experimental!");
+        return REDUCTION_MEAN;
     }
-    OP_LOGW("reduce not in [0, 4], will use reduce=0.");
+    OP_LOGW("reduce not in {0,1,2,3,4,5}, will use reduce=0.");
     return REDUCTION_NONE;
 }
 
@@ -343,7 +357,7 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
 
 static aclnnStatus ExecScatterNoTranspose(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
-    aclOpExecutor* executor) {
+    aclOpExecutor* executor, bool includeSelf = true) {
     auto ret = CheckParams(self, index, src, out);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
@@ -360,13 +374,15 @@ static aclnnStatus ExecScatterNoTranspose(
         CHECK_RET(selfCopy != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto copyResult = l0op::TensorMove(selfContiguous, selfCopy, executor);
         CHECK_RET(copyResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto scatterRes = l0op::ScatterElementsNoTranspose(selfCopy, indexContiguous, srcContiguous, dim, reduction, executor);
+        auto scatterRes = l0op::ScatterElementsNoTranspose(
+            selfCopy, indexContiguous, srcContiguous, dim, reduction, executor, includeSelf);
         CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
         auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
         CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
         return ACLNN_SUCCESS;
     }
-    auto scatterRes = l0op::ScatterElementsNoTranspose(selfContiguous, indexContiguous, srcContiguous, dim, reduction, executor);
+    auto scatterRes = l0op::ScatterElementsNoTranspose(
+        selfContiguous, indexContiguous, srcContiguous, dim, reduction, executor, includeSelf);
     CHECK_RET(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR);
     auto viewCopyResult = l0op::ViewCopy(scatterRes, out, executor);
     CHECK_COND(viewCopyResult != nullptr, ACLNN_ERR_INNER_NULLPTR, "viewCopy output failed!");
@@ -462,10 +478,10 @@ static const aclTensor* DoScatterAddWithSorted(
 
 static const aclTensor* DoScatterElements(
     const aclTensor* self, const aclTensor* index, const aclTensor* src, int64_t dimInput, bool isCopy,
-    const std::string& reduction, aclOpExecutor* executor)
+    const std::string& reduction, aclOpExecutor* executor, bool includeSelf = true)
 {
     const aclTensor* scatterRes = nullptr;
-    std::string newReduction = (reduction == REDUCTION_MIN || reduction == REDUCTION_MAX) ? REDUCTION_NONE : reduction;
+    std::string newReduction = reduction;
 
     if (CheckUseAicpu(self, index, src, dimInput, reduction)) {
         // 转换BF16数据类型为FP32，因aicpu算子未升精度计算
@@ -485,19 +501,11 @@ static const aclTensor* DoScatterElements(
         CHECK_RET(selfCopy != nullptr, nullptr);
         auto copyResult = l0op::TensorMove(self, selfCopy, executor);
         CHECK_RET(copyResult != nullptr, nullptr);
-        scatterRes = l0op::ScatterElements(selfCopy, index, src, dimInput, newReduction, executor);
+        scatterRes = l0op::ScatterElements(selfCopy, index, src, dimInput, newReduction, executor, includeSelf);
     } else {
-        scatterRes = l0op::ScatterElements(self, index, src, dimInput, newReduction, executor);
+        scatterRes = l0op::ScatterElements(self, index, src, dimInput, newReduction, executor, includeSelf);
     }
     CHECK_RET(scatterRes != nullptr, nullptr);
-
-    if (reduction == REDUCTION_MAX) {
-        scatterRes = l0op::Maximum(self, scatterRes, executor);
-        CHECK_RET(scatterRes != nullptr, nullptr);
-    } else if (reduction == REDUCTION_MIN) {
-        scatterRes = l0op::Minimum(self, scatterRes, executor);
-        CHECK_RET(scatterRes != nullptr, nullptr);
-    }
 
     return scatterRes;
 }
@@ -562,7 +570,7 @@ static bool IsMeetScatterAddShape(const op::Shape &selfShape, const op::Shape &i
 
 static aclnnStatus ExecScatterBase(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
-    aclOpExecutor* executor)
+    aclOpExecutor* executor, bool includeSelf = true)
 {
     const std::string& reduction = GetReduceStr(reduce);
     auto ret = CheckParams(self, index, src, out);
@@ -608,7 +616,7 @@ static aclnnStatus ExecScatterBase(
         aicoreSupport = CheckType(selfContiguous->GetDataType(), AICORE_DTYPE_SUPPORT_LIST);
     }
 
-    aicoreSupport = aicoreSupport && (reduction != REDUCTION_MUL) && (curArch != NpuArch::DAV_2002);
+    aicoreSupport = aicoreSupport && (curArch != NpuArch::DAV_2002);
     scatterAddRegbaseSupport = scatterAddRegbaseSupport && (reduction == REDUCTION_ADD) && flagRebase;
 
     int64_t selfDimNum = static_cast<int64_t>(selfContiguous->GetViewShape().GetDimNum());
@@ -621,7 +629,7 @@ static aclnnStatus ExecScatterBase(
     bool aicore910b = aicoreSupport && flag910b;
     // index的步长为[1,0]或者[x,1,0] 且x不为0，是index expand场景，走scatteraddwithsorted, 超过16777216的FP32无法精准表示整数
     bool expandFlag =
-        aicore910b &&
+        includeSelf && aicore910b &&
         ((selfDimNum == TWO_DIM && indexShape[0] < MAX_EXACT_FLOAT && dimFinal != 1) ||
          (selfDimNum == THREE_DIM && indexShape[0] * indexShape[1] < MAX_EXACT_FLOAT && dimFinal != TWO_DIM)) &&
         strides[selfDimNum + NEG_TWO] == 1 && strides[selfDimNum + NEG_ONE] == 0 && shape.GetDimNum() == 1;
@@ -749,7 +757,7 @@ static aclnnStatus ExecScatterBase(
 
     bool isCopy = (flagRebase || aicore910b) && self->GetData() != out->GetData();
     const aclTensor* scatterRes =
-        DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy, reduction, executor);
+        DoScatterElements(selfContiguous, indexContiguous, srcContiguous, dimInput, isCopy, reduction, executor, includeSelf);
     CHECK_COND(scatterRes != nullptr, ACLNN_ERR_INNER_NULLPTR, "DoScatterElements failed!");
 
     scatterRes = needTranspose ? l0op::Transpose(scatterRes, valuePerm, executor) : scatterRes;
@@ -780,20 +788,35 @@ static bool isTensorComplex(const aclTensor* data)
 
 static aclnnStatus ExecScatterGetWorkspaceSize(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, aclTensor* out,
-    uint64_t* workspaceSize, aclOpExecutor** executor)
+    uint64_t* workspaceSize, aclOpExecutor** executor, bool includeSelf = true)
 {
     auto uniqueExecutor = CREATE_EXECUTOR();
     CHECK_COND(uniqueExecutor.get() != nullptr, ACLNN_ERR_INNER_CREATE_EXECUTOR, "CREATE_EXECUTOR failed!");
-    bool supportNoTranspose = l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
+    bool supportNoTranspose = includeSelf && l0op::SupportNoTranspose(self, index, src, dim, GetReduceStr(reduce));
     aclnnStatus ret;
     if (supportNoTranspose) {
-        ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        ret = ExecScatterNoTranspose(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
     } else {
-        ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get());
+        ret = ExecScatterBase(self, dim, index, src, reduce, out, uniqueExecutor.get(), includeSelf);
     }
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
     return ret;
+}
+
+static aclnnStatus ExecScatterReduceGetWorkspaceSize(
+    const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, bool includeSelf,
+    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    CHECK_COND(
+        IsValidScatterReduce(reduce), ACLNN_ERR_PARAM_INVALID,
+        "reduce must be one of [0(none), 1(add), 2(mul), 3(max), 4(min), 5(mean)].");
+    return ExecScatterGetWorkspaceSize(self, dim, index, src, reduce, out, workspaceSize, executor, includeSelf);
+}
+
+static aclnnStatus RunScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
 }
 
 static void CheckFormat(const aclTensor* self) {
@@ -875,34 +898,53 @@ aclnnStatus aclnnScatterValueGetWorkspaceSize(
     return ExecScatterValueGetWorkspaceSize(self, dim, index, value, reduce, out, workspaceSize, executor);
 }
 
+aclnnStatus aclnnScatterReduceGetWorkspaceSize(
+    const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, bool includeSelf,
+    aclTensor* out, uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnScatterReduce, DFX_IN(self, dim, index, src, reduce, includeSelf), DFX_OUT(out));
+    return ExecScatterReduceGetWorkspaceSize(
+        self, dim, index, src, reduce, includeSelf, out, workspaceSize, executor);
+}
+
 aclnnStatus aclnnScatterAddGetWorkspaceSize(
     const aclTensor* self, int64_t dim, const aclTensor* index, const aclTensor* src, aclTensor* out,
     uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);
+    constexpr bool includeSelf = true;
 
     L2_DFX_PHASE_1(aclnnScatterAdd, DFX_IN(self, dim, index, src), DFX_OUT(out));
-    return ExecScatterGetWorkspaceSize(self, dim, index, src, REDUCE_ADD, out, workspaceSize, executor);
+    return ExecScatterReduceGetWorkspaceSize(
+        self, dim, index, src, REDUCE_ADD, includeSelf, out, workspaceSize, executor);
 }
 
 aclnnStatus aclnnScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnScatter);
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return RunScatter(workspace, workspaceSize, executor, stream);
 }
 
 aclnnStatus aclnnScatterValue(
     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnScatterValue);
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return RunScatter(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnScatterReduce(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnScatterReduce);
+    return RunScatter(workspace, workspaceSize, executor, stream);
 }
 
 aclnnStatus aclnnScatterAdd(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
 {
-    // 固定写法，调用框架能力，完成计算
     L2_DFX_PHASE_2(aclnnScatterAdd);
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return RunScatter(workspace, workspaceSize, executor, stream);
 }
 
 // inplace
@@ -915,6 +957,18 @@ aclnnStatus aclnnInplaceScatterGetWorkspaceSize(
     L2_DFX_PHASE_1(aclnnInplaceScatter, DFX_IN(selfRef, dim, index, src, reduce), DFX_OUT(selfRef));
     auto out = const_cast<aclTensor*>(selfRef);
     return ExecScatterGetWorkspaceSize(selfRef, dim, index, src, reduce, out, workspaceSize, executor);
+}
+
+aclnnStatus aclnnInplaceScatterReduceGetWorkspaceSize(
+    aclTensor* selfRef, int64_t dim, const aclTensor* index, const aclTensor* src, int64_t reduce, bool includeSelf,
+    uint64_t* workspaceSize, aclOpExecutor** executor)
+{
+    OP_CHECK_COMM_INPUT(workspaceSize, executor);
+
+    L2_DFX_PHASE_1(aclnnInplaceScatterReduce, DFX_IN(selfRef, dim, index, src, reduce, includeSelf), DFX_OUT(selfRef));
+    auto out = const_cast<aclTensor*>(selfRef);
+    return ExecScatterReduceGetWorkspaceSize(
+        selfRef, dim, index, src, reduce, includeSelf, out, workspaceSize, executor);
 }
 
 aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(
@@ -931,14 +985,21 @@ aclnnStatus aclnnInplaceScatterValueGetWorkspaceSize(
 aclnnStatus aclnnInplaceScatter(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceScatter);
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return RunScatter(workspace, workspaceSize, executor, stream);
+}
+
+aclnnStatus aclnnInplaceScatterReduce(
+    void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+{
+    L2_DFX_PHASE_2(aclnnInplaceScatterReduce);
+    return RunScatter(workspace, workspaceSize, executor, stream);
 }
 
 aclnnStatus aclnnInplaceScatterValue(
     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
 {
     L2_DFX_PHASE_2(aclnnInplaceScatterValue);
-    return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);
+    return RunScatter(workspace, workspaceSize, executor, stream);
 }
 
 #ifdef __cplusplus

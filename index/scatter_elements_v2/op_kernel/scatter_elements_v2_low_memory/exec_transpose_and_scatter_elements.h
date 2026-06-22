@@ -26,7 +26,7 @@
 namespace ScatterElementsV2NS {
 using namespace AscendC;
 
-template <typename T, typename U, const uint32_t MODE, const bool IsScalar>
+template <typename T, typename U, const bool IsScalar>
 class ExecTransposeAndScatterElements {
 public:
     __aicore__ inline ExecTransposeAndScatterElements() {}
@@ -49,6 +49,8 @@ public:
         this->updatesDim1 = tilingData->updatesDim1;
         this->coreNums = tilingData->coreNums;
         this->dim = tilingData->realDim;
+        this->mode = tilingData->mode;
+        this->includeSelf = tilingData->includeSelf;
         
         TPipe* pipe = tPipe;
         TBuf<TPosition::VECCALC> allUbBuf;
@@ -76,9 +78,10 @@ public:
                 if (indicesDim != updatesDim) {
                     GlobalTensor<int32_t> offsetGmTensor1;
                     offsetGmTensor1.SetGlobalBuffer(reinterpret_cast<__gm__ int32_t*>(this->workspace + AGG_INDICES_NUM * sizeof(int32_t)));
-                    InitGatherOffset<T, MODE> initGatherOffset1;
+                    InitGatherOffset<T> initGatherOffset1;
                     initGatherOffset1.Init(offsetGmTensor1, this->allUbLocal, indicesDim, BLOCK_SIZE);
                     initGatherOffset1.SetCoreNums(this->coreNums);
+                    initGatherOffset1.SetCastFloat(this->mode >= 2 && this->mode <= 6);
                     initGatherOffset1.ProcessAggUpdates(xDim, updatesDim);
                 }
             }
@@ -116,7 +119,7 @@ public:
         ScatterElementsV2NS::TransposeBatchForward<T, V, T> transposeVarBatchForward, transposeUpdatesBatchForward;
         ScatterElementsV2NS::TransposeBatchForward<U, int32_t, int32_t> transposeIndicesBatchForward;
         ScatterElementsV2NS::TransposeBatchBackward<T, V, T> transposeDataBatchBackward;
-        ScatterElementsV2NS::ScatterElements<T, int32_t, MODE, IsScalar> scatterElements;
+        ScatterElementsV2NS::ScatterElements<T, int32_t, IsScalar> scatterElements;
 
         this->SetTransposeOffsets(transposeVarBatchForward, transposeIndicesBatchForward, 
                                   transposeUpdatesBatchForward, transposeDataBatchBackward, maxBatch);
@@ -168,7 +171,7 @@ public:
                   half, T >::type;
         ScatterElementsV2NS::TransposeTileForward<T, V, T> transposeVarTileForward;
         ScatterElementsV2NS::TransposeTileBackward<T, V, T> transposeDataTileBackward;
-        ScatterElementsV2NS::ScatterElements<T, U, MODE, IsScalar> scatterElements;
+        ScatterElementsV2NS::ScatterElements<T, U, IsScalar> scatterElements;
 
         uint32_t offsetIndex = 0;
         this->InitTileOffset<V>(transposeVarTileForward, this->xDim0, maxSize, offsetIndex++, OffsetType::PAD_UNPAD);
@@ -227,7 +230,7 @@ public:
         ScatterElementsV2NS::TransposeTileForward<T, V, T> transposeVarTileForward, transposeUpdatesTileForward;
         ScatterElementsV2NS::TransposeTileForward<U, int32_t, int32_t> transposeIndicesTileForward;
         ScatterElementsV2NS::TransposeTileBackward<T, V, T> transposeDataTileBackward;
-        ScatterElementsV2NS::ScatterElements<T, int32_t, MODE, IsScalar> scatterElements;
+        ScatterElementsV2NS::ScatterElements<T, int32_t, IsScalar> scatterElements;
 
         uint32_t offsetIndex = 0;
         this->InitTileOffset<V>(transposeVarTileForward, this->xDim0, maxSize, offsetIndex++, OffsetType::PAD_UNPAD);
@@ -283,7 +286,7 @@ public:
     }
 
     __aicore__ inline void ProcessLastDim() {
-        ScatterElements<T, U, MODE, IsScalar> scatterElements;
+        ScatterElements<T, U, IsScalar> scatterElements;
         this->InitAggOffset(this->indicesDim1, this->xDim1, this->updatesDim1);
         this->ProcessScatter(scatterElements, this->xGm, this->indicesGm, this->updatesGm,
                              ScatterParams{this->xDim0, this->xDim1, this->indicesDim0, this->indicesDim1,
@@ -465,6 +468,7 @@ public:
         scatter.SetIndicesInfo(params.indicesDim0, params.indicesDim1);
         scatter.SetUpdatesInfo(params.updatesDim0, params.updatesDim1);
         scatter.SetCoreNums(this->coreNums);
+        scatter.SetModeInfo(this->mode, this->includeSelf);
         scatter.Process();
     }
 
@@ -551,6 +555,8 @@ private:
     uint64_t indicesDim1 = 0; // indices.shape[1]
     uint64_t updatesDim0 = 0; // updates.shape[0]
     uint64_t updatesDim1 = 0; // updates.shape[1]
+    uint64_t mode = 1;
+    uint64_t includeSelf = 1;
     uint32_t coreNums;
     uint32_t dim; // 1: 中间轴scatter 2: 最后轴scatter
     LocalTensor<uint8_t> allUbLocal;
