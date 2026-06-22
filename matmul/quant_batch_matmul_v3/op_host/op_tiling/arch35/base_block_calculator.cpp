@@ -190,7 +190,7 @@ bool BaseBlockCalculator::AdjustBaseBlock(BaseBlockMode mode)
         case NpuArch::DAV_3510:
             return mode == BaseBlockMode::PERBLOCK ? AdjustBaseBlockPerblock() : AdjustBaseBlockDefault();
         case NpuArch::DAV_RESV:
-            return AdjustBaseBlockMmadS8S4(mode, oriBlock);
+            return AdjustBaseBlockMmadS8S4(oriBlock);
         default:
             OP_LOGE(inputParams_.opName, "Failed to find the AdjustBaseBlock function for the current NPU architecture.");
             return false;
@@ -334,7 +334,7 @@ bool BaseBlockCalculator::AdjustBaseBlockPertile(uint64_t coreNumMN)
     return true;
 }
 
-bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(BaseBlockMode, uint64_t oriBlock)
+bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(uint64_t oriBlock)
 {
     uint64_t baseMAlignNum =
         inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
