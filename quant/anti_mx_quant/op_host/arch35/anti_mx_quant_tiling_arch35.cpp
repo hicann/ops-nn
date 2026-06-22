@@ -195,9 +195,9 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Anti
     int64_t axis = tilingParam.axis >= 0 ? tilingParam.axis : tilingParam.axis + xShape.GetDimNum();
     int64_t dimNum = static_cast<int64_t>(xShape.GetDimNum());
     OP_CHECK_IF(
-        axis >= dimNum || axis < 0,
+        axis != dimNum - 1,
         OP_LOGE(context->GetNodeName(),
-            "The attr axis[%ld] is invalid for input rank[%zu], please check.",
+            "The attr axis[%ld] is invalid for input rank[%zu], the axis only supports the tail axis currently, please check.",
             tilingParam.axis, xShape.GetDimNum()),
         return ge::GRAPH_FAILED);
 
