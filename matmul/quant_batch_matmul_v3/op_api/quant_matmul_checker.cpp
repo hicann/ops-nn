@@ -1167,11 +1167,10 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
 
 bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
 {
-    if (!(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
-          x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
+    if (!IsMicroScaling(x1Scale_, x2Scale_)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
-            FormatString("%s, %s", op::ToString(x1Scale_->GetDataType()).GetString(),
+            FormatString("%s, %s", x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
                 op::ToString(x2Scale_->GetDataType()).GetString()).c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT4_E2M1, the dtypes of x1Scale and x2Scale "
             "must be FLOAT8_E8M0");
