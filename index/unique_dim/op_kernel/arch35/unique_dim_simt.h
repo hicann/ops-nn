@@ -26,7 +26,7 @@ constexpr int32_t GM_BLOCK_DIM = 2048; // more threads for GM-bound ops (transpo
 // ============================================================
 
 // TotalOrder comparison for floating-point types that need it (bf16, double)
-// Normalizes -0 → +0, then maps to unsigned: negative → ~bits, positive → bits ^ signBit
+// Normalizes -0 → +0 so they compare equal (stable sort preserves first-appearing one)
 template <typename T, typename U>
 __simt_callee__ __aicore__ inline int SimtCompareTotalOrder(T lhs, T rhs, U signBit)
 {
@@ -63,24 +63,20 @@ __simt_callee__ __aicore__ inline bool SimtIsNan(T val)
 }
 
 // Version for simt context (called from __simt_callee__/__simt_vf__)
+// NOTE: NaN compares as equal here (for stable sorting). NaN dedup is handled
+// separately in SimtAdjacentDiff to keep sort order consistent with CPU.
 template <typename T>
 __simt_callee__ __aicore__ inline int SimtScalarCompare(T lhs, T rhs)
 {
-    int cmp;
     if constexpr (IsSameType<T, bfloat16_t>::value) {
-        cmp = SimtCompareTotalOrder<T, uint16_t>(lhs, rhs, 0x8000U);
+        return SimtCompareTotalOrder<T, uint16_t>(lhs, rhs, 0x8000U);
     } else if constexpr (IsSameType<T, double>::value) {
-        cmp = SimtCompareTotalOrder<T, uint64_t>(lhs, rhs, 0x8000000000000000ULL);
+        return SimtCompareTotalOrder<T, uint64_t>(lhs, rhs, 0x8000000000000000ULL);
     } else {
         if (lhs < rhs) return -1;
         if (lhs > rhs) return 1;
-        cmp = 0;
+        return 0;
     }
-    // Only check NaN when values appear equal (NaN < x and NaN > x are both false)
-    if (cmp == 0 && (SimtIsNan<T>(lhs) || SimtIsNan<T>(rhs))) {
-        return 1;
-    }
-    return cmp;
 }
 
 // ============================================================
@@ -106,6 +102,34 @@ __simt_callee__ __aicore__ inline int SimtRowCompare(__gm__ T *inputFlat, int64_
         int cmp = SimtScalarCompare<T>(lhs, rhs);
         if (cmp != 0) {
             return cmp;
+        }
+    }
+    return 0;
+}
+
+// Dedup variant: same single-pass comparison, but also treats NaN as not-equal
+// (for sorting NaN compares equal to preserve stable order; for dedup NaN must be unique)
+template <typename T>
+__simt_callee__ __aicore__ inline int SimtRowCompareDedup(__gm__ T *dataPtr, int64_t rowSize, int64_t rowA, int64_t rowB)
+{
+    if (rowA == -1 && rowB == -1) {
+        return 0;
+    }
+    if (rowA == -1) {
+        return 1;
+    }
+    if (rowB == -1) {
+        return -1;
+    }
+    for (int64_t colIdx = 0; colIdx < rowSize; ++colIdx) {
+        T valA = dataPtr[rowA * rowSize + colIdx];
+        T valB = dataPtr[rowB * rowSize + colIdx];
+        int cmpResult = SimtScalarCompare<T>(valA, valB);
+        if (cmpResult != 0) {
+            return cmpResult;
+        }
+        if (SimtIsNan<T>(valA) || SimtIsNan<T>(valB)) {
+            return 1;
         }
     }
     return 0;
@@ -227,7 +251,7 @@ inline void SimtAdjacentDiff(int64_t coreStart, int64_t coreLen,
         } else {
             int64_t prevKey = static_cast<int64_t>(indices[i - 1]);
             int64_t curKey = static_cast<int64_t>(indices[i]);
-            int cmp = SimtRowCompare<T>(inputFlat, rowLen, prevKey, curKey);
+            int cmp = SimtRowCompareDedup<T>(inputFlat, rowLen, prevKey, curKey);
             flags[i] = (cmp != 0) ? 1 : 0;
         }
     }

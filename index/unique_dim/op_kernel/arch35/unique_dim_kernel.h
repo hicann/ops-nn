@@ -423,6 +423,7 @@ private:
             (__gm__ uint32_t *)flagsGm_.GetPhyAddr(),
             coreId_,
             (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr());
+        SyncAll();
     }
 
     // ============================================================
@@ -487,6 +488,8 @@ private:
                     (__gm__ uint32_t *)positionsGm_.GetPhyAddr(),
                     numOut, static_cast<uint32_t>(numInp_));
             }
+            SyncAll();
+        } else {
             SyncAll();
         }
     }
