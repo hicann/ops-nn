@@ -405,7 +405,16 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     | x        | weight            | weight Format | antiquantScale | antiquantOffsetOptional | quantScaleOptional | quantOffsetOptional | biasOptional | antiquantGroupSize | y    | 场景说明 |
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
     | FLOAT16/BFLOAT16 | INT8 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | T & C & G量化 |
-    | FLOAT16/BFLOAT16 | HIFLOAT8/FLOAT8_E4M3FN | ND | 与x一致 | null | null | null | 与x一致/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C量化 |
+    | FLOAT16/BFLOAT16 | HIFLOAT8/FLOAT8_E4M3FN | ND | 与x一致 | null | null | null | 与x一致/null | 0 | 与x一致 | C量化 |
+
+    - x、weight、antiquantScale、antiquantOffsetOptional、biasOptional和antiquantGroupSize的取值关系：
+
+    | 场景说明 | x数据类型 | weight数据类型 | x shape | weight shape | antiquantScale shape | antiquantOffsetOptional shape | biasOptional shape | antiquantGroupSize |
+    | ------- | -------- | ------------- | ------- | ------------ | -------------------- | ----------------------------- | ------------------ | ------------------ |
+    | T量化 | FLOAT16/BFLOAT16 | INT8 | (m, k) | (k, n) | (1,)或(1,1) | (1,)或(1,1)/null | (n,)或(1,n)/null | 0 |
+    | C量化 | FLOAT16/BFLOAT16 | INT8 | (m, k) | (k, n) | (1,n)或(n,) | (1,n)或(n,)/null | (n,)或(1,n)/null | 0 |
+    | G量化 | FLOAT16/BFLOAT16 | INT8 | (m, k) | (k, n) | (⌈k/group_size⌉, n) | (⌈k/group_size⌉, n)/null | (n,)或(1,n)/null | [32, k-1]且为32倍数 |
+    | C量化 | FLOAT16/BFLOAT16 | HIFLOAT8/FLOAT8_E4M3FN | (m, k) | (k, n) | (1,n)或(n,) | null | (n,)或(1,n)/null | 0 |
 
     </details>
 
@@ -420,15 +429,26 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
     | ----     | ------------------| --------------| -------------- | ------------------------| ------------------ | ------------------- | ------------ | ------------------ | ---- | ------- |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | 0 | 与x一致 | T量化 |
     | FLOAT16/BFLOAT16 | INT4/INT32 | ND | 与x一致 | 与x一致/null | null | null | 与x一致/FLOAT（仅x为BFLOAT16）/null | pergroup: [32, k-1]且为32倍数<br>其他: 0 | 与x一致 | C & G量化 |
-    | FLOAT16/BFLOAT16 | FLOAT4_E2M1 | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
-    | FLOAT16/BFLOAT16 | FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
+    | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | ND | FLOAT8_E8M0 | null | null | null | 与x一致/null | 32 | 与x一致 | MX量化 |
+    | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | ND | FLOAT16/BFLOAT16 | null | null | null | 与x一致/null | 32/64/128/256 | 与x一致 | G量化 |
+
+    - x、weight、antiquantScale、antiquantOffsetOptional、biasOptional和antiquantGroupSize的取值关系：
+
+    | 场景说明 | x数据类型 | weight数据类型 | x shape | weight shape | antiquantScale shape | antiquantOffsetOptional shape | biasOptional shape | antiquantGroupSize |
+    | ------- | -------- | ------------- | ------- | ------------ | -------------------- | ----------------------------- | ------------------ | ------------------ |
+    | T量化 | FLOAT16/BFLOAT16 | INT4/INT32 | (m, k) | (k, n) | (1,)或(1,1) | (1,)或(1,1)/null | (n,)或(1,n)/null | 0 |
+    | C量化 | FLOAT16/BFLOAT16 | INT4/INT32 | (m, k) | (k, n) | (1,n)或(n,) | (1,n)或(n,)/null | (n,)或(1,n)/null | 0 |
+    | G量化 | FLOAT16/BFLOAT16 | INT4/INT32 | (m, k) | (k, n) | (⌈k/group_size⌉, n) | (⌈k/group_size⌉, n)/null | (n,)或(1,n)/null | [32, k-1]且为32倍数 |
+    | MX量化 | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | (m, k) | (k, n) | (⌈k/32⌉, n) | null | (n,)或(1,n)/null | 32 |
+    | G量化 | FLOAT16/BFLOAT16 | FLOAT4_E2M1/FLOAT | (m, k) | (k, n) | (⌈k/32⌉, n) | null | (n,)或(1,n)/null | 32/64/128/256 |
 
     - **约束说明**
 
-      除[公共约束](#公共约束)外，A16W4场景其余约束如下：
+      除[公共约束](#公共约束)外，其余约束如下：
       - 若`weight`数据类型为INT4或FLOAT4_E2M1，则weight的最后一维应为2对齐；若`weight`数据类型为INT32或FLOAT，则weight的最后一维应为8对齐。
       - 若`weight`数据类型为INT32/FLOAT时，必须配合`aclnnConvertWeightToINT4Pack`接口完成从INT32/FLOAT到紧密排布的INT4/FLOAT4_E2M1的转换，[详情可参考样例](../../convert_weight_to_int4_pack/docs/aclnnConvertWeightToINT4Pack.md)。
-  
+      - 若`weight`数据类型为FLOAT4_E2M1或者FLOAT，且为G量化时，weight仅支持非转置。其他数据流weight同时支持转置和非转置。
+
   <a id="ascend_950pr_ascend950dt_性能优化建议"></a>
 
   - **性能优化建议**

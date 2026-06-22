@@ -826,6 +826,29 @@ static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2S
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
+static inline bool IsTCG(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+    return x1Scale == nullptr && x2Scale != nullptr &&
+           (x2Scale->GetDataType() == op::DataType::DT_BF16 || x2Scale->GetDataType() == op::DataType::DT_FLOAT16);
+}
+
+static inline bool CheckA8W4FloatQuantType(const aclTensor *x1, const aclTensor *x2,
+                                            const aclTensor *perTokenScale, const aclTensor *scale) {
+    if (isA8W4Float(x1, x2)) {
+        if (!IsMicroScaling(perTokenScale, scale) && !IsTCG(perTokenScale, scale)) {
+            std::string scaleInfo = std::string("perTokenScale=") +
+                op::ToString(perTokenScale != nullptr ? perTokenScale->GetDataType() : op::DataType::DT_UNDEFINED).GetString() +
+                ", scale=" + op::ToString(scale->GetDataType()).GetString();
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                "aclnnQuantMatmulV4", "perTokenScale/scale",
+                scaleInfo.c_str(),
+                "A8W4 float scenario only supports MX quantization (perTokenScale and scale are FLOAT8_E8M0) "
+                "or TCG quantization (perTokenScale is null and scale is BF16 or FLOAT16)");
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool CheckA8W4TcGDtype(const aclTensor *x2Scale, const aclTensor *bias, const aclTensor *yScale) {
     if (bias != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
@@ -1657,6 +1680,7 @@ static aclnnStatus PreMatmulCalcProcess(TupleTensor &mandatoryTensors, TupleOpti
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (isA8W4Float(x1, x2)) {
         bool tempTransposeValue = false;
+        CHECK_RET(CheckA8W4FloatQuantType(x1, x2, perTokenScale, scale), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(TensorContiguousProcess(perTokenScale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(TensorContiguousProcess(scale, tempTransposeValue, executor), ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(

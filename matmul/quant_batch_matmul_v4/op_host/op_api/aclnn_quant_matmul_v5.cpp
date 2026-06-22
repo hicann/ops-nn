@@ -64,7 +64,7 @@ static const std::initializer_list<op::DataType> X1_SCALE_SUPPORT_LIST = {op::Da
 static const std::initializer_list<op::DataType> X2_SCALE_SUPPORT_LIST = {op::DataType::DT_UINT64};
 static const std::initializer_list<op::DataType> Y_OFFSET_SUPPORT_LIST = {op::DataType::DT_FLOAT};
 
-static constexpr const char* kOpName = "aclnnQuantMatmulV5";
+static constexpr const char* kOpName = "aclnnQuantMatmulV5GetWorkspaceSize";
 
 static inline bool isA8W4Float(const aclTensor *x1, const aclTensor *x2) {
     return (std::find(EIGHT_BIT_FLOAT_INPUT_LIST.begin(), EIGHT_BIT_FLOAT_INPUT_LIST.end(), x1->GetDataType()) !=
@@ -121,6 +121,11 @@ static inline bool IsMicroScaling(const aclTensor *x1Scale, const aclTensor *x2S
     }
     return x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
            x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+}
+
+static inline bool IsTCG(const aclTensor *x1Scale, const aclTensor *x2Scale) {
+    return x1Scale == nullptr && x2Scale != nullptr &&
+           (x2Scale->GetDataType() == op::DataType::DT_BF16 || x2Scale->GetDataType() == op::DataType::DT_FLOAT16);
 }
 
 static inline bool IsHif8Input(const aclTensor *x1, const aclTensor *x2) {
@@ -421,12 +426,20 @@ static bool CheckBasicInputDtypes(const aclTensor* x1, const aclTensor* x2, cons
 
 static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias, const aclTensor* yScale)
 {
-    if (bias != nullptr || yScale == nullptr) {
+    if (bias != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            kOpName, "bias, yScale", "non-null bias or null yScale",
-            "When the quant mode is A8W4, the value of bias must be null and the value of yScale can not be null");
+            kOpName, "bias", "non-null bias",
+            "When the quant mode is A8W4 T-CG, the value of bias must be null");
         return false;
     }
+
+    if (yScale == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            kOpName, "yScale", "null yScale",
+            "When the quant mode is A8W4 T-CG, the value of yScale can not be null");
+        return false;
+    }
+
     if (!CheckType(x2Scale->GetDataType(), Y_SUPPORT_LIST)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "x2Scale", op::ToString(x2Scale->GetDataType()).GetString(),
                                               std::string("The dtype of x2Scale must be within the range ") +
@@ -918,6 +931,24 @@ static inline bool MxScaleContiguousProcess(const aclTensor *&mxScaleTensor, acl
     return true;
 }
 
+static inline bool CheckA8W4FloatQuantType(const aclTensor *x1, const aclTensor *x2,
+                                            const aclTensor *x1Scale, const aclTensor *x2Scale) {
+    if (isA8W4Float(x1, x2)) {
+        if (!IsMicroScaling(x1Scale, x2Scale) && !IsTCG(x1Scale, x2Scale)) {
+            std::string scaleInfo = std::string("x1Scale=") +
+                op::ToString(x1Scale != nullptr ? x1Scale->GetDataType() : op::DataType::DT_UNDEFINED).GetString() +
+                ", x2Scale=" + op::ToString(x2Scale->GetDataType()).GetString();
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                kOpName, "x1Scale/x2Scale",
+                scaleInfo.c_str(),
+                "A8W4 float scenario only supports MX quantization (x1Scale and x2Scale are FLOAT8_E8M0) "
+                "or TCG quantization (x1Scale is null and x2Scale is BF16 or FLOAT16)");
+            return false;
+        }
+    }
+    return true;
+}
+
 static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &quantTensors,
                                         TupleAttr &boolsTrans, const aclTensor *out,
                                         bool& isA8W4, aclOpExecutor *executor) {
@@ -958,6 +989,7 @@ static aclnnStatus PreMatmulCalcProcess(TupleInput &inputTensors, TupleQuant &qu
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     if (isA8W4) {
         bool isA8W4INT = isA8W4Int(x1, x2);
+        CHECK_RET(CheckA8W4FloatQuantType(x1, x2, x1Scale, x2Scale), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckInputAttrExistence(boolsTrans, groupSize, x2, quantTensors, isA8W4INT), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckDimRangeA8W4(inputTensors, quantTensors, out), ACLNN_ERR_PARAM_INVALID);
     } else {
