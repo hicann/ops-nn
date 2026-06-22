@@ -118,10 +118,10 @@ aclnnStatus aclnnL1Loss(
       <td class="tg-0pky">out（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">指定要应用到输出的缩减。</td>
-      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out的shape支持0维。</td>
+      <td class="tg-0pky">数据类型需要是self与target推导之后可转换的数据类型（参见<a href="../../../docs/zh/context/互转换关系.md" target="_blank">互转换关系</a>）。<br>当reduction的值为0时，out的shape与self和target<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>后的shape一致；当reduction的值不为0时，out的shape只支持0维。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16、INT64</td>
       <td class="tg-0pky">-</td>
-      <td class="tg-0pky">1-8</td>
+      <td class="tg-0pky">0-8</td>
       <td class="tg-0pky">√</td>
     </tr>
     <tr>
