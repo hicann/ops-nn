@@ -169,10 +169,13 @@ public:
         isLoaded = true;
         param_.SetMStartPosition(0);
         param_.SetKStartPosition(0);
-        param_.SetMStep(static_cast<uint16_t>(self_->ctx.currentNL0Align / BLOCK_L0_N)); 
-        param_.SetKStep(static_cast<uint16_t>(AlignB(self_->ctx.convTilingData->kBL1, Intf::k0)/Intf::k0));
+        uint16_t nL0Tail = self_->ctx.nBL1Tail % self_->ctx.convTilingData->nL0;
+        nL0Tail = nL0Tail == 0 ? self_->ctx.convTilingData->nL0 : nL0Tail;
+        uint16_t mGap = static_cast<uint16_t>(CeilDiv(nL0Tail, BLOCK_L0_N));
+        param_.SetMStep(mGap);
+        param_.SetKStep(static_cast<uint16_t>(CeilDiv(self_->ctx.convTilingData->kBL1, Intf::k0)));
         param_.SetSrcStride(static_cast<uint16_t>(self_->ctx.convTilingData->nBL1 / BLOCK_L0_N));
-        param_.SetDstStride(static_cast<uint16_t>(self_->ctx.currentNL0Align / BLOCK_L0_N));
+        param_.SetDstStride(mGap);
         param_.SetIfTranspose(false);
         LoadData<TPosition::B2, TPosition::B1, typename Intf::WeightT>(bl0, self_->ctx.bl1, param_);
     }
