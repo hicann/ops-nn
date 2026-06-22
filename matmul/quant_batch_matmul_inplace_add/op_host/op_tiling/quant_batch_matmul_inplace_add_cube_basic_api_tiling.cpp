@@ -66,7 +66,7 @@ ge::graphStatus QuantBatchMatmulInplaceAddCubeBasicAPITiling::DoLibApiTiling()
 
 uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetKernelType() const
 {
-    return isAFullLoad_ ? TPL_CUBE_FIXPIPE_A_FULL_LOAD_WITH_MMAPI : TPL_CUBE_FIXPIPE_DEFAULT_LOAD_WITH_MMAPI;
+    return isAFullLoad_ ? TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI : TPL_NO_VEC_EPILOGUE_WITH_MMAPI;
 }
 
 uint64_t QuantBatchMatmulInplaceAddCubeBasicAPITiling::GetTilingKey() const

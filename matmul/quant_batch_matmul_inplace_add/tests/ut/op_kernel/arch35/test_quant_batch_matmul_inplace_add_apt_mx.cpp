@@ -13,6 +13,8 @@
 #define DTYPE_Y float
 #define ORIG_DTYPE_X1 DT_FLOAT8_E4M3FN
 #define ORIG_DTYPE_X2 DT_FLOAT8_E5M2
+#define ORIG_DTYPE_X1_SCALE DT_FLOAT8_E8M0
+#define ORIG_DTYPE_X2_SCALE DT_FLOAT8_E8M0
 #define ORIG_DTYPE_Y DT_FLOAT
 #define __CCE_AICORE__ 310
 #include "../test_quant_batch_matmul_inplace_add_utils.h"

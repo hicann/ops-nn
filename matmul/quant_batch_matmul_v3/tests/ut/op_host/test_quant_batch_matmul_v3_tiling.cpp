@@ -686,8 +686,14 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
     if (result) {
         ASSERT_EQ(tilingFunc(tilingContext), ge::GRAPH_SUCCESS)
             << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
-        //  非 Blaze 不支持 weightNz BasicAPI 路径，跳过出参校验
-        if (tilingStub || (weightNz && !IsTensorapiCapable())) {
+        bool isMxfp8 = quantMode == 2 && (x1Dtype == ge::DT_FLOAT8_E4M3FN || x1Dtype == ge::DT_FLOAT8_E5M2) &&
+            (x2Dtype == ge::DT_FLOAT8_E4M3FN || x2Dtype == ge::DT_FLOAT8_E5M2);
+        bool isMxfp4 = quantMode == 2 && x1Dtype == ge::DT_FLOAT4_E2M1 && x2Dtype == ge::DT_FLOAT4_E2M1;
+        bool isAscend950 = socVersion == "Ascend950";
+        bool tensorApiCapable = IsTensorapiCapable() && isAscend950;
+        //  非 Blaze 不支持 weightNz BasicAPI 路径；950 非 TensorAPI 场景跳过 MX 出参校验
+        bool skipMxCheckWithoutTensorApi = isAscend950 && !tensorApiCapable && (isMxfp8 || isMxfp4);
+        if (tilingStub || (weightNz && !tensorApiCapable) || skipMxCheckWithoutTensorApi) {
             return;
         }
         ASSERT_EQ(tilingContext->GetTilingKey(), tilingKey)
@@ -703,9 +709,25 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
             tilingDataInt.push_back(atoi(tilingValue.c_str()));
         }
 
+        size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
+        bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) &&
+            ((tilingKey >> 8U) == 9U || (tilingKey >> 8U) == 10U) &&
+            actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
         bool isUseBasicApiTilingData =
-            tilingContext->GetRawTilingData()->GetDataSize() == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
-        if (isUseBasicApiTilingData) {
+            actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+        if (isMxWithoutBatchTilingData) {
+            DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData*>(tilingContext->GetRawTilingData()->GetData());
+            if (biasFlag == false) {
+                SetExpectedTilingFieldIfPresent(tilingDataInt,
+                    offsetof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData, biasDtype),
+                    actualTilingData.biasDtype);
+            }
+            string actualTilingDataStr = TilingData2Str(tilingContext->GetRawTilingData()->GetData(),
+                                                        tilingContext->GetRawTilingData()->GetDataSize());
+            string expectTilingDataStr = TilingData2Str(tilingDataInt.data(), tilingDataInt.size() * sizeof(int32_t));
+            ASSERT_EQ(actualTilingDataStr, expectTilingDataStr)
+                << "socVersion is: " << socVersion << ", caseName is: " << caseName << ", prefix is: " << prefix;
+        } else if (isUseBasicApiTilingData) {
             DequantBmm::QuantBatchMatmulV3BasicAPITilingData& actualTilingData = *reinterpret_cast<DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingContext->GetRawTilingData()->GetData());
             // biasFlag 为0时，biasDtype在kernel侧不使用，忽略校验
             if (biasFlag == false) {

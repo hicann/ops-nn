@@ -48,7 +48,7 @@ constexpr uint32_t SCALER_FACTOR_N_BIT = 24;
 constexpr uint32_t VEC_CORE_GROUP_NUM = 2;
 
 constexpr uint64_t WINDOW_LEN = 4;                // Sliding-window length used by outer-axis tail merging.
-constexpr uint64_t MTE2_CACHELINE_SIZE = 256;     // MTE2 cacheline size in bytes.
+constexpr uint64_t MTE2_ADDRESS_ALIGN_SIZE = 128; // MTE2 address alignment size in bytes.
 constexpr uint64_t LOAD_BALANCE_THRESHOLD = 1792; // Minimum M/N size to enable outer-axis load balancing.
 
 struct AswPlatformInfoCache {
@@ -659,7 +659,8 @@ bool AdaptiveSlidingWindowTiling::OptimizeEdgeBasicBlock()
         (inputParams_.kSize < BASIC_BLOCK_SIZE_1024 ||
          (inputParams_.kSize == BASIC_BLOCK_SIZE_1024 &&
           adaptiveWin_.nBlockCnt >= 8)); // With enough N tiles, imbalance impact is negligible.
-    bool isInnerAxisAlign = GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) % MTE2_CACHELINE_SIZE == 0UL;
+    bool isInnerAxisAlign =
+        GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype) % MTE2_ADDRESS_ALIGN_SIZE == 0UL;
     if (mBaseTail > 0UL && !inputParams_.transA &&
         (isInnerAxisAlign || (inputParams_.mSize >= LOAD_BALANCE_THRESHOLD && !isMxfp4))) {
         GetOuterMAxisTailCnt(adaptiveWin_.mBaseTailSplitCnt, adaptiveWin_.mTailMain);

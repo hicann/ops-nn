@@ -31,12 +31,15 @@
 #include "test_cube_util.h"
 #include "ut_op_util.h"
 #include "../../../op_host/op_tiling/quant_batch_matmul_inplace_add_tiling.h"
+#include "../../../op_kernel/arch35/quant_batch_matmul_inplace_add_tiling_key.h"
 #include "../../../../common/op_host/math_util.h"
+#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/quant_batch_matmul_v3_tiling_util.h"
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../../../tests/ut/common/ut_string_utils.h"
 
 using namespace std;
 using namespace ut_str;
+using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 
 namespace {
 
@@ -67,6 +70,18 @@ struct QuantBatchMatmulInplaceAddTilingTestParam {
     ge::graphStatus expectTilingResult;
     uint64_t expectTilingKey;
 };
+
+bool IsMxFp8Param(const QuantBatchMatmulInplaceAddTilingTestParam& param)
+{
+    return param.groupSize > 0 &&
+           (param.x1Dtype == ge::DT_FLOAT8_E4M3FN || param.x1Dtype == ge::DT_FLOAT8_E5M2) &&
+           (param.x2Dtype == ge::DT_FLOAT8_E4M3FN || param.x2Dtype == ge::DT_FLOAT8_E5M2);
+}
+
+bool ShouldSkipMxCheckWithoutTensorApi(const QuantBatchMatmulInplaceAddTilingTestParam& param)
+{
+    return param.socVersion == "Ascend950" && IsMxFp8Param(param) && !optiling::IsTensorapiCapable();
+}
 
 struct QuantBatchMatmulInplaceAddTilingCsvLoadResult {
     vector<QuantBatchMatmulInplaceAddTilingTestParam> params;
@@ -334,8 +349,15 @@ static void TestOneParamCase(const QuantBatchMatmulInplaceAddTilingTestParam &pa
     ge::graphStatus ret = tilingFunc(tilingContext);
     ASSERT_EQ(ret, param.expectTilingResult);
     if (ret == ge::GRAPH_SUCCESS) {
+        if (ShouldSkipMxCheckWithoutTensorApi(param)) {
+            return;
+        }
         ASSERT_EQ(tilingContext->GetTilingKey(), param.expectTilingKey);
         ASSERT_EQ(tilingContext->GetBlockDim(), param.expectBlockDim);
+        size_t expectTilingDataSize = IsMxFp8Param(param) ?
+            sizeof(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData) :
+            sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+        ASSERT_EQ(tilingContext->GetRawTilingData()->GetDataSize(), expectTilingDataSize);
     }
 }
 

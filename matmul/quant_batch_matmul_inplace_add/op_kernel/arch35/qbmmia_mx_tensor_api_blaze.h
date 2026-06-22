@@ -9,53 +9,46 @@
  */
 
 /* !
- * \file qbmm_mx_tensor_api_blaze.h
+ * \file qbmmia_mx_tensor_api_blaze.h
  * \brief
  */
 #pragma once
+#include "quant_batch_matmul_inplace_add_tiling_data.h"
 #include "blaze/gemm/block/block_scheduler_qbmm.h"
 #include "blaze/epilogue/block/block_epilogue_empty.h"
 #include "blaze/gemm/block/block_mmad_qbmm_mx.h"
 #include "blaze/gemm/kernel/kernel_qbmm_mx.h"
 
-using namespace Blaze::Gemm;
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class aLayout, class bLayout, class cLayout, uint64_t FULL_LOAD_MODE = 0>
-__aicore__ inline void QbmmMxTensorApiKernel(
-    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR bias, GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
+__aicore__ inline void QbmmiaMxTensorApiKernel(
+    GM_ADDR aGM, GM_ADDR bGM, GM_ADDR scale, GM_ADDR perTokenScale, GM_ADDR cGM, const void* tilingData)
 {
-    // 定义矩阵的类型和布局
     using AType = A_TYPE;
     using BType = B_TYPE;
     using BiasType = float;
     using OutType = C_TYPE;
 
-    // 定义BlockEpilogue类型
-    using BlockEpilogue = Block::BlockEpilogueEmpty;
-
-    // 定义shape的形状，tuple保存 m n k batch
+    using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
-
-    // 定义scheduler类型 来自block_scheduler_policy.h
     using BlockScheduler =
-        Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout, AType>;
+        Blaze::Gemm::Block::BlockSchedulerQuantBatchMatmulV3<ProblemShape, FULL_LOAD_MODE, aLayout, bLayout, AType>;
 
-    // 定义MMAD类型
-    using DispatchPolicy = MatmulWithScaleMx<FULL_LOAD_MODE, false>;
-    using BlockMmad =
-        Block::BlockMmad<DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType, cLayout>;
+    using DispatchPolicy = Blaze::Gemm::MatmulWithScaleMx<FULL_LOAD_MODE, true>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
+        DispatchPolicy, AType, aLayout, BType, bLayout, OutType, cLayout, BiasType, cLayout>;
 
-    // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& quantBmmTilingData =
-        *static_cast<const DequantBmm::QuantBatchMatmulV3BasicAPITilingData*>(tilingData);
-    const DequantBmm::QuantBatchMatmulV3BasicAPIDataParams& dataParams = quantBmmTilingData.params;
-    const DequantBmm::BasicAPICubeTiling& matmulTiling = quantBmmTilingData.matmulTiling;
-    const DequantBmm::SlidingWindowParams& slidingWindowParams = quantBmmTilingData.adaptiveSlidingWin;
+    const QMMIA::QuantBatchMatmulInplaceAddTilingData& qbmmiaTilingData =
+        *static_cast<const QMMIA::QuantBatchMatmulInplaceAddTilingData*>(tilingData);
+    const QMMIA::QuantBatchMatmulV3BasicAPIDataParams& dataParams = qbmmiaTilingData.params;
+    const QMMIA::BasicAPICubeTiling& matmulTiling = qbmmiaTilingData.matmulTiling;
+    const QMMIA::SlidingWindowParams& slidingWindowParams = qbmmiaTilingData.adaptiveSlidingWin;
+
     MatmulKernel{}(Params{
         {matmulTiling.m, matmulTiling.n, matmulTiling.k, dataParams.batchC},
-        {aGM, bGM, cGM, bias, perTokenScale, scale}, // gm addr
+        {aGM, bGM, cGM, nullptr, perTokenScale, scale},
         {matmulTiling.stepKb * matmulTiling.baseK, matmulTiling.scaleKL1, matmulTiling.nBufferNum},
         {matmulTiling.baseM, matmulTiling.baseN, slidingWindowParams.mTailTile, slidingWindowParams.nTailTile,
          slidingWindowParams.mBaseTailSplitCnt, slidingWindowParams.nBaseTailSplitCnt, slidingWindowParams.mTailMain,

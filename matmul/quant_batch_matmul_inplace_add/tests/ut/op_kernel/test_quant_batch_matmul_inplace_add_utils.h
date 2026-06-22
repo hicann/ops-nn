@@ -35,6 +35,12 @@
 
 using namespace QuantBatchMatmulInplaceAddArch35TilingKey;
 
+#if SUPPORT_MX_WITHOUT_BATCH_TILING_KEY
+#define QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH 1
+#else
+#define QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH 0
+#endif
+
 #define QBMIIA_PARAM_LIST_DEF                                                                                          \
     GM_ADDR x1, GM_ADDR x2, GM_ADDR x2Scale, GM_ADDR yIn, GM_ADDR x1Scale, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling
 
@@ -45,7 +51,11 @@ using QuantBatchMatmulInplaceAddAptFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM
 
 static std::unordered_map<uint64_t, QuantBatchMatmulInplaceAddAptFunc> s_funcMapApt = {
     {1UL, quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_WITH_MMAPI>},
-    {33UL, quant_batch_matmul_inplace_add<1, 0, TPL_CUBE_FIXPIPE_DEFAULT_LOAD_WITH_MMAPI>},
+    {17UL, quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI>},
+#if QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH
+    {33UL, quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH>},
+    {49UL, quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH>},
+#endif
 };
 #endif
 
@@ -162,6 +172,33 @@ public:
     }
 
 #if defined(__CCE_AICORE__) && __CCE_AICORE__ == 310
+    static constexpr bool IsMxWithoutBatchUtSupported()
+    {
+        return QBMIIA_UT_SUPPORT_MX_WITHOUT_BATCH != 0;
+    }
+
+    static bool IsMxWithoutBatchTilingData(const QuantBatchMatmulInplaceAddTestParam &param)
+    {
+        constexpr uint64_t kernelTypeShift = 4UL;
+        constexpr uint64_t kernelTypeMask = 0xFUL;
+        uint64_t kernelType = (param.tilingKey >> kernelTypeShift) & kernelTypeMask;
+        return kernelType == TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH ||
+               kernelType == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH;
+    }
+
+    static bool ShouldSkipMxWithoutBatchUt(const QuantBatchMatmulInplaceAddTestParam &param)
+    {
+        return IsMxWithoutBatchTilingData(param) && !IsMxWithoutBatchUtSupported();
+    }
+
+    static size_t GetTilingDataSize(const QuantBatchMatmulInplaceAddTestParam &param)
+    {
+        if (IsMxWithoutBatchTilingData(param)) {
+            return sizeof(QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData);
+        }
+        return sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+    }
+
     static void InitDefaultTilingData(const QuantBatchMatmulInplaceAddTestParam &param,
                                       QMMIA::QuantBatchMatmulInplaceAddTilingData &tilingData)
     {
@@ -185,13 +222,43 @@ public:
         tilingData.adaptiveSlidingWin.nBaseTailSplitCnt = 1;
     }
 
+    static void InitDefaultWithoutBatchTilingData(
+        const QuantBatchMatmulInplaceAddTestParam &param,
+        QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData &tilingData)
+    {
+        constexpr uint8_t MX_PERGROUP_MODE = 0x1U << 3;
+        memset(&tilingData, 0, sizeof(tilingData));
+        tilingData.m = static_cast<uint32_t>(param.m);
+        tilingData.k = static_cast<uint32_t>(param.k);
+        tilingData.n = static_cast<uint32_t>(param.n);
+        tilingData.baseM = static_cast<uint16_t>(std::min<int64_t>(param.m, 128));
+        tilingData.baseN = static_cast<uint16_t>(std::min<int64_t>(param.n, 128));
+        tilingData.baseK = static_cast<uint16_t>(std::min<int64_t>(param.k, 64));
+        tilingData.scaleKL1 = static_cast<uint32_t>(tilingData.baseK);
+        tilingData.groupSizeK = static_cast<uint16_t>(param.groupSize);
+        tilingData.mBaseTailSplitCnt = 1;
+        tilingData.nBaseTailSplitCnt = 1;
+        tilingData.stepKa = 1;
+        tilingData.stepKb = 1;
+        tilingData.x1QuantMode = MX_PERGROUP_MODE;
+        tilingData.x2QuantMode = MX_PERGROUP_MODE;
+        tilingData.nBufferNum = 2;
+        tilingData.dbL0C = 2;
+    }
+
     static void FillTilingBuffer(const QuantBatchMatmulInplaceAddTestParam &param, uint8_t *tiling)
     {
-        size_t tilingDataSize = sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+        size_t tilingDataSize = GetTilingDataSize(param);
         if (param.tilingData.empty() || param.tilingData == "AUTO") {
-            QMMIA::QuantBatchMatmulInplaceAddTilingData tilingStruct;
-            InitDefaultTilingData(param, tilingStruct);
-            memcpy(tiling, &tilingStruct, tilingDataSize);
+            if (IsMxWithoutBatchTilingData(param)) {
+                QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData tilingStruct;
+                InitDefaultWithoutBatchTilingData(param, tilingStruct);
+                memcpy(tiling, &tilingStruct, tilingDataSize);
+            } else {
+                QMMIA::QuantBatchMatmulInplaceAddTilingData tilingStruct;
+                InitDefaultTilingData(param, tilingStruct);
+                memcpy(tiling, &tilingStruct, tilingDataSize);
+            }
             return;
         }
 
@@ -236,6 +303,15 @@ public:
     static void TestOneParamCase950(const QuantBatchMatmulInplaceAddTestParam &param,
                                     decltype(s_funcMapApt) &funcMapApt)
     {
+        if (ShouldSkipMxWithoutBatchUt(param)) {
+#ifdef __CCE_KT_TEST__
+            GTEST_SKIP() << "Skip MX without-batch TensorAPI UT before asc-devkit 9.1.0: " << param.caseName;
+#else
+            cout << "Skip MX without-batch TensorAPI UT before asc-devkit 9.1.0: " << param.caseName << endl;
+            return;
+#endif
+        }
+
         int64_t batchA = param.batchA > 0 ? param.batchA : 1L;
         int64_t batchB = param.batchB > 0 ? param.batchB : 1L;
         int64_t batchC = param.batchC > 0 ? param.batchC : 1L;
@@ -244,7 +320,7 @@ public:
         size_t shapeY = static_cast<size_t>(batchC) * param.m * param.n * sizeof(DTYPE_Y);
         size_t shapeX1Scale = GetX1ScaleBytes(param);
         size_t shapeX2Scale = GetX2ScaleBytes(param);
-        size_t tilingDataSize = sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData);
+        size_t tilingDataSize = GetTilingDataSize(param);
         size_t workspaceSize = 16 * 1024 * 1024 + 50 * 1024 * 1024;
 
         uint8_t *x1 = static_cast<uint8_t *>(AscendC::GmAlloc(shapeX1));

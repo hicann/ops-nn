@@ -32,6 +32,8 @@ private:
     void Reset();
     void CalculateNBufferNum4MX();
     void UpdateAFullLoadStatus();
+    bool IsWithoutBatchTilingData() const;
+    void SetWithoutBatchTilingData();
 
 protected:
     bool IsCapable() override;
@@ -45,5 +47,7 @@ protected:
 
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3BasicAPITilingData& tilingData_;
+    DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData withoutBatchTilingData_;
+    bool useWithoutBatchTilingData_ = false;
 };
 } // namespace optiling

@@ -57,7 +57,7 @@ private:
     bool AdjustBaseBlockDefault();
     bool AdjustBaseBlockPerblock();
     bool AdjustBaseBlockPertile(uint64_t coreNumMN);
-    bool AdjustBaseBlockMmadS8S4(BaseBlockMode mode, uint64_t oriBlock);
+    bool AdjustBaseBlockMmadS8S4(uint64_t oriBlock);
     bool CalculateOptimalSplit(
         uint64_t& baseM, uint64_t& baseN, uint64_t baseMAlignNum, uint64_t baseNAlignNum, uint64_t baseKAlignNum) const;
     bool IsMxBackwardTrans() const;

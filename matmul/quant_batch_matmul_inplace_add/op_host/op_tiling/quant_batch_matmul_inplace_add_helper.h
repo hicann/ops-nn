@@ -56,7 +56,8 @@ protected:
     bool InitMatmulSize(const gert::Shape& x1Shape, const gert::Shape& x2Shape);
     bool ValidateQuantParams(const gert::Shape& x1ScaleShape, const gert::Shape& scaleShape);
     uint64_t GetBatchCoreCnt() const override;
-    void ResetInplaceTilingData(QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData);
+    template <typename TilingData>
+    void ResetInplaceTilingData(TilingData& tilingData);
     void CopyV3BasicApiTilingData(
         const DequantBmm::QuantBatchMatmulV3BasicAPITilingData& src,
         QMMIA::QuantBatchMatmulInplaceAddTilingData& dst);
@@ -422,11 +423,11 @@ uint64_t QuantBatchMatmulInplaceAddHelper<BaseT>::GetBatchCoreCnt() const
 }
 
 template <typename BaseT>
-void QuantBatchMatmulInplaceAddHelper<BaseT>::ResetInplaceTilingData(
-    QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData)
+template <typename TilingData>
+void QuantBatchMatmulInplaceAddHelper<BaseT>::ResetInplaceTilingData(TilingData& tilingData)
 {
     if (!this->isTilingOut_) {
-        tilingData = QMMIA::QuantBatchMatmulInplaceAddTilingData();
+        tilingData = TilingData();
         OP_TILING_CHECK(
             memset_s(
                 this->context_->GetRawTilingData()->GetData(), this->context_->GetRawTilingData()->GetCapacity(), 0,

@@ -23,9 +23,9 @@
 namespace {
 constexpr uint32_t X1_INDEX = 0;
 constexpr uint32_t X2_INDEX = 1;
-constexpr uint32_t X1_SCALE_INDEX = 2;
+constexpr uint32_t X2_SCALE_INDEX = 2;
 constexpr uint32_t YREF_INDEX = 3;
-constexpr uint32_t X2_SCALE_INDEX = 4;
+constexpr uint32_t X1_SCALE_INDEX = 4;
 constexpr size_t QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE = 2;
 constexpr const char *OP_NAME = "QuantBatchMatmulInplaceAdd";
 

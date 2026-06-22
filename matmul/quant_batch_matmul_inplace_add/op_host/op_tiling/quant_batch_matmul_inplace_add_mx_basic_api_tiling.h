@@ -36,9 +36,12 @@ protected:
 
 private:
     void Reset();
+    void UpdateTilingData();
+    void SetWithoutBatchTilingData();
 
-    QMMIA::QuantBatchMatmulInplaceAddTilingData tilingDataSelf_;
-    QMMIA::QuantBatchMatmulInplaceAddTilingData& tilingData_;
+    QMMIA::QuantBatchMatmulInplaceAddTilingData basicTilingData_;
+    QMMIA::QuantBatchMatmulInplaceAddTensorAPIWithoutBatchTilingData withoutBatchTilingData_;
+    bool useWithoutBatchTilingData_ = false;
 };
 
 } // namespace optiling

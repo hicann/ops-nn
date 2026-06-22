@@ -1,4 +1,4 @@
 socVersion,caseName,kernelUtTarget,prefix,coreNum,batchA,batchB,batchC,m,k,n,transA,transB,groupSize,hasX1Scale,hasX2Scale,result,numBlocks,tilingKey,tilingData,comment
-Ascend950,hif8_tt,HIF8_FLOW,kernel,,1,1,1,128,512,128,1,0,0,1,1,TRUE,16,33,AUTO,FALSE
-Ascend950,mx_2,MX_FLOW,kernel,,1,1,1,1024,512,1024,1,0,32,1,1,TRUE,32,1,AUTO,FALSE
-Ascend950,mx_test1,MX_FLOW,kernel,,1,1,1,128,512,128,1,0,32,1,1,TRUE,16,1,AUTO,FALSE
+Ascend950,hif8_tt,HIF8_FLOW,kernel,,1,1,1,128,512,128,1,0,0,1,1,TRUE,16,1,AUTO,FALSE
+Ascend950,mx_2,MX_FLOW,kernel,,1,1,1,1024,512,1024,1,0,32,1,1,TRUE,32,33,AUTO,FALSE
+Ascend950,mx_test1,MX_FLOW,kernel,,1,1,1,128,512,128,1,0,32,1,1,TRUE,16,33,AUTO,FALSE

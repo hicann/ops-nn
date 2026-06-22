@@ -68,6 +68,14 @@ void AdaptiveSlidingWindowMXBasicAPITiling::Reset()
     if (!isTilingOut_) {
         tilingData_ = DequantBmm::QuantBatchMatmulV3BasicAPITilingData();
     }
+    withoutBatchTilingData_ = DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData();
+    useWithoutBatchTilingData_ = false;
+    tilingDataSize_ = sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+}
+
+bool AdaptiveSlidingWindowMXBasicAPITiling::IsWithoutBatchTilingData() const
+{
+    return IsTensorapiCapable() && inputParams_.batchC == 1UL;
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable()
@@ -87,7 +95,8 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const
 
 const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 {
-    return &tilingData_;
+    return useWithoutBatchTilingData_ ? static_cast<const void*>(&withoutBatchTilingData_) :
+                                        static_cast<const void*>(&tilingData_);
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::CalcBasicBlock()
@@ -164,6 +173,9 @@ ge::graphStatus AdaptiveSlidingWindowMXBasicAPITiling::DoLibApiTiling()
         tilingData_.matmulTiling.scaleFactorA = SCALER_FACTOR_DEFAULT;
         tilingData_.matmulTiling.scaleFactorB = SCALER_FACTOR_DEFAULT;
     }
+    if (useWithoutBatchTilingData_) {
+        SetWithoutBatchTilingData();
+    }
     return ge::GRAPH_SUCCESS;
 }
 
@@ -232,6 +244,11 @@ void AdaptiveSlidingWindowMXBasicAPITiling::CalcTailRoundBasicBlockSplit()
 
 void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
 {
+    useWithoutBatchTilingData_ = IsWithoutBatchTilingData();
+    tilingDataSize_ = useWithoutBatchTilingData_ ?
+        sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData) :
+        sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
+
     QuantBatchMatMulV3TilingUtil::SetCommonTilingData(inputParams_, tilingData_);
     tilingData_.params.x1QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
     tilingData_.params.x2QuantMode = static_cast<uint32_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
@@ -241,6 +258,38 @@ void AdaptiveSlidingWindowMXBasicAPITiling::SetTilingData()
     tilingData_.adaptiveSlidingWin.nBaseTailSplitCnt = static_cast<uint32_t>(adaptiveWin_.nBaseTailSplitCnt);
     tilingData_.adaptiveSlidingWin.mTailMain = static_cast<uint32_t>(adaptiveWin_.mTailMain);
     tilingData_.adaptiveSlidingWin.nTailMain = static_cast<uint32_t>(adaptiveWin_.nTailMain);
+
+    if (useWithoutBatchTilingData_) {
+        SetWithoutBatchTilingData();
+    }
+}
+
+void AdaptiveSlidingWindowMXBasicAPITiling::SetWithoutBatchTilingData()
+{
+    withoutBatchTilingData_.m = static_cast<uint32_t>(inputParams_.mSize);
+    withoutBatchTilingData_.n = static_cast<uint32_t>(inputParams_.nSize);
+    withoutBatchTilingData_.k = static_cast<uint32_t>(inputParams_.kSize);
+    withoutBatchTilingData_.scaleKL1 = tilingData_.matmulTiling.scaleKL1;
+    withoutBatchTilingData_.baseM = static_cast<uint16_t>(basicTiling_.baseM);
+    withoutBatchTilingData_.baseN = static_cast<uint16_t>(basicTiling_.baseN);
+    withoutBatchTilingData_.baseK = static_cast<uint16_t>(basicTiling_.baseK);
+    withoutBatchTilingData_.stepKa = tilingData_.matmulTiling.stepKa;
+    withoutBatchTilingData_.stepKb = tilingData_.matmulTiling.stepKb;
+    withoutBatchTilingData_.groupSizeM = static_cast<uint16_t>(inputParams_.groupSizeM);
+    withoutBatchTilingData_.groupSizeN = static_cast<uint16_t>(inputParams_.groupSizeN);
+    withoutBatchTilingData_.groupSizeK = static_cast<uint16_t>(inputParams_.groupSizeK);
+    withoutBatchTilingData_.mTailTile = static_cast<uint16_t>(adaptiveWin_.mTailTile);
+    withoutBatchTilingData_.nTailTile = static_cast<uint16_t>(adaptiveWin_.nTailTile);
+    withoutBatchTilingData_.mBaseTailSplitCnt = static_cast<uint16_t>(adaptiveWin_.mBaseTailSplitCnt);
+    withoutBatchTilingData_.nBaseTailSplitCnt = static_cast<uint16_t>(adaptiveWin_.nBaseTailSplitCnt);
+    withoutBatchTilingData_.mTailMain = static_cast<uint16_t>(adaptiveWin_.mTailMain);
+    withoutBatchTilingData_.nTailMain = static_cast<uint16_t>(adaptiveWin_.nTailMain);
+    withoutBatchTilingData_.x1QuantMode = static_cast<uint8_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
+    withoutBatchTilingData_.x2QuantMode = static_cast<uint8_t>(optiling::BasicQuantMode::MX_PERGROUP_MODE);
+    withoutBatchTilingData_.isBias = tilingData_.matmulTiling.isBias;
+    withoutBatchTilingData_.biasDtype = static_cast<uint8_t>(inputParams_.biasDtype);
+    withoutBatchTilingData_.nBufferNum = tilingData_.matmulTiling.nBufferNum;
+    withoutBatchTilingData_.dbL0C = tilingData_.matmulTiling.dbL0C;
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(

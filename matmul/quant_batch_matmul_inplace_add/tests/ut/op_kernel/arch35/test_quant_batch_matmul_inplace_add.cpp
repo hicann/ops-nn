@@ -52,7 +52,7 @@ TEST_F(QuantBatchMatmulInplaceAddKernelTest, Hif8BasicApiKernelCompile)
     using KernelFunc = void (*)(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR x2Scale, GM_ADDR yIn, GM_ADDR x1Scale, GM_ADDR y, GM_ADDR workspace,
         GM_ADDR tiling);
-    KernelFunc kernelFunc = quant_batch_matmul_inplace_add<1, 0, TPL_CUBE_FIXPIPE_DEFAULT_LOAD_WITH_MMAPI>;
+    KernelFunc kernelFunc = quant_batch_matmul_inplace_add<1, 0, TPL_NO_VEC_EPILOGUE_WITH_MMAPI>;
     ASSERT_NE(kernelFunc, nullptr);
     ASSERT_GT(sizeof(QMMIA::QuantBatchMatmulInplaceAddTilingData), 0UL);
 #endif
