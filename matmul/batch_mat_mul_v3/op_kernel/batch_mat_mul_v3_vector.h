@@ -60,7 +60,7 @@ public:
                                 GM_ADDR biasGM,
                                 GM_ADDR offsetWGM,
                                 GM_ADDR workspaceGM,
-                                BatchMatmulTilingData* tilingData, TPipe* pipe)
+                                const BatchMatmulTilingData* tilingData, TPipe* pipe)
     {
         ASSERT(GetBlockNum() != 0 && "block dim can not be zero!");
         this->coreNumber = tilingData->vectorTilingInfo.coreNumber;
