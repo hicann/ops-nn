@@ -66,6 +66,8 @@ private:
     int64_t rowBlockSize_ = 0;
     int64_t colBlockSize_ = 0;
     float minScale_ = 0;
+    // 目标数据类型的最大值
+    float dstTypeMax_ = 0.0f;
     int64_t fullBlockNum = 0;
     int64_t resBlockRowNum = 0;
     int64_t groupBlockNumHeadCore_ = 0;
@@ -136,6 +138,7 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::ParseTil
     dstType_ = tilingData.dstType;
     rowBlockSize_ = tilingData.rowBlockSize;
     colBlockSize_ = tilingData.colBlockSize;
+    dstTypeMax_ = tilingData.dstTypeMax;
     batchNum_ = tilingData.batchNum;
     rowNum_ = tilingData.rowNum;
     colNum_ = tilingData.colNum;
@@ -168,7 +171,11 @@ __aicore__ inline void GroupedDynamicBlockQuantLargeBlock<T, U, RMode>::Init(
     } else if constexpr (IsSameType<U, fp8_e4m3fn_t>::value) {
         fp8MaxExpValue_ = FP8_E4M3_MAX_VALUE;
     } else if constexpr (IsSameType<U, hifloat8_t>::value) {
-        fp8MaxExpValue_ = HIFP8_MAX_VALUE;
+        if (dstTypeMax_ != 0) {
+            fp8MaxExpValue_ = dstTypeMax_;
+        } else {
+            fp8MaxExpValue_ = HIFP8_MAX_VALUE;
+        }
     }
     infValue_ = FP32_INF_VALUE;
     this->xGm_.SetGlobalBuffer((__gm__ T*)(x));

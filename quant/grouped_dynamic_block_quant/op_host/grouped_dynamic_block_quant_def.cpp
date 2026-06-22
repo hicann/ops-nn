@@ -20,6 +20,7 @@ static constexpr int32_t DEFAULT_ROW_BLOCK_SIZE = 1;
 static constexpr int32_t DEFAULT_COL_BLOCK_SIZE = 128;
 static constexpr int32_t DEFAULT_DST_TYPE = 35;
 static constexpr int32_t DEFAULT_GROUP_LIST_TYPE = 0;
+static constexpr int32_t GROUPED_DYNAMIC_BLOCK_QUANT_VERSION_V2 = 2;
 
 static const std::vector<ge::DataType> groupedDynamicBlockQuantXDataType = {
     ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16};
@@ -69,6 +70,7 @@ public:
         this->Attr("row_block_size").AttrType(OPTIONAL).Int(DEFAULT_ROW_BLOCK_SIZE);
         this->Attr("col_block_size").AttrType(OPTIONAL).Int(DEFAULT_COL_BLOCK_SIZE);
         this->Attr("group_list_type").AttrType(OPTIONAL).Int(DEFAULT_GROUP_LIST_TYPE);
+        this->Attr("dst_type_max").AttrType(OPTIONAL).Version(GROUPED_DYNAMIC_BLOCK_QUANT_VERSION_V2).Float(0.0);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

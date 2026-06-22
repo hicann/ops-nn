@@ -64,6 +64,8 @@ private:
     int64_t rowBlockSize_ = 0;
     int64_t colBlockSize_ = 0;
     float minScale_ = 0;
+    // 目标数据类型的最大值
+    float dstTypeMax_ = 0.0f;
     int64_t fullBlockNum = 0;
     int64_t resBlockRowNum = 0;
     float fp8MaxExpValue = 0.0;
@@ -129,6 +131,7 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ParseTil
     dstType_ = tilingData.dstType;
     rowBlockSize_ = tilingData.rowBlockSize;
     colBlockSize_ = tilingData.colBlockSize;
+    dstTypeMax_ = tilingData.dstTypeMax;
     batchNum_ = tilingData.batchNum;
     rowNum_ = tilingData.rowNum;
     colNum_ = tilingData.colNum;
@@ -305,7 +308,11 @@ __aicore__ inline void GroupedDynamicBlockQuantSmallBlock<T, U, RMode>::ComputeA
     } else if constexpr (ops::IsSame<U, fp8_e5m2_t>::value) {
         fp8MaxExpValue = FP8_E5M2_MAX_VALUE;
     } else if constexpr (ops::IsSame<U, hifloat8_t>::value) {
-        fp8MaxExpValue = HIFP8_MAX_VALUE;
+        if (dstTypeMax_ != 0) {
+            fp8MaxExpValue = dstTypeMax_;
+        } else {
+            fp8MaxExpValue = HIFP8_MAX_VALUE;
+        }
     }
 
     __VEC_SCOPE__

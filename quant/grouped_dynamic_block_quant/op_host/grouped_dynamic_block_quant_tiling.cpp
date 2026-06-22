@@ -32,6 +32,7 @@ constexpr int64_t INDEX_ATTR_DST_DTYPE = 2;
 constexpr int64_t INDEX_ATTR_ROW_BLOCK_SIZE = 3;
 constexpr int64_t INDEX_ATTR_COL_BLOCK_SIZE = 4;
 constexpr int64_t INDEX_ATTR_GROUP_LIST_TYPE = 5;
+constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 6;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 constexpr int64_t BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t BYTES_OF_SCALE_TYPE = 4;
@@ -60,6 +61,11 @@ constexpr int64_t BLOCK_SIZE_512 = 512;
 constexpr int64_t DT_HIFLOAT8_TYPE = 34;
 constexpr int64_t DT_FLOAT8_E5M2_TYPE = 35;
 constexpr int64_t DT_FLOAT8_E4M3FN_TYPE = 36;
+constexpr float FLOAT_0 = 0.0;
+constexpr float FLOAT_15 = 15.0;
+constexpr float FLOAT_56 = 56.0;
+constexpr float FLOAT_224 = 224.0;
+constexpr float FLOAT_32768 = 32768.0;
 
 inline static ge::graphStatus GroupedDynamicBlockQuantSetTilingData(
     gert::TilingContext* context, GroupedDynamicBlockQuantTilingData& tilingData)
@@ -78,17 +84,17 @@ inline static void PrintTilingData(const gert::TilingContext* context, GroupedDy
         context,
         "tilingData is tilingKey:%ld, totalCoreNum:%ld, ubSize:%ld, vfLen:%ld, usedCoreNum:%ld, headCoreNum:%ld, "
         "tailCoreNum:%ld, minScale:%f,"
-        "roundMode:%ld, dstType:%ld, rowBlockSize:%ld, colBlockSize:%ld, batchNum:%ld, rowNum:%ld, colNum:%ld,"
+        "roundMode:%ld, dstType:%ld, rowBlockSize:%ld, colBlockSize:%ld, dstTypeMax:%f, batchNum:%ld, rowNum:%ld, colNum:%ld,"
         "scaleRowNum:%ld, scaleColNum:%ld, uo:%ld, groupNum:%ld, blockFactor:%ld, tailBlockFactor:%ld, "
         "groupBlockNumHeadCore:%ld,"
         "groupBlockNumTailCore:%ld, maxUbRow:%ld",
         tilingData.get_tilingKey(), tilingData.get_totalCoreNum(), tilingData.get_ubSize(), tilingData.get_vfLen(),
         tilingData.get_usedCoreNum(), tilingData.get_headCoreNum(), tilingData.get_tailCoreNum(),
         tilingData.get_minScale(), tilingData.get_roundMode(), tilingData.get_dstType(), tilingData.get_rowBlockSize(),
-        tilingData.get_colBlockSize(), tilingData.get_batchNum(), tilingData.get_rowNum(), tilingData.get_colNum(),
-        tilingData.get_scaleRowNum(), tilingData.get_scaleColNum(), tilingData.get_uo(), tilingData.get_groupNum(),
-        tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(), tilingData.get_groupBlockNumHeadCore(),
-        tilingData.get_groupBlockNumTailCore(), tilingData.get_maxUbRow());
+        tilingData.get_colBlockSize(), tilingData.get_dstTypeMax(), tilingData.get_batchNum(), tilingData.get_rowNum(),
+        tilingData.get_colNum(), tilingData.get_scaleRowNum(), tilingData.get_scaleColNum(), tilingData.get_uo(),
+        tilingData.get_groupNum(), tilingData.get_blockFactor(), tilingData.get_tailBlockFactor(),
+        tilingData.get_groupBlockNumHeadCore(), tilingData.get_groupBlockNumTailCore(), tilingData.get_maxUbRow());
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -191,6 +197,16 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, GroupedDynami
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context->GetNodeName(), "group_list_type", std::to_string(groupListType), "The value of group_list_type must be 0 or 1"),
         return ge::GRAPH_FAILED);
+
+    auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
+    tilingParam.dstTypeMax = (attrDstTypeMax != nullptr) ? static_cast<float>(*attrDstTypeMax) : 0.0f;
+    OP_CHECK_IF(
+        tilingParam.dstType == DT_HIFLOAT8_TYPE && (tilingParam.dstTypeMax < FLOAT_0 || tilingParam.dstTypeMax > FLOAT_32768),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax),
+            "The value of dst_type_max must be in the range [" + std::to_string(FLOAT_0) + ", "
+            + std::to_string(FLOAT_32768) + "] when dst_type is DT_HIFLOAT8"),
+        return GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -408,6 +424,7 @@ inline static void SetTilingData(
     tilingData.set_dstType(tilingParam.dstType);
     tilingData.set_rowBlockSize(tilingParam.rowBlockSize);
     tilingData.set_colBlockSize(tilingParam.colBlockSize);
+    tilingData.set_dstTypeMax(tilingParam.dstTypeMax);
     tilingData.set_batchNum(tilingParam.batchNum);
     tilingData.set_rowNum(tilingParam.rowNum);
     tilingData.set_colNum(tilingParam.colNum);

@@ -42,6 +42,8 @@ namespace ge {
 *   Defaults to 128.
 * @li group_list_type: An Optional Int. Indicate the meaning of group_list.
 *   Defaults to 0.
+* @li dst_type_max: An Optional Float. Maximum Value of the target data type.
+*   Only effective when dst_type is 34(HIFLOAT8), supporting values range 0 ~ 32768.
 
 * @par Outputs:
 * @li y: A tensor of type Fp8/HiF8. Quantized tensor with same shape as input x. Data type depends on dst_type.
@@ -58,6 +60,7 @@ REG_OP(GroupedDynamicBlockQuant)
     .ATTR(row_block_size, Int, 1)
     .ATTR(col_block_size, Int, 128)
     .ATTR(group_list_type, Int, 0)
+    .ATTR(dst_type_max, Float, 0.0)
     .OP_END_FACTORY_REG(GroupedDynamicBlockQuant)
 } // namespace ge
 

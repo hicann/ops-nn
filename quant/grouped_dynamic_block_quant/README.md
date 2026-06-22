@@ -22,7 +22,7 @@
   $$
 
   $$
-    scale = min(input\_max/FP8\_MAX(HiF8\_MAX), 1/min\_scale)
+    scale = min(input\_max/(FP8\_MAX/HiF8\_MAX/DST\_TYPE\_MAX), 1/min\_scale)
   $$
 
   $$
@@ -104,6 +104,13 @@
       <td>-</td>
     </tr>
     <tr>
+      <td>dst_type_max</td>
+      <td>可选属性</td>
+      <td><ul><li>目标数据类型的最大值。</li><li>当前只支持目标数据类型为HIFLOAT8，且可选取值范围为[0.0, 32768.0]</li><li>0.0表示使用数据类型原始的最大值。</li></ul></td>
+      <td>FLOAT32</td>
+      <td>-</td>
+    </tr>
+    <tr>
       <td>y</td>
       <td>输出</td>
       <td>表示量化后的输出Tensor，对应公式中的y。</td>
@@ -124,4 +131,5 @@
 | 调用方式   | 样例代码           | 说明                                         |
 | ---------------- | --------------------------- | --------------------------------------------------- |
 | aclnn接口  | [test_aclnn_grouped_dynamic_block_quant](examples/arch35/test_aclnn_grouped_dynamic_block_quant.cpp) | 通过[aclnnGroupedDynamicBlockQuant](docs/aclnnGroupedDynamicBlockQuant.md)接口方式调用GroupedDynamicBlockQuant算子。 |
+| aclnn接口  | [test_aclnn_grouped_dynamic_block_quant_v2](examples/arch35/test_aclnn_grouped_dynamic_block_quant_v2.cpp) | 通过[aclnnGroupedDynamicBlockQuantV2](docs/aclnnGroupedDynamicBlockQuantV2.md)接口方式调用GroupedDynamicBlockQuant算子。 |
 | 图模式 | -  | 通过[算子IR](op_graph/grouped_dynamic_block_quant_proto.h)构图方式调用GroupedDynamicBlockQuant算子。         |

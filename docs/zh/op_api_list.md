@@ -122,6 +122,7 @@
 | [aclnnGroupedDynamicMxQuantV2](../../quant/grouped_dynamic_mx_quant/docs/aclnnGroupedDynamicMxQuantV2.md) | 根据传入的分组索引的起始值，对传入的数据进行分组的float8的动态量化。根据scaleAlg不同取值，选择不同的量化算法。 | - | 默认确定性实现 |
 | [aclnnDynamicDualLevelMxQuant](../../quant/dynamic_dual_level_mx_quant/docs/aclnnDynamicDualLevelMxQuant.md) | 通过给定的level0BlockSize和level1BlockSize将输入进行两次划分，以数据块为粒度，进行目的数据类型为FLOAT4类的MX二级量化。 | - | 默认确定性实现 |
 | [aclnnGroupedDynamicBlockQuant](../../quant/grouped_dynamic_block_quant/docs/aclnnGroupedDynamicBlockQuant.md) | 根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。 | - | 默认确定性实现 |
+| [aclnnGroupedDynamicBlockQuantV2](../../quant/grouped_dynamic_block_quant/docs/aclnnGroupedDynamicBlockQuantV2.md) | 根据传入的分组索引的起始值对各个group以基本块的粒度进行量化，并输出量化参数scale。在目标数据类型为HIFLOAT8时，可以根据dstTypeMax设置目标数据类型的最大值。 | - | 默认确定性实现 |
 | [aclnnDualLevelQuantMatmulWeightNz](../../matmul/dual_level_quant_batch_matmul/docs/aclnnDualLevelQuantMatmulWeightNz.md) | 完成二级量化mxfp4的矩阵乘计算。 | - | 默认确定性实现 |
 | [aclnnDynamicMxQuant](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuant.md) | 目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。 | - | 默认确定性实现 |
 | [aclnnDynamicMxQuantV2](../../quant/dynamic_mx_quant/docs/aclnnDynamicMxQuantV2.md) | 目的数据类型为FLOAT4类、FLOAT8类的MX量化。根据scaleAlg不同取值，选择目的数据类型FP4E2M1的不同量化算法。 | - | 默认确定性实现 |

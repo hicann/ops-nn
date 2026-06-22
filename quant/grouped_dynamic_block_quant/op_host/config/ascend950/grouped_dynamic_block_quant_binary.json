@@ -81,6 +81,11 @@
             "name": "group_list_type",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -163,6 +168,11 @@
           {
             "name": "group_list_type",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
@@ -247,6 +257,11 @@
             "name": "group_list_type",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -329,6 +344,11 @@
           {
             "name": "group_list_type",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
@@ -413,6 +433,11 @@
             "name": "group_list_type",
             "dtype": "int",
             "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
+            "value": null
           }
         ]
       },
@@ -495,6 +520,11 @@
           {
             "name": "group_list_type",
             "dtype": "int",
+            "value": null
+          },
+          {
+            "name": "dst_type_max",
+            "dtype": "float",
             "value": null
           }
         ]
