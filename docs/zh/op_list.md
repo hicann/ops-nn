@@ -3510,6 +3510,16 @@
     <td>结合Adagrad自适应学习率与FOBOS（Forward-Backward Splitting）Proximal近端算法的优化器，基于梯度平方累加器自适应调整学习率，并通过软阈值（L1正则化）与缩放（L2正则化）对模型参数进行原地更新。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/fused_sgd/README.md">fused_sgd</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>实现FusedSgd融合优化器功能。</td>
+  </tr>
+  <tr>
     <td>pooling</td>
     <td><a href="../../pooling/adaptive_avg_pool3d/README.md">adaptive_avg_pool3d</a></td>
     <td>✓</td>

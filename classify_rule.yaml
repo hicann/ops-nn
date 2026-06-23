@@ -2023,6 +2023,14 @@ loss-c@ops-nn:
         - ops/ops-nn/optim/apply_adam_w_v2/op_kernel/apply_adam_w_v2_fp.h
         - ops/ops-nn/optim/apply_adam_w_v2/op_kernel/apply_adam_w_v2_mix_dtype.h
         - ops/ops-nn/optim/apply_adam_w_v2/op_kernel/apply_adam_w_v2.cpp
+        - ops/ops-nn/optim/fused_sgd/docs/
+        - ops/ops-nn/optim/fused_sgd/README.md
+        - ops/ops-nn/optim/fused_sgd/op_host/
+        - ops/ops-nn/optim/fused_sgd/op_kernel/fused_sgd_base.h
+        - ops/ops-nn/optim/fused_sgd/op_kernel/fused_sgd_f16_bf16.h
+        - ops/ops-nn/optim/fused_sgd/op_kernel/fused_sgd_f32.h
+        - ops/ops-nn/optim/fused_sgd/op_kernel/fused_sgd_tiling_data.h
+        - ops/ops-nn/optim/fused_sgd/op_kernel/fused_sgd.cpp
         - ops/ops-nn/optim/apply_fused_ema_adam/
       opensource_style: null
       kernel_style: null
@@ -2089,6 +2097,8 @@ loss-c@ops-nn:
         - ops/ops-nn/optim/apply_adam_w_quant/tests/
         - ops/ops-nn/optim/apply_adam_w_v2/examples/
         - ops/ops-nn/optim/apply_adam_w_v2/tests/
+        - ops/ops-nn/optim/fused_sgd/examples/
+        - ops/ops-nn/optim/fused_sgd/tests/
         - ops/ops-nn/optim/apply_fused_ema_adam/examples/
         - ops/ops-nn/optim/apply_fused_ema_adam/tests/
       non_delivery: null
