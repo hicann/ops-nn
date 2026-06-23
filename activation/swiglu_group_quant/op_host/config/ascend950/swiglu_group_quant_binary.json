@@ -1,0 +1,326 @@
+{
+    "op_type": "SwigluGroupQuant",
+    "op_list": [
+      {
+        "bin_filename": "SwigluGroupQuant_float32_float32_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_origin",
+            "index": 2,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": 27
+          },
+          {
+            "name": "quant_mode",
+            "dtype": "int",
+            "value": 3
+          },
+          {
+            "name": "block_size",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "round_scale",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "clamp_limit",
+            "dtype": "float",
+            "value": 0.0
+          },
+          {
+            "name": "dst_type_max_finite",
+            "dtype": "float",
+            "value": 448.0
+          },
+          {
+            "name": "output_origin",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "SwigluGroupQuant_float16_float16_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_origin",
+            "index": 2,
+            "dtype": "float16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": 27
+          },
+          {
+            "name": "quant_mode",
+            "dtype": "int",
+            "value": 3
+          },
+          {
+            "name": "block_size",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "round_scale",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "clamp_limit",
+            "dtype": "float",
+            "value": 0.0
+          },
+          {
+            "name": "dst_type_max_finite",
+            "dtype": "float",
+            "value": 448.0
+          },
+          {
+            "name": "output_origin",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      },
+      {
+        "bin_filename": "SwigluGroupQuant_bfloat16_bfloat16_hifloat8",
+        "inputs": [
+          {
+            "name": "x",
+            "index": 0,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "weight",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "group_index",
+            "index": 2,
+            "dtype": "int64",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "scale",
+            "index": 3,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "y",
+            "index": 0,
+            "dtype": "hifloat8",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_scale",
+            "index": 1,
+            "dtype": "float32",
+            "format": "ND",
+            "paramType": "required",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          },
+          {
+            "name": "y_origin",
+            "index": 2,
+            "dtype": "bfloat16",
+            "format": "ND",
+            "paramType": "optional",
+            "shape": [-2],
+            "format_match_mode": "FormatAgnostic"
+          }
+        ],
+        "attrs": [
+          {
+            "name": "dst_type",
+            "dtype": "int",
+            "value": 27
+          },
+          {
+            "name": "quant_mode",
+            "dtype": "int",
+            "value": 3
+          },
+          {
+            "name": "block_size",
+            "dtype": "int",
+            "value": 0
+          },
+          {
+            "name": "round_scale",
+            "dtype": "bool",
+            "value": false
+          },
+          {
+            "name": "clamp_limit",
+            "dtype": "float",
+            "value": 0.0
+          },
+          {
+            "name": "dst_type_max_finite",
+            "dtype": "float",
+            "value": 448.0
+          },
+          {
+            "name": "output_origin",
+            "dtype": "bool",
+            "value": false
+          }
+        ]
+      }
+    ]
+}

@@ -687,6 +687,16 @@
     <td>AI Core</td>
     <td>完成aclnnSwiGlu的反向计算，完成x的SwiGlu反向梯度计算。</td>
   </tr>
+    <tr>
+    <td>activation</td>
+    <td><a href="../../activation/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>完成SwiGLU激活函数分组量化计算。</td>
+  </tr>
   <tr>
     <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant_grad/README.md">swiglu_group_quant_grad</a></td>
