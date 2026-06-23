@@ -91,6 +91,7 @@ const static uint8_t ROUND_MODE_HYBRID = 3;
 const static uint8_t DOUBLE_BUF = 2;
 const static uint8_t BIT_OFFSET_8 = 8;
 const static uint8_t ADDR_ALIGN_SIZE = 32;
+const static uint8_t DTYPE_SIZE_B8 = 1;
 
 // Vec DeQuant
 const static uint32_t DTYPE_SIZE_B32 = 4;

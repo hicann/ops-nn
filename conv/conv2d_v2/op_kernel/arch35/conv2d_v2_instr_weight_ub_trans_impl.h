@@ -55,9 +55,7 @@ private:
                 self_->ctx.convTilingData->coutOffsetBlock;
             copyParams.loopInfo.loopDstStride[NDDMA_LOOP1_INDEX] =
                 self_->ctx.convTilingData->bUbKStep;
-            if constexpr (sizeof(typename Intf::WeightT) != 1) {    
-                copyParams.constantValue = 0;
-            }
+            copyParams.constantValue = 0;
         }
         // NDDMA Loop0 params
         copyParams.loopInfo.loopSize[NDDMA_LOOP0_INDEX] = self_->ctx.currentUbKStep;
@@ -72,8 +70,16 @@ private:
             self_->ctx.kBL1Iter * self_->ctx.convTilingData->kBL1 +
             self_->ctx.vecKIter * self_->ctx.convTilingData->bUbKStep;
 
-        DataCopy<typename Intf::WeightT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
-            self_->ctx.ndTensor, self_->ctx.bgm[srcOffset], copyParams);
+        LocalTensor<NddmaT> ndTensorNddma = self_->ctx.ndUbBuf.template Get<NddmaT>();
+        if constexpr (sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8) {
+            GlobalTensor<NddmaT> bgmNddma;
+            bgmNddma.SetGlobalBuffer((__gm__ NddmaT *)self_->ctx.bgm.GetPhyAddr());
+            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
+                ndTensorNddma, bgmNddma[srcOffset], copyParams);
+        } else {
+            DataCopy<NddmaT, NDDMA_DIMS_NO_TRANS, kDefaultMultiCopyConfig>(
+                ndTensorNddma, self_->ctx.bgm[srcOffset], copyParams);
+        }
     }
 
     __aicore__ inline void LoadGM2UBAlign()
@@ -96,8 +102,10 @@ private:
 
 private:
     Intf *self_ = nullptr;
+    using NddmaT = typename Conditional<(sizeof(typename Intf::WeightT) == DTYPE_SIZE_B8), uint8_t,
+        typename Intf::WeightT>::type;
     DataCopyParams repeatParams;
-    MultiCopyParams<typename Intf::WeightT, NDDMA_DIMS_NO_TRANS> copyParams;
+    MultiCopyParams<NddmaT, NDDMA_DIMS_NO_TRANS> copyParams;
 };
 
 template <class Intf>
