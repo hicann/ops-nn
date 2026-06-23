@@ -49,7 +49,9 @@ class BinParamBuilder(opdesc_parser.OpDesc):
 
     def gen_input_json(self: any):
         key_map = {}
-        count = len(self.input_dtype[0].split(','))
+        count = 1
+        if self.input_dtype:
+            count = len(self.input_dtype[0].split(','))
         required_parameters = set()
         index_value = -1
 
