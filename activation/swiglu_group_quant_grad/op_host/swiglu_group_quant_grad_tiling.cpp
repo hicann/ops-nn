@@ -30,7 +30,7 @@ static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext *context)
     if (GetCompileInfo(context, compileInfo) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (CheckOpParams(context, compileInfo) != ge::GRAPH_SUCCESS) {
+    if (CheckOpAllParams(context, compileInfo) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     

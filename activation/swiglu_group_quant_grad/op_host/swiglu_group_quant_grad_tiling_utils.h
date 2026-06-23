@@ -26,7 +26,7 @@
 namespace optiling {
 
 constexpr uint32_t INPUT_GRAD_Y_INDEX = 0;
-constexpr uint32_t INPUT_X_INDEX = 1;
+constexpr uint32_t INPUT_OP_X_INDEX = 1;
 constexpr uint32_t INPUT_WEIGHT_INDEX = 2;
 constexpr uint32_t INPUT_Y_ORIGIN_INDEX = 3;
 constexpr uint32_t INPUT_GROUP_INDEX_INDEX = 4;
@@ -50,27 +50,27 @@ constexpr uint32_t MAX_H = 4096;
 constexpr uint32_t MIN_H = 512;
 
 template <typename T>
-inline auto AlignUp(T num, T div) -> decltype(num)
+inline auto AlignUpT(T num, T div) -> decltype(num)
 {
     return (div == 0) ? 0 : (num + div - 1) / div * div;
 }
 
 template <typename T>
-inline auto AlignDown(T num, T div) -> decltype(num)
+inline auto AlignDownT(T num, T div) -> decltype(num)
 {
     return (div == 0) ? 0 : num / div * div;
 }
 
 template <typename T>
-inline auto CeilDiv(T num, T div) -> decltype(num)
+inline auto CeilDivT(T num, T div) -> decltype(num)
 {
     return div == 0 ? 0 : (num + div - 1) / div;
 }
 
-inline ge::graphStatus CheckInputDtype(const gert::TilingContext *context)
+inline ge::graphStatus CheckAllInputDtype(const gert::TilingContext *context)
 {
     auto gradYDtype = context->GetInputDesc(INPUT_GRAD_Y_INDEX)->GetDataType();
-    auto xDtype = context->GetInputDesc(INPUT_X_INDEX)->GetDataType();
+    auto xDtype = context->GetInputDesc(INPUT_OP_X_INDEX)->GetDataType();
     
     if (gradYDtype != ge::DT_FLOAT16 && gradYDtype != ge::DT_BF16 && gradYDtype != ge::DT_FLOAT) {
         OP_LOGE(context->GetNodeName(), "input grad_y dtype is only support fp16/bf16/fp32.");
@@ -117,10 +117,10 @@ inline ge::graphStatus CheckInputDtype(const gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckOutputDtype(const gert::TilingContext *context)
+inline ge::graphStatus CheckAllOutputDtype(const gert::TilingContext *context)
 {
     auto gradXDtype = context->GetOutputDesc(OUTPUT_GRAD_X_INDEX)->GetDataType();
-    auto xDtype = context->GetInputDesc(INPUT_X_INDEX)->GetDataType();
+    auto xDtype = context->GetInputDesc(INPUT_OP_X_INDEX)->GetDataType();
     
     if (gradXDtype != xDtype) {
         OP_LOGE(context->GetNodeName(), "output grad_x dtype must be same as input x.");
@@ -139,7 +139,7 @@ inline ge::graphStatus CheckOutputDtype(const gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckAttrs(const gert::TilingContext *context, SwigluGroupQuantGradCompileInfo &compileInfo)
+inline ge::graphStatus CheckAllAttrs(const gert::TilingContext *context, SwigluGroupQuantGradCompileInfo &compileInfo)
 {
     const gert::RuntimeAttrs *attrs = context->GetAttrs();
     if (attrs != nullptr) {
@@ -154,7 +154,7 @@ inline ge::graphStatus CheckAttrs(const gert::TilingContext *context, SwigluGrou
 inline ge::graphStatus CheckGradYAndXShapeDim(const gert::TilingContext *context)
 {
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
-    auto xShape = context->GetInputShape(INPUT_X_INDEX);
+    auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     
     size_t gradYDimNum = gradYShape->GetStorageShape().GetDimNum();
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -304,7 +304,7 @@ inline ge::graphStatus CheckInputShape(const gert::TilingContext *context, Swigl
 
 inline ge::graphStatus CheckOutputShape(const gert::TilingContext *context)
 {
-    auto xShape = context->GetInputShape(INPUT_X_INDEX);
+    auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     auto gradXShape = context->GetOutputShape(OUTPUT_GRAD_X_INDEX);
     
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -345,17 +345,17 @@ inline ge::graphStatus CheckOutputShape(const gert::TilingContext *context)
     return ge::GRAPH_SUCCESS;
 }
 
-inline ge::graphStatus CheckOpParams(gert::TilingContext *context, SwigluGroupQuantGradCompileInfo &compileInfo)
+inline ge::graphStatus CheckOpAllParams(gert::TilingContext *context, SwigluGroupQuantGradCompileInfo &compileInfo)
 {
-    if (CheckInputDtype(context) != ge::GRAPH_SUCCESS) {
+    if (CheckAllInputDtype(context) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "Check input dtype failed.");
         return ge::GRAPH_FAILED;
     }
-    if (CheckOutputDtype(context) != ge::GRAPH_SUCCESS) {
+    if (CheckAllOutputDtype(context) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "Check output dtype failed.");
         return ge::GRAPH_FAILED;
     }
-    if (CheckAttrs(context, compileInfo) != ge::GRAPH_SUCCESS) {
+    if (CheckAllAttrs(context, compileInfo) != ge::GRAPH_SUCCESS) {
         OP_LOGE(context->GetNodeName(), "Check attrs failed.");
         return ge::GRAPH_FAILED;
     }
@@ -439,17 +439,17 @@ inline void CalculateTilingParams(const gert::TilingContext *context,
             ubAvailable -= UB_WEIGHT_EXTRA_TOKENS * sizeof(float);
         }
         tileH = ubAvailable / ubPerTokenMinH;
-        tileH = AlignDown(tileH, FP16_BFP16_32B_ALIGN_NUM);
+        tileH = AlignDownT(tileH, FP16_BFP16_32B_ALIGN_NUM);
         tileH = std::max(tileH, FP16_BFP16_32B_ALIGN_NUM);
         tileTokens = ONE;
     }
     
-    uint32_t numHTiles = CeilDiv(dimH, tileH);
+    uint32_t numHTiles = CeilDivT(dimH, tileH);
     
     uint32_t usedCoreNum = std::min(truncValue, compileInfo.totalCore);
     usedCoreNum = std::max(usedCoreNum, ONE);
     
-    uint32_t tokensPerCore = CeilDiv(truncValue, usedCoreNum);
+    uint32_t tokensPerCore = CeilDivT(truncValue, usedCoreNum);
     
     uint32_t totalTiles = truncValue * numHTiles;
     OP_LOGD(context, "ubAvailable %u needSplitH %u tileTokens %u tileH %u compileInfo.totalCore %u \n", 
@@ -495,7 +495,7 @@ inline void SetBasicTilingData(gert::TilingContext *context,
                                SwigluGroupQuantGradTilingData &tilingData)
 {
     auto gradYShape = context->GetInputShape(INPUT_GRAD_Y_INDEX);
-    auto xShape = context->GetInputShape(INPUT_X_INDEX);
+    auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     uint32_t totalTokens = GetTotalTokens(gradYShape, context);
     uint32_t dimH = static_cast<uint32_t>(gradYShape->GetStorageShape()
                                                     .GetDim(gradYShape->GetStorageShape().GetDimNum() - 1));
