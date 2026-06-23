@@ -28,6 +28,7 @@ extern "C" __global__ __aicore__ void flat_quant(
     GM_ADDR x, GM_ADDR kronecker_p1, GM_ADDR kronecker_p2, GM_ADDR out, GM_ADDR quant_scale, GM_ADDR workspace,
     GM_ADDR tiling)
 {
+    AscendC::InitSocState();
     GET_TILING_DATA(tilingData, tiling);
     const FlatQuantTilingData* __restrict tiling_data = &tilingData;
     const TCubeTiling* __restrict mmTilingR = &(tiling_data->matmulTilingR);

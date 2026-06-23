@@ -93,6 +93,7 @@ template <
 __global__ __aicore__ void mat_mul_v3(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR offsetWGM, GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
+    AscendC::InitSocState();
     constexpr bool aTran = (A_TRANS == 1);
     constexpr bool bTran = (B_TRANS == 1);
 

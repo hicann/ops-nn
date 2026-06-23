@@ -181,6 +181,7 @@ template <
 __global__ __aicore__ void fused_mat_mul(
     GM_ADDR x1GM, GM_ADDR x2GM, GM_ADDR biasGM, GM_ADDR x3GM, GM_ADDR yGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
+    AscendC::InitSocState();
     __gm__ uint8_t* user = AscendC::GetUserWorkspace(workspaceGM);
 
     constexpr bool aTran = (TRANS_MODEL == 1 || TRANS_MODEL == 3);

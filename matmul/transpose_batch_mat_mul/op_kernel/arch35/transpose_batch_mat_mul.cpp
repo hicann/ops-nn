@@ -54,6 +54,7 @@ template <int8_t PERM_X1, int8_t PERM_X2, int8_t BATCH_SPLIT>
 __global__ __aicore__ void transpose_batch_mat_mul(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR scalesGM,
                                                    GM_ADDR cGM, GM_ADDR workspaceGM, GM_ADDR tilingGM)
 {
+    AscendC::InitSocState();
     __gm__ uint8_t* user = GetUserWorkspace(workspaceGM);
 
     constexpr bool aTran = false;

@@ -25,6 +25,7 @@ using RotateQuantAptOpt::RotateQuantAptTilingData;
 extern "C" __global__ __aicore__ void rotate_quant(
     GM_ADDR x, GM_ADDR rot, GM_ADDR alpha, GM_ADDR y, GM_ADDR scale, GM_ADDR workSpace, GM_ADDR tiling)
 {
+    AscendC::InitSocState();
     REGISTER_TILING_DEFAULT(RotateQuantAptTilingData);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     GET_TILING_DATA_WITH_STRUCT(RotateQuantAptTilingData, tilingData, tiling);
