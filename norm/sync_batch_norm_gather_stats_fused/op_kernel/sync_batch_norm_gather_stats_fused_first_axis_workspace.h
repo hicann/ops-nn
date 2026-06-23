@@ -217,7 +217,7 @@ public:
         Duplicate(buffer1, countsSumScalar, curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer0, buffer0, buffer1, curColNum);
+        Div<float, divConfig>(buffer0, buffer0, buffer1, curColNum);
         PipeBarrier<PIPE_V>();
 
         event_t event1 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -242,7 +242,7 @@ public:
         Duplicate(buffer0, static_cast<float>(1.0f), curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer1, buffer0, buffer1, curColNum);
+        Div<float, divConfig>(buffer1, buffer0, buffer1, curColNum);
         PipeBarrier<PIPE_V>();
         queue0.FreeTensor(buffer0);
 
@@ -307,6 +307,7 @@ public:
 
 private:
     TPipe pipe;
+    static constexpr DivConfig divConfig = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
     constexpr static uint16_t SYNC_AIV_ONLY_ALL = 14;
     constexpr static uint16_t WORKSPACE_NUM = 1;
     int64_t nLength;

@@ -159,7 +159,7 @@ public:
         Duplicate(buffer3_, unbiasCountsSum_, colSize);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer3_, buffer1_, buffer3_, colSize);
+        Div<float, divConfig>(buffer3_, buffer1_, buffer3_, colSize);
         PipeBarrier<PIPE_V>();
 
         Muls(buffer3_, buffer3_, momentum_, colSize);
@@ -171,7 +171,7 @@ public:
         Duplicate(buffer2_, countSum_, colSize);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer4_, buffer1_, buffer2_, colSize);
+        Div<float, divConfig>(buffer4_, buffer1_, buffer2_, colSize);
         PipeBarrier<PIPE_V>();
 
         Adds(buffer4_, buffer4_, eps_, colSize);
@@ -183,7 +183,7 @@ public:
         Duplicate(buffer2_, 1.0f, colSize);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer4_, buffer2_, buffer4_, colSize);
+        Div<float, divConfig>(buffer4_, buffer2_, buffer4_, colSize);
         PipeBarrier<PIPE_V>();
     }
 
@@ -211,6 +211,7 @@ public:
 
 private:
     TPipe pipe_;
+    static constexpr DivConfig divConfig = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueRunningVarOut_;
     TQue<QuePosition::VECOUT, DOUBLE_BUFFER> queueInvstdAllOut_;
     TQue<QuePosition::VECIN, DOUBLE_BUFFER> queueRunningVarIn_;

@@ -225,16 +225,17 @@ private:
             const LocalTensor<float>&, const LocalTensor<float>&, const LocalTensor<float>&, uint64_t, uint8_t,
             const BinaryRepeatParams&));
 
-    __aicore__ inline void LastReduceSumLargeStride(
-        const LocalTensor<float>& tmp, const LocalTensor<float>& src, const int64_t curRowsNum,
-        const int64_t curColNum);
-
     __aicore__ inline void LastReduceSum(
         const LocalTensor<float>& dst, const LocalTensor<float>& src, const LocalTensor<float>& tmp,
         const int64_t curRowsNum, const int64_t curColNum);
 
+    __aicore__ inline void LastReduceSumLargeStride(
+        const LocalTensor<float>& tmp, const LocalTensor<float>& src, const int64_t curRowsNum,
+        const int64_t curColNum);
+
 private:
     TPipe pipe;
+    static constexpr DivConfig divConfig = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
     constexpr static uint16_t SYNC_AIV_ONLY_ALL = 14;
     constexpr static int64_t WORKSPACE_NUM = 1;
     int64_t nLength;

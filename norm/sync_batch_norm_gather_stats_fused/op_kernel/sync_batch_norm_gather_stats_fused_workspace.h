@@ -177,7 +177,7 @@ public:
         Duplicate(buffer1_, countsSumScalar, curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer0_, buffer0_, buffer1_, curColNum);
+        Div<float, divConfig>(buffer0_, buffer0_, buffer1_, curColNum);
         PipeBarrier<PIPE_V>();
 
         Add(buffer2_, buffer2_, buffer0_, curColNum);
@@ -196,7 +196,7 @@ public:
         Duplicate(buffer0_, static_cast<float>(1.0f), curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer1_, buffer0_, buffer1_, curColNum);
+        Div<float, divConfig>(buffer1_, buffer0_, buffer1_, curColNum);
         PipeBarrier<PIPE_V>();
         queue0_.FreeTensor(buffer0_);
 
@@ -300,7 +300,7 @@ public:
         Duplicate(buffer1_, unbiasCountsSum, curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer1_, buffer3_, buffer1_, curColNum);
+        Div<float, divConfig>(buffer1_, buffer3_, buffer1_, curColNum);
         PipeBarrier<PIPE_V>();
 
         Muls(buffer1_, buffer1_, momentum, curColNum);
@@ -317,7 +317,7 @@ public:
         Duplicate(buffer1_, countsSumScalar, curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer3_, buffer3_, buffer1_, curColNum);
+        Div<float, divConfig>(buffer3_, buffer3_, buffer1_, curColNum);
         PipeBarrier<PIPE_V>();
 
         Adds(buffer3_, buffer3_, eps, curColNum);
@@ -329,7 +329,7 @@ public:
         Duplicate(buffer1_, static_cast<float>(1.0), curColNum);
         PipeBarrier<PIPE_V>();
 
-        Div(buffer3_, buffer1_, buffer3_, curColNum);
+        Div<float, divConfig>(buffer3_, buffer1_, buffer3_, curColNum);
         PipeBarrier<PIPE_V>();
         queue0_.FreeTensor(buffer0_);
         queue1_.FreeTensor(buffer1_);
@@ -363,6 +363,7 @@ public:
 
 private:
     TPipe pipe;
+    static constexpr DivConfig divConfig = {DivAlgo::PRECISION_0ULP_FTZ_FALSE};
     constexpr static uint16_t SYNC_AIV_ONLY_ALL = 14;
     int64_t nLength;
     int64_t cLength;
