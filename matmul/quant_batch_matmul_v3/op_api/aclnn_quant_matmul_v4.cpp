@@ -46,6 +46,9 @@ using TupleQuant = std::tuple<const aclTensor *, const aclTensor *, const aclTen
 using TupleAttr = std::tuple<bool, bool>;
 
 namespace {
+static constexpr int MX_SCALE_LAST_DIM_INDEX = 2;
+static constexpr int MX_SCALE_LAST_DIM = 2;
+
 static constexpr int INDEX_X1_IN_MANDTORY_TUPLE = 0;
 static constexpr int INDEX_X2_IN_MANDTORY_TUPLE = 1;
 static constexpr int INDEX_SCALE_IN_MANDTORY_TUPLE = 2;
@@ -990,10 +993,11 @@ static inline bool CheckA8W4ScaleX2Shape(
     if (IsMicroScaling(x1Scale, x2Scale)) {
         // 2： x2Scale形状：（n, groupDimK / 2, 2）
         if (x2ScaleNDim != groupDimN || x2ScaleGroupDim != CeilDiv(groupDimK, x2ScaleReshapeFactor) ||
-            x2Scale->GetViewShape().GetDim(2) != 2) {
+            x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX) != MX_SCALE_LAST_DIM) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale",
-                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim, x2Scale->GetViewShape().GetDim(2)).c_str(),
+                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim, 
+                    x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX)).c_str(),
                 FormatString("the shape of x2Scale must be [%ld, %ld, 2]", groupDimN,
                     CeilDiv(groupDimK, x2ScaleReshapeFactor)).c_str());
             return false;
