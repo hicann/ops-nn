@@ -133,6 +133,14 @@ public:
         return;
     }
 
+    __aicore__ inline void operator()(BlockShape const& blockShape, int64_t dstOffset,
+        AscendC::GlobalTensor<DataTypeIn>& workspaceGlobal, int64_t workspaceOffset, bool useWorkspace,
+        int64_t flagId = 5)
+    {
+        Run(blockShape, dstOffset, flagId);
+        return;
+    }
+
     // static init
     __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR x3Gm)
     {
