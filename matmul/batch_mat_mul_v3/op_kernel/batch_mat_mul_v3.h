@@ -553,7 +553,7 @@ __aicore__ inline void BatchMatMulUnalignedMultiBatchKernel<A_TYPE, B_TYPE, C_TY
 
     CalculateabGM(aGM, bGM, cGM, biasGM, offsetWGM, workspaceGM, c0Size);
 
-    innerParams_.batchL2Cnt = DivCeil(tilingPtr_->multiBatchInfo.cBatchDimAll, tilingPtr_->multiBatchInfo.batchTileBlock);
+    innerParams_.batchL2Cnt = MMV3DivCeil(tilingPtr_->multiBatchInfo.cBatchDimAll, tilingPtr_->multiBatchInfo.batchTileBlock);
     innerParams_.nd2nzBatchNum = tilingPtr_->multiBatchInfo.batchTileBlock;
 
     if (innerParams_.nd2nzFlag == ND2NZ_SELECT::ONLY_B) {

@@ -182,7 +182,7 @@ __aicore__ inline void MatmulBaseBlock::UpdateBlockCnt(uint64_t mTileIndex, uint
         params_.nCntUse = params_.nCnt;
     }
 
-    params_.round = DivCeil(params_.totalTileCnt, static_cast<uint64_t>(matmulTilingData_->matmulTiling.usedCoreNum));
+    params_.round = MMV3DivCeil(params_.totalTileCnt, static_cast<uint64_t>(matmulTilingData_->matmulTiling.usedCoreNum));
     params_.preCoreNum = params_.totalTileCnt % matmulTilingData_->matmulTiling.usedCoreNum;
     if (params_.preCoreNum == 0) {
         params_.preCoreNum = static_cast<uint64_t>(matmulTilingData_->matmulTiling.usedCoreNum);

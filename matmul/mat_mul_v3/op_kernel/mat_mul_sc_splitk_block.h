@@ -118,7 +118,7 @@ __aicore__ inline void MatmulSingleCoreSplitKBaseBlock::Init(const MatmulTilingD
     params_.index = 0;
     // M和N方向绑多核, 按照3*3个128*128的基本块
     params_.totalCnt = params_.mCnt * params_.nCnt;
-    params_.round = DivCeil(params_.totalCnt, matmulTilingData_->matmulTiling.usedCoreNum);
+    params_.round = MMV3DivCeil(params_.totalCnt, matmulTilingData_->matmulTiling.usedCoreNum);
     params_.realRound = 0;
     params_.preCoreNum = params_.totalCnt % matmulTilingData_->matmulTiling.usedCoreNum;
     if (params_.preCoreNum == 0) {
@@ -176,10 +176,10 @@ __aicore__ inline void MatmulSingleCoreSplitKBaseBlock::UpdateBlockCnt()
     params_.innerLoopM = MMV3DivCeil(matmulTilingData_->matmulTiling.singleCoreM, params_.innerBlockM);
     params_.innerLoopN = MMV3DivCeil(matmulTilingData_->matmulTiling.singleCoreN, params_.innerBlockN);
     if (params_.mIndex == params_.mCnt - 1) {
-        params_.innerLoopM = DivCeil(params_.mCoreTail, params_.innerBlockM);
+        params_.innerLoopM = MMV3DivCeil(params_.mCoreTail, params_.innerBlockM);
     }
     if (params_.nIndex == params_.nCnt - 1) {
-        params_.innerLoopN = DivCeil(params_.nCoreTail, params_.innerBlockN);
+        params_.innerLoopN = MMV3DivCeil(params_.nCoreTail, params_.innerBlockN);
     }
     if (params_.rowOrder == 0) { // 单核切k中 l2IterateOrder 为默认值0时走原kernel
         params_.innerLoopN = 1;
