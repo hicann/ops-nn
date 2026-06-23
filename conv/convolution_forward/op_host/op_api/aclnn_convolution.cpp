@@ -67,6 +67,7 @@ static constexpr int64_t SMALL_CHANNEL = 4;
 static constexpr int64_t CONV2D_SHAPE_SIZE = 4;
 static constexpr int64_t CONV3D_SHAPE_SIZE = 5;
 static const std::string REFLECTION_MODE = "constant";
+const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
 
 // 根据API定义，需要列出所能支持的所有dtype
 static constexpr const std::initializer_list<op::DataType> BIAS_SUPPORT_LIST = {
@@ -5121,8 +5122,39 @@ public:
         if (PreProcessCheckOutputDtype(bias, opInfo, entityName) != ACLNN_SUCCESS) {
             return ACLNN_ERR_PARAM_INVALID;
         }
-        return CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        auto ret = CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
+        CHECK_RET(ret == ACLNN_SUCCESS, ret);
+        TransposeAdaptParam adptParams = {0};
+        GetConv3DTransposeAdapterParam(input, stride, padding, dilation, outputPadding, executor, &adptParams);
+        return CheckN2HAndTranspose(input, weight, groups, executor, &adptParams);
     };
+
+    aclnnStatus CheckN2HAndTranspose(const aclTensor *&input, const aclTensor *&weight, int groups, aclOpExecutor *executor, TransposeAdaptParam *params){
+        if (CheckTransposeN2HEnable(input, weight, params->adaptStride, params->adaptDilation, params->adaptPad, groups)) {
+            auto ret = N2HChangeInput(input, executor);
+            if (ret != ACLNN_SUCCESS) {
+                OP_LOGE(ACLNN_ERR_INNER_INFERSHAPE_ERROR, "N2H failed.");
+                return ACLNN_ERR_INNER_INFERSHAPE_ERROR;
+            }
+        }
+
+        if (CheckPreTransposeEnable(weight, groups)) {
+            OP_LOGD("Conv3d transpose v2 support weight pre transpose.");
+            auto originShape = weight->GetOriginalShape();
+            // transpose weight NCDHW -> NDHWC
+            auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(), WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
+            CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            weight = l0op::Transpose(weight, permAfter, executor);
+            // 为了infershape正确，需要保存原来的shape
+            weight->SetStorageShape(originShape);
+            weight->SetOriginalShape(originShape);
+
+            // change weight format
+            CHECK_RET(weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+            const_cast<aclTensor*>(weight)->SetViewFormat(Format::FORMAT_NDHWC);
+        }
+        return ACLNN_SUCCESS;
+    }
 
     aclnnStatus Impl() override
     {

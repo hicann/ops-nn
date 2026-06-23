@@ -56,6 +56,7 @@ extern "C" {
 
 static constexpr const char* ACLNN_CONVOLUTION_BACKWARD_NAME = "aclnnConvolutionBackwardGetWorkspaceSize";
 static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackwardGetWorkspaceSize";
+const FVector<int64_t> WEIGHT_TRANSPOSE_SHAPE_DIMS = {0, 2, 3, 4, 1};
 constexpr int64_t DILATION_45 = 45;
 constexpr int64_t MIN_KL0_FP32 = 2;
 constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
@@ -2273,25 +2274,25 @@ static aclnnStatus CalculateConv3DBackwardByMatmulImpl(ConvolutionBackwardInputT
 namespace {
 static const aclTensor *GetGradInputNDC1HWC0(const ConvolutionBackwardInputTensor &inputTensor,
                                        const ConvolutionBackwardParams &params,
-                                       aclOpExecutor *executor, bool useHf32)
+                                       aclOpExecutor *executor, bool useHf32, AdaptParam *adptParams)
 {
     const aclTensor *gradInputNDC1HWC0 = nullptr;
     if (useHf32) {
       gradInputNDC1HWC0 = l0op::Conv3DBackpropInputHf32(inputTensor.input, inputTensor.weight,
                                                     inputTensor.gradOutput, params.stride,
-                                                    params.padding, params.dilation, params.groups, executor);
+                                                    params.padding, params.dilation, params.groups, executor, adptParams);
     } else if (inputTensor.weight->GetDataType() == DataType::DT_FLOAT) {
       gradInputNDC1HWC0 = l0op::Conv3DBackpropInputFp322Fp32(inputTensor.input, inputTensor.weight,
                                                             inputTensor.gradOutput, params.stride,
-                                                            params.padding, params.dilation, params.groups, executor);
+                                                            params.padding, params.dilation, params.groups, executor, adptParams);
     } else if (inputTensor.input->GetDataType() == DataType::DT_BF16) {
       gradInputNDC1HWC0 = l0op::Conv3DBackpropInputBf162Bf16(inputTensor.input, inputTensor.weight,
                                                             inputTensor.gradOutput, params.stride,
-                                                            params.padding, params.dilation, params.groups, executor);
+                                                            params.padding, params.dilation, params.groups, executor, adptParams);
     } else {
       gradInputNDC1HWC0 = l0op::Conv3DBackpropInputFp162Fp16(inputTensor.input, inputTensor.weight,
                                                             inputTensor.gradOutput, params.stride,
-                                                            params.padding, params.dilation, params.groups, executor);
+                                                            params.padding, params.dilation, params.groups, executor, adptParams);
     }
     return gradInputNDC1HWC0;
 }
@@ -2456,6 +2457,35 @@ static const aclTensor *Conv3DBackpropFilterBy1x1Dw(ConvolutionBackwardInputTens
   return gradWeightND;
 }
 
+static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTensor &tempTensor, ConvolutionBackwardParams &params, AdaptParam &adptParams, aclOpExecutor *executor) {
+  GetConv3DBackpropAdapterParam(tempTensor.input, params.stride, params.padding, params.dilation, executor, &adptParams);
+  aclIntArray *stride5 = adptParams.adaptStride;   // Conv3d stride维度为5
+  aclIntArray *dilation5 = adptParams.adaptDilation; // Conv3d dilation维度为5
+  aclIntArray *pad6 = adptParams.adaptPad;          // conv3d pad维度为6
+  if (Ops::NN::AclnnUtil::IsRegbase() && CheckN2HEnable(tempTensor.weight, tempTensor.input, stride5, dilation5, pad6, params.groups)) {
+    auto ret = N2HOptimize(tempTensor.weight, tempTensor.gradOutput, &adptParams, executor);
+    if (ret != ACLNN_SUCCESS) {
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput N2HOptimize failed.");
+      return ACLNN_ERR_INNER_NULLPTR;
+    }
+  }
+
+  if (CheckWeightPreTransposeEnable(tempTensor.weight, tempTensor.input, stride5, params.groups)) {
+    OP_LOGD("Conv3d backpropInput v2 support weight pre transpose.");
+    // transpose weight NCDHW -> NDHWC
+    auto permAfter = executor->AllocIntArray(WEIGHT_TRANSPOSE_SHAPE_DIMS.data(), WEIGHT_TRANSPOSE_SHAPE_DIMS.size());
+    CHECK_RET(permAfter != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    tempTensor.weight = l0op::Transpose(tempTensor.weight, permAfter, executor);
+
+    // change weight format
+    CHECK_RET(tempTensor.weight != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    const_cast<aclTensor*>(tempTensor.weight)->SetOriginalFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(tempTensor.weight)->SetStorageFormat(Format::FORMAT_NDHWC);
+    const_cast<aclTensor*>(tempTensor.weight)->SetViewFormat(Format::FORMAT_NDHWC);
+  }
+  return ACLNN_SUCCESS;
+}
+
 static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &inputTensor,
                                            ConvolutionBackwardResult &outputTensor, ConvolutionBackwardParams &params,
                                            aclOpExecutor *executor) {
@@ -2504,13 +2534,17 @@ static aclnnStatus CalculateConv3DBackward(ConvolutionBackwardInputTensor &input
   if ((*params.outputMask)[0] && !conv3DBp2MatmulMask[0]) {
     OP_LOGD("Enter dx Calculate");
     const aclTensor *gradInputNDC1HWC0 = nullptr;
+    AdaptParam adptParams = {0};
+    auto tempTensor = inputTensor;
+    CHECK_RET(PrepareConv3DBackpropInputParams(tempTensor, params, adptParams, executor) == ACLNN_SUCCESS,
+          ACLNN_ERR_INNER_NULLPTR);
     if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
       useV2Flag = true;
-      gradInputNDC1HWC0 = l0op::Conv3DBackpropInput(inputTensor, params, executor, useHf32);
+      gradInputNDC1HWC0 = l0op::Conv3DBackpropInput(tempTensor, params, executor, useHf32, &adptParams);
     } else {
-      gradInputNDC1HWC0 = GetGradInputNDC1HWC0(inputTensor, params, executor, useHf32);
+      gradInputNDC1HWC0 = GetGradInputNDC1HWC0(tempTensor, params, executor, useHf32, &adptParams);
     }
-    if (useV2Flag && !useHf32 && inputTensor.weight->GetDataType() != DataType::DT_FLOAT) {
+    if (useV2Flag && !useHf32 && tempTensor.weight->GetDataType() != DataType::DT_FLOAT) {
       outputTransdataFlag = false; // V2，非HF32，非FP32，不在黑名单
     }
     OP_CHECK(

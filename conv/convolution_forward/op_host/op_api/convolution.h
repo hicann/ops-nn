@@ -19,6 +19,13 @@
 #include "opdev/op_executor.h"
 
 namespace l0op {
+struct transposeTagAdaptParam {
+  aclIntArray *adaptStride {0};
+  aclIntArray *adaptDilation {0};
+  aclIntArray *adaptPad {0};
+  aclIntArray *adaptoutputPad {0};
+};
+using TransposeAdaptParam = struct transposeTagAdaptParam;
 const aclTensor *Conv2d5HdFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
                                const aclIntArray *stride, const aclIntArray *padding, const aclIntArray *dilation,
                                int groups, aclOpExecutor *executor);
@@ -147,6 +154,13 @@ bool IsSupportConv2DTransposeTo3D(const aclTensor *input, const aclTensor *weigh
                                   const aclIntArray *stride, const aclIntArray *padding,
                                   const aclIntArray *dilation, const aclIntArray *outputPadding,
                                   const int64_t groups, aclTensor *output);
+bool CheckTransposeN2HEnable(const aclTensor *input, const aclTensor *weight,
+                           aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad5, int groups);
+bool CheckPreTransposeEnable(const aclTensor *weight, int groups);
+aclnnStatus N2HChangeInput(const aclTensor *&input, aclOpExecutor *executor);
+void GetConv3DTransposeAdapterParam(const aclTensor *input, const aclIntArray *stride, const aclIntArray *padding, 
+                                    const aclIntArray *dilation, const aclIntArray *outputPadding,
+                                    aclOpExecutor *executor, TransposeAdaptParam *params);                           
 }  // namespace l0op
 
 #endif  // OP_API_OP_API_COMMON_INC_LEVEL0_OP_CONVOLUTION_OP_H
