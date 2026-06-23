@@ -91,7 +91,7 @@ public:
                 indexOffset += S_PART_MIN_LEN;
             }
             auto srcPos = srcGlobal[gmOffset];
-            DataCopy(localValueCast, srcPos, innerCopyLen);
+            DataCopyPad(localValueCast, srcPos, {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(eventIDMTE2ToV);
             CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), (int32_t)(indexOffset), innerCopyLen);
             PipeBarrier<PIPE_V>();
