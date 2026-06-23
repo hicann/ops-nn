@@ -113,12 +113,13 @@ static inline std::string GetInputName(const std::map<int64_t, std::string> &inp
 
 static inline bool OpCheckDtypeNotSupport(int64_t interfaceType, const std::map<int64_t, std::string> &inputNameMap,
                                           const aclTensor *tensor,
-                                          const std::initializer_list<op::DataType> &supportList)
+                                          const std::initializer_list<op::DataType> &supportList,
+                                          const char *apiName)
 {
     if (!CheckType(tensor->GetDataType(), supportList)) {
         const auto inputName = GetInputName(inputNameMap, interfaceType);
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", inputName.c_str(), op::ToString(tensor->GetDataType()).GetString(),
+            apiName, inputName.c_str(), op::ToString(tensor->GetDataType()).GetString(),
             FormatString("the dtype of %s must be in dtype support list %s", inputName.c_str(),
                 op::ToString(supportList).GetString()).c_str());
         return false;
@@ -127,12 +128,13 @@ static inline bool OpCheckDtypeNotSupport(int64_t interfaceType, const std::map<
 }
 
 static inline bool OpCheckDtypeNotMatch(int64_t interfaceType, const std::map<int64_t, std::string> &inputNameMap,
-                                        const aclTensor *tensor, DataType expectedDtype)
+                                        const aclTensor *tensor, DataType expectedDtype,
+                                        const char *apiName)
 {
     if (tensor->GetDataType() != expectedDtype) {
         const auto inputName = GetInputName(inputNameMap, interfaceType);
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", inputName.c_str(), op::ToString(tensor->GetDataType()).GetString(),
+            apiName, inputName.c_str(), op::ToString(tensor->GetDataType()).GetString(),
             FormatString("the dtype of %s must be %s", inputName.c_str(), op::ToString(expectedDtype).GetString())
                 .c_str());
         return false;
@@ -141,12 +143,13 @@ static inline bool OpCheckDtypeNotMatch(int64_t interfaceType, const std::map<in
 }
 
 static inline bool OpCheckWrongDimension(int64_t interfaceType, const std::map<int64_t, std::string> &inputNameMap,
-                                         const aclTensor *tensor, size_t expectedDimNum)
+                                         const aclTensor *tensor, size_t expectedDimNum,
+                                         const char *apiName)
 {
     if (tensor->GetViewShape().GetDimNum() != expectedDimNum) {
         const auto inputName = GetInputName(inputNameMap, interfaceType);
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", inputName.c_str(),
+            apiName, inputName.c_str(),
             FormatString("%zuD", tensor->GetViewShape().GetDimNum()).c_str(),
             FormatString("the shape dim of %s must be %zuD", inputName.c_str(), expectedDimNum).c_str());
         return false;
@@ -213,12 +216,12 @@ static inline int64_t EncodeGroupSizeMnk(const GroupSizeMNK &groupSizeMnk)
     return static_cast<int64_t>((groupSizeMnk.m << GROUP_M_OFFSET) | (groupSizeMnk.n << GROUP_N_OFFSET) | groupSizeMnk.k);
 }
 
-static inline bool CheckMxGroupSize(int64_t groupSize, const GroupSizeMNK &groupSizeMnk)
+static inline bool CheckMxGroupSize(int64_t groupSize, const GroupSizeMNK &groupSizeMnk, const char *apiName)
 {
     if (groupSizeMnk.k != static_cast<uint64_t>(PERGROUP_GROUP_SIZE) ||
         groupSizeMnk.m != 1ULL || groupSizeMnk.n != 1ULL) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSize, groupSizeM, groupSizeN, groupSizeK",
+            apiName, "groupSize, groupSizeM, groupSizeN, groupSizeK",
             FormatString("%ld, %lu, %lu, %lu", groupSize, groupSizeMnk.m, groupSizeMnk.n, groupSizeMnk.k).c_str(),
             "when the quantization mode is mx, groupSize must be 4295032864 and Torch API group_sizes must be [1, 1, 32]");
         return false;
@@ -226,34 +229,34 @@ static inline bool CheckMxGroupSize(int64_t groupSize, const GroupSizeMNK &group
     return true;
 }
 
-static inline bool CheckA4W4PergroupNonSymmetricGroupSize(const GroupSizeMNK &groupSizeMnk)
+static inline bool CheckA4W4PergroupNonSymmetricGroupSize(const GroupSizeMNK &groupSizeMnk, const char *apiName)
 {
     if (groupSizeMnk.k != static_cast<uint64_t>(PERGROUP_GROUPSIZEK_SIZE)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSizeK", std::to_string(groupSizeMnk.k).c_str(),
+            apiName, "groupSizeK", std::to_string(groupSizeMnk.k).c_str(),
             "in A4W4 pertoken-pergroup non-symmetric scenario, groupSizeK must be 256");
         return false;
     }
     return true;
 }
 
-static inline bool CheckPerblockGroupSize(const GroupSizeMNK &groupSizeMnk)
+static inline bool CheckPerblockGroupSize(const GroupSizeMNK &groupSizeMnk, const char *apiName)
 {
     if (groupSizeMnk.k != PERBLOCK_BLOCK_SIZE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSizeK", std::to_string(groupSizeMnk.k).c_str(),
+            apiName, "groupSizeK", std::to_string(groupSizeMnk.k).c_str(),
             "when the quantization mode is G-B or B-B, groupSizeK must be 128");
         return false;
     }
     if (groupSizeMnk.n != PERBLOCK_BLOCK_SIZE) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSizeN", std::to_string(groupSizeMnk.n).c_str(),
+            apiName, "groupSizeN", std::to_string(groupSizeMnk.n).c_str(),
             "when the quantization mode is G-B or B-B, groupSizeN must be 128");
         return false;
     }
     if (groupSizeMnk.m != PERBLOCK_BLOCK_SIZE && groupSizeMnk.m != 1UL) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSizeM", std::to_string(groupSizeMnk.m).c_str(),
+            apiName, "groupSizeM", std::to_string(groupSizeMnk.m).c_str(),
             "when the quantization mode is G-B or B-B, groupSizeM must be 128 or 1");
         return false;
     }
@@ -301,10 +304,10 @@ static inline auto CeilAlign(T x, T y) -> T {
 }
 
 template <typename T>
-static inline bool IsAligned(T num, T factor)
+static inline bool IsAligned(T num, T factor, const char *apiName)
 {
     if (factor == 0) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "factor",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName, "factor",
             std::to_string(factor).c_str(), "the divisor can not be zero");
         return false;
     }
@@ -361,7 +364,7 @@ bool QuantMatmulChecker::IsA4W4PergroupNonSymmetric(const uint64_t groupSizeK) c
 
     auto bias = std::get<INDEX_BIAS_IN_QUANT_TUPLE>(quantTensors_);
     if (bias != nullptr) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias", "not null",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "bias", "not null",
             "in A4W4 pergroup non-symmetric scenario, bias must be null");
         return false;
     }
@@ -404,7 +407,7 @@ bool QuantMatmulChecker::CheckEmptyTensor() const
 {
     // scale, out和可选参数已在CheckShape函数校验，无需再次校验空tensor场景。
     if (x1_->IsEmpty() || x2_->IsEmpty()) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "x1, x2",
             FormatString("%s, %s", x1_->IsEmpty() ? "empty" : "not empty",
                 x2_->IsEmpty() ? "empty" : "not empty").c_str(),
             "x1 and x2 can not be empty");
@@ -440,7 +443,7 @@ bool QuantMatmulChecker::CheckShapeForWeightNz() const
     int64_t aligneValue = transposeX2_ ? nz_k0_value_trans : NZ_K0_VALUE_INT8_INT4;
     int64_t alignedX1K = ((x1KDim_ + aligneValue - 1) / aligneValue) * aligneValue;
     if (alignedX1K != x2K1Dim * aligneValue) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             "alignedX1K, x2K1Dim * alignedValue",
             FormatString("%ld, %ld", alignedX1K, x2K1Dim * aligneValue).c_str(),
             "when the format of x2 is FRACTAL_NZ, alignedX1K must be equal to x2K1Dim multiplied by alignedValue");
@@ -457,14 +460,14 @@ bool QuantMatmulChecker::CheckMXFP4FP8ParamsNDOrNZ() const
     auto x2DimNum = x2_->GetViewShape().GetDimNum();
     auto x2InnerAxis = x2_->GetViewShape().GetDim(x2DimNum - 1);
     if (x1InnerAxis % MICRO_SCALING_ALIGN_NUM != 0 || x2InnerAxis % MICRO_SCALING_ALIGN_NUM != 0) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             "x1 inner axis, x2 inner axis", FormatString("%ld, %ld", x1InnerAxis, x2InnerAxis).c_str(),
             "when the quantization mode is mx and x1 and x2 are FLOAT4_E2M1, the inner axes of x1 and x2 must be even");
         return false;
     }
     // fp4 k轴大于2校验
     if (x1KDim_ <= 2 || x2KDim_ <= 2) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1 K, x2 K",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "x1 K, x2 K",
             FormatString("%ld, %ld", x1KDim_, x2KDim_).c_str(),
             "when the quantization mode is mx and x1 and x2 are FLOAT4_E2M1, the K dimension of x1 and x2 must be greater than 2");
         return false;
@@ -490,7 +493,7 @@ bool QuantMatmulChecker::CheckDimValueMicroScaling() const
                          (x2ScaleNDim == 1 && x2ScaleKDim == CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE)) ||
                          (x2ScaleNDim == CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE) && x2ScaleKDim == 1);
  	if ((!x1ScaleHasOne && x1ScaleMDim != x1MDim_) || (!x2ScaleHasOne && x2ScaleNDim != x2NDim_)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x1 M, %s M, x2 N, %s N", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
 FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1ScaleMDim, x2NDim_, x2ScaleNDim).c_str(),
             FormatString("when the quantization mode is mx, the M dimension of x1 and %s must be equal, and the N dimension "
@@ -499,7 +502,7 @@ FormatString("%ld, %ld, %ld, %ld", x1MDim_, x1ScaleMDim, x2NDim_, x2ScaleNDim).c
     }
  	if ((!x1ScaleHasOne && (CeilDiv(x1KDim_, MXFP_DIVISOR_SIZE) != x1ScaleKDim)) ||
  	    (!x2ScaleHasOne && (CeilDiv(x2KDim_, MXFP_DIVISOR_SIZE) != x2ScaleKDim))) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x1 K, %s K, x2 K, %s K", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
 FormatString("%ld, %ld, %ld, %ld", x1KDim_, x1ScaleKDim, x2KDim_, x2ScaleKDim).c_str(),
             FormatString("when the quantization mode is mx, the K dimension of %s must be equal to the K dimension of x1 "
@@ -509,7 +512,7 @@ FormatString("%ld, %ld, %ld, %ld", x1KDim_, x1ScaleKDim, x2KDim_, x2ScaleKDim).c
     }
     if (x1Scale_->GetViewShape().GetDim(MX_SCALE_DIM - 1) != MXFP_MULTI_BASE_SIZE ||
         x2Scale_->GetViewShape().GetDim(MX_SCALE_DIM - 1) != MXFP_MULTI_BASE_SIZE) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("%s last dimension, %s last dimension", GetX1ScaleName().c_str(), GetX2ScaleName().c_str())
                 .c_str(),
             FormatString("%ld, %ld", x1Scale_->GetViewShape().GetDim(MX_SCALE_DIM - 1),
@@ -538,7 +541,7 @@ bool QuantMatmulChecker::CheckGroupSizeShape(uint64_t groupSizeM) const
     auto x2KDimNum = x2DimNum - (transposeX2_ ? 1 : PENULTIMATE_DIM);
     // m dim
     if (CeilDiv(x1Shape.GetDim(mDimNum), static_cast<int64_t>(groupSizeM)) != x1ScaShape.GetDim(mDimNum)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x1 m, %s m, groupSizeM", GetX1ScaleName().c_str()).c_str(),
             FormatString("%ld, %ld, %lu", x1Shape.GetDim(mDimNum), x1ScaShape.GetDim(mDimNum), groupSizeM).c_str(),
             FormatString("when the quantization mode is G-B or B-B, the m dimension of %s must be equal to "
@@ -546,7 +549,7 @@ bool QuantMatmulChecker::CheckGroupSizeShape(uint64_t groupSizeM) const
         return false;
     }
     if (CeilDiv(x1Shape.GetDim(x1KDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) != x1ScaShape.GetDim(x1KDimNum)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x1 k, %s k", GetX1ScaleName().c_str()).c_str(),
             FormatString("%ld, %ld", x1Shape.GetDim(x1KDimNum), x1ScaShape.GetDim(x1KDimNum)).c_str(),
             FormatString("when the quantization mode is G-B or B-B, the k dimension of %s must be equal to "
@@ -554,7 +557,7 @@ bool QuantMatmulChecker::CheckGroupSizeShape(uint64_t groupSizeM) const
         return false;
     }
     if (CeilDiv(x2Shape.GetDim(nDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) != x2ScaShape.GetDim(nDimNum)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x2 n, %s n", GetX2ScaleName().c_str()).c_str(),
             FormatString("%ld, %ld", x2Shape.GetDim(nDimNum), x2ScaShape.GetDim(nDimNum)).c_str(),
             FormatString("when the quantization mode is G-B or B-B, the n dimension of %s must be equal to "
@@ -562,7 +565,7 @@ bool QuantMatmulChecker::CheckGroupSizeShape(uint64_t groupSizeM) const
         return false;
     }
     if (CeilDiv(x2Shape.GetDim(x2KDimNum), static_cast<int64_t>(PERBLOCK_BLOCK_SIZE)) != x2ScaShape.GetDim(x2KDimNum)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x2 k, %s k", GetX2ScaleName().c_str()).c_str(),
             FormatString("%ld, %ld", x2Shape.GetDim(x2KDimNum), x2ScaShape.GetDim(x2KDimNum)).c_str(),
             FormatString("when the quantization mode is G-B or B-B, the k dimension of %s must be equal to "
@@ -578,7 +581,7 @@ bool QuantMatmulChecker::ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, u
     if (scaleSize == 0ULL) {
         std::string scaleName = strcmp(dimensionName, "n") == 0 ? "x2Scale(scale)" : "x1Scale(pertokenScale)";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            apiName_,
             FormatString("%s dimension of %s", dimensionName, scaleName.c_str()).c_str(),
             std::to_string(scaleSize).c_str(),
             FormatString("the %s dimension of %s must be positive", dimensionName, scaleName.c_str())
@@ -594,7 +597,7 @@ bool QuantMatmulChecker::ReCalcGroupSize(int64_t inputSize, int64_t scaleSize, u
                 inputName = "x2";
             }
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize",
+                apiName_,
                 FormatString("groupSize, %s dimension of %s, %s dimension of %s",
                     dimensionName, inputName.c_str(), dimensionName, scaleName.c_str()).c_str(),
                 FormatString("%lu, %ld, %ld", groupSize, inputSize, scaleSize).c_str(),
@@ -705,7 +708,7 @@ bool QuantMatmulChecker::CheckDimValuePerblock() const
     auto x2ScaleDimNum = x2Scale_->GetViewShape().GetDimNum();
     uint64_t groupSizeM = std::max((static_cast<uint64_t>(groupSize_) >> GROUP_M_OFFSET) & GROUP_MNK_BIT_SIZE, 1UL);
     if (x1ScaleDimNum != x1DimNum || x2ScaleDimNum != x2DimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(apiName_,
             FormatString("x1, %s, x2, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString("%zuD, %zuD, %zuD, %zuD", x1DimNum, x1ScaleDimNum, x2DimNum, x2ScaleDimNum).c_str(),
             FormatString("when the quantization mode is G-B or B-B, the shape dim of %s must be the same as x1, and the "
@@ -714,7 +717,7 @@ bool QuantMatmulChecker::CheckDimValuePerblock() const
     }
     for (int64_t index = x1DimNum - BATCH_TAILENDER_DIM; index >= 0; --index) {
         if (x1Scale_->GetViewShape().GetDim(index) != x1_->GetViewShape().GetDim(index)) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
                 FormatString("x1 batch dimension, %s batch dimension", GetX1ScaleName().c_str()).c_str(),
                 FormatString("%ld, %ld", x1_->GetViewShape().GetDim(index), x1Scale_->GetViewShape().GetDim(index))
                     .c_str(),
@@ -725,7 +728,7 @@ bool QuantMatmulChecker::CheckDimValuePerblock() const
     }
     for (int64_t index = x2DimNum - BATCH_TAILENDER_DIM; index >= 0; --index) {
         if (x2Scale_->GetViewShape().GetDim(index) != x2_->GetViewShape().GetDim(index)) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
                 FormatString("x2 batch dimension, %s batch dimension", GetX2ScaleName().c_str()).c_str(),
                 FormatString("%ld, %ld", x2_->GetViewShape().GetDim(index), x2Scale_->GetViewShape().GetDim(index))
                     .c_str(),
@@ -742,7 +745,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
     auto x1ScaleDim0Size = x1Scale_->GetViewShape().GetDim(0);
     if (x1MDim_ == 1) {
         if (x1ScaleDim0Size != 1) {
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_,
                 GetX1ScaleName().c_str(), std::to_string(x1ScaleDim0Size).c_str(),
                 FormatString("when %s and %s are 1D and the M dimension of x1 is 1, the shape of %s must be [1]",
                     GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX1ScaleName().c_str()).c_str());
@@ -751,7 +754,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
     } else {
         if (x1ScaleDim0Size == 1 && !IsInt8Input(x1_, x2_)) { // double scale
             if (x2Scale_->GetViewShape().GetDim(0) != 1 && x2Scale_->GetViewShape().GetDim(0) != x2NDim_) {
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_,
                     GetX2ScaleName().c_str(), std::to_string(x2Scale_->GetViewShape().GetDim(0)).c_str(),
                     FormatString("when the shape of %s is [1], the shape of %s must be [1] or [%ld]",
                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), x2NDim_).c_str());
@@ -759,7 +762,7 @@ bool QuantMatmulChecker::CheckDimValuePertokenDoubleScale() const
             }
         } else {
             if (x1ScaleDim0Size!= x1MDim_) { // pertoken
-                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_,
                     GetX1ScaleName().c_str(), std::to_string(x1ScaleDim0Size).c_str(),
                     FormatString("when %s and %s are 1D, the shape of %s must be [%ld]",
                         GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX1ScaleName().c_str(), x1MDim_)
@@ -785,7 +788,7 @@ bool QuantMatmulChecker::CheckDimValue() const
         }
     }
     if (ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ && (x2KDim_ == 1 || x2NDim_ == 1)) {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2 K, x2 N",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "x2 K, x2 N",
             FormatString("%ld, %ld", x2KDim_, x2NDim_).c_str(),
             "when the format of x2 is FRACTAL_NZ, the last two dimensions of x2 can not be 1");
         return false;
@@ -796,7 +799,7 @@ bool QuantMatmulChecker::CheckDimValue() const
     if (!isA4W4PergroupNonSymmetric && x2Scale_->GetViewShape().GetDim(0) != x2NDim_ &&
         x2Scale_->GetViewShape().GetDim(0) != 1) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(),
+            apiName_, GetX2ScaleName().c_str(),
             std::to_string(x2Scale_->GetViewShape().GetDim(0)).c_str(),
             FormatString("when the quantization mode of x2 is pertensor or perchannel, the last dimension of %s must be "
                 "%ld or 1", GetX2ScaleName().c_str(), x2NDim_).c_str());
@@ -805,9 +808,9 @@ bool QuantMatmulChecker::CheckDimValue() const
 
     if (x2Offset_ != nullptr) {
         if (!isA4W4PergroupNonSymmetric) {
-            CHECK_RET(OpCheckWrongDimension(interfaceType_, X2OFFSET_NAME, x2Offset_, 1UL), false);
+            CHECK_RET(OpCheckWrongDimension(interfaceType_, X2OFFSET_NAME, x2Offset_, 1UL, apiName_), false);
             if (x2Offset_->GetViewShape().GetDim(0) != x2NDim_ && x2Offset_->GetViewShape().GetDim(0) != 1) {
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_,
                     GetX2OffsetName().c_str(), std::to_string(x2Offset_->GetViewShape().GetDim(0)).c_str(),
                     FormatString("the first dimension of %s must be %ld or 1", GetX2OffsetName().c_str(), x2NDim_)
                         .c_str());
@@ -831,7 +834,7 @@ int64_t QuantMatmulChecker::InferOutputShape(std::vector<int64_t> &batchRecord) 
         auto longDimVal = longShapeTensor->GetViewShape().GetDim(i);
         auto shortDimVal = i < validOffset ? 1 : shortShapeTensor->GetViewShape().GetDim(i - validOffset);
         if (shortDimVal > 1 && longDimVal > 1 && shortDimVal != longDimVal) {
-            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
                 "short batch dimension, long batch dimension", FormatString("%ld, %ld", shortDimVal, longDimVal).c_str(),
                 "the batch dimensions of x1 and x2 must be broadcastable");
             return OUTPUT_INFER_FAIL;
@@ -848,7 +851,7 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
     auto biasDimNum = bias_->GetViewShape().GetDimNum();
     // 3 is bias with batch dim-num
     if (biasDimNum != 3 && biasDimNum != 1) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(apiName_, "bias",
             FormatString("%zuD", biasDimNum).c_str(), "the shape dim of bias must be 1D or 3D");
         return false;
     }
@@ -856,7 +859,7 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
     if (biasDimNum == 1) {
         OP_CHECK(
             biasFirstDim == x2NDim_,
-            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(apiName_, "bias",
                 std::to_string(biasFirstDim).c_str(),
                 FormatString("the shape of bias must be [%ld]", x2NDim_).c_str()),
             return false);
@@ -867,25 +870,25 @@ bool QuantMatmulChecker::CheckBiasShape(const std::vector<int64_t> &batchRecord,
     auto biasThirdDim = bias_->GetViewShape().GetDim(2);
     // output batch need to be only 1 dim when bias dim is 3
     if (batchRecord.size() != 1) {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_,
             "inferred out batch dimension", std::to_string(batchRecord.size()).c_str(),
             "when the shape dim of bias is 3D, the inferred out batch dimension must be 1");
         return false;
     }
     OP_CHECK(
         biasSecondDim == 1,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias second dimension",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "bias second dimension",
             std::to_string(biasSecondDim).c_str(), "when the shape dim of bias is 3D, the second dimension of bias must be 1"),
         return false);
     OP_CHECK(
         biasThirdDim == x2NDim_,
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias last dimension",
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_, "bias last dimension",
             std::to_string(biasThirdDim).c_str(),
             FormatString("when the shape dim of bias is 3D, the last dimension of bias must be %ld", x2NDim_).c_str()),
         return false);
     OP_CHECK(
         biasFirstDim == inferredOutbatchValue,
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             "bias first dimension, inferred out batch dimension",
             FormatString("%ld, %ld", biasFirstDim, inferredOutbatchValue).c_str(),
             "when the shape dim of bias is 3D, the first dimension of bias must be equal to the inferred out batch "
@@ -906,22 +909,22 @@ bool QuantMatmulChecker::CheckOutShape(bool twoDimMatmulCaseFlag, const std::vec
         outMDim = out_->GetViewShape().GetDim(0);
     }
     if (inferredOutDimNum != outDimNum) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(apiName_,
             GetInputName(OUT_NAME, interfaceType_).c_str(), FormatString("%zuD", outDimNum).c_str(),
             FormatString("the shape dim of out must be %zuD", inferredOutDimNum).c_str());
         return false;
     }
     OP_CHECK(outMDim == x1MDim_,
-             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "out M, x1 M",
+             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "out M, x1 M",
                  FormatString("%ld, %ld", outMDim, x1MDim_).c_str(),
                  "the M dimension of out must be equal to the M dimension of x1"), return false);
     OP_CHECK(outNDim == x2NDim_,
-             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "out N, x2 N",
+             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "out N, x2 N",
                  FormatString("%ld, %ld", outNDim, x2NDim_).c_str(),
                  "the N dimension of out must be equal to the N dimension of x2"), return false);
     for (size_t i = 0; i < outDimNum - PENULTIMATE_DIM; i++) {
         OP_CHECK(out_->GetViewShape().GetDim(i) == batchRecord[i],
-                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+                 OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
                      FormatString("out batch dimension %zu, inferred output batch dimension %zu", i, i).c_str(),
                      FormatString("%ld, %ld", out_->GetViewShape().GetDim(i), batchRecord[i]).c_str(),
                      FormatString("the batch dimension %zu of out must be equal to the inferred output batch dimension",
@@ -933,40 +936,40 @@ bool QuantMatmulChecker::CheckOutShape(bool twoDimMatmulCaseFlag, const std::vec
 
 bool QuantMatmulChecker::CheckShapeInt4() const
 {
-    if (!IsAligned<int64_t>(x1KDim_, INT4_NUMS_IN_INT8)) {
+    if (!IsAligned<int64_t>(x1KDim_, INT4_NUMS_IN_INT8, apiName_)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", std::to_string(x1KDim_).c_str(),
+            apiName_, "x1", std::to_string(x1KDim_).c_str(),
             "in A4W4 scenario, the K dimension of x1 must be positive and even");
         return false;
     }
-    if (transposeX2_ && !IsAligned<int64_t>(x2KDim_, INT4_NUMS_IN_INT8)) {
+    if (transposeX2_ && !IsAligned<int64_t>(x2KDim_, INT4_NUMS_IN_INT8, apiName_)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", std::to_string(x2KDim_).c_str(),
+            apiName_, "x2", std::to_string(x2KDim_).c_str(),
             "in A4W4 scenario and transposeX2 is true, the K dimension of x2 must be positive and even");
         return false;
     }
-    if (!transposeX2_ && !IsAligned<int64_t>(x2NDim_, INT4_NUMS_IN_INT8)) {
+    if (!transposeX2_ && !IsAligned<int64_t>(x2NDim_, INT4_NUMS_IN_INT8, apiName_)) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", std::to_string(x2NDim_).c_str(),
+            apiName_, "x2", std::to_string(x2NDim_).c_str(),
             "in A4W4 scenario and transposeX2 is false, the N dimension of x2 must be positive and even");
         return false;
     }
     if (transposeX1_) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX1", transposeX1_ ? "true" : "false",
+            apiName_, "transposeX1", transposeX1_ ? "true" : "false",
             "in A4W4 scenario, transposeX1 must be false");
         return false;
     }
     if (x2_->GetViewShape().GetDimNum() != X2_FIXED_DIM_NUM_A4W4) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2",
+            apiName_, "x2",
             FormatString("%zuD", x2_->GetViewShape().GetDimNum()).c_str(),
             "in A4W4 scenario, the shape dim of x2 must be 2D");
         return false;
     }
     if (bias_ != nullptr && bias_->GetViewShape().GetDimNum() != 1) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias",
+            apiName_, "bias",
             FormatString("%zuD", bias_->GetViewShape().GetDimNum()).c_str(),
             "in A4W4 scenario, the shape dim of bias must be 1D");
         return false;
@@ -978,7 +981,7 @@ bool QuantMatmulChecker::CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleD
 {
     if (x1ScaleDim != MX_SCALE_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX1ScaleName().c_str(),
+            apiName_, GetX1ScaleName().c_str(),
             FormatString("%zuD", x1ScaleDim).c_str(),
             FormatString("when the quantization mode is mx, the shape dim of %s must be %zuD",
                 GetX1ScaleName().c_str(), MX_SCALE_DIM).c_str());
@@ -986,7 +989,7 @@ bool QuantMatmulChecker::CheckMxScaleDimRange(size_t x1ScaleDim, size_t x2ScaleD
     }
     if (x2ScaleDim != MX_SCALE_DIM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(),
+            apiName_, GetX2ScaleName().c_str(),
             FormatString("%zuD", x2ScaleDim).c_str(),
             FormatString("when the quantization mode is mx, the shape dim of %s must be %zuD",
                 GetX2ScaleName().c_str(), MX_SCALE_DIM).c_str());
@@ -1000,7 +1003,7 @@ bool QuantMatmulChecker::CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2Sc
     bool isPerblock = IsPerblock(x1_, x2_, x1Scale_, x2Scale_);
     if ((isPerblock && x1ScaleDim != x1_->GetViewShape().GetDimNum()) || (!isPerblock && x1ScaleDim != 1)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            apiName_,
             FormatString("%s, x1", GetX1ScaleName().c_str()).c_str(),
             FormatString("%zuD, %zuD", x1ScaleDim, x1_->GetViewShape().GetDimNum()).c_str(),
             FormatString(
@@ -1011,7 +1014,7 @@ bool QuantMatmulChecker::CheckNormalScaleDimRange(size_t x1ScaleDim, size_t x2Sc
     }
     if ((isPerblock && x2ScaleDim != x2_->GetViewShape().GetDimNum()) || (!isPerblock && x2ScaleDim != 1)) {
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            apiName_,
             FormatString("%s, x2", GetX2ScaleName().c_str()).c_str(),
             FormatString("%zuD, %zuD", x2ScaleDim, x2_->GetViewShape().GetDimNum()).c_str(),
             FormatString(
@@ -1052,14 +1055,14 @@ bool QuantMatmulChecker::CheckGroupSize() const
     }
     const GroupSizeMNK groupSizeMnk = DecodeGroupSizeMnk(groupSize_);
     if (IsA4W4PergroupNonSymmetric(groupSizeMnk.k)) {
-        CHECK_RET(CheckA4W4PergroupNonSymmetricGroupSize(groupSizeMnk), false);
+        CHECK_RET(CheckA4W4PergroupNonSymmetricGroupSize(groupSizeMnk, apiName_), false);
     } else if (IsMicroScaling(x1Scale_, x2Scale_)) {
-        CHECK_RET(CheckMxGroupSize(groupSize_, groupSizeMnk), false);
+        CHECK_RET(CheckMxGroupSize(groupSize_, groupSizeMnk, apiName_), false);
     } else if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
-        CHECK_RET(CheckPerblockGroupSize(groupSizeMnk), false);
+        CHECK_RET(CheckPerblockGroupSize(groupSizeMnk, apiName_), false);
     } else if (groupSize_ != 0UL) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "groupSize, groupSizeM, groupSizeN, groupSizeK",
+            apiName_, "groupSize, groupSizeM, groupSizeN, groupSizeK",
             FormatString("%ld, %lu, %lu, %lu", groupSize_, groupSizeMnk.m, groupSizeMnk.n, groupSizeMnk.k).c_str(),
             "when the quantization mode is other than G-B, B-B, or mx, groupSize must be 0 and Torch API "
             "group_sizes must be [0, 0, 0] or None");
@@ -1080,7 +1083,7 @@ bool QuantMatmulChecker::CheckShape() const
         return false;
     }
     OP_CHECK(x1KDim_ == x2KDim_,
-             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1 K, x2 K",
+             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_, "x1 K, x2 K",
                  FormatString("%ld, %ld", x1KDim_, x2KDim_).c_str(),
                  "the K dimension of x1 and x2 must be equal"), return false);
 
@@ -1107,19 +1110,19 @@ bool QuantMatmulChecker::CheckShape() const
 bool QuantMatmulChecker::CheckFormatInt4() const
 {
     if (x1_->GetStorageFormat() != op::Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", op::ToString(x1_->GetStorageFormat()).GetString(),
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+            apiName_, "x1", op::ToString(x1_->GetStorageFormat()).GetString(),
             "in A4W4 scenario, the format of x1 must be ND");
         return false;
     }
     if (isWeightNz_ && x2_->GetStorageFormat() != op::Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", op::ToString(x2_->GetStorageFormat()).GetString(),
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+            apiName_, "x2", op::ToString(x2_->GetStorageFormat()).GetString(),
             "in A4W4 scenario and weight_nz_flag is true, the format of x2 must be FRACTAL_NZ");
         return false;
     } else if (!isWeightNz_ && x2_->GetStorageFormat() != op::Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", op::ToString(x2_->GetStorageFormat()).GetString(),
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+            apiName_, "x2", op::ToString(x2_->GetStorageFormat()).GetString(),
             "in A4W4 scenario, the format of x2 must be ND");
         return false;
     }
@@ -1134,7 +1137,7 @@ bool QuantMatmulChecker::CheckWeightNzAbDtypes() const
            x2_->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN) ||
           (x1_->GetDataType() == op::DataType::DT_FLOAT4_E2M1 && x2_->GetDataType() == op::DataType::DT_FLOAT4_E2M1))) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", op::ToString(x1_->GetDataType()).GetString(),
                 op::ToString(x2_->GetDataType()).GetString()).c_str(),
             "when the format of x2 is FRACTAL_NZ, the dtypes of x1 and x2 must be "
@@ -1151,7 +1154,7 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
                             x2Scale_->GetDataType() == op::DataType::DT_INT64);
     if (!IsMicroScaling(x1Scale_, x2Scale_) && !isStaticX2Scale) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            apiName_,
             FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString(
                 "%s, %s",
@@ -1169,7 +1172,7 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
 {
     if (!IsMicroScaling(x1Scale_, x2Scale_)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
+            apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString("%s, %s", x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
                 op::ToString(x2Scale_->GetDataType()).GetString()).c_str(),
             "when the format of x2 is FRACTAL_NZ and input dtype is FLOAT4_E2M1, the dtypes of x1Scale and x2Scale "
@@ -1183,14 +1186,14 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Hifloat8() const
 {
     if (x1Scale_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX1ScaleName().c_str(), "not null",
+            apiName_, GetX1ScaleName().c_str(), "not null",
             "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, x1Scale must be null");
         return false;
     }
     if (!(x2Scale_->GetDataType() == op::DataType::DT_UINT64 ||
           x2Scale_->GetDataType() == op::DataType::DT_INT64)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(),
+            apiName_, GetX2ScaleName().c_str(),
             op::ToString(x2Scale_->GetDataType()).GetString(),
             "when the format of x2 is FRACTAL_NZ and input dtype is HIFLOAT8, the dtype of x2Scale must be "
             "UINT64 or INT64");
@@ -1254,14 +1257,14 @@ bool QuantMatmulChecker::CheckL0c2outPertensorPerchannel() const
 {
     if (!(x2Scale_->GetDataType() == op::DataType::DT_FLOAT || x2Scale_->GetDataType() == op::DataType::DT_BF16)) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
+            apiName_, GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
             FormatString("when the dtype of out is INT32, the dtype of %s must be FLOAT or BFLOAT16",
                 GetX2ScaleName().c_str()).c_str());
         return false;
     }
     if (bias_ != nullptr && bias_->GetDataType() != op::DataType::DT_INT32) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(BIAS_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(BIAS_NAME, interfaceType_).c_str(),
             op::ToString(bias_->GetDataType()).GetString(),
             "when the dtype of out is INT32, the dtype of bias must be INT32");
         return false;
@@ -1272,11 +1275,11 @@ bool QuantMatmulChecker::CheckL0c2outPertensorPerchannel() const
 bool QuantMatmulChecker::CheckFloat16OutBiasAndOffset() const
 {
     if (bias_ != nullptr) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32, apiName_), false);
     }
     if (x2Offset_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+                apiName_, GetX2OffsetName().c_str(), "not null",
             FormatString("when the dtype of out is FLOAT16, %s must be null", GetX2OffsetName().c_str()).c_str());
         return false;
     }
@@ -1285,40 +1288,40 @@ bool QuantMatmulChecker::CheckFloat16OutBiasAndOffset() const
 
 bool QuantMatmulChecker::CheckL0c2outAndL0c2ubPertensorPerchannel() const
 {
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8, apiName_), false);
     if (outType_ == op::DataType::DT_INT32) {
         CHECK_RET(CheckL0c2outPertensorPerchannel(), false);
     } else if (outType_ == op::DataType::DT_BF16) {
-        CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_,BF16_OUT_X2SCALE_SUPPORT_LIST), false);
+        CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_,BF16_OUT_X2SCALE_SUPPORT_LIST, apiName_), false);
         if (groupSize_ != 0UL) {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_BF16), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_BF16, apiName_), false);
         }
         if (bias_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST), false);
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST, apiName_), false);
         }
         if (x2Offset_ != nullptr) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+                apiName_, GetX2OffsetName().c_str(), "not null",
                 FormatString("when the dtype of out is BFLOAT16, %s must be null", GetX2OffsetName().c_str()).c_str());
             return false;
         }
     } else if (outType_ == op::DataType::DT_INT8) {
         CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME,
-                                         x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST), false);
+                                         x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST, apiName_), false);
         if (bias_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32, apiName_), false);
         }
         if (x2Offset_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2OFFSET_NAME, x2Offset_, op::DataType::DT_FLOAT), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2OFFSET_NAME, x2Offset_, op::DataType::DT_FLOAT, apiName_), false);
         }
     } else if (outType_ == op::DataType::DT_FLOAT16) {
         CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME,
-                                         x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST), false);
+                                         x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST, apiName_), false);
         CHECK_RET(CheckFloat16OutBiasAndOffset(), false);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(OUT_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(OUT_NAME, interfaceType_).c_str(),
             RemoveDtInDtype(op::ToString(outType_).GetString()).c_str(),
             "the dtype of out must be INT32, BFLOAT16, INT8 or FLOAT16");
         return false;
@@ -1328,24 +1331,24 @@ bool QuantMatmulChecker::CheckL0c2outAndL0c2ubPertensorPerchannel() const
 
 bool QuantMatmulChecker::CheckOnlyL0c2outPertoken() const
 {
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, X1_X2_L0C2OUT_PERTOKEN_SUPPORT_LIST), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, X1_X2_L0C2OUT_PERTOKEN_SUPPORT_LIST, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT, apiName_), false);
     if (outType_ == op::DataType::DT_BF16) {
         CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_,
-                                         PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST), false);
+                                         PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST, apiName_), false);
         if (bias_ != nullptr) {
             CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME,
-                                             bias_, PERTOKEN_BF16_OUT_BIAS_SUPPORT_LIST), false);
+                                             bias_, PERTOKEN_BF16_OUT_BIAS_SUPPORT_LIST, apiName_), false);
         }
     } else if (outType_ == op::DataType::DT_FLOAT16) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_), false);
         if (bias_ != nullptr) {
             CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME,
-                                             bias_, PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST), false);
+                                             bias_, PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST, apiName_), false);
         }
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(OUT_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(OUT_NAME, interfaceType_).c_str(),
             RemoveDtInDtype(op::ToString(outType_).GetString()).c_str(),
             FormatString("when x1/x2 are INT8/INT4 and %s, %s are FLOAT, the dtype of out must be BFLOAT16 or FLOAT16",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str());
@@ -1355,7 +1358,7 @@ bool QuantMatmulChecker::CheckOnlyL0c2outPertoken() const
         if (x1_->GetDataType() == op::DataType::DT_INT8 && x2_->GetDataType() == op::DataType::DT_INT8 &&
             x1Scale_->GetDataType() != op::DataType::DT_FLOAT && x2Scale_->GetDataType() != op::DataType::DT_FLOAT) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+                apiName_, GetX2OffsetName().c_str(), "not null",
                 FormatString("when x1 and x2 are INT8 and the dtypes of %s and %s are outside FLOAT, %s must be null",
                     GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX2OffsetName().c_str()).c_str());
             return false;
@@ -1368,7 +1371,7 @@ bool QuantMatmulChecker::CheckDtypeValidOnOnlyL0c2outForA4W4() const
 {
     if (x1_->GetDataType() != op::DataType::DT_INT4 || x2_->GetDataType() != op::DataType::DT_INT4) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", op::ToString(x1_->GetDataType()).GetString(),
                 op::ToString(x2_->GetDataType()).GetString()).c_str(),
             "in A4W4 scenario, the dtypes of x1 and x2 must be INT4");
@@ -1376,14 +1379,14 @@ bool QuantMatmulChecker::CheckDtypeValidOnOnlyL0c2outForA4W4() const
     }
     if (x2Scale_->GetDataType() != op::DataType::DT_UINT64 && x2Scale_->GetDataType() != op::DataType::DT_INT64) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
+            apiName_, GetX2ScaleName().c_str(), op::ToString(x2Scale_->GetDataType()).GetString(),
             FormatString("in A4W4 scenario and %s is null, the dtype of %s must be UINT64 or INT64",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str());
         return false;
     }
     if (bias_ != nullptr && bias_->GetDataType() != op::DataType::DT_INT32) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(BIAS_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(BIAS_NAME, interfaceType_).c_str(),
             op::ToString(bias_->GetDataType()).GetString(),
             FormatString("in A4W4 scenario and %s is null, the dtype of bias must be INT32",
                 GetX1ScaleName().c_str()).c_str());
@@ -1391,7 +1394,7 @@ bool QuantMatmulChecker::CheckDtypeValidOnOnlyL0c2outForA4W4() const
     }
     if (out_->GetDataType() != op::DataType::DT_FLOAT16 && out_->GetDataType() != op::DataType::DT_BF16) {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(OUT_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(OUT_NAME, interfaceType_).c_str(),
             op::ToString(out_->GetDataType()).GetString(),
             "in A4W4 scenario, the dtype of out must be FLOAT16 or BFLOAT16");
         return false;
@@ -1423,7 +1426,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeOnlyL0c2out() const
     } else if (x1_->GetDataType() == op::DataType::DT_INT8 || (isA4W4_ && x1Scale_ != nullptr)) { // pertoken
         CHECK_RET(CheckOnlyL0c2outPertoken(), ACLNN_ERR_PARAM_INVALID);
     } else {
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(apiName_,
             FormatString("x1, x2, %s, %s, out", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString("%s, %s, %s, %s, %s", op::ToString(x1_->GetDataType()).GetString(),
                 op::ToString(x2_->GetDataType()).GetString(),
@@ -1440,43 +1443,43 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input() con
 {
     if (outType_ == op::DataType::DT_BF16) {
         CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_,
-                                         X2_INT8_X2_SCALE_TYPE_SUPPORT_LIST), false);
+                                         X2_INT8_X2_SCALE_TYPE_SUPPORT_LIST, apiName_), false);
     } else if (outType_ == op::DataType::DT_INT8 || outType_ == op::DataType::DT_FLOAT16) {
         CHECK_RET(
-            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST), false);
+            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST, apiName_), false);
     } else if (outType_ == op::DataType::DT_INT32) {
         CHECK_RET(
-            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, INT32_OUT_X2SCALE_SUPPORT_LIST), false);
+            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, INT32_OUT_X2SCALE_SUPPORT_LIST, apiName_), false);
     }
     if (bias_ != nullptr) {
         if (outType_ == op::DataType::DT_INT32 && bias_->GetDataType() != op::DataType::DT_INT32) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(BIAS_NAME, interfaceType_).c_str(),
+                apiName_, GetInputName(BIAS_NAME, interfaceType_).c_str(),
                 op::ToString(bias_->GetDataType()).GetString(),
                 "when the dtype of out is INT32, the dtype of bias must be INT32");
             return false;
         }
         if (outType_ == op::DataType::DT_BF16 &&
             (x2ScaleType_ == op::DataType::DT_FLOAT || x2ScaleType_ == op::DataType::DT_BF16)) {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST), false);
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, BIAS_TYPE_SUPPORT_LIST, apiName_), false);
         }
         if ((outType_ == op::DataType::DT_INT8 || outType_ == op::DataType::DT_FLOAT16 ||
              outType_ == op::DataType::DT_BF16) &&
             (x2ScaleType_ == op::DataType::DT_UINT64 || x2ScaleType_ == op::DataType::DT_INT64)) {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_INT32, apiName_), false);
         }
     }
     if (x2Offset_ != nullptr) {
         if (outType_ != op::DataType::DT_INT8) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+                apiName_, GetX2OffsetName().c_str(), "not null",
                 FormatString("when x1 and x2 are INT8 and the dtype of out is outside INT8, %s must be null",
                     GetX2OffsetName().c_str()).c_str());
             return false;
         }
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2OFFSET_NAME, x2Offset_, op::DataType::DT_FLOAT), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2OFFSET_NAME, x2Offset_, op::DataType::DT_FLOAT, apiName_), false);
     }
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, INT8_OUT_TYPE_SUPPORT_LIST), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, INT8_OUT_TYPE_SUPPORT_LIST, apiName_), false);
     return true;
 }
 
@@ -1484,7 +1487,7 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel() const
 {
     if (outType_ == op::DataType::DT_INT32 && (x1_->GetDataType() != op::DataType::DT_INT8 || x2_->GetDataType() != op::DataType::DT_INT8)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", op::ToString(x1_->GetDataType()).GetString(),
                 op::ToString(x2_->GetDataType()).GetString()).c_str(),
             "when the dtype of out is INT32, the dtypes of x1 and x2 must be INT8");
@@ -1494,25 +1497,25 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertensorPerchannel() const
         CHECK_RET(CheckL0c2outOrL0c2ubPertensorPerchannel4Int8Input(), false);
     } else if (IsHif8Input(x1_, x2_) || IsFp8Input(x1_, x2_)) {
         CHECK_RET(
-            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST), false);
+            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, UINT64_X2_SCALE_TYPE_SUPPORT_LIST, apiName_), false);
         if (bias_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT, apiName_), false);
         }
         if (x2Offset_ != nullptr) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+                apiName_, GetX2OffsetName().c_str(), "not null",
                 FormatString("when x1 and x2 are FLOAT8 or HIFLOAT8, %s must be null",
                     GetX2OffsetName().c_str()).c_str());
             return false;
         }
         if (IsHif8Input(x1_, x2_)) {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, HIF8_OUT_TYPE_SUPPORT_LIST), false);
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, HIF8_OUT_TYPE_SUPPORT_LIST, apiName_), false);
         } else {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_OUT_TYPE_SUPPORT_LIST), false);
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_OUT_TYPE_SUPPORT_LIST, apiName_), false);
         }
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", RemoveDtInDtype(op::ToString(x1_->GetDataType()).GetString()).c_str(),
                 RemoveDtInDtype(op::ToString(x2_->GetDataType()).GetString()).c_str()).c_str(),
             FormatString("when %s is null, the dtypes of x1 and x2 must be the same and must be in "
@@ -1526,7 +1529,7 @@ bool QuantMatmulChecker::CheckMicroScaling() const
 {
     if (!IsFp4Input(x1_, x2_) && !IsFp8Input(x1_, x2_)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", RemoveDtInDtype(op::ToString(x1_->GetDataType()).GetString()).c_str(),
                 RemoveDtInDtype(op::ToString(x2_->GetDataType()).GetString()).c_str()).c_str(),
             FormatString("when %s and %s are FLOAT8_E8M0, the dtypes of x1 and x2 must be FLOAT4_E2M1 or FLOAT8",
@@ -1534,12 +1537,12 @@ bool QuantMatmulChecker::CheckMicroScaling() const
         return false;
     }
     if (bias_ != nullptr) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT, apiName_), false);
     }
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST, apiName_), false);
     if (x2Offset_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+            apiName_, GetX2OffsetName().c_str(), "not null",
             FormatString("when %s and %s are FLOAT8_E8M0, %s must be null",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX2OffsetName().c_str()).c_str());
         return false;
@@ -1548,7 +1551,7 @@ bool QuantMatmulChecker::CheckMicroScaling() const
     if (IsFp4Input(x1_, x2_) && ge::GetPrimaryFormat(x2_->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ &&
         transposeX1_) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX1", transposeX1_ ? "true" : "false",
+            apiName_, "transposeX1", transposeX1_ ? "true" : "false",
             FormatString("when %s and %s are FLOAT8_E8M0, x1 and x2 are FLOAT4_E2M1 and x2 is FRACTAL_NZ, "
                 "transposeX1 must be false", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str());
         return false;
@@ -1558,14 +1561,14 @@ bool QuantMatmulChecker::CheckMicroScaling() const
 
 bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertoken() const
 {
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1_NAME, x1_, {op::DataType::DT_INT4, op::DataType::DT_INT8}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, {op::DataType::DT_INT4, op::DataType::DT_INT8}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, PERTOKEN_OUT_TYPE_SUPPORT_LIST), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1_NAME, x1_, {op::DataType::DT_INT4, op::DataType::DT_INT8}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, {op::DataType::DT_INT4, op::DataType::DT_INT8}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, PERTOKEN_OUT_TYPE_SUPPORT_LIST, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT, apiName_), false);
 
     if (x2Offset_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+            apiName_, GetX2OffsetName().c_str(), "not null",
             FormatString("when x1 and x2 are INT8 with %s, %s must be null",
                 GetX1ScaleName().c_str(), GetX2OffsetName().c_str()).c_str());
         return false;
@@ -1573,16 +1576,16 @@ bool QuantMatmulChecker::CheckL0c2outOrL0c2ubPertoken() const
 
     if (outType_ == op::DataType::DT_BF16) {
         CHECK_RET(
-            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST),
+            OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, PERTOKEN_BF16_OUT_X2SCALE_SUPPORT_LIST, apiName_),
             false);
         if (bias_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, PERTOKEN_BF16_OUT_BIAS_SUPPORT_LIST),
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, PERTOKEN_BF16_OUT_BIAS_SUPPORT_LIST, apiName_),
                       false);
         }
     } else if (outType_ == op::DataType::DT_FLOAT16) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_), false);
         if (bias_ != nullptr) {
-            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST),
+            CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, BIAS_NAME, bias_, PERTOKEN_FP16_OUT_BIAS_SUPPORT_LIST, apiName_),
                       false);
         }
     }
@@ -1595,16 +1598,16 @@ bool QuantMatmulChecker::CheckL0C2outOrL0C2ubPertokenPergroup() const {
         x1Scale_ == nullptr || x2Scale_ == nullptr || x2Offset_ == nullptr) {
         return false;
     }
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1_NAME, x1_, {op::DataType::DT_INT8, op::DataType::DT_INT4}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, {op::DataType::DT_INT8, op::DataType::DT_INT4}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, {op::DataType::DT_FLOAT16, op::DataType::DT_BF16}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1SCALE_NAME, x1Scale_, {op::DataType::DT_FLOAT}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, {op::DataType::DT_FLOAT}), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2OFFSET_NAME, x2Offset_, {op::DataType::DT_FLOAT16}), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1_NAME, x1_, {op::DataType::DT_INT8, op::DataType::DT_INT4}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2_NAME, x2_, {op::DataType::DT_INT8, op::DataType::DT_INT4}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, {op::DataType::DT_FLOAT16, op::DataType::DT_BF16}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X1SCALE_NAME, x1Scale_, {op::DataType::DT_FLOAT}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2SCALE_NAME, x2Scale_, {op::DataType::DT_FLOAT}, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, X2OFFSET_NAME, x2Offset_, {op::DataType::DT_FLOAT16}, apiName_), false);
 
     if (transposeX1_ != false || transposeX2_ != true) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX1, transposeX2",
+            apiName_, "transposeX1, transposeX2",
             FormatString("%s, %s", transposeX1_ ? "true" : "false", transposeX2_ ? "true" : "false").c_str(),
             "in A4W4 scenario, transposeX1 must be false and transposeX2 must be true");
         return false;
@@ -1614,12 +1617,12 @@ bool QuantMatmulChecker::CheckL0C2outOrL0C2ubPertokenPergroup() const {
 
 bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
 {
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT), false);
-    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotSupport(interfaceType_, OUT_NAME, out_, FP8_AND_HIF8_COMMON_OUT_TYPE_SUPPORT_LIST, apiName_), false);
     if (IsPerblock(x1_, x2_, x1Scale_, x2Scale_)) {
         if (bias_ != nullptr) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_,
                 GetInputName(BIAS_NAME, interfaceType_).c_str(), "not null",
                 "when the quantization mode is G-B or B-B, bias must be null");
             return false;
@@ -1628,18 +1631,18 @@ bool QuantMatmulChecker::CheckDoubleScaleAndFp8Hif8PertokenPerblock() const
     if (bias_ != nullptr) {
         if (x1Scale_->GetViewShape().GetDim(0) == 1L && x1MDim_ != 1L &&
             x2Scale_->GetViewShape().GetDim(0) == x2NDim_ && x2NDim_ != 1L) {
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize",
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(apiName_,
                 GetInputName(BIAS_NAME, interfaceType_).c_str(), "not null",
                 FormatString("when the shape of %s is [1] and the shape of %s is [%ld], bias must be null",
                     GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), x2NDim_).c_str());
             return false;
         } else {
-            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT), false);
+            CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, BIAS_NAME, bias_, op::DataType::DT_FLOAT, apiName_), false);
         }
     }
     if (x2Offset_ != nullptr) {
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX2OffsetName().c_str(), "not null",
+            apiName_, GetX2OffsetName().c_str(), "not null",
             FormatString("when x1 and x2 are FLOAT8 or HIFLOAT8 and %s and %s are FLOAT, %s must be null",
                 GetX1ScaleName().c_str(), GetX2ScaleName().c_str(), GetX2OffsetName().c_str()).c_str());
         return false;
@@ -1654,7 +1657,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
     }
     if (outType_ == op::DataType::DT_INT32 && x1Scale_ != nullptr) { 
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetX1ScaleName().c_str(), "not null",
+            apiName_, GetX1ScaleName().c_str(), "not null",
             "when the dtype of out is INT32, pertokenScaleOptional/x1Scale(pertokenScale) must be null");
         return ACLNN_ERR_PARAM_INVALID; 
     }
@@ -1671,7 +1674,7 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
         CHECK_RET(CheckDoubleScaleAndFp8Hif8PertokenPerblock(), ACLNN_ERR_PARAM_INVALID);
     } else {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+            apiName_, "x1, x2",
             FormatString("%s, %s", RemoveDtInDtype(op::ToString(x1_->GetDataType()).GetString()).c_str(),
                 RemoveDtInDtype(op::ToString(x2_->GetDataType()).GetString()).c_str()).c_str(),
             FormatString("the quantization mode determined by x1, x2 and %s must be supported",
@@ -1683,15 +1686,15 @@ aclnnStatus QuantMatmulChecker::CheckDtypeL0c2outOrL0c2ub() const
 
 bool QuantMatmulChecker::CheckOnlyL0c2ubPertoken() const
 {
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8), false);
-    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1_NAME, x1_, op::DataType::DT_INT8, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2_NAME, x2_, op::DataType::DT_INT8, apiName_), false);
+    CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X1SCALE_NAME, x1Scale_, op::DataType::DT_FLOAT, apiName_), false);
     if (outType_ == op::DataType::DT_FLOAT16) {
-        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT), false);
+        CHECK_RET(OpCheckDtypeNotMatch(interfaceType_, X2SCALE_NAME, x2Scale_, op::DataType::DT_FLOAT, apiName_), false);
         CHECK_RET(CheckFloat16OutBiasAndOffset(), false);
     } else {
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            "aclnnQuantMatmulWeightNzGetWorkspaceSize", GetInputName(OUT_NAME, interfaceType_).c_str(),
+            apiName_, GetInputName(OUT_NAME, interfaceType_).c_str(),
             RemoveDtInDtype(op::ToString(outType_).GetString()).c_str(),
             "when pertokenScaleOptional exists, the dtype of out must be FLOAT16");
         return false;
@@ -1703,7 +1706,7 @@ aclnnStatus QuantMatmulChecker::CheckDtype() const
 {
     // 5 represents the aclnnQuantMatmulV5 interface
     if (!IsIntInput(x1_, x2_) && interfaceType_ != 5) {
-        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1, x2",
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(apiName_, "x1, x2",
             FormatString("%s, %s", op::ToString(x1_->GetDataType()).GetString(),
                 op::ToString(x2_->GetDataType()).GetString()).c_str(),
             "when the interface is aclnnQuantMatmulV3 or aclnnQuantMatmulV4, the dtypes of x1 and x2 must be "

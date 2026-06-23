@@ -254,7 +254,9 @@ static aclnnStatus aclnnFusedQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput
     TupleTensor inOutTuple = std::tie(reformatedX1, reformatedX2, out);
     GetDtypeAndTranspose(inOutTuple, dtype, transposeX1, transposeX2);
 
-    QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out, isWeightNz);
+    QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out, isWeightNz,
+                                    isWeightNz ? "aclnnFusedQuantMatmulWeightNzGetWorkspaceSize"
+                                               : "aclnnFusedQuantMatmulGetWorkspaceSize");
     qmmV3Checker.Init();
 
     ret = CheckParams(qmmV3Checker);

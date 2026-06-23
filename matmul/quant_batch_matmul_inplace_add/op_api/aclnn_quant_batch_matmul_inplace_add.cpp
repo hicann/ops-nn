@@ -51,31 +51,31 @@ static aclnnStatus CheckNotNull(const QBMMInplaceAdd::QuantBatchMatmulInplaceAdd
 static aclnnStatus CheckFormat(const QBMMInplaceAdd::QuantBatchMatmulInplaceAddParams& params)
 {
     if (params.x1->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1", op::ToString(params.x1->GetStorageFormat()).GetString(),
             "the format of x1 must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2", op::ToString(params.x2->GetStorageFormat()).GetString(),
             "the format of x2 must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x2Scale->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x2Scale", op::ToString(params.x2Scale->GetStorageFormat()).GetString(),
             "the format of x2Scale must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.yRef->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "yRef", op::ToString(params.yRef->GetStorageFormat()).GetString(),
             "the format of yRef must be ND");
         return ACLNN_ERR_PARAM_INVALID;
     }
     if (params.x1ScaleOptional->GetStorageFormat() != Format::FORMAT_ND) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantBatchMatmulInplaceAddGetWorkspaceSize", "x1Scale", op::ToString(params.x1ScaleOptional->GetStorageFormat()).GetString(),
             "the format of x1Scale must be ND");
         return ACLNN_ERR_PARAM_INVALID;

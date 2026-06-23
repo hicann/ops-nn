@@ -970,7 +970,7 @@ static inline bool CheckA8W4ScaleX1Shape(
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1Scale",
                 FormatString("%ld, %ld, %ld", x1Scale->GetViewShape().GetDim(0),
-                    x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(2)).c_str(),
+                    x1Scale->GetViewShape().GetDim(1), x1Scale->GetViewShape().GetDim(MAX_DIM_VALUE)).c_str(),
                 FormatString("the shape of x1Scale must be [%ld, %ld, 2]", groupDimM, CeilDiv(groupDimK, 2L)).c_str());
             return false;
         }
@@ -1133,7 +1133,7 @@ static inline aclnnStatus CheckParamsA8W4Float(const TupleTensor &mandatoryTenso
 }
 
 static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
-                                     const aclTensor *out) {
+                                      const aclTensor *out, const char *apiName) {
     auto x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     if (isA8W4Float(x1, x2)) {
@@ -1153,7 +1153,7 @@ static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptiona
     int64_t groupSizeReal = groupSize;
     auto& scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
     if (isMx(scale)) {
-        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
+        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out, false, apiName);
         qmmV3Checker.Init();
         CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.", groupSizeReal);
@@ -1163,7 +1163,7 @@ static aclnnStatus CheckParamsDAV3510(TupleTensor mandatoryTensors, TupleOptiona
                     x1Offset, std::get<0>(optionalTensors), x1Offset,
                     std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors), groupSizeReal, interfaceType);
 
-    QuantMatmulChecker qmmV3Checker(inputTensors, quantTuples, boolsTrans, out);
+    QuantMatmulChecker qmmV3Checker(inputTensors, quantTuples, boolsTrans, out, false, apiName);
     qmmV3Checker.Init();
     return qmmV3Checker.CheckParams();
 }
@@ -1193,7 +1193,7 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor *x1, const aclTens
 
     if (isA8W4Float(x1, x2)) {
         if (!IsFormatNZ(x2)) {
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+            OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", op::ToString(x2->GetStorageFormat()).GetString(),
                 "in A8W4 scenario, the format of x2 must be FRACTAL_NZ, FRACTAL_NZ_C0_4 or FRACTAL_NZ_C0_32");
             return ACLNN_ERR_PARAM_INVALID;
@@ -1209,7 +1209,7 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor *x1, const aclTens
     }
 
     if (static_cast<ge::Format>(ge::GetPrimaryFormat(x2->GetStorageFormat())) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", op::ToString(x2->GetStorageFormat()).GetString(),
             "the format of x2 must be FRACTAL_NZ");
         return ACLNN_ERR_PARAM_INVALID;
@@ -1231,9 +1231,9 @@ static aclnnStatus CheckWeightNzParamsDAV3510(const aclTensor *x1, const aclTens
 }
 
 static aclnnStatus CheckParams(TupleTensor mandatoryTensors, TupleOptional optionalTensors, TupleAttr boolsTrans,
-                               bool isA4W4, const aclTensor *out) {
+                               bool isA4W4, const aclTensor *out, const char *apiName) {
     if (op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_3510) {
-        return CheckParamsDAV3510(mandatoryTensors, optionalTensors, boolsTrans, out);
+        return CheckParamsDAV3510(mandatoryTensors, optionalTensors, boolsTrans, out, apiName);
     } else {
         // 1. 检查输入的数据类型是否在API支持的数据类型范围之内，需要根据api定义校验
         CHECK_RET(CheckDtypeValid(mandatoryTensors, optionalTensors, out, isA4W4), ACLNN_ERR_PARAM_INVALID);
@@ -1510,7 +1510,7 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, const Tu
 
     bool isX2Nz = ge::GetPrimaryFormat(x2->GetStorageFormat()) == op::Format::FORMAT_FRACTAL_NZ;
     if (!isX2Nz) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2", op::ToString(x2->GetStorageFormat()).GetString(),
             "in A8W4 scenario, the format of x2 must be FRACTAL_NZ");
         return false;
@@ -1830,7 +1830,7 @@ static inline aclnnStatus TransdataX1Process(bool isX1TransdataFlag, const aclTe
 static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor mandatoryTensors,
                                                                  TupleOptional optionalTensors,
                                                                  TupleAttr boolsTrans, const aclTensor *out,
-                                                                 aclOpExecutor *executor) {
+                                                                 aclOpExecutor *executor, const char *apiName) {
     auto &x1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &x2 = std::get<INDEX_X2_IN_MANDTORY_TUPLE>(mandatoryTensors);
     auto &scale = std::get<INDEX_SCALE_IN_MANDTORY_TUPLE>(mandatoryTensors);
@@ -1889,7 +1889,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleTensor man
 
     ret = CheckParams(std::tie(reformatedX1, reformatedX2, reformatedScale),
                       std::tie(offset, reformatedpertokenScaleOptional, reformatedBias, reformatedYScale, yOffset, groupSize),
-                      std::tie(transposeX1, transposeX2), isA4W4, out);
+                      std::tie(transposeX1, transposeX2), isA4W4, out, apiName);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     auto castedScale = ProcessScaleTensor(reformatedScale);
     int64_t dtype = 0;
@@ -1945,7 +1945,8 @@ aclnnStatus aclnnQuantMatmulV3GetWorkspaceSize(const aclTensor *x1, const aclTen
     auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(std::tie(x1, x2, scale),
                                                              std::tie(offset, tempPtr, bias, tempYScalePtr, tempYOffsetPtr, groupSize),
                                                              std::tie(transposeX1, transposeX2),
-                                                             out, uniqueExecutor.get());
+                                                             out, uniqueExecutor.get(),
+                                                             "aclnnQuantMatmulV3GetWorkspaceSize");
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
@@ -1965,7 +1966,8 @@ aclnnStatus aclnnQuantMatmulV4GetWorkspaceSize(const aclTensor *x1, const aclTen
     int64_t groupSize = 0;
     auto ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
         std::tie(x1, x2, scale), std::tie(offset, pertokenScaleOptional, bias, tempYScalePtr, tempYOffsetPtr, groupSize),
-        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get());
+        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get(),
+        "aclnnQuantMatmulV4GetWorkspaceSize");
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
@@ -2206,7 +2208,8 @@ affinity format.");
     x2 = SetTensorToNZFormat(x2, weightNzShape, uniqueExecutor.get());
     ret = aclnnQuantMatmulGetWorkspaceSizeCommonProcess(
         std::tie(x1, x2, x2Scale), std::tie(x2Offset, x1Scale, bias, yScale, yOffset, groupSize),
-        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get());
+        std::tie(transposeX1, transposeX2), out, uniqueExecutor.get(),
+        "aclnnQuantMatmulWeightNzGetWorkspaceSize");
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
     uniqueExecutor.ReleaseTo(executor);
