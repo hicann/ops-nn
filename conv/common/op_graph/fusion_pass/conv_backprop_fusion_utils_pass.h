@@ -20,7 +20,6 @@
 #include "ge/es_graph_builder.h"
 #include "ge/es_tensor_holder.h"
 #include "ge/ge_utils.h"
-#include "ge/compliant_node_builder.h"
 #include "platform/platform_info.h"
 #include "platform/soc_spec.h"
 
