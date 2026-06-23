@@ -32,7 +32,6 @@ aclTensor* QuantBatchMatmulInplaceAdd(
     auto ret = INFER_SHAPE(
         QuantBatchMatmulInplaceAdd, OP_INPUT(x1, x2, x2Scale, yRef, x1ScaleOptional), OP_OUTPUT(yRef),
         OP_ATTR(transposeX1, transposeX2, groupSize));
-
     if (ret != ACLNN_SUCCESS) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "InferShape failed.");
         return nullptr;

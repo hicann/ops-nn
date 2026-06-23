@@ -44,7 +44,7 @@ private:
     bool AnalyzeAttrs() override;
     bool AnalyzeDtype() override;
     bool AnalyzeInputs() override;
-    bool CheckDtype();
+    bool CheckDtype() const override;
     bool IsFp8Dtype(const ge::DataType dtype) const;
     bool IsHiFloat8Dtype(const ge::DataType dtype) const;
     bool CheckParamsForMxQuant(const gert::Shape &x1ScaleShape, const gert::Shape &x2ScaleShape) const;

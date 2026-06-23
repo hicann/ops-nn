@@ -24,7 +24,7 @@ constexpr uint32_t YREF_INDEX = 3;
 constexpr uint32_t X2_SCALE_INDEX = 4;
 constexpr size_t QUANT_BATCH_MATMUL_V3_MIN_SHAPE_SIZE = 2;
 
-static ge::graphStatus IsInputTensorNull(gert::InferShapeContext* context)
+static ge::graphStatus IsInputTensorNull(const gert::InferShapeContext* context)
 {
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X1_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X2_INDEX));

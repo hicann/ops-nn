@@ -393,12 +393,16 @@ static ge::graphStatus GetShape(const gert::TilingContext &context, MatmulV3Args
     // get transpose
     if (strcmp(context.GetNodeType(), "GemmV3") == 0) {
         // GemmV3 OP_ATTR: alpha, beta, transposeX1, transposeX2, ...
-        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(2);
-        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(3);
+        constexpr int kAttrTransposeX1 = 2;
+        constexpr int kAttrTransposeX2 = 3;
+        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(kAttrTransposeX1);
+        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(kAttrTransposeX2);
     } else {
         // Other OP_ATTR: transposeX1, transposeX2, ...
-        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(0);
-        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(1);
+        constexpr int kAttrTransposeX1 = 0;
+        constexpr int kAttrTransposeX2 = 1;
+        args.isATrans = *context.GetAttrs()->GetAttrPointer<bool>(kAttrTransposeX1);
+        args.isBTrans = *context.GetAttrs()->GetAttrPointer<bool>(kAttrTransposeX2);
     }
     
     // get (m, k, n)
@@ -1428,6 +1432,10 @@ void MatmulV3BaseTiling::CalcTailBasicBlock()
 {
     uint64_t mCnt = MathUtil::CeilDivision(args_.mValue, runInfo_.baseM);
     uint64_t nCnt = MathUtil::CeilDivision(args_.nValue, runInfo_.baseN);
+    if (compileInfo_.aicNum == 0) {
+        OP_LOGE(args_.opName, "aicNum is zero.");
+        return;
+    }
     uint64_t tailCnt = mCnt * nCnt % compileInfo_.aicNum;
     tailCnt = mCnt * nCnt <= compileInfo_.aicNum ? 0 : tailCnt;
     runInfo_.l2Info.mTile = 1;

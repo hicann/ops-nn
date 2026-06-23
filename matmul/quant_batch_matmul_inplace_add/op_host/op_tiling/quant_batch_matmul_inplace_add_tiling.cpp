@@ -147,7 +147,7 @@ bool QuantBatchMatmulInplaceAddTiling::IsHiFloat8Dtype(const ge::DataType dtype)
     return dtype == ge::DT_HIFLOAT8;
 }
 
-bool QuantBatchMatmulInplaceAddTiling::CheckDtype()
+bool QuantBatchMatmulInplaceAddTiling::CheckDtype() const
 {
     OP_CHECK_IF(inputParams_.cDtype != ge::DT_FLOAT,
             OP_LOGE(context_->GetNodeName(),

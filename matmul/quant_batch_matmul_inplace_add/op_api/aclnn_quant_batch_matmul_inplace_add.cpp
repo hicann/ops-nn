@@ -303,14 +303,15 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
     int64_t dimNum = mxScaleTensor->GetViewShape().GetDimNum();
     int64_t lastDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 1);
     int64_t lastSecondDim = mxScaleTensor->GetViewShape().GetDim(dimNum - PENULTIMATE_DIM);
-    int64_t lastThirdDim = mxScaleTensor->GetViewShape().GetDim(dimNum - 3);    // 3: 倒数第3维
-    if (mxScaleTensor->GetViewStrides()[dimNum - 3] == lastDim &&   // 3： 倒数第3维
-        mxScaleTensor->GetViewStrides()[dimNum - PENULTIMATE_DIM] == lastDim * lastThirdDim) {
+    constexpr int64_t kThirdLastDim = 3;
+    int64_t thirdLastIdx = dimNum - kThirdLastDim;
+    int64_t lastThirdDim = mxScaleTensor->GetViewShape().GetDim(thirdLastIdx);
+    if (mxScaleTensor->GetViewStrides()[static_cast<size_t>(thirdLastIdx)] == lastDim &&
+        mxScaleTensor->GetViewStrides()[static_cast<size_t>(dimNum - PENULTIMATE_DIM)] == lastDim * lastThirdDim) {
         int64_t tmpNxD = lastDim * lastSecondDim * lastThirdDim;
         transposeFlag = true;
-        // 4：batch维度从倒数第4维起
         for (int64_t batchDim = dimNum - 4; batchDim >= 0; batchDim--) {
-            if (mxScaleTensor->GetViewStrides()[batchDim] != tmpNxD) {
+            if (mxScaleTensor->GetViewStrides()[static_cast<size_t>(batchDim)] != tmpNxD) {
                 transposeFlag = false;
                 break;
             }
@@ -323,7 +324,7 @@ static inline bool MxScaleContiguousProcess(const aclTensor*& mxScaleTensor, acl
     if (transposeFlag) {
         op::Shape swapedShape = mxScaleTensor->GetViewShape();
         swapedShape.SetDim(dimNum - PENULTIMATE_DIM, lastThirdDim);
-        swapedShape.SetDim(dimNum - 3, lastSecondDim);  // 3： 倒数第3维
+        swapedShape.SetDim(dimNum - kThirdLastDim, lastSecondDim);
         mxScaleTensor = executor->CreateView(mxScaleTensor, swapedShape, mxScaleTensor->GetViewOffset());
     } else {
         mxScaleTensor = l0op::Contiguous(mxScaleTensor, executor);
@@ -432,7 +433,9 @@ static inline bool InferGroupSize(QBMMInplaceAdd::QuantBatchMatmulInplaceAddPara
     auto x2 = params.x2;
     auto x1Scale = params.x1ScaleOptional;
     auto x2Scale = params.x2Scale;
-    if (x1Scale == nullptr || x1Scale->GetViewShape().GetDimNum() < 2 || x2Scale->GetViewShape().GetDimNum() < 2) {
+    constexpr int64_t kScaleMinDimNum = 2;
+    if (x1Scale == nullptr || x1Scale->GetViewShape().GetDimNum() < kScaleMinDimNum ||
+        x2Scale->GetViewShape().GetDimNum() < kScaleMinDimNum) {
         return true;
     }
     auto x1DimNum = x1->GetViewShape().GetDimNum();

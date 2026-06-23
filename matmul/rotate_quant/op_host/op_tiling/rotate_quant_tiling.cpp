@@ -360,19 +360,25 @@ bool RotateQuantTiling::SetMatmulTiling()
         return false;
     }
 
+    constexpr uint32_t kDbL0A = 2;
+    constexpr uint32_t kDbL0B = 2;
+    constexpr uint32_t kStepKa = 8;
+    constexpr uint32_t kStepKb = 4;
+    constexpr uint32_t kDepthA1 = 16;
+    constexpr uint32_t kDepthB1 = 8;
     mt.iterateOrder = 1;
     mt.usedCoreNum = compileInfo_.aicNum;
     mt.shareMode = 0;
     mt.dbL0C = 1;
-    mt.dbL0A = 2;
-    mt.dbL0B = 2;
+    mt.dbL0A = kDbL0A;
+    mt.dbL0B = kDbL0B;
     mt.baseM = BASE_M;
     mt.baseN = BASE_N;
     mt.baseK = BASE_K;
-    mt.stepKa = 8;
-    mt.stepKb = 4;
-    mt.depthA1 = 16;
-    mt.depthB1 = 8;
+    mt.stepKa = kStepKa;
+    mt.stepKb = kStepKb;
+    mt.depthA1 = kDepthA1;
+    mt.depthB1 = kDepthB1;
     mt.stepM = 1;
     mt.stepN = 1;
 
@@ -416,7 +422,7 @@ ge::graphStatus RotateQuantTiling::PostTiling()
     context_->SetScheduleMode(1);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&tilingData_), tilingDataSize_);
+        static_cast<void*>(&tilingData_), tilingDataSize_);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

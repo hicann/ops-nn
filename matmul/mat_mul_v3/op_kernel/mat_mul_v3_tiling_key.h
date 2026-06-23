@@ -45,7 +45,7 @@
 
 #define FRACTAL_NZ 29
 
-#if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && ORIG_DTYPE_X2 == DT_FLOAT
+#if defined(FORMAT_X1) && defined(FORMAT_ND) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && defined(DT_FLOAT) && ORIG_DTYPE_X2 == DT_FLOAT
     #define IS_ND_NZ_FP32 1
 #else
     #define IS_ND_NZ_FP32 0
@@ -117,7 +117,7 @@ ASCENDC_TPL_SEL(
 );
 #else
 ASCENDC_TPL_SEL(
-#if (!defined(ORIG_DTYPE_C) || (defined(ORIG_DTYPE_C) && ORIG_DTYPE_C == DT_FLOAT))
+#if (!defined(ORIG_DTYPE_C) || (defined(ORIG_DTYPE_C) && defined(DT_FLOAT) && ORIG_DTYPE_C == DT_FLOAT))
     /* Base */
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
