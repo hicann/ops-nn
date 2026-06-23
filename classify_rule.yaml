@@ -2220,7 +2220,6 @@ VC1@ops-nn:
         - ops/ops-nn/quant/trans_quant_param_v2/op_kernel/trans_quant_param_v2.h
         - ops/ops-nn/index/quant_update_scatter/
         - ops/ops-nn/index/sparse_slice/
-        - ops/ops-nn/quant/quant_max/
       opensource_style: null
       kernel_style: null
     unrelease:
@@ -2310,6 +2309,41 @@ VC2@ops-nn:
       kernel_style: null
     unrelease:
       test_code: null
+      non_delivery: null
+      open_source: null
+
+VC3@ops-nn:
+  src:
+    release:
+      style:
+        # concat_offset
+        - ops/ops-nn/index/concat_offset/op_host/arch35/
+        - ops/ops-nn/index/concat_offset/op_kernel/arch35/
+        # quant_max
+        - ops/ops-nn/quant/quant_max/
+        # reverse_sequence
+        - ops/ops-nn/index/reverse_sequence/
+        # glu
+        - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.cpp
+        - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.h
+        - ops/ops-nn/activation/glu/op_kernel/arch35/
+      opensource_style: null
+      kernel_style: null
+    unrelease:
+      test_code:
+        # concat_offset
+        - ops/ops-nn/index/concat_offset/tests/
+        # quant_max
+        - ops/ops-nn/quant/quant_max/examples/
+        - ops/ops-nn/quant/quant_max/tests/
+        # reverse_sequence
+        - ops/ops-nn/index/reverse_sequence/examples/
+        - ops/ops-nn/index/reverse_sequence/tests/
+        - ops/ops-nn/index/reverse_sequence/op_kernel_aicpu/
+        # glu
+        - ops/ops-nn/activation/glu/examples/*.cpp
+        - ops/ops-nn/activation/glu/tests/**/*.py
+        - ops/ops-nn/activation/glu/tests/**/*.cpp
       non_delivery: null
       open_source: null
 
@@ -2468,8 +2502,6 @@ VC8@ops-nn:
         - ops/ops-nn/index/gather_v2/op_kernel/arch35/
         - ops/ops-nn/index/embedding/op_host/arch35/
         - ops/ops-nn/index/embedding/op_kernel/arch35/
-        - ops/ops-nn/index/concat_offset/op_host/arch35/
-        - ops/ops-nn/index/concat_offset/op_kernel/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_host/arch35/
         - ops/ops-nn/index/sparse_segment_mean/op_kernel/arch35/
         - ops/ops-nn/index/scatter/op_host/arch35/
@@ -2516,7 +2548,6 @@ VC8@ops-nn:
         - ops/ops-nn/index/gather_v2/tests/
         - ops/ops-nn/index/embedding/examples/
         - ops/ops-nn/index/embedding/tests/
-        - ops/ops-nn/index/concat_offset/tests/
         - ops/ops-nn/index/sparse_segment_mean/tests/
         - ops/ops-nn/index/scatter_nd/examples/
         - ops/ops-nn/index/scatter_nd/tests/
