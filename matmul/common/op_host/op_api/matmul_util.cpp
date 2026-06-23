@@ -934,22 +934,10 @@ static inline string PrintIndex(const vector<int> idx)
     return oss.str();
 }
 
-/*
-   判断Tensor是否满足非连续Transpose
-*/
-bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim)
+static bool CheckTransposeNonContiguousStridePattern(
+    const op::Shape& viewShape, const op::Strides& viewStrides, bool& isNeedSwapInnerTwoDim)
 {
-    int64_t dimNum = tensor->GetViewShape().GetDimNum();
-    if (!IsUseNonContiguous(tensor) || dimNum != 3) { // only support 3D && NonContiguous
-        return false;
-    }
-    const auto& viewStrides = tensor->GetViewStrides();
-    const auto& viewShape = tensor->GetViewShape();
-    auto storageSize = tensor->GetStorageShape().GetShapeSize();
-    // Validate view params
-    if (dimNum != static_cast<int64_t>(viewStrides.size()) || storageSize <= 0) {
-        return false;
-    }
+    int64_t dimNum = viewShape.GetDimNum();
     StrideIndexPairs strideIndexPairs;
     strideIndexPairs.reserve(dimNum);
     auto lastStride = INT64_MAX;
@@ -989,6 +977,30 @@ bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoD
         isNeedSwapInnerTwoDim = true; // 如果场景2则需要转置
     }
     return true;
+}
+
+/*
+   判断Tensor是否满足非连续Transpose
+*/
+bool IsTransposeNonContiguous(const aclTensor* tensor, bool& isNeedSwapInnerTwoDim)
+{
+    int64_t dimNum = tensor->GetViewShape().GetDimNum();
+    if (!IsUseNonContiguous(tensor) || dimNum != 3) { // only support 3D && NonContiguous
+        return false;
+    }
+    const auto& viewStrides = tensor->GetViewStrides();
+    const auto& viewShape = tensor->GetViewShape();
+    auto storageSize = tensor->GetStorageShape().GetShapeSize();
+    auto viewSize = viewShape.GetShapeSize();
+    // Validate view params
+    if (dimNum != static_cast<int64_t>(viewStrides.size()) || storageSize <= 0) {
+        return false;
+    }
+    if (storageSize != viewSize) {
+        OP_LOGI("The storageShape size does not match the viewShape size in non-contiguous transpose scenario.");
+        return false;
+    }
+    return CheckTransposeNonContiguousStridePattern(viewShape, viewStrides, isNeedSwapInnerTwoDim);
 }
 
 /*
