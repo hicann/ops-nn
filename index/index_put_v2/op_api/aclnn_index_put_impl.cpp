@@ -1259,23 +1259,34 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
     if (indicesSize <= MAX_SUPPORT_DIMS_NUMS) {
-        FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
-        for (int64_t i = 0; i < indicesSize; ++i) {
-            const aclTensor* curIndices = (*indices)[i];
-            const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
-            CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-            indicesTensors.emplace_back(curIndicesTensor);
+      FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
+      FVector<bool, MAX_SUPPORT_DIMS_NUMS> dimMask;
+      for (int64_t i = 0; i < indicesSize; ++i) {
+        const aclTensor* curIndices = (*indices)[i];
+        op::DataType curDataType = curIndices->GetDataType();
+        if (!curIndices->IsEmpty() && (curDataType == op::DataType::DT_INT64 || curDataType == op::DataType::DT_INT32)) {
+          const aclTensor* curIndicesTensor = l0op::Contiguous(curIndices, uniqueExecutor.get());
+          CHECK_RET(curIndicesTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+          indicesTensors.emplace_back(curIndicesTensor);
+          dimMask.emplace_back(true);
         }
-        aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesSize);
-        CHECK_RET(IndicesTensorList != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
-        for (size_t i = 0; i < selfRef->GetViewShape().GetDimNum(); i++) {
-            boundsVec.emplace_back(selfRef->GetViewShape().GetDim(i));
+        else{
+          dimMask.emplace_back(false);
         }
-        aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
-        const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
-        CHECK_RET(boundsTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        l0op::IndexCheck(boundsTensor, IndicesTensorList, uniqueExecutor.get());
+      }
+      aclTensorList *IndicesTensorList = uniqueExecutor.get()->AllocTensorList(indicesTensors.data(), indicesTensors.size());
+      CHECK_RET(IndicesTensorList != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      FVector<int64_t, MAX_SUPPORT_DIMS_NUMS> boundsVec;
+      for (size_t i = 0; i < dimMask.size(); i++) {
+        if (dimMask[i]) {
+          int64_t bound = (selfRef->GetViewShape().GetDimNum() == 0) ? 1 : selfRef->GetViewShape().GetDim(i);
+          boundsVec.emplace_back(bound);
+        }
+      }
+      aclIntArray *boundsArray = uniqueExecutor.get()->AllocIntArray(boundsVec.data(), boundsVec.size());
+      const aclTensor *boundsTensor = uniqueExecutor.get()->ConvertToTensor(boundsArray, op::ToOpDataType(ACL_INT64));
+      CHECK_RET(boundsTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      l0op::IndexCheck(boundsTensor, IndicesTensorList, uniqueExecutor.get());
     }
   }
 
