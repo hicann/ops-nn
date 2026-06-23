@@ -419,11 +419,11 @@ private:
                 countLen = this->innerLoopEleTail;
             }
             if constexpr (std::is_same<T, float>::value) {
-                DataCopy(localValueCast, logitsGlobal[gmOffset], innerCopyLen);
+                DataCopyPad(localValueCast, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_MTE3>(HardEvent::MTE2_MTE3);
             }
             else {
-                DataCopy(localValue, logitsGlobal[gmOffset], innerCopyLen);
+                DataCopyPad(localValue, logitsGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, countLen); // half/bfloat16 -> float32
                 SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3);
@@ -475,7 +475,7 @@ private:
             CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
             SetWaitFlag<HardEvent::V_MTE3>(HardEvent::V_MTE3); 
             DataCopyPad(srcIndexGlobalUser[gmOffset], localIndex, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0, 0}); 
-            DataCopy(valueLocalCast, logitsGlobalUser[gmOffset], innerCopyLen);
+            DataCopyPad(valueLocalCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             GetRowMaxAndIndexInner(valueLocalCast, reduceMaxMiddle, countLen, rowMax, rowMaxIdx, indexOffset, logitsGlobalUser[gmOffset]);
@@ -519,8 +519,8 @@ private:
                 countLenPad = Align(countLen, EIGHT);
             }
             // 搬运至UB
-            DataCopy(logitsLocal, logitsGlobalUser[startIndex + gmOffset], countLenPad);
-            DataCopy(srcIndexLocal, srcIndexGlobalUser[startIndex + indexOffset], countLenPad);
+            DataCopyPad(logitsLocal, logitsGlobalUser[startIndex + gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(srcIndexLocal, srcIndexGlobalUser[startIndex + indexOffset], {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
 
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
@@ -590,12 +590,12 @@ private:
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
             if constexpr (std::is_same<DTYPE, float>::value) {
-                DataCopy(valueLocalCast, src[gmOffset], innerCopyLen);
+                DataCopyPad(valueLocalCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             }
             else {
-                DataCopy(valueLocal, src[gmOffset], innerCopyLen);
+                DataCopyPad(valueLocal, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
                 SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
                 Cast(valueLocalCast, valueLocal, RoundMode::CAST_NONE, countLen);
@@ -627,9 +627,9 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            DataCopy(
+            DataCopyPad(
                 valueLocalCast, logitsGlobalUser[gmOffset],
-                innerCopyLen); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
+                {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0}); // 从globalUser里将GetRowMax函数中存储的未排序的做了cast的logits拿出来
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             Duplicate(valueLocalMiddle, rowMax, countLen); // 复制rowMax并填充
             PipeBarrier<PIPE_V>();
@@ -664,9 +664,9 @@ private:
         uint32_t countLen)
     {
         LocalTensor<float> valueRs = buf0.Get<float>();
-        DataCopy(
+        DataCopyPad(
             valueRs, logitsGlobalUser[gmOffset],
-            innerCopyLen); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
+            {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0}); // 将softmaxFst中算的exp临时存储在了GM中，现在搬到local中
         SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Duplicate(valueLocalCast, reduceSumMax, countLen);
@@ -698,7 +698,7 @@ private:
                 DataCopyPad(logitsGlobalUser[gmOffset], localValueCast, {1, static_cast<uint32_t>(countLen * SIZEOF_FP32), 0, 0,0});
                 SetWaitFlag<HardEvent::MTE3_MTE2>(HardEvent::MTE3_MTE2);
             } else{
-                DataCopy(sampleDistTemp, qGlobal[gmOffset], innerCopyLen);
+                DataCopyPad(sampleDistTemp, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Abs(sampleDistTemp, sampleDistTemp, countLen);
                 PipeBarrier<PIPE_V>();
@@ -862,11 +862,11 @@ private:
             CreateVecIndex(localIndex[NUM_ZERO].ReinterpretCast<int32_t>(), static_cast<int32_t>(indexOffset), countLen);
             PipeBarrier<PIPE_V>();
             if constexpr (std::is_same<DTYPE, float>::value) {
-                DataCopy(localValueCast, src[gmOffset], innerCopyLen);
+                DataCopyPad(localValueCast, src[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
             }
             else {
-                DataCopy(localValue, src[gmOffset], innerCopyLen);
+                DataCopyPad(localValue, src[gmOffset], {1, (uint32_t)(countLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, countLen); // half/bfloat16 -> float32
                 PipeBarrier<PIPE_V>();
@@ -964,8 +964,8 @@ private:
                 countLen = params.softmaxLoopEleTail;
                 innerCopyLen = params.softmaxLoopEleTailPad;
             }
-            DataCopy(localValueCast, logitsGlobalUser[gmOffset], innerCopyLen);
-            DataCopy(sampleDist, qGlobal[gmOffset], innerCopyLen);
+            DataCopyPad(localValueCast, logitsGlobalUser[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+            DataCopyPad(sampleDist, qGlobal[gmOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
             SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
             WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
             SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
@@ -1039,11 +1039,11 @@ private:
         while (rowLenOri > 0) {
             auto dataLen = rowLenOri > maxNum ? maxNum : rowLenOri;
             if constexpr (std::is_same<T, float>::value) {
-                DataCopy(localValueCast, logitsGlobal[startIndex + startOffset], Align(dataLen, EIGHT));
+                DataCopyPad(localValueCast, logitsGlobal[startIndex + startOffset], {1, (uint32_t)(dataLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
             }
             else {
-                DataCopy(localValue, logitsGlobal[startIndex + startOffset], Align(dataLen, SIXTEEN));
+                DataCopyPad(localValue, logitsGlobal[startIndex + startOffset], {1, (uint32_t)(dataLen * sizeof(T)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 Cast(localValueCast, localValue, RoundMode::CAST_NONE, dataLen); // half/bfloat16 -> float32
                 PipeBarrier<PIPE_V>();
@@ -1092,8 +1092,8 @@ private:
                 countLen = lastLoopLen;
             }
             if (!isInLocalTensor) {
-                DataCopy(sampleLogitsLocal, logitsGlobalUser[startIndex + startOffset], Align(countLen, EIGHT));
-                DataCopy(localIndexRs, srcIndexGlobalUser[startIndex + startOffset], Align(countLen, EIGHT));
+                DataCopyPad(sampleLogitsLocal, logitsGlobalUser[startIndex + startOffset], {1, (uint32_t)(countLen * sizeof(float)), 0, 0, 0}, {false, 0, 0, 0});
+                DataCopyPad(localIndexRs, srcIndexGlobalUser[startIndex + startOffset], {1, (uint32_t)(countLen * sizeof(uint32_t)), 0, 0, 0}, {false, 0, 0, 0});
                 SetWaitFlag<HardEvent::MTE2_MTE3>(HardEvent::MTE2_MTE3);
                 SetWaitFlag<HardEvent::MTE2_V>(HardEvent::MTE2_V);
                 DataCopyExtParams dstLogitsSortMaskedParams{1, static_cast<uint32_t>(countLen * sizeof(float)), 0, 0, 0};
