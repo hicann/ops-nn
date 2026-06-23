@@ -37,7 +37,7 @@ namespace {
 namespace optiling {
 namespace transpose_batch_mat_mul {
 
-inline static ge::graphStatus CheckInputArgs(gert::TilingContext* context){
+inline static ge::graphStatus CheckInputArgs(const gert::TilingContext* context){
     constexpr size_t INDEX_X1 = 0;
     constexpr size_t INDEX_X2 = 1;
     constexpr size_t INDEX_BIAS = 2;
@@ -86,8 +86,8 @@ ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context)
     auto attrs = context->GetAttrs();
     auto x1PermList = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PERM_X1);
     auto x2PermList = attrs->GetAttrPointer<gert::ContinuousVector>(INDEX_PERM_X2);
-    const int64_t* perm_x1 = reinterpret_cast<const int64_t*>(x1PermList->GetData());
-    const int64_t* perm_x2 = reinterpret_cast<const int64_t*>(x2PermList->GetData());
+    const int64_t* perm_x1 = static_cast<const int64_t*>(x1PermList->GetData());
+    const int64_t* perm_x2 = static_cast<const int64_t*>(x2PermList->GetData());
     OP_TILING_CHECK((PermDecode(perm_x1, x1PermList->GetSize()) != 213L),
         OP_LOGI(context->GetNodeName(), "PpMatmulEinsum only support permA={1,0,2}."),
         return ge::GRAPH_FAILED);
@@ -117,7 +117,7 @@ ge::graphStatus IsPpMatmulEinsumMode(gert::TilingContext* context)
     return ge::GRAPH_FAILED;
 }
 
-bool GetCloseKShiftFlag(gert::TilingContext* context)
+bool GetCloseKShiftFlag(const gert::TilingContext* context)
 {
     if (context->GetDeterministicLevel() == INT32_MAX) {
         OP_LOGW(context->GetNodeName(), "GetDeterministicLevel() failed.");
@@ -256,7 +256,7 @@ ge::graphStatus TransposeBatchMatMulEinsumTiling::PostTiling()
     currentWorkSpace[0] = sysWorkspaceSize;
 
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void *>(&tilingData), tilingDataSize);
+        static_cast<void *>(&tilingData), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

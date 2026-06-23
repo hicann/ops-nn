@@ -15,7 +15,6 @@
 #include "aclnn_fused_linear_cross_entropy_loss_grad.h"
 #include "fused_linear_cross_entropy_loss_grad.h"
 #include "aclnn_kernels/contiguous.h"
-#include "op_api/op_api_def.h"
 #include "aclnn/aclnn_base.h"
 #include "aclnn_kernels/common/op_error_check.h"
 #include "opdev/common_types.h"
@@ -132,7 +131,7 @@ inline static bool CheckFormatValid(FusedLinearCrossEntropyLossGradInputs& input
     return true;
 }
 
-inline static bool CheckAttrValid(FusedLinearCrossEntropyLossGradInputs& inputs)
+inline static bool CheckAttrValid(const FusedLinearCrossEntropyLossGradInputs& inputs)
 {
     if (inputs.labelSmoothing != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,

@@ -45,7 +45,7 @@
 
 #define FRACTAL_NZ 29
 
-#if defined(FORMAT_X1) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && ORIG_DTYPE_X2 == DT_FLOAT
+#if defined(FORMAT_X1) && defined(FORMAT_ND) && FORMAT_X1 == FORMAT_ND && defined(ORIG_DTYPE_X2) && defined(DT_FLOAT) && ORIG_DTYPE_X2 == DT_FLOAT
     #define IS_ND_NZ_FP32 1
 #else
     #define IS_ND_NZ_FP32 0

@@ -41,7 +41,7 @@ const char *GetValidOpName(gert::InferShapeContext *context)
     return OP_NAME;
 }
 
-static ge::graphStatus IsInputTensorNull(gert::InferShapeContext* context)
+static ge::graphStatus IsInputTensorNull(const gert::InferShapeContext* context)
 {
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X1_INDEX));
     OP_CHECK_NULL_WITH_CONTEXT(context, context->GetInputShape(X2_INDEX));

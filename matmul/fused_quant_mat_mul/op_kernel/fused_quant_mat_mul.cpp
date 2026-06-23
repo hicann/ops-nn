@@ -45,7 +45,7 @@
 #undef ORIG_DTYPE_X1_SCALE
 #undef DTYPE_X1_SCALE
 #define ORIG_DTYPE_X1_SCALE DT_FLOAT
-#define DTYPE_X1_SCALE float
+using DTYPE_X1_SCALE = float;
 
 using namespace AscendC;
 using namespace matmul;

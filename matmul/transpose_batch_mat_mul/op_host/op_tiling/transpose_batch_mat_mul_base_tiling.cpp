@@ -390,7 +390,7 @@ ge::graphStatus TransposeBatchMatMulBaseTiling::PostTiling()
                     return ge::GRAPH_FAILED);
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
     errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void *>(&tbmmTilingData_), tilingDataSize);
+        static_cast<void *>(&tbmmTilingData_), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

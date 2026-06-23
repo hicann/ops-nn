@@ -196,10 +196,11 @@ int main()
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy scale result failed.\n"); return ret);
 
     // 打印部分结果
-    for (int64_t i = 0; i < 5 && i < static_cast<int64_t>(yResult.size()); i++) {
+    constexpr int64_t kPrintLimit = 5;
+    for (int64_t i = 0; i < kPrintLimit && i < static_cast<int64_t>(yResult.size()); i++) {
         LOG_PRINT("y[%ld] = %d\n", i, static_cast<int>(yResult[i]));
     }
-    for (int64_t i = 0; i < 5 && i < static_cast<int64_t>(scaleResult.size()); i++) {
+    for (int64_t i = 0; i < kPrintLimit && i < static_cast<int64_t>(scaleResult.size()); i++) {
         LOG_PRINT("scale[%ld] = %f\n", i, scaleResult[i]);
     }
 
