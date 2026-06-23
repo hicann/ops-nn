@@ -126,8 +126,8 @@ uint64_t Conv2dBaseTiling::GetOutputOrderVal()
 uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 {
     // Not support group conv, c04, weight ub, multi-bath.
-    if (((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0)) ||
-        static_cast<uint64_t>(tilingData_.get_singleCoreBatch() != 1) ||
+    if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) ||
+        static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) != 1 ||
         tilingData_.get_nL0() != tilingData_.get_nBL1() ||
         flagInfo_.enableC04Flag) {
         return CONV_NOT_SMALL_KERNEL;

@@ -160,7 +160,7 @@ struct ShapeInfo {
 };
 
 #pragma pack(push, 1)  // 确保无填充，严格按位排列
-using BitFieldData = struct {
+struct BitFieldData {
     uint64_t strideW        : 6;       // bits 0-5
     uint64_t strideH        : 6;       // bits 6-11
     uint64_t kernelW        : 8;       // bits 12-19

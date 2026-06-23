@@ -111,7 +111,7 @@ bool Conv3dToConv3dV2FusionPass::CheckIFMRInSameOutputNode(const GNode &convNode
         if (outNode == nullptr) {
             continue;
         }
-        for (int32_t idx = 0; idx < outNode->GetInputsSize(); ++idx) {
+        for (size_t idx = 0; idx < outNode->GetInputsSize(); ++idx) {
             auto inNode = outNode->GetInDataNodesAndPortIndexs(idx).first;
             if (inNode == nullptr) {
                 continue;

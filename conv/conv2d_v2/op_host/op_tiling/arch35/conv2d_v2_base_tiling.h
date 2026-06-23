@@ -21,7 +21,6 @@
 #include <unordered_set>
 #include <chrono>
 #include "op_host/tiling_base.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_base_utils.h"
 #include "../conv2d_v2_tiling.h"
 #include "conv2d_v2_tuning_tiling.h"

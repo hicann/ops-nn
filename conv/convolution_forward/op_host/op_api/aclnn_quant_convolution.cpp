@@ -635,7 +635,7 @@ public:
         return ACLNN_SUCCESS;
     }
 
-    aclnnStatus CheckFormat3D(QuantConvEngine &engine)
+    aclnnStatus CheckFormat3D(QuantConvEngine &engine) const
     {
         auto inputFormat = engine.meta.input.format;
         auto weightFormat = engine.meta.weight.format;

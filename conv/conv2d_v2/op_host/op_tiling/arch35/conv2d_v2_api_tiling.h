@@ -16,7 +16,6 @@
 #ifndef ASCENDC_TILING_CONV2D_V2_API_TILING_H
 #define ASCENDC_TILING_CONV2D_V2_API_TILING_H
 
-#include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_base.h"
 #include "../../../../common/op_host/op_tiling/arch35/conv_api_tiling_algorithm_base.h"
 
 namespace optiling {

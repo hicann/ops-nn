@@ -211,7 +211,7 @@ bool ConvFusionUtilsPass::IsUnknownShape(const TensorDesc &tensorDesc)
 AscendString ConvFusionUtilsPass::ListToAscendString(const std::vector<AscendString> &strList)
 {
     std::string res = "";
-    for (auto index = 0; index < strList.size(); ++index) {
+    for (size_t index = 0; index < strList.size(); ++index) {
         res += strList[index].GetString();
         if (index != strList.size() - 1) {
             res += ", ";

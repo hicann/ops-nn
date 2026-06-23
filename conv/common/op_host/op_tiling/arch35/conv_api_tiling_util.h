@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <set>
 #include <tiling/platform/platform_ascendc.h>
+#include "platform/soc_spec.h"
 #include "conv_template_utils.h"
 
 namespace conv_tiling {
