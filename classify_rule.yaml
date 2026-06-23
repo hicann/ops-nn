@@ -1721,6 +1721,7 @@ norm-c@ops-nn:
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_split_n_high_precision.h
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_whole_reduce_d.h
         - ops/ops-nn/norm/rms_norm_grad/op_kernel/rms_norm_grad_whole_reduce_n.h
+        - ops/ops-nn/norm/rms_norm_grad_quant/
         - ops/ops-nn/norm/rms_norm_quant/
         - ops/ops-nn/norm/sync_batch_norm_backward_elemt/
         - ops/ops-nn/norm/sync_batch_norm_backward_reduce/
