@@ -49,7 +49,7 @@ bool AdaptiveSlidingWindowTilingV4::CheckDtype() const
         return false);
 
     OP_TILING_CHECK(!checker->CheckDtype(),
-        CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype fail"),
+        OP_LOGE(inputParams_.opName, "CheckDtype fail"),
         return false);
 
     return true;

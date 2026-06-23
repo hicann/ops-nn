@@ -957,7 +957,7 @@ bool CheckCoreNum(const WeightQuantBatchMatmulInfo* inputParams, const gert::Til
     auto aicNum = ascendcPlatform.GetCoreNumAic();
     OP_TILING_CHECK(
         aivNum != CORE_RATIO * aicNum,
-        VECTOR_INNER_ERR_REPORT_TILIING(
+        OP_LOGE(
             inputParams->opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum),
         return false);
 
@@ -968,31 +968,38 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams, const gert::TilingC
 {
     // check aic and aiv core num
     OP_TILING_CHECK(
-        !CheckCoreNum(inputParams, context), VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Check CoreNum fail."),
+        !CheckCoreNum(inputParams, context), OP_LOGE(inputParams->opName, "Check CoreNum fail."),
         return false);
 
     // not support transposeA and int8 out
     OP_TILING_CHECK(
-        inputParams->transA, VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Only support TransposeA false"),
+        inputParams->transA,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            inputParams->opName, "transpose_x", std::to_string(inputParams->transA).c_str(),
+            "transpose_x must be false"),
         return false);
     OP_TILING_CHECK(
         inputParams->cDtype == ge::DT_INT8,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "Not support Output dtype int8"), return false);
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams->opName, "y", "INT8",
+            "The dtype of y can not be INT8"),
+        return false);
 
     // A16F8 only support perchannel(include n=1)
     if (std::find(BIT8_WEIGHT_DTYPE_LIST.begin(), BIT8_WEIGHT_DTYPE_LIST.end(), inputParams->bDtype) !=
             BIT8_WEIGHT_DTYPE_LIST.end() &&
         inputParams->bDtype != ge::DT_INT8) {
         OP_TILING_CHECK(
-            inputParams->antiQuantType != QuantType::PER_CHANNEL && inputParams->antiQuantType != QuantType::PER_TENSOR,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "A16F8 only support perchannel"), return false);
+            !(inputParams->antiQuantType == QuantType::PER_CHANNEL ||
+              (inputParams->antiQuantType == QuantType::PER_TENSOR && inputParams->nSize == 1)),
+            OP_LOGE(inputParams->opName, "A16F8 only support perchannel"), return false);
     }
     // A16F4 support Mx and pergroup
     if (inputParams->bDtype == ge::DT_FLOAT4_E2M1 ||
         inputParams->bDtype == ge::DT_FLOAT) {
         OP_TILING_CHECK(
             inputParams->antiQuantType == QuantType::PER_TENSOR || inputParams->antiQuantType == QuantType::PER_CHANNEL,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName, "A16F4 only support Mx and pergroup"), return false);
+            OP_LOGE(inputParams->opName, "A16F4 only support Mx and pergroup"), return false);
     }
 
     if (inputParams->antiQuantType == QuantType::PER_GROUP &&
@@ -1000,10 +1007,9 @@ bool CheckTempLimit(WeightQuantBatchMatmulInfo* inputParams, const gert::TilingC
          inputParams->bDtype == ge::DT_FLOAT)) {
         OP_TILING_CHECK(
             std::find(GROUP_SIZE_LIST.begin(), GROUP_SIZE_LIST.end(), inputParams->groupSize) == GROUP_SIZE_LIST.end(),
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams->opName,
-                                            "In the A16Fp4 pergroup scenario of the DAV3510 , groupsize only "
-                                            "supports 32, 64, 128, 256, but is [%lu]",
-                                            inputParams->groupSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams->opName, "groupSize", std::to_string(inputParams->groupSize).c_str(),
+                "In the A16Fp4 pergroup scenario of the DAV_3510, groupSize only supports 32, 64, 128, 256"),
             return false);
     }
 
@@ -1055,12 +1061,12 @@ bool CheckNzSupportedScenarios(WeightQuantBatchMatmulInfo* inputParams, NpuArch 
         //     quantization without transA , transB or C8.
         OP_TILING_CHECK(
             !CheckDav3510NzSupported(inputParams),
-            VECTOR_INNER_ERR_REPORT_TILIING(
+            OP_LOGE(
                 inputParams->opName,
                 "WeightNZ supports S4/FP4_E2M1/FP4_E1M2 weights with non-transposed A/B, "
                 "and supports INT8 per-channel quantization with non-transposed A, INT8 per-group quantization with "
                 "non-transposed A/B. WeightNZ cannot support int8 output or per-tensor quantization"),
-            return ge::GRAPH_FAILED);
+            return false);
     } else {
         OP_TILING_CHECK(
             (inputParams->antiQuantType == QuantType::PER_GROUP && inputParams->transA &&
@@ -1069,7 +1075,7 @@ bool CheckNzSupportedScenarios(WeightQuantBatchMatmulInfo* inputParams, NpuArch 
             VECTOR_INNER_ERR_REPORT_TILIING(
                 inputParams->opName,
                 "WeightNZ cannot support per-group with transA int8, cannot support int8 output or per-tensor"),
-            return ge::GRAPH_FAILED);
+            return false);
     }
     return true;
 }
@@ -1112,7 +1118,7 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
         inputParams.bDtype == ge::DT_HIFLOAT8) {
         OP_TILING_CHECK(
             inputParams.transA || (inputParams.cDtype == ge::DT_INT8) || (inputParams.bFormat == ge::FORMAT_FRACTAL_NZ),
-            VECTOR_INNER_ERR_REPORT_TILIING(
+            OP_LOGE(
                 inputParams.opName,
                 "Weight FP8_E4M3/HIFLOAT8 input cannot support transA, int8 output or weightNz"),
             return ge::GRAPH_FAILED);
@@ -1120,7 +1126,7 @@ ge::graphStatus CheckPara(gert::TilingContext* context, platform_ascendc::SocVer
     if (npuArch == NpuArch::DAV_3510) {
         OP_TILING_CHECK(
             !CheckTempLimit(&inputParams, context),
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams.opName, "Input cannot meet the condition of this version"),
+            OP_LOGE(inputParams.opName, "Input cannot meet the condition of this version"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

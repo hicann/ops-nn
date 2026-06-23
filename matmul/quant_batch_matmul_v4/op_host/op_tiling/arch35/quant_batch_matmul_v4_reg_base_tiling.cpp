@@ -45,36 +45,38 @@ bool QuantBatchMatmulV4RegBase::CheckA8W4Params() const
              OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX1", (inputParams_.transA ? "true" : "false"), "The value of transposeX1 must be false"),
              return false);
     OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_ND && !inputParams_.transB,
-             OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(inputParams_.opName, "x2", "x2Format", "When transposeX2 is true, the format of x2 must be ND"),
-             return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX2", "false",
+            "When the format of x2 is ND, transposeX2 must be true"),
+        return false);
     OP_CHECK_IF(inputParams_.antiQuantType == QuantType::PER_GROUP && inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.transB,
-            OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(inputParams_.opName, "x2", "x2Format", "When the quant mode is per_group and transposeX2 is false, the format of x2 must be FRACTAL_NZ"),
-            return false);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transposeX2", "true",
+            "When the quantization mode is pergroup and the format of x2 is FRACTAL_NZ, transposeX2 must be false"),
+        return false);
 
     if (inputParams_.antiQuantType == QuantType::MX) {
         OP_CHECK_IF(
             inputParams_.groupSize != MX_GROUP_SIZE,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName,
-                "Invalid params, groupSize must be 32 for MX quantization, but got %lu.",
-                inputParams_.groupSize), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(),
+                "groupSize must be 32 when the quantization mode is MX"),
+            return false);
     } else {
         OP_CHECK_IF(
             inputParams_.groupSize <= 0 || inputParams_.kSize < inputParams_.groupSize,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName,
-                "Invalid params, groupSize must be greater than 0 and less than kSize, kSize: %lu, groupSize: %lu.",
-                inputParams_.kSize, inputParams_.groupSize), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(),
+                "groupSize must be greater than 0 and less than kSize(" + std::to_string(inputParams_.kSize) + ")"),
+            return false);
     }
 
     OP_CHECK_IF(inputParams_.groupSize % GROUP_ALIGN_SIZE > 0,
-             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(), "The value of groupSize must be aligned to 32"),
+             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize", std::to_string(inputParams_.groupSize).c_str(), "groupSize must be aligned to 32"),
              return false);
     // A8W4 Nz场景要求n为32B对齐
     OP_CHECK_IF(inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && inputParams_.nSize % N_ALIGN_SIZE > 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                                            "Invalid params, nSize only support aligned to 8 when weight format is NZ, but nSize is %lu.",
-                                            inputParams_.nSize), return false);
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "nSize", std::to_string(inputParams_.nSize).c_str(),
+                "nSize must be aligned to 8 when the format of x2 is FRACTAL_NZ"),
+            return false);
     return true;
 }
 
@@ -83,16 +85,16 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
     if (inputParams_.antiQuantType == QuantType::MX) {
         OP_CHECK_IF(
             inputParams_.kSize % K_ALIGN_SIZE_MX > 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "Invalid params, kSize must be aligned to 8 for MX quantization, but got %lu.",
-                inputParams_.kSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "kSize", std::to_string(inputParams_.kSize).c_str(),
+                "kSize must be aligned to 8 when the quantization mode is MX"),
             return false);
     } else {
         OP_CHECK_IF(
             inputParams_.kSize % K_ALIGN_SIZE > 0 || inputParams_.kSize <= K_ALIGN_SIZE,
-            VECTOR_INNER_ERR_REPORT_TILIING(
-                inputParams_.opName, "Invalid params, kSize must be aligned to 32 and greater than 32, but got %lu.",
-                inputParams_.kSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                inputParams_.opName, "kSize", std::to_string(inputParams_.kSize).c_str(),
+                "kSize must be aligned to 32 and greater than 32"),
             return false);
     }
 

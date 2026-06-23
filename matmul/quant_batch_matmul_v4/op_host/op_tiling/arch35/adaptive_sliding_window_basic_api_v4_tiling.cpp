@@ -104,7 +104,7 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckPertileDtype()
     auto outputDesc = context_->GetOutputDesc(0);
     inputParams_.cDtype = outputDesc != nullptr ? outputDesc->GetDataType() : ge::DT_BF16;
 
-    OP_TILING_CHECK(!CheckDtype(), CUBE_INNER_ERR_REPORT(inputParams_.opName, "CheckDtype failed!"), return false);
+    OP_TILING_CHECK(!CheckDtype(), OP_LOGE(inputParams_.opName, "CheckDtype failed!"), return false);
 
     bool isA8W8GBDtype = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8 &&
                          inputParams_.perTokenScaleDtype == ge::DT_FLOAT && inputParams_.scaleDtype == ge::DT_FLOAT &&
