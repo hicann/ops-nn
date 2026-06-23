@@ -44,6 +44,11 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
 
   1. 按分段长度v采用分段topk归并排序，用{s-1}块的topK对当前{s}块的输入进行预筛选，渐进更新单batch的topK，减少冗余数据和计算。
   2. topK[batch]对应当前batch采样的k值，有效范围为1≤topK[batch]≤min(voc_size[batch], ks_max)，如果top[k]超出有效范围，则视为跳过当前batch的topK采样阶段，也同样会则跳过当前batch的排序，将输入logits[batch]直接传入下一模块。
+  * 根据输入`topK[b]`的数值，本模块的处理策略如下：
+
+    | 参数类型 | ≤0 | 有效域 | 无效域 |
+    | :-------:| :------:|:-------:|:-------:|
+    |`topK[b]`|跳过topK采样|1≤topK≤min(ksMax, 1024, vocSize),执行topK采样|topK>min(ksMax, 1024, vocSize),跳过topK采样,选择全部有效元素|
 
   * 对当前batch分割为若干子段，滚动计算topKValue[b]：
 
@@ -144,6 +149,12 @@ logits中的每一行logits[batch][:]根据相应的topK[batch]、topP[batch]、
   logitsSortMasked[b,:] = sortedValue[b]
   $$
   minP采样
+  * 根据输入`minPs[b]`的数值，本模块的处理策略如下：
+
+    | 参数类型 | ≤0 | 有效域 | 无效域 |
+    | :-------:| :------:|:-------:|:-------:|
+    |`minPs[b]`|跳过minP采样,保留前序结果不变|0<minPs<1,执行minP采样|minPs≥1,仅保留1个最大token|
+
   * 如果min_ps[b]∈(0, 1)，则执行min_p采样：
     $$
     \text{logitsMax}[b] = \text{Max}(\text{logitsSortMasked}[b])

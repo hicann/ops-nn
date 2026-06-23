@@ -23,7 +23,6 @@ namespace TopKTopPSampleV2 {
 
 constexpr uint32_t INNER_LOOP_ELE = 8 * 1024;
 constexpr uint32_t TOPP_K_FIX = 32;
-constexpr uint32_t ROW_LEN_MAX = 128;   // max batch size processed for single core under CUT_B template
 constexpr uint32_t TOPK_MAX = 1 * 1024;
 constexpr uint32_t SORT32_PER_LEN = 2 * 1024;
 constexpr uint32_t SORT32_MAX_LOOP = INNER_LOOP_ELE / SORT32_PER_LEN;
@@ -1181,9 +1180,6 @@ private:
     int32_t topKGuess{TOPP_K_FIX};
     bool ifQSampleCompute = false;
     uint32_t queLenGlobal[NUM_TWO]{0};
-    // rowId*List here ought to be local index instead of global batch index
-    uint32_t rowIdToppList[ROW_LEN_MAX]{0};
-    uint32_t rowIdTopkList[ROW_LEN_MAX]{0};
     uint32_t ifFind{0};
     uint32_t ksMAX{1024};
     uint32_t inputIsLogits{0};
