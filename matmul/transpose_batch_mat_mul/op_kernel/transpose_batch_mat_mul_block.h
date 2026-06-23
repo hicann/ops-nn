@@ -172,7 +172,7 @@ __aicore__ inline void TransposeBatchMatMulBlock::InitL2Cache()
         params_.mTileCnt = tilingL2.mTileBlock; // 每份mTile包含的base块个数
         params_.nTileCnt = tilingL2.nTileBlock; // 每份nTile包含的base块个数
         params_.totalTileCnt = params_.mTileCnt * params_.nTileCnt;
-        params_.mCntTail = params_.mCnt - (params_.mTileCnt * (DivCeil(params_.mCnt, params_.mTileCnt) - 1)); // M方向上mtile尾块的个数
+        params_.mCntTail = params_.mCnt - (params_.mTileCnt * (MMV3DivCeil(params_.mCnt, params_.mTileCnt) - 1)); // M方向上mtile尾块的个数
         params_.nCntTail = params_.nCnt - (params_.nTileCntL2 - 1) * params_.nTileCnt; // N方向nTile尾块base块个数
         params_.mCntUse = params_.mTileCnt;
         params_.nCntUse = params_.nTileCnt;
@@ -298,7 +298,7 @@ __aicore__ inline void TransposeBatchMatMulBlock::UpdateBlockCnt(uint64_t bmTile
         curBatchTileIdx * params_.mTileCnt * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreM;
     params_.nTileAddrOffset =
         nTileIndex * params_.nTileCnt * tbmmTilingData_->matmulTiling.matmulTiling.singleCoreN;
-    batchLastFlag_ = ((bmTileIndex + 1) % DivCeil(params_.mCnt, params_.mTileCnt) == 0);
+    batchLastFlag_ = ((bmTileIndex + 1) % MMV3DivCeil(params_.mCnt, params_.mTileCnt) == 0);
     if (batchLastFlag_ && (nTileIndex == (params_.nTileCntL2 - 1))) {
         params_.totalTileCnt = params_.mCntTail * params_.nCntTail;
         params_.mCntUse = params_.mCntTail;
@@ -316,7 +316,7 @@ __aicore__ inline void TransposeBatchMatMulBlock::UpdateBlockCnt(uint64_t bmTile
         params_.mCntUse = params_.mTileCnt;
         params_.nCntUse = params_.nTileCnt;
     }
-    params_.round = DivCeil(params_.totalTileCnt,
+    params_.round = MMV3DivCeil(params_.totalTileCnt,
                             static_cast<uint64_t>(tbmmTilingData_->matmulTiling.matmulTiling.usedCoreNum));
     params_.preCoreNum = params_.totalTileCnt % tbmmTilingData_->matmulTiling.matmulTiling.usedCoreNum;
     if (params_.preCoreNum == 0) {

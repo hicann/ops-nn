@@ -96,8 +96,8 @@ __aicore__ inline void BatchMatMulMultiBatchFullLoadBlock::Init(const void *tili
         static_cast<uint64_t>(batchMatmulTilingData_->matmulTiling.matmulTiling.M) * batchMatmulTilingData_->matmulTiling.matmulTiling.N;
 
     // 用于计算A矩阵在L1上的地址偏移
-    innerA = DivCeil(innerA, c0Size_) * c0Size_;
-    outterA = DivCeil(outterA, ALIGNED_H) * ALIGNED_H;
+    innerA = MMV3DivCeil(innerA, c0Size_) * c0Size_;
+    outterA = MMV3DivCeil(outterA, ALIGNED_H) * ALIGNED_H;
     params_.singleASizeL1 = innerA * outterA;
 
     params_.singleBiasSize = static_cast<uint64_t>(batchMatmulTilingData_->matmulTiling.matmulTiling.N);
@@ -272,10 +272,10 @@ __aicore__ inline void BatchMatMulUnalignedMultiBatchBaseBlock::Init(const void*
                             ? batchMatmulTilingData_->matmulTiling.matmulTiling.N
                             : batchMatmulTilingData_->matmulTiling.matmulTiling.Kb;
 
-    innerA = DivCeil(innerA, c0Size_) * c0Size_;
-    innerB = DivCeil(innerB, c0Size_) * c0Size_;
-    outterA = DivCeil(outterA, ALIGNED_H) * ALIGNED_H;
-    outterB = DivCeil(outterB, ALIGNED_H) * ALIGNED_H;
+    innerA = MMV3DivCeil(innerA, c0Size_) * c0Size_;
+    innerB = MMV3DivCeil(innerB, c0Size_) * c0Size_;
+    outterA = MMV3DivCeil(outterA, ALIGNED_H) * ALIGNED_H;
+    outterB = MMV3DivCeil(outterB, ALIGNED_H) * ALIGNED_H;
     if (nd2nzFlag_ == static_cast<int32_t>(ND2NZ_SELECT::ONLY_A)) {
         params_.singleASize = innerA * outterA;
     } else if (nd2nzFlag_ == static_cast<int32_t>(ND2NZ_SELECT::ONLY_B)) {
