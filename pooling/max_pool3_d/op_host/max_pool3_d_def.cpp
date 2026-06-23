@@ -42,7 +42,8 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true);
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "max_pool3_d_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };

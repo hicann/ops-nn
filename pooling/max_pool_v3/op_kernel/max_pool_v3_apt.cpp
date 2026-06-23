@@ -14,12 +14,12 @@
 
 #include <cstdint>
 #include "kernel_operator.h"
-#include "max_pool_v3_big_kernel.h"
-#include "max_pool_v3_small_kernel.h"
-#include "max_pool_v3_small_kernel_pad.h"
-#include "max_pool_v3_nhwc_big_kernel.h"
-#include "max_pool_v3_nhwc_small_kernel.h"
-#include "max_pool_v3_nhwc_small_kernel_pad.h"
+#include "arch35/max_pool_v3_big_kernel.h"
+#include "arch35/max_pool_v3_small_kernel.h"
+#include "arch35/max_pool_v3_small_kernel_pad.h"
+#include "arch35/max_pool_v3_nhwc_big_kernel.h"
+#include "arch35/max_pool_v3_nhwc_small_kernel.h"
+#include "arch35/max_pool_v3_nhwc_small_kernel_pad.h"
 
 #define BIG_KERNEL_FORMAT_NCHW 311110
 #define SMALL_KERNEL_NO_PADDING_FORMAT_NCHW 300001

@@ -80,7 +80,8 @@ public:
              .DynamicRankSupportFlag(true)
              .DynamicShapeSupportFlag(true)
              .NeedCheckSupportFlag(false)
-             .PrecisionReduceFlag(true);
+             .PrecisionReduceFlag(true)
+             .ExtendCfgInfo("opFile.value", "avg_pool3_d_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
 
         OpAICoreConfig config_kirin = GetKirinCoreConfig();

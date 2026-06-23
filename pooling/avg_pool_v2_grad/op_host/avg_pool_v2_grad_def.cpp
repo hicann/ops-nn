@@ -7,11 +7,11 @@
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
-
+ 	 
 /*!
- * \file avg_pool_v2_grad_def.cpp
- * \brief
- */
+* \file avg_pool_v2_grad_def.cpp
+* \brief
+*/
 
 #include "register/op_def_registry.h"
 
@@ -21,8 +21,7 @@ class AvgPoolV2Grad : public OpDef {
 public:
     const std::vector<ge::DataType> AvgPoolV2GradXDataType = {ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_BF16};
     const std::vector<ge::Format> AvgPoolV2GradXFormat = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
-    explicit AvgPoolV2Grad(const char* name) : OpDef(name)
-    {
+    explicit AvgPoolV2Grad(const char* name) : OpDef(name) {
         this->Input("orig_input_shape")
             .ParamType(REQUIRED)
             .ValueDepend(OPTIONAL)
@@ -42,15 +41,33 @@ public:
             .Format(AvgPoolV2GradXFormat)
             .UnknownShapeFormat(AvgPoolV2GradXFormat)
             .AutoContiguous();
-        this->Attr("ksize").AttrType(REQUIRED).ListInt();
-        this->Attr("strides").AttrType(REQUIRED).ListInt();
-        this->Attr("padding_mode").AttrType(OPTIONAL).String("CALCULATED");
-        this->Attr("pads").AttrType(OPTIONAL).ListInt({0, 0, 0, 0});
-        this->Attr("data_format").AttrType(OPTIONAL).String("NCHW");
-        this->Attr("global_pooling").AttrType(OPTIONAL).Bool(false);
-        this->Attr("ceil_mode").AttrType(OPTIONAL).Bool(false);
-        this->Attr("exclusive").AttrType(OPTIONAL).Bool(true);
-        this->Attr("divisor_override").AttrType(OPTIONAL).Int(0);
+        this->Attr("ksize")
+            .AttrType(REQUIRED)
+            .ListInt();
+        this->Attr("strides")
+            .AttrType(REQUIRED)
+            .ListInt();
+        this->Attr("padding_mode")
+            .AttrType(OPTIONAL)
+            .String("CALCULATED");
+        this->Attr("pads")
+            .AttrType(OPTIONAL)
+            .ListInt({0, 0, 0, 0});
+        this->Attr("data_format")
+            .AttrType(OPTIONAL)
+            .String("NCHW");
+        this->Attr("global_pooling")
+            .AttrType(OPTIONAL)
+            .Bool(false);
+        this->Attr("ceil_mode")
+            .AttrType(OPTIONAL)
+            .Bool(false);
+        this->Attr("exclusive")
+            .AttrType(OPTIONAL)
+            .Bool(true);
+        this->Attr("divisor_override")
+            .AttrType(OPTIONAL)
+            .Int(0);
 
         OpAICoreConfig aiCoreConfig;
         aiCoreConfig.DynamicCompileStaticFlag(true)
@@ -58,10 +75,11 @@ public:
             .DynamicRankSupportFlag(true)
             .DynamicShapeSupportFlag(true)
             .NeedCheckSupportFlag(false)
-            .PrecisionReduceFlag(true);
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "avg_pool_v2_grad_apt");
         this->AICore().AddConfig("ascend950", aiCoreConfig);
     }
 };
 
 OP_ADD(AvgPoolV2Grad);
-} // namespace ops
+}  // namespace ops
