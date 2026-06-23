@@ -123,7 +123,7 @@ __aicore__ inline void SyncBatchNormGatherStatsFusedFirstAxisCommon<T>::ComputeG
     Duplicate(buffer1_, countsSumScalar, curRowsNum * cAlign);
     PipeBarrier<PIPE_V>();
 
-    Div(buffer0_, buffer0_, buffer1_, curRowsNum * cAlign);
+    Div<float, divConfig>(buffer0_, buffer0_, buffer1_, curRowsNum * cAlign);
     PipeBarrier<PIPE_V>();
 
     NlastReduceSum(buffer3_, buffer0_, curRowsNum);
@@ -156,7 +156,7 @@ __aicore__ inline void SyncBatchNormGatherStatsFusedFirstAxisCommon<T>::ComputeG
     Duplicate(buffer0_, static_cast<float>(1.0f), curRowsNum * cAlign);
     PipeBarrier<PIPE_V>();
 
-    Div(buffer1_, buffer0_, buffer1_, curRowsNum * cAlign);
+    Div<float, divConfig>(buffer1_, buffer0_, buffer1_, curRowsNum * cAlign);
     PipeBarrier<PIPE_V>();
 
     queue0_.FreeTensor(buffer0_);
