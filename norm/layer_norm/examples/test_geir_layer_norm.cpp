@@ -20,6 +20,8 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
+#include <utility>
 #include "assert.h"
 #include "graph.h"
 #include "types.h"
@@ -36,6 +38,7 @@
 
 using namespace ge;
 using std::map;
+using std::unique_ptr;
 using std::string;
 using std::vector;
 #define ADD_INPUT(inputIndex, inputName, inputDtype, inputShape)                                             \
@@ -47,7 +50,8 @@ using std::vector;
     placeholder##inputIndex##_desc.SetFormat(FORMAT_ND);                                                     \
     Tensor tensor_placeholder##inputIndex;                                                                   \
     ret = GenOnesDataFloat32(                                                                                \
-        placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, 2); \
+        placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, 2,  \
+        inputDataHolder);                                                                                    \
     if (ret != SUCCESS) {                                                                                    \
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                       \
         return FAILED;                                                                                       \
@@ -71,7 +75,7 @@ using std::vector;
     Tensor tensor_placeholder##inputIndex;                                                                           \
     ret = GenOnesData(                                                                                               \
         placeholder##inputIndex##_shape, tensor_placeholder##inputIndex, placeholder##inputIndex##_desc, inputDtype, \
-        2);                                                                                                          \
+        2, constDataHolder);                                                                                         \
     if (ret != SUCCESS) {                                                                                            \
         printf("%s - ERROR - [XIR]: Generate input data failed\n", GetTime().c_str());                               \
         return FAILED;                                                                                               \
@@ -133,7 +137,9 @@ uint32_t GetDataTypeSize(DataType dt)
     return dilation;
 }
 
-int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value)
+int32_t GenOnesDataFloat32(
+    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, float value,
+    vector<unique_ptr<float[]>>& inputDataHolder)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -142,17 +148,22 @@ int32_t GenOnesDataFloat32(vector<int64_t> shapes, Tensor& input_tensor, TensorD
     }
     uint32_t byteSizeFloat32 = 4;
     uint32_t data_len = size * byteSizeFloat32;
-    float* pData = new (std::nothrow) float[size];
+    unique_ptr<float[]> pData(new (std::nothrow) float[size]);
+    if (pData == nullptr) {
+        return FAILED;
+    }
 
     for (size_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+        pData[i] = value;
     }
-    input_tensor = Tensor(input_tensor_desc, (uint8_t*)pData, data_len);
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData.get()), data_len);
+    inputDataHolder.push_back(std::move(pData));
     return SUCCESS;
 }
 
 int32_t GenOnesData(
-    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, int value)
+    vector<int64_t> shapes, Tensor& input_tensor, TensorDesc& input_tensor_desc, DataType data_type, int value,
+    vector<unique_ptr<int32_t[]>>& constDataHolder)
 {
     input_tensor_desc.SetRealDimCnt(shapes.size());
     size_t size = 1;
@@ -160,11 +171,15 @@ int32_t GenOnesData(
         size *= shapes[i];
     }
     uint32_t data_len = size * GetDataTypeSize(data_type);
-    int32_t* pData = new (std::nothrow) int32_t[data_len];
-    for (uint32_t i = 0; i < size; ++i) {
-        *(pData + i) = value;
+    unique_ptr<int32_t[]> pData(new (std::nothrow) int32_t[data_len]);
+    if (pData == nullptr) {
+        return FAILED;
     }
-    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData), data_len);
+    for (uint32_t i = 0; i < size; ++i) {
+        pData[i] = value;
+    }
+    input_tensor = Tensor(input_tensor_desc, reinterpret_cast<uint8_t*>(pData.get()), data_len);
+    constDataHolder.push_back(std::move(pData));
     return SUCCESS;
 }
 
@@ -179,7 +194,7 @@ int32_t WriteDataToFile(string bin_file, uint64_t data_size, uint8_t* inputData)
 
 int CreateOppInGraph(
     DataType inDtype, std::vector<ge::Tensor>& input, std::vector<Operator>& inputs, std::vector<Operator>& outputs,
-    Graph& graph)
+    Graph& graph, vector<unique_ptr<float[]>>& inputDataHolder, vector<unique_ptr<int32_t[]>>& constDataHolder)
 {
     Status ret = SUCCESS;
     // 自定义代码：添加单算子定义到图中
@@ -206,6 +221,8 @@ int main(int argc, char* argv[])
 {
     const char* graph_name = "tc_ge_irrun_test";
     Graph graph(graph_name);
+    vector<unique_ptr<float[]>> inputDataHolder;
+    vector<unique_ptr<int32_t[]>> constDataHolder;
     std::vector<ge::Tensor> input;
 
     printf("%s - INFO - [XIR]: Start to initialize ge using ge global options\n", GetTime().c_str());
@@ -227,7 +244,7 @@ int main(int argc, char* argv[])
 
     std::cout << inDtype << std::endl;
 
-    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph);
+    ret = CreateOppInGraph(inDtype, input, inputs, outputs, graph, inputDataHolder, constDataHolder);
     if (ret != SUCCESS) {
         printf("%s - ERROR - [XIR]: Create ir session using build options failed\n", GetTime().c_str());
         return FAILED;
@@ -304,6 +321,7 @@ int main(int argc, char* argv[])
     std::string warning_str(warning_msg.GetString());
     std::cout << "Warning message: " << warning_str << std::endl;
     printf("%s - INFO - [XIR]: Start to finalize ir graph session\n", GetTime().c_str());
+    delete session;
     ret = ge::GEFinalize();
     if (ret != SUCCESS) {
         printf("%s - INFO - [XIR]: Finalize ir graph session failed\n", GetTime().c_str());
