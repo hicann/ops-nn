@@ -1226,7 +1226,7 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
     L0_DFX(ConvTranspose3dWithFlag, input, weight, bias, stride, padding, dilation, groups, outputPadding, useHf32);
     const char *dataFormat = "NCDHW"; // 由于transpose中infershape的逻辑只支持dataformat为‘NCHW’,而不是input的GetOriginalForamt
     const int64_t hf32 = useHf32 ? 0x40 : 0x00;
-    TransposeAdaptParam adptParams = {0};
+    TransposeAdaptParam adptParams = {nullptr};
     GetConv3DTransposeAdapterParam(input, stride, padding, dilation, outputPadding, executor, &adptParams);
     aclIntArray *stride5 = adptParams.adaptStride;
     aclIntArray *dilation5 = adptParams.adaptDilation;
@@ -1295,7 +1295,6 @@ static aclnnStatus ConvTranspose3dWithFlag(const aclTensor *input, const aclTens
                                           dataFormat, adptParams.adaptoutputPad, 0, useHf32, paddingP, hf32),
                                           OP_MODE(execMode));
         }
-        
     } else {
         ret = ADD_TO_LAUNCHER_LIST_AICORE(Conv3DTranspose, OP_INPUT(inputSize, input, weight), OP_OUTPUT(output),
                                           OP_ATTR(adptParams.adaptStride, pad5, dilation5, groups,

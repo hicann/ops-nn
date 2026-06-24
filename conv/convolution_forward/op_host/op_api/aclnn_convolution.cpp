@@ -5124,7 +5124,7 @@ public:
         }
         auto ret = CommonPreProcess(input, weight, bias, groups, transposed, opInfo, needChangeFormat, true, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        TransposeAdaptParam adptParams = {0};
+        TransposeAdaptParam adptParams = {nullptr};
         GetConv3DTransposeAdapterParam(input, stride, padding, dilation, outputPadding, executor, &adptParams);
         return CheckN2HAndTranspose(input, weight, groups, executor, &adptParams);
     };

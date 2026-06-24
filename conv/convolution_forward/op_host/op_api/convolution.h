@@ -20,10 +20,10 @@
 
 namespace l0op {
 struct transposeTagAdaptParam {
-  aclIntArray *adaptStride {0};
-  aclIntArray *adaptDilation {0};
-  aclIntArray *adaptPad {0};
-  aclIntArray *adaptoutputPad {0};
+  aclIntArray *adaptStride = nullptr;
+  aclIntArray *adaptDilation = nullptr;
+  aclIntArray *adaptPad = nullptr;
+  aclIntArray *adaptoutputPad = nullptr;
 };
 using TransposeAdaptParam = struct transposeTagAdaptParam;
 const aclTensor *Conv2d5HdFp16(const aclTensor *input, const aclTensor *weight, const aclTensor *bias,
