@@ -400,7 +400,7 @@ static bool CheckShapeValid(
 static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp)
 {
     if (!isMxFp) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             OP_NAME, "x2", "FRACTAL_NZ",
             Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
                                   "non-mxfp8 mode", "x2", "FRACTAL_NZ").c_str());
@@ -624,7 +624,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNzGetWorkspaceSize(
 
     // x2 format must be NZ
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) != Format::FORMAT_FRACTAL_NZ) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             OP_NAME, "x2",
             op::ToString(x2->GetStorageFormat()).GetString(),
             Ops::NN::FormatString("The format of %s must be %s", "x2", "FRACTAL_NZ").c_str());

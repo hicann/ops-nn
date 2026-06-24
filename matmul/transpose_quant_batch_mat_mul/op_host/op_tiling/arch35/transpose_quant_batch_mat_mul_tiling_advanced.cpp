@@ -273,7 +273,7 @@ ge::graphStatus IsValidFormat(const gert::TilingContext& context, const MatMulV3
         return ge::GRAPH_FAILED;
     }
     if (args.bFormat == ge::FORMAT_FRACTAL_NZ && !isMxfp8) {
-        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
             args.opName, "x2", "FRACTAL_NZ",
             Ops::NN::FormatString("In %s case, the format of %s cannot be %s",
                                   "non-mxfp8 mode", "x2", "FRACTAL_NZ").c_str());
