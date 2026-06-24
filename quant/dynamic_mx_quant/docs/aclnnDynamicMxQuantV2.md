@@ -145,8 +145,8 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入x，对应公式中Vi和di。</td>
-      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li><li>x的类型为FLOAT时，仅支持blocksize=32。</li></ul></td>
+      <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
       <td>√</td>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -39,10 +39,9 @@ protected:
     __aicore__ inline int64_t CalcDataLen(
         int64_t curLoopBlockSizeNum, int64_t blockSizeNumHandled, int64_t scaleDataLen);
     __aicore__ inline int64_t BlockCountInCurCompute(int64_t blockSizeIdx);
+
     template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const bool ISCOMPUTEELE = false>
-    __aicore__ inline void LoadData(
-        __ubuf__ T* xAddr, uint64_t offset, AscendC::MicroAPI::RegTensor<T>& xRegTensor,
-        AscendC::MicroAPI::MaskReg& mask);
+    __aicore__ inline void LoadData(__ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<T>& x, Reg::MaskReg& mask);
 
 protected:
     TPipe pipe_;
@@ -113,10 +112,7 @@ __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::ParseTilingData(cons
     mxScaleSize_ = tilingData->mxScaleSize;
 }
 
-__aicore__ inline int64_t min(int64_t a, int64_t b)
-{
-    return a > b ? b : a;
-}
+__aicore__ inline int64_t min(int64_t a, int64_t b) { return a > b ? b : a; }
 
 template <typename T, typename U, const bool isTail>
 __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::CopyIn(int64_t offset)
@@ -205,11 +201,11 @@ __aicore__ inline int64_t DynamicMxQuantBaseFP8<T, U, isTail>::BlockCountInCurCo
 template <typename T, typename U, const bool isTail>
 template <AscendC::RoundMode toBf16RoundMode, AscendC::RoundMode roundMode, const bool ISCOMPUTEELE>
 __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::LoadData(
-    __ubuf__ T* xAddr, uint64_t offset, AscendC::MicroAPI::RegTensor<T>& xRegTensor, AscendC::MicroAPI::MaskReg& mask)
+    __ubuf__ T* xAddr, uint64_t offset, Reg::RegTensor<T>& x, Reg::MaskReg& mask)
 {
-    AscendC::MicroAPI::UnalignReg uReg;
-    AscendC::MicroAPI::DataCopyUnAlignPre(uReg, xAddr + offset);
-    AscendC::MicroAPI::DataCopyUnAlign(xRegTensor, uReg, xAddr + offset);
+    Reg::UnalignReg uReg;
+    Reg::DataCopyUnAlignPre(uReg, xAddr + offset);
+    Reg::DataCopyUnAlign(x, uReg, xAddr + offset);
 }
 
 } // namespace DynamicMxQuant

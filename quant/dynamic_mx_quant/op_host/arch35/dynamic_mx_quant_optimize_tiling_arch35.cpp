@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 using namespace std;
 using namespace ge;
 using namespace AscendC;
+using namespace DynamicMxQuant;
 
 namespace optiling {
 constexpr int64_t NUM_ZERO = 0;
@@ -34,7 +35,6 @@ constexpr int64_t MODE_ONE = 1;
 constexpr int64_t MODE_TWO = 2;
 constexpr int64_t MODE_THREE = 3;
 constexpr int64_t DIGIT_TEN_THOUSAND = 10000;
-constexpr int64_t N_ALIGN128 = 128;
 constexpr int64_t BLOCK_PER_GROUP = 2;
 constexpr int64_t BYTES_OF_INPUT_TYPE = 2;
 
@@ -91,7 +91,7 @@ void DynamicMxQuantOptimzieTiling::SplitCore()
        小尾轴：以group为单位分核，group指竖直方向相邻两个block块
        大尾轴：以groupPerUb个块的block的大小为单位分核
     */
-    if (tilingParam_.postAxisSize <= N_ALIGN128) { // 小尾轴
+    if (tilingParam_.postAxisSize <= tilingParam_.nAlignNum) { // 小尾轴
         tilingParam_.totalGroupNum =
             tilingParam_.preAxisSize * tilingParam_.mAlignGroupCount * tilingParam_.nAlignBlockCount;
         tilingParam_.groupPerCore = Ops::Base::CeilDiv(tilingParam_.totalGroupNum, tilingParam_.totalCoreNum);
@@ -110,7 +110,10 @@ void DynamicMxQuantOptimzieTiling::SplitCore()
         // 尾轴是否需要补
         tilingParam_.needPadPostAxis = tilingParam_.postAxisSize % tilingParam_.nAlignNum != 0;
     } else { // 大尾轴
-        tilingParam_.ubRowLen = tilingParam_.vfLen / BYTES_OF_INPUT_TYPE;
+        // fp32 输入按 4 字节计算 ubRowLen，bf16/fp16 按 2 字节
+        int64_t inBytes =
+            tilingParam_.isFp32Input ? static_cast<int64_t>(4) : static_cast<int64_t>(BYTES_OF_INPUT_TYPE);
+        tilingParam_.ubRowLen = tilingParam_.vfLen / inBytes;
         tilingParam_.ubRowLenTail = tilingParam_.postAxisSize % tilingParam_.ubRowLen == 0 ?
                                         tilingParam_.ubRowLen :
                                         tilingParam_.postAxisSize % tilingParam_.ubRowLen;
@@ -147,7 +150,9 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
             tilingParam_.calcMode = MODE_THREE;
         }
     } else {
-        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "scale_alg", std::to_string(tilingParam_.scaleAlg), "The value of scale_alg must be [0, 1, 2]");
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context_->GetNodeName(), "scale_alg", std::to_string(tilingParam_.scaleAlg),
+            "The value of scale_alg must be [0, 1, 2]");
         return ge::GRAPH_FAILED;
     }
 
@@ -164,13 +169,13 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetCalcMode()
 
 void DynamicMxQuantOptimzieTiling::SetTilingKey()
 {
-    // 万位数为1、2，分别代表融合尾轴大于128和融合尾轴小于等于128
-    int64_t tenThousandDigit = tilingParam_.postAxisSize <= N_ALIGN128 ? NUM_ONE : NUM_TWO;
-    // 十位数表示舍入模式，0,1,4分别代表round，floor，rint
-    int64_t tenDigit = tilingParam_.roundMode;
-    // 个位数表示计算模式，可取0,1,2,3
-    int64_t digit = tilingParam_.calcMode;
-    tilingParam_.tilingKey = tenThousandDigit * DIGIT_TEN_THOUSAND + tenDigit * NUM_TEN + digit;
+    uint64_t optiMode = tilingParam_.postAxisSize <= tilingParam_.nAlignNum ? TPL_NOT_TAIL_AXIS_QUANT_SMALL_OPTI :
+                                                                              TPL_NOT_TAIL_AXIS_QUANT_LARGE_OPTI;
+    // 0,1,4分别代表round，floor，rint
+    uint64_t roundMode = tilingParam_.roundMode;
+    // 对应scaleAlg，可取0,1,2dst_value_max特殊值的情况下是2）,3（dst_value_max非特殊值的情况下是3）
+    uint64_t scaleAlg = tilingParam_.calcMode;
+    tilingParam_.tilingKey = GET_TPL_TILING_KEY(optiMode, scaleAlg, roundMode, TPL_NOT_CARE_SCALE);
 }
 
 ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData()
