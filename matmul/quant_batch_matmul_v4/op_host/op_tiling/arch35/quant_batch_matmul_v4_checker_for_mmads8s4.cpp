@@ -319,7 +319,8 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::ExtraInputCheck() const
         auto x2Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat()));
         OP_TILING_CHECK(x1Format != ge::Format::FORMAT_ND || x2Format != ge::Format::FORMAT_FRACTAL_NZ,
                         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-                            inputParams_.opName, "x1, x2", "x1Format, x2Format",
+                            inputParams_.opName, "x1, x2",
+                            Ops::Base::ToString(x1Format) + ", " + Ops::Base::ToString(x2Format),
                             "When in LUT mode, the format of x1 must be ND and the format of x2 must be FRACTAL_NZ"),
                         return false);
 

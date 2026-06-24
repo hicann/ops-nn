@@ -779,12 +779,73 @@ static bool AdvancedQuantParamsNullCheckForWeightInt4Nz(
     return true;
 }
 
+static bool CheckValForWeightFp4(
+    const aclTensor* weight, const aclTensor* antiquantScale, int antiquantGroupSize)
+{
+    auto weightDtype = weight->GetDataType();
+    if (weightDtype != DataType::DT_FLOAT4_E2M1) {
+        return true;
+    }
+
+    // MX supported: FP4 weight + FP8_E8M0 antiquantScale
+    if (antiquantScale->GetDataType() == DataType::DT_FLOAT8_E8M0) {
+        return true;
+    }
+
+    // perchannel/pertensor not supported
+    if (antiquantGroupSize == 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantGroupSize", "0",
+            "When the dtype of weight is FLOAT4_E2M1, "
+            "quantization mode perchannel/pertensor is not supported");
+        return false;
+    }
+
+    return true;
+}
+
+static bool CheckValForWeightFp8Hif8(
+    const aclTensor* weight, const aclTensor* antiquantScale, int antiquantGroupSize)
+{
+    auto weightDtype = weight->GetDataType();
+    if (weightDtype != DataType::DT_FLOAT8_E4M3FN && weightDtype != DataType::DT_HIFLOAT8) {
+        return true;
+    }
+
+    // MX not supported
+    if (antiquantScale->GetDataType() == DataType::DT_FLOAT8_E8M0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantScale", "DT_FLOAT8_E8M0",
+            "When the dtype of weight is FP8_E4M3FN or HIFLOAT8, "
+            "only perchannel quantization is supported, MX mode is not supported");
+        return false;
+    }
+
+    // pergroup not supported
+    if (antiquantGroupSize > 0) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantGroupSize", std::to_string(antiquantGroupSize).c_str(),
+            "When the dtype of weight is FP8_E4M3FN or HIFLOAT8, "
+            "only perchannel quantization is supported, antiquantGroupSize must be 0");
+        return false;
+    }
+
+    // pertensor not supported (n=1 pertensor is equivalent to perchannel, so it is allowed)
+    if (antiquantScale->GetViewShape().GetShapeSize() == 1 && GetWeightN(weight) != 1) {
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "antiquantScale", "pertensor",
+            "When the dtype of weight is FP8_E4M3FN or HIFLOAT8, "
+            "only perchannel quantization is supported, pertensor is not supported");
+        return false;
+    }
+
+    return true;
+}
+
 static bool AdvancedParamsCheck(
     const aclTensor* x, const aclTensor* weight, const aclTensor* antiquantScale, int antiquantGroupSize,
     bool transposeWeight)
 {
     return CheckValForWeightInt4Nz(x, weight, transposeWeight, antiquantGroupSize, antiquantScale) &&
-           CheckValForWeightInt8Nz(x, weight, antiquantGroupSize, antiquantScale);
+           CheckValForWeightInt8Nz(x, weight, antiquantGroupSize, antiquantScale) &&
+           CheckValForWeightFp4(weight, antiquantScale, antiquantGroupSize) &&
+           CheckValForWeightFp8Hif8(weight, antiquantScale, antiquantGroupSize);
 }
 
 static aclnnStatus CheckSocValid()

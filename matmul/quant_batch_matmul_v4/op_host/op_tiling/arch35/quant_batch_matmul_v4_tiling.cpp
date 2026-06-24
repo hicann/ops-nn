@@ -148,9 +148,9 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::GetShapeAttrsInfo()
     }
     inputParams_.weightNz = inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ;
     OP_TILING_CHECK(!AnalyzeQuantType() || !AnalyzeAttrs() || !AnalyzeInputs() || !AnalyzeDtype(),
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "Fail to analyze context info"), return ge::GRAPH_FAILED);
+        OP_LOGE(inputParams_.opName, "Fail to analyze context info"), return ge::GRAPH_FAILED);
     OP_TILING_CHECK(CheckInputParams() != ge::GRAPH_SUCCESS, 
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName, "invalid input parameters"),
+                    OP_LOGE(inputParams_.opName, "invalid input parameters"),
                     return ge::GRAPH_FAILED);
     auto transA_str = inputParams_.transA ? "true" : "false";
     auto transB_str = inputParams_.transB ? "true" : "false";
@@ -184,22 +184,20 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckContext() const
     OPS_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData()->GetData());
 
     size_t xDimNum = x1Shape->GetStorageShape().GetDimNum();
-    size_t weigthDimNum = x2Shape->GetStorageShape().GetDimNum();
+    size_t weightDimNum = x2Shape->GetStorageShape().GetDimNum();
     ge::Format weightFormat = static_cast<ge::Format>(ge::GetPrimaryFormat(weightDesc->GetStorageFormat()));
 
     OP_TILING_CHECK(inputParams_.supportL0c2Out && xDimNum != VALID_INPUT_DIM_NUM,
-        VECTOR_INNER_ERR_REPORT_TILIING(
-            inputParams_.opName,"only support dim num[%zu] for x, but get [%zu]", VALID_INPUT_DIM_NUM, xDimNum),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
+            inputParams_.opName, "x", std::to_string(xDimNum).c_str(),
+            "The shape dim of x must be " + std::to_string(VALID_INPUT_DIM_NUM)),
         return ge::GRAPH_FAILED);
     OP_TILING_CHECK(inputParams_.supportL0c2Out &&
-            ((!IsFormatNZ(weightFormat) && weigthDimNum != VALID_INPUT_DIM_NUM) ||
-             (IsFormatNZ(weightFormat) && weigthDimNum != VALID_WEIGHT_NZ_DIM_NUM)),
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "only support weight dim num[%zu] for ND format and dim num[%zu] for NZ format, but get [%zu] dim for [%s]",
-            VALID_INPUT_DIM_NUM,
-            VALID_WEIGHT_NZ_DIM_NUM,
-            weigthDimNum,
-            ge::TypeUtils::FormatToSerialString(weightFormat).c_str()),
+            ((!IsFormatNZ(weightFormat) && weightDimNum != VALID_INPUT_DIM_NUM) ||
+             (IsFormatNZ(weightFormat) && weightDimNum != VALID_WEIGHT_NZ_DIM_NUM)),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(inputParams_.opName, "x2", std::to_string(weightDimNum).c_str(),
+            "The shape dim of x2 must be " + std::to_string(VALID_INPUT_DIM_NUM) + "D when the format of x2 "
+            "is ND, or " + std::to_string(VALID_WEIGHT_NZ_DIM_NUM) + "D when the format of x2 is FRACTAL_NZ"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -211,32 +209,35 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
         maxDimCheck |= inputParams_.mSize > MAX_SHAPE_DIM;
     }
     OP_TILING_CHECK(inputParams_.supportL0c2Out && maxDimCheck,
-        VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-            "only support MKN in range [1, %lu], get actual value[%lu, %lu, %lu]",
-            MAX_SHAPE_DIM, inputParams_.mSize, inputParams_.kSize, inputParams_.nSize),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "MKN",
+            (std::to_string(inputParams_.mSize) + ", " + std::to_string(inputParams_.kSize) + ", " +
+             std::to_string(inputParams_.nSize)).c_str(),
+            "mkn must be in range [1, " + std::to_string(MAX_SHAPE_DIM) + "]"),
         return ge::GRAPH_FAILED);
     if (inputParams_.antiQuantType == QuantType::MX) {
         OP_TILING_CHECK(inputParams_.groupSize != MX_GROUP_SIZE,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Group size must be 32 for MX quantization, get group size[%lu]", inputParams_.groupSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize",
+                std::to_string(inputParams_.groupSize).c_str(),
+                "groupSize must be 32 when the quantization mode is MX"),
             return ge::GRAPH_FAILED);
     } else {
         OP_TILING_CHECK(inputParams_.groupSize > inputParams_.kSize || inputParams_.groupSize % MIN_GROUP_SIZE != 0,
-            VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                "Only support group size greater than %lu, less than K and align to %lu, get K[%lu] and group size[%lu]",
-                MIN_GROUP_SIZE, MIN_GROUP_SIZE, inputParams_.kSize, inputParams_.groupSize),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "groupSize",
+                std::to_string(inputParams_.groupSize).c_str(),
+                "groupSize must be greater than " + std::to_string(MIN_GROUP_SIZE) +
+                ", less than K(" + std::to_string(inputParams_.kSize) + ") and aligned to " + std::to_string(MIN_GROUP_SIZE)),
             return ge::GRAPH_FAILED);
     }
     OP_TILING_CHECK(inputParams_.supportL0c2Out && !inputParams_.supportL12BtBf16 &&
                         inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ &&
                         (inputParams_.bDtype != ge::DT_INT8 || inputParams_.antiQuantType != QuantType::PER_CHANNEL ||
                             inputParams_.cDtype == ge::DT_INT8),
-                    VECTOR_INNER_ERR_REPORT_TILIING(inputParams_.opName,
-                        "weight Nz only support weight dtype INT8 per-channel scene, and not support quant scale, "
-                        "current input bDtype[%s], antiquantType[%d], cDtype[%s]",
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                        static_cast<int>(inputParams_.antiQuantType),
-                        ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str()),
+                    OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(inputParams_.opName, "x2", "FRACTAL_NZ",
+                        "When the format of x2 is FRACTAL_NZ, the dtype of x2 must be INT8 and "
+                        "the quantization mode must be perchannel, quantScale can not be supported, "
+                        "current bDtype[" + ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype) +
+                        "], antiQuantType[" + std::to_string(static_cast<int>(inputParams_.antiQuantType)) +
+                        "], cDtype[" + ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype) + "]"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -282,7 +283,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeDtype()
         inputParams_.cDtype != ge::DT_BF16 && inputParams_.cDtype != ge::DT_FLOAT16,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
             inputParams_.opName, "y", ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype).c_str(),
-            "The dtype of y must be BF16 or FLOAT16."),
+            "The dtype of y must be BF16 or FLOAT16"),
         return false);
     if (inputParams_.antiQuantType != QuantType::MX) {
         // check yScale dtype
@@ -291,7 +292,7 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeDtype()
             yScaleDesc->GetDataType() != ge::DT_UINT64,
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 inputParams_.opName, "yScale", ge::TypeUtils::DataTypeToSerialString(yScaleDesc->GetDataType()).c_str(),
-                "The dtype of yScale must be UINT64."),
+                "The dtype of yScale must be UINT64"),
             return false);
     }
     return AnalyzeBiasDtype(biasDesc) && AnalyzeX1scaleDtype(x1ScaleDesc) && AnalyzeX2scaleDtype(x2ScaleDesc);
@@ -468,8 +469,8 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeInputs()
     }
     inputParams_.batchSize = shapeBatch;
     ge::Format aFormatCur = static_cast<ge::Format>(ge::GetPrimaryFormat(context_->GetInputDesc(0)->GetStorageFormat()));
-    OP_TILING_CHECK(aFormatCur != ge::FORMAT_ND, OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-        inputParams_.opName, "x1", "aFormat", "The format of x1 must be ND"), return false);
+    OP_TILING_CHECK(aFormatCur != ge::FORMAT_ND, OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
+        inputParams_.opName, "x1", Ops::Base::ToString(aFormatCur), "The format of x1 must be ND"), return false);
     return AnalyzeX2InputDim(x2Shape) && AnalyzeShapeSize(x1Shape, x2Shape) && AnalyzeBiasShape(biasShape) &&
            AnalyzeX1ScaleShape(x1ScaleShape) && AnalyzeX2ScaleShape(x2ScaleShape) &&
            AnalyzeYScaleOffsetShape(yScaleShape, yOffsetShape);
