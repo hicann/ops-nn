@@ -37,6 +37,10 @@ constexpr float ZERO_FLOAT = 0.0f;
 constexpr float SIX_FLOAT = 6.0f;
 constexpr float TWELVE_FLOAT = 12.0f;
 
+static bool IsFloatEqual(float a, float b) {
+    return std::abs(a - b) <= std::numeric_limits<float>::epsilon();
+}
+
 static bool IsFlatQuantMxFp4DavidSupport()
 {
     fe::PlatformInfo platformInfo;
@@ -70,7 +74,7 @@ static ge::graphStatus InferShape4FlatQuant(gert::InferShapeContext* context)
         }
         if (dstTypeMax != nullptr) {
             OP_CHECK_IF(
-                (*dstTypeMax != ZERO_FLOAT) && (*dstTypeMax < SIX_FLOAT || *dstTypeMax > TWELVE_FLOAT),
+                (!IsFloatEqual(*dstTypeMax, ZERO_FLOAT)) && (*dstTypeMax < SIX_FLOAT || *dstTypeMax > TWELVE_FLOAT),
                 OP_LOGE(context, "The dst_type_max[%f] must be 0 or in range [6, 12].", *dstTypeMax),
                 return GRAPH_FAILED);
         }
