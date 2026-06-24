@@ -73,6 +73,10 @@ static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_O
 static const std::map<NpuArch, const std::initializer_list<op::DataType>*> SOC_SCALE_SUPPORT_DTYPES = {
     {NpuArch::DAV_2201, &SCALE_DTYPE_SUPPORT_LIST}, {NpuArch::DAV_3510, &SCALE_DTYPE_SUPPORT_LIST_REGBASE}};
 
+static bool IsDoubleEqual(double a, double b) {
+    return std::abs(a - b) <= std::numeric_limits<double>::epsilon();
+}
+
 static const std::initializer_list<op::DataType>& GetDtypeSupportList(
     const std::map<NpuArch, const std::initializer_list<op::DataType>*>& socSupportDtypes)
 {
@@ -309,7 +313,7 @@ static bool CheckRatioValid(double clipRatio)
 static bool CheckMaxValid(double dstTypeMax)
 {
     OP_CHECK(
-        dstTypeMax == ZERO || (dstTypeMax >= SIX && dstTypeMax <= TWELVE),
+        IsDoubleEqual(dstTypeMax, ZERO) || (dstTypeMax >= SIX && dstTypeMax <= TWELVE),
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dstTypeMax must be 0 or in range [6, 12], dstTypeMax [%f].", dstTypeMax),
         return false);
     return true;
