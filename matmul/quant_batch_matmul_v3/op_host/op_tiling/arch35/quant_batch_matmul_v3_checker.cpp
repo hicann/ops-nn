@@ -587,7 +587,7 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
             FormatString("[%ld, %ld], [%ld, %ld]",
                          scaleShape.GetDim(x2ShapeLen - 2), scaleShape.GetDim(x2ShapeLen - 1),
                          x2Shape.GetDim(x2ShapeLen - 2), x2Shape.GetDim(x2ShapeLen - 1)).c_str(),
-            "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two dimensions of x2 ceildivided by groupSize 128"),
+            "when the quantization mode is G-B or B-B, the last two dimensions of scale must be equal to the last two dimensions of x2 ceildivided by 128"),
         return false);
     int64_t x1MIndex = inputParams_.transA ? (x1ShapeLen - 1) : (x1ShapeLen - 2);
     int64_t x1KIndex = inputParams_.transA ? (x1ShapeLen - 2) : (x1ShapeLen - 1);

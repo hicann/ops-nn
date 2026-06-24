@@ -207,7 +207,7 @@ bool QuantBatchMatmulV3Checker4MmadS8S4::ExtraInputCheck() const
     auto x2Desc = context_->GetInputDesc(GetX2Idx());
     auto x2Format = static_cast<ge::Format>(ge::GetPrimaryFormat(x2Desc->GetStorageFormat()));
     OP_TILING_CHECK(inputParams_.aDtype == ge::DT_INT4 && x2Format != ge::Format::FORMAT_FRACTAL_NZ,
-                    OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+                    OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
                         inputParams_.opName, "x2", ge::TypeUtils::FormatToSerialString(x2Format).c_str(),
                         "when the dtype of x1 is INT4, the format of x2 must be FRACTAL_NZ"),
                     return false);

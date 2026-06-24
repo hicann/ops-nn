@@ -1104,7 +1104,8 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     }
     int64_t groupSizeReal = groupSize;
     if (!isA8W4) {
-        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out);
+        QuantMatmulChecker qmmV3Checker(inputTensors, quantTensors, boolsTrans, out, false,
+                                        "aclnnQuantMatmulV5GetWorkspaceSize");
         qmmV3Checker.Init();
         CHECK_RET(qmmV3Checker.InferGroupSize(groupSizeReal), ACLNN_ERR_PARAM_INVALID);
         OP_LOGD("Infer groupSize success. groupSize: %ld.",
@@ -1128,7 +1129,8 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     TupleTensor inOutTuple = std::tie(reformatedX1, reformatedX2, out);
     GetDtypeAndTranspose(inOutTuple, dtype, transposeX1, transposeX2);
 
-    QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out);
+    QuantMatmulChecker qmmV3Checker(inputTuple, quantTuple, boolsTrans, out, false,
+                                    "aclnnQuantMatmulV5GetWorkspaceSize");
     qmmV3Checker.Init();
     bool isA4W4PergroupNonSymmetric =
         qmmV3Checker.IsA4W4PergroupNonSymmetric(groupSizeK) && CheckFormat(inputTensors, quantTensors, out);
