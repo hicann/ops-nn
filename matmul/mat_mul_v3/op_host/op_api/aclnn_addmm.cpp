@@ -475,8 +475,7 @@ static aclnnStatus AddmmCheckWeightNzParam(AclnnAddmmTensor& addmmTensor, int8_t
     return ACL_SUCCESS;
 }
 
-static bool check16In32OutputWithBias(
-    const aclTensor* bias, const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
+static bool check16In32Output(const aclTensor* mat1, const aclTensor* mat2, const aclTensor* out)
 {
     auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     if (npuArch != NpuArch::DAV_2201) {
@@ -488,7 +487,7 @@ static bool check16In32OutputWithBias(
     if ((dtypeBf16 || dtypeFp16) && outFp32) {
         return false;
     }
-    
+
     return true;
 }
 
@@ -701,7 +700,7 @@ std::shared_ptr<MatmulGraphImpl> CreateAddmmGraphImpl(
     }
     // 以下全部是 alpha != 0 && beta != 0
 
-    if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32OutputWithBias(self, mat1, mat2, out)) {
+    if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
         OP_LOGI("run in NeedToConvertBias branch");
         matmulGraph = std::make_shared<AddmmMmOpWithBiasGraph>(mat1, mat2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
@@ -819,7 +818,7 @@ ACLNN_API aclnnStatus aclnnAddmmWeightNzGetWorkspaceSize(
         OP_LOGD("aclnnAddmmWeightNz run in ExecGemmV3WithAlphaBetaOp branch");
         // 16in32out场景优先走gemmV3通路
         castOut = ExecGemmV3WithAlphaBetaOp(self, mat1, mat2, alpha, beta, uniqueExecutor.get(), enable16In32Out);
-    } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32OutputWithBias(self, mat1, mat2, out)) {
+    } else if (NeedToConvertBias(self, mat1, mat2, beta, alpha) && check16In32Output(mat1, mat2, out)) {
         OP_LOGD("aclnnAddmmWeightNz run in NeedToConvertBias branch");
         auto biasMmOut = ExecMmOpWithBias(
             mat1, mat2, self, out, cubeMathType, uniqueExecutor.get(), false, false);

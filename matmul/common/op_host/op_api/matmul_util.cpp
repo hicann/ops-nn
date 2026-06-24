@@ -1949,7 +1949,7 @@ bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
 {
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
-    int64_t dimNum = selfShape.GetDimNum();
+    int64_t dimNum = static_cast<int64_t>(selfShape.GetDimNum());
     if (dimNum < NUM_TWO) {
         return false;
     }
