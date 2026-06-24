@@ -46,28 +46,28 @@ $$
     <tr>
       <td>self</td>
       <td>输入</td>
-      <td>输入张量，公式中的 $x$。</td>
+      <td>输入张量，公式中的x。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>threshold</td>
       <td>属性</td>
-      <td>阈值，用于判断条件 $x > \text{threshold}$。</td>
+      <td>阈值，用于判断条件 x > threshold。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>value</td>
       <td>属性</td>
-      <td>替换值，当 $x \leq \text{threshold}$ 时，输出为 value。</td>
+      <td>替换值，当 x <= threshold 时，输出为 value。</td>
       <td>FLOAT</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>输出张量，公式中的 $y$，与 self 的 shape 和数据类型一致。</td>
+      <td>输出张量，公式中的 y，与 self 的 shape 和数据类型一致。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>

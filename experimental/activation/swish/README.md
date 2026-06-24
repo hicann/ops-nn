@@ -36,7 +36,7 @@
 
 ## 约束与限制
 
-- x,y的数据类型仅支持float32,float16,bfloat1，数据格式仅支持ND
+- x,y的数据类型仅支持float32,float16,bfloat16，数据格式仅支持ND
 
 ### 运行验证
 
