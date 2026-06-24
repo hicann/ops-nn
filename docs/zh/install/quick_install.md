@@ -44,7 +44,7 @@
 
 1. **安装驱动与固件（运行态依赖）**
 
-驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-sim info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
+驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-smi info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
 
 2. **下载镜像**
 
@@ -92,7 +92,7 @@ docker run --name cann_container --device /dev/davinci0 --device /dev/davinci_ma
 
     1. **安装驱动与固件（运行态依赖）**
 
-        驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-sim info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
+        驱动与固件是运行态依赖，若仅编译算子，可以不安装。使用`npu-smi info`检查是否有NPU相关信息，若没有，请参考《[CANN快速安装](https://www.hiascend.com/cann/download)》完成驱动与固件安装。
 
     2. **安装CANN包**
 
