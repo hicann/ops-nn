@@ -172,12 +172,16 @@ static bool CheckDtypeValid(RmsNormQuantInputTensor& inputTensor, const aclTenso
 aclnnStatus PreDealData(RmsNormQuantInputTensor& inputTensor, aclOpExecutor* executor)
 {
     if (inputTensor.gamma != nullptr && inputTensor.gamma->GetViewShape().GetDimNum() == DIMS_TWO_NUMS) {
-        auto gammaReshape = l0op::Reshape(inputTensor.gamma, {inputTensor.gamma->GetViewShape()[1]}, executor);
+        auto gammaCont = l0op::Contiguous(inputTensor.gamma, executor);
+        CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto gammaReshape = l0op::Reshape(gammaCont, {gammaCont->GetViewShape()[1]}, executor);
         CHECK_RET(gammaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputTensor.gamma = gammaReshape;
     }
     if (inputTensor.beta != nullptr && inputTensor.beta->GetViewShape().GetDimNum() == DIMS_TWO_NUMS) {
-        auto betaReshape = l0op::Reshape(inputTensor.beta, {inputTensor.beta->GetViewShape()[1]}, executor);
+        auto betaCont = l0op::Contiguous(inputTensor.beta, executor);
+        CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        auto betaReshape = l0op::Reshape(betaCont, {betaCont->GetViewShape()[1]}, executor);
         CHECK_RET(betaReshape != nullptr, ACLNN_ERR_INNER_NULLPTR);
         inputTensor.beta = betaReshape;
     }
@@ -360,7 +364,7 @@ aclnnStatus aclnnRmsNormQuantGetWorkspaceSize(
         auto betaCont = l0op::Contiguous(beta, uniqueExecutor.get());
         CHECK_RET(gammaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
         CHECK_RET(betaCont != nullptr, ACLNN_ERR_INNER_NULLPTR);
-        auto resultTensor = l0op::RmsNormQuant(x, gamma, beta, scale, offset, epsilon, yType, uniqueExecutor.get());
+        auto resultTensor = l0op::RmsNormQuant(xCont, gammaCont, betaCont, scaleCont, offsetCont, epsilon, yType, uniqueExecutor.get());
         const aclTensor* outTensor = resultTensor;
         if (yType == op::DataType::DT_INT4) {
             ret = Int42Int32PackedTensor(resultTensor, outTensor, uniqueExecutor.get());
