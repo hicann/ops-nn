@@ -1170,8 +1170,7 @@ bool QuantMatmulChecker::CheckWeightNzDtype4Fp8E4M3() const
 
 bool QuantMatmulChecker::CheckWeightNzDtype4Fp4() const
 {
-    if (!(x1Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
-          x2Scale_->GetDataType() == op::DataType::DT_FLOAT8_E8M0)) {
+    if (!IsMicroScaling(x1Scale_, x2Scale_)) {
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
             apiName_, FormatString("%s, %s", GetX1ScaleName().c_str(), GetX2ScaleName().c_str()).c_str(),
             FormatString("%s, %s", x1Scale_ == nullptr ? "null" : op::ToString(x1Scale_->GetDataType()).GetString(),
