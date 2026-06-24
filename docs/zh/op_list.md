@@ -3391,6 +3391,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_add_sign/README.md">apply_add_sign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行AddSign优化器的单步参数更新，根据当前梯度grad、一阶矩动量m、学习率lr、缩放系数alpha和符号衰减系数sign_decay，利用梯度方向与动量方向的符号一致性自适应调节学习率步长，原地更新权重参数var。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_adamax/README.md">apply_adamax</a></td>
     <td>✓</td>
     <td>✓</td>
