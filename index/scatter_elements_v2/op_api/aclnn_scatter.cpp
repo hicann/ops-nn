@@ -436,6 +436,12 @@ static const aclTensor* DoScatterAddWithSorted(
     if (!CheckType(self->GetDataType(), AICORE_910B_DTYPE_FLOAT_LIST) && reduction == REDUCTION_ADD) {
         // scatter add index
         scatterRes = l0op::ScatterAddWithSorted(self, src, indexLinear, nullptr, reduction, executor);
+    } else if (linearSize == 1) {
+        // sort在元素个数为1时会走到aicpu算子，性能大幅劣化，跳过sort
+        const aclTensor* posTensor =
+            executor->ConvertToTensor(executor->AllocScalar(0), op::DataType::DT_INT32);
+        CHECK_RET(posTensor != nullptr, nullptr);
+        scatterRes = l0op::ScatterAddWithSorted(self, src, indexLinear, posTensor, reduction, executor);
     } else {
         // sort index
         const aclTensor* indiceViewFloat =
