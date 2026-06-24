@@ -1606,6 +1606,11 @@ __aicore__ inline void CrossCoreSetHead(Intf *self)
     if ASCEND_IS_AIC_SCALAR {
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
+#if (__NPU_ARCH__ == 5102)
+            if (self->ctx.tiling_->bl1Pbuffer > 1) {
+                CvCrossCoreSet<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
+            }
+#endif
         }
     }
 #endif
@@ -1619,6 +1624,11 @@ __aicore__ inline void CrossCoreWaitTail(Intf *self)
         if constexpr (Intf::conv3dConfig.groupMode == TPL_GROUP_MODE_ENLARGE) {
             if (GetSubBlockIdx() == 0) {
                 CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
+#if (__NPU_ARCH__ == 5102)
+                if (self->ctx.tiling_->bl1Pbuffer > 1) {
+                    CvCrossCoreWait<Intf, PIPE_MTE1, PIPE_V>(self, FLAG_MTE1_ID_2);
+                }
+#endif
             }
         }
     }
