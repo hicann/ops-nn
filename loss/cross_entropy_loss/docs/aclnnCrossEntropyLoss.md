@@ -104,7 +104,7 @@ aclnnStatus aclnnCrossEntropyLoss(
     <tr>
     <td>input（aclTensor*）</td>
     <td>输入</td>
-    <td>公式中的input。</td>
+    <td>公式中的x。</td>
     <td>-</td>
     <td>FLOAT、FLOAT16、BFLOAT16</td>
     <td>ND</td>
