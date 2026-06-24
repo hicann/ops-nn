@@ -104,15 +104,6 @@ static ge::graphStatus Tiling4ForeachPowScalarAndTensorTiling(gert::TilingContex
     return tilingObject.RunBigKernelTiling();
 }
 
-static ge::graphStatus Tiling4ForeachPowScalarListTiling(gert::TilingContext* context)
-{
-    ForeachCommonTiling tilingObject(context);
-    if (tilingObject.Init(FOREACH_POW_SCALAR_OP_CODE, ForeachInputType::TYPE_SCALARS_TENSOR) != ge::GRAPH_SUCCESS) {
-        return ge::GRAPH_FAILED;
-    }
-    return tilingObject.RunBigKernelTiling();
-}
-
 static ge::graphStatus Tiling4ForeachSqrtTiling(gert::TilingContext* context)
 {
     return Ops::NN::Optiling::TilingRegistry::GetInstance().DoTilingImpl(context);
@@ -284,10 +275,6 @@ IMPL_OP_OPTILING(ForeachPowList)
 
 IMPL_OP_OPTILING(ForeachPowScalarAndTensor)
     .Tiling(Tiling4ForeachPowScalarAndTensorTiling)
-    .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
-
-IMPL_OP_OPTILING(ForeachPowScalarList)
-    .Tiling(Tiling4ForeachPowScalarListTiling)
     .TilingParse<ForeachCompileInfo>(TilingPrepare4ForeachTiling);
 
 IMPL_OP_OPTILING(ForeachSqrt)

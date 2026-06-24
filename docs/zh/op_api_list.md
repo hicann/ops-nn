@@ -213,7 +213,7 @@
 | [aclnnForeachPowScalar](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalar.md) | 对输入张量列表x中的每个张量进行指数运算，指数为张量scale。 | 默认确定性实现 | - |
 | [aclnnForeachPowScalarV2](../../foreach/foreach_pow_scalar/docs/aclnnForeachPowScalarV2.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量exponent。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachPowScalarAndTensor](../../foreach/foreach_pow_scalar_and_tensor/docs/aclnnForeachPowScalarAndTensor.md) | 对输入张量列表x中的每个张量进行指数运算，底数为输入的标量scalar。 | 默认确定性实现 | - |
-| [aclnnForeachPowScalarList](../../foreach/foreach_pow_scalar_list/docs/aclnnForeachPowScalarList.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量列表exponent中对应的标量。 | 默认确定性实现 | - |
+| [aclnnForeachPowScalarList](../../foreach/foreach_pow_scalar_list/docs/aclnnForeachPowScalarList.md) | 对输入张量列表x中的每个张量进行指数运算，指数为标量列表exponent中对应的标量。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachReciprocal](../../foreach/foreach_reciprocal/docs/aclnnForeachReciprocal.md) | 对输入张量列表的每个张量进行倒数运算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnForeachRoundOffNumber](../../foreach/foreach_round_off_number/docs/aclnnForeachRoundOffNumber.md) | 对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。 | 默认确定性实现 | 默认确定性计算 |
 | [aclnnForeachRoundOffNumberV2](../../foreach/foreach_round_off_number/docs/aclnnForeachRoundOffNumberV2.md) | 对输入张量列表的每个张量执行指定精度的四舍五入运算，可通过roundMode指定舍入方式。 | 默认确定性实现 | 默认确定性计算 |

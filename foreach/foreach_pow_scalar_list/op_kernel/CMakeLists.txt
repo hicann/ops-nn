@@ -12,7 +12,9 @@ add_kernel_sources(
     COMPUTE_UNITS ascend910b ascend910_93 kirinx90 kirin9030
     AUTO_SYNC false
 )
+
 add_kernel_sources(
+    KERNEL_SRC arch35/foreach_pow_scalar_list.cpp
     COMPUTE_UNITS ascend950
     AUTO_SYNC false
 )
