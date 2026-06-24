@@ -36,6 +36,7 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/small_vector.h"
 #include "opdev/platform.h"
+#include "level0/fill.h"
 
 #include <cstdint>
 #include <cmath>
@@ -250,6 +251,12 @@ static bool CanDealWith(const aclTensor *self, int64_t k)
     }
 }
 
+// 非950不操作
+static bool IsTopkAxisOneCopy(int64_t k, int64_t sortDimValue)
+{
+    return sortDimValue == k && k == 1 && Ops::NN::AclnnUtil::IsRegbase();
+}
+
 static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, bool sorted)
 {
   // 如果不是950,不copy
@@ -264,8 +271,8 @@ static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, b
   if (!CanDealWith(self, k)) {
     return false;
   }
-  // k等于1或者不排序的时候，直接Copy
-  return k == 1 || !sorted;
+  // 不排序的时候，直接Copy
+  return !sorted;
 }
 
 static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values, aclTensor *indices, aclOpExecutor *executor)
@@ -490,6 +497,25 @@ static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
     return socCheck && dtypeCheck && shapeCheck && k > RADIX_TOP_K_MIN_K;
 }
 
+static const aclTensor* GetTensorWithValueZero(aclTensor* out, aclOpExecutor* executor)
+{
+    OP_LOGD("get topk zero tensor start");
+    if (out->IsEmpty()) {
+        return out;
+    }
+    aclScalar* scalar = executor->AllocScalar(0);
+    auto valueTensor = executor->ConvertToTensor(scalar, out->GetDataType());
+    auto outputDims = op::ToShapeVector(out->GetViewShape());
+    aclIntArray* dimArray = executor->AllocIntArray(outputDims.data(), outputDims.size());
+    auto dimTensor = executor->ConvertToTensor(dimArray, op::DataType::DT_INT64);
+    auto zeroTensor = l0op::Fill(dimTensor, valueTensor, dimArray, executor);
+    if (zeroTensor == nullptr) {
+        return nullptr;
+    }
+    auto viewCopyResult = l0op::ViewCopy(zeroTensor, out, executor);
+    return viewCopyResult;
+}
+
 aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool largest, bool sorted,
                                       aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
                                       aclOpExecutor **executor) {
@@ -535,6 +561,21 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
   auto indicesDType = indicesOut->GetDataType();
   auto xDType = self->GetDataType();
   bool isHasCasted = false;
+
+  if (IsTopkAxisOneCopy(k, sortDimValue)) {
+      OP_LOGD("topk axis one copy sortDimValue=[%ld].", sortDimValue);
+      // self 如果非连续，需要转换
+      auto selfContiguousCast = l0op::Contiguous(selfCast, uniqueExecutor.get());
+      CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      auto viewCopyValues = l0op::ViewCopy(selfContiguousCast, valuesOut, uniqueExecutor.get());
+      CHECK_RET(viewCopyValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      auto zeroTensor = GetTensorWithValueZero(indicesOut, uniqueExecutor.get());
+      CHECK_RET(zeroTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+      uniqueExecutor.ReleaseTo(executor);
+      return ACLNN_SUCCESS;
+  }
+
   if (IsTopKCopy(selfCast, k, sortDimValue, sorted)) {
     OP_LOGD("aclnn topk copy, positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
     TopKCopy(selfCast, k, valuesOut, indicesOut, uniqueExecutor.get());
