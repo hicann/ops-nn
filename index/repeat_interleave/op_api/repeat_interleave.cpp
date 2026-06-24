@@ -23,68 +23,9 @@
 
 using namespace op;
 
-static const int64_t AXIS_LIMIT = 8; // L0算子最大支持8维
-static const int64_t INT32_MAX_NUM = 2147483647;
-static const int64_t MTE_NUM = 256;
-
 namespace l0op {
 OP_TYPE_REGISTER(RepeatInterleave);
 OP_TYPE_REGISTER(RepeatInterleaveV2);
-static const std::initializer_list<op::DataType> AICORE910B_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
-
-static const std::initializer_list<op::DataType> BIG_SHAPE_DTYPE_SUPPORT_LIST = {
-    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
-    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16,
-    op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BOOL};
-
-static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize)
-{
-    if (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B &&
-        GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) {
-        return false;
-    }
-
-    auto xViewShape = x->GetViewShape();
-    auto xDataType = x->GetDataType();
-    int64_t xDimNum = xViewShape.GetDimNum();
-    for (int64_t i = 0; i < xDimNum; i++) {
-        if (xViewShape[i] > INT32_MAX_NUM && CheckType(xDataType, BIG_SHAPE_DTYPE_SUPPORT_LIST)) {
-            return true;
-        }
-    }
-
-    if (outputSize >= INT32_MAX_NUM) {
-        return false;
-    }
-
-    // 这种情况是V1特殊优化场景，走V1
-    if (xDimNum == 1 && repeats->GetViewShape().GetDimNum() == 1 &&
-        repeats->GetViewShape().GetDim(0) == x->GetViewShape().GetDim(0)) {
-        // repeats and z one-to-one，and rowLength = 1 and not is int64
-        if (x->GetDataType() != op::DataType::DT_INT64) {
-            return false;
-        }
-    }
-
-    if (xDimNum == 0) {
-        return false; // V2 不支持标量tensor
-    }
-
-    auto xDimSize = x->GetViewShape().GetDimNum();
-    axis = axis >= 0 ? axis : axis + xDimSize; // axis保证为非负数
-    int64_t rows = 1;
-    for (int64_t i = 0; i < axis; i++) {
-        rows *= (x->GetViewShape())[i];
-    }
-
-    if (rows * outputSize < MTE_NUM) {
-        return false; // V2始终是满核运行，搬运次数小于256时走V1，防止小shape因为V2启动的核多导致劣化
-    }
-
-    return CheckType(x->GetDataType(), AICORE910B_DTYPE_SUPPORT_LIST);
-}
 
 static op::Shape RepeatInterleaveInferShape(const aclTensor* x, int64_t axis, int64_t outputSize)
 {
@@ -115,19 +56,11 @@ const aclTensor* RepeatInterleaveV2(
     L0_DFX(RepeatInterleaveV2, x, repeats, axis, outputSize);
     op::Shape outShape = RepeatInterleaveInferShape(x, axis, outputSize);
     auto out = executor->AllocTensor(outShape, x->GetDataType(), x->GetViewFormat());
-    if (IsRepeatInterleaveV2Support(x, repeats, axis, outputSize)) {
-        auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleaveV2, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-        OP_CHECK(
-            ret == ACLNN_SUCCESS,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-            return nullptr);
-    } else {
-        auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleave, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
-        OP_CHECK(
-            ret == ACLNN_SUCCESS,
-            OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveAiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
-            return nullptr);
-    }
+    auto ret = ADD_TO_LAUNCHER_LIST_AICORE(RepeatInterleaveV2, OP_INPUT(x, repeats), OP_OUTPUT(out), OP_ATTR(axis));
+    OP_CHECK(
+        ret == ACLNN_SUCCESS,
+        OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "RepeatInterleaveV2AiCore ADD_TO_LAUNCHER_LIST_AICORE failed."),
+        return nullptr);
     return out;
 }
 } // namespace l0op

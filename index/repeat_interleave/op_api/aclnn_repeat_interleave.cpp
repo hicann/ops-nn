@@ -62,6 +62,62 @@ static const std::string STR_SELF = "self";
 static const std::string STR_REPEATS = "repeats";
 static const std::string STR_OUT = "out";
 
+static const int64_t INT32_MAX_NUM = 2147483647;
+static const int64_t MTE_NUM = 256;
+
+static const std::initializer_list<op::DataType> AICORE910B_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16};
+
+static const std::initializer_list<op::DataType> BIG_SHAPE_DTYPE_SUPPORT_LIST = {
+    op::DataType::DT_INT16,   op::DataType::DT_INT32, op::DataType::DT_INT64,
+    op::DataType::DT_FLOAT16, op::DataType::DT_FLOAT, op::DataType::DT_BF16,
+    op::DataType::DT_INT8,    op::DataType::DT_UINT8, op::DataType::DT_BOOL};
+
+static bool IsRepeatInterleaveV2Support(const aclTensor* x, const aclTensor* repeats, int64_t axis, int64_t outputSize)
+{
+    if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+        return false;
+    }
+
+    auto xViewShape = x->GetViewShape();
+    auto xDataType = x->GetDataType();
+    int64_t xDimNum = xViewShape.GetDimNum();
+    for (int64_t i = 0; i < xDimNum; i++) {
+        if (xViewShape[i] > INT32_MAX_NUM && op::CheckType(xDataType, BIG_SHAPE_DTYPE_SUPPORT_LIST)) {
+            return true;
+        }
+    }
+
+    if (outputSize >= INT32_MAX_NUM) {
+        return false;
+    }
+
+    if (xDimNum == 1 && repeats->GetViewShape().GetDimNum() == 1 &&
+        repeats->GetViewShape().GetDim(0) == x->GetViewShape().GetDim(0)) {
+        if (x->GetDataType() != op::DataType::DT_INT64) {
+            return false;
+        }
+    }
+
+    if (xDimNum == 0) {
+        return false;
+    }
+
+    auto xDimSize = x->GetViewShape().GetDimNum();
+    axis = axis >= 0 ? axis : axis + xDimSize;
+    int64_t rows = 1;
+    for (int64_t i = 0; i < axis; i++) {
+        rows *= (x->GetViewShape())[i];
+    }
+
+    if (rows * outputSize < MTE_NUM) {
+        return false;
+    }
+
+    return op::CheckType(x->GetDataType(), AICORE910B_DTYPE_SUPPORT_LIST);
+}
+
 // 得到tensor的维度数
 static inline int64_t GetTensorDimNum(const aclTensor* self)
 {
@@ -501,8 +557,14 @@ aclnnStatus aclnnRepeatInterleaveWithDimGetWorkspaceSize(
     int64_t selfDimNum = GetTensorDimNum(self);
     dim = WrapDim(dim, selfDimNum); // 将负数dim转为正数dim
 
-    auto repeatInterleaveOut =
-        l0op::RepeatInterleaveV2(selfContiguous, repeatsContiguous, dim, outputSize, uniqueExecutor.get());
+    const aclTensor* repeatInterleaveOut = nullptr;
+    if (IsRepeatInterleaveV2Support(selfContiguous, repeatsContiguous, dim, outputSize)) {
+        repeatInterleaveOut =
+            l0op::RepeatInterleaveV2(selfContiguous, repeatsContiguous, dim, outputSize, uniqueExecutor.get());
+    } else {
+        repeatInterleaveOut =
+            l0op::RepeatInterleave(selfContiguous, repeatsContiguous, dim, outputSize, uniqueExecutor.get());
+    }
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
@@ -626,8 +688,14 @@ aclnnStatus aclnnRepeatInterleaveIntWithDimGetWorkspaceSize(
     int64_t selfDimNum = GetTensorDimNum(self);
     dim = WrapDim(dim, selfDimNum);
 
-    auto repeatInterleaveOut =
-        l0op::RepeatInterleaveV2(selfContiguous, repeatsTensor, dim, outputSize, uniqueExecutor.get());
+    const aclTensor* repeatInterleaveOut = nullptr;
+    if (IsRepeatInterleaveV2Support(selfContiguous, repeatsTensor, dim, outputSize)) {
+        repeatInterleaveOut =
+            l0op::RepeatInterleaveV2(selfContiguous, repeatsTensor, dim, outputSize, uniqueExecutor.get());
+    } else {
+        repeatInterleaveOut =
+            l0op::RepeatInterleave(selfContiguous, repeatsTensor, dim, outputSize, uniqueExecutor.get());
+    }
     CHECK_RET(repeatInterleaveOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
     CHECK_RET(CheckRepeatresOutShape(repeatInterleaveOut, out), ACLNN_ERR_PARAM_INVALID);
 
