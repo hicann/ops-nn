@@ -482,7 +482,11 @@ __aicore__ inline void SetMNBeforeIterateK(Intf *self, MmadParams &mmadParams)
     self->ctx.loadScaleL1Ins.SetN(currentNL0);
 
     if constexpr (Intf::ConvParam::innerBatch == static_cast<int8_t>(ConvInnerBatch::KERNEL_1X1_MULTI_BATCH)) {
-        mmadParams.m = self->ctx.innerBatch * currentML0;
+        if constexpr (Intf::formatOutput == ConvFormat::NCHW && Intf::c04Flag) {
+            mmadParams.m = self->ctx.innerBatch * AlignB(C04_CIN_SIZE * currentML0, Intf::k0) / C04_CIN_SIZE;
+        } else {
+            mmadParams.m = self->ctx.innerBatch * currentML0;
+        }
         mmadParams.disableGemv = true;
     } else {
         mmadParams.m = self->ctx.currentML0Align;
