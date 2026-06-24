@@ -26,7 +26,7 @@ using namespace Cmct::Gemm;
               int8_t precisionMode, bool aTrans, bool bTrans, CubeFormat bFormat, class l0cDtype, class blockType,     \
               const MatmulConfig& mmCfg>
 #define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                                 \
-    aType, bType, scaleType, biasType, ptScaleType, cType, precisionMode, aTrans, bTrans, bFormat, l0cDtype, blockType,\ 
+    aType, bType, scaleType, biasType, ptScaleType, cType, precisionMode, aTrans, bTrans, bFormat, l0cDtype, blockType,\
     mmCfg
 
 namespace TransposeQuantBatchMatMulAdvanced {

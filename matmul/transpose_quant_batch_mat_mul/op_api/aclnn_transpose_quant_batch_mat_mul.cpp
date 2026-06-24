@@ -437,6 +437,27 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     }
     return true;
 }
+static bool CheckBatchAndKDimsValid(op::Shape x1Shape, op::Shape x2Shape, int64_t x1KDim, int64_t x2KDim,
+                                    int64_t x1BatchDim, int64_t x2BatchDim)
+{
+    if (x1BatchDim != x2BatchDim) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString("%s, %s", op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "batch-axis", "x1, x2").c_str());
+        return false;
+    }
+    if (x1KDim != x2KDim) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            OP_NAME, "x1, x2",
+            Ops::NN::FormatString("%s, %s", op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString())
+                .c_str(),
+            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
+        return false;
+    }
+    return true;
+}
 
 static bool CheckShapeValid(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale,
@@ -453,16 +474,12 @@ static bool CheckShapeValid(
     }
     int64_t x1KDim = x1->GetViewShape().GetDim((*permX1)[2]);
     int64_t x2KDim = x2->GetViewShape().GetDim((*permX2)[1]);
-    int64_t batch = x1->GetViewShape().GetDim((*permX1)[0]);
+    int64_t x1BatchDim = x1->GetViewShape().GetDim((*permX1)[0]);
+    int64_t x2BatchDim = x2->GetViewShape().GetDim((*permX2)[0]);
     int64_t m = x1->GetViewShape().GetDim((*permX1)[1]);
     int64_t n = x2->GetViewShape().GetDim((*permX2)[2]);
 
-    if (x1KDim != x2KDim) {
-        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            OP_NAME, "x1, x2",
-            Ops::NN::FormatString("%s, %s", op::ToString(x1Shape).GetString(), op::ToString(x2Shape).GetString())
-                .c_str(),
-            Ops::NN::FormatString("%s of %s must be equal", "K-axis", "x1, x2").c_str());
+    if (!CheckBatchAndKDimsValid(x1Shape, x2Shape, x1KDim, x2KDim, x1BatchDim, x2BatchDim)) {
         return false;
     }
     bool isHIFP8 = IsHIFP8(x1, x2);
@@ -485,7 +502,7 @@ static bool CheckShapeValid(
             return false;
         }
     }
-    return CheckScaleValid(x1Scale, x2Scale, batch, m, n, x1KDim, permX2, isMxFp, isHIFP8);
+    return CheckScaleValid(x1Scale, x2Scale, x1BatchDim, m, n, x1KDim, permX2, isMxFp, isHIFP8);
 }
 
 static inline bool CheckWeightNz(const aclTensor* x2, bool isMxFp)
@@ -561,17 +578,19 @@ inline static aclnnStatus CheckParams(
     if (ge::GetPrimaryFormat(x2->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
         CHECK_RET(CheckWeightNz(x2, isMxFp), ACLNN_ERR_PARAM_INVALID);
     }
-    // 不支持x1Format、 outFormat为NZ
+    // 不支持x1Format、 outFormat、 x1scaleFormat、 x2scaleFormat为NZ
     if (ge::GetPrimaryFormat(x1->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
-        ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
+        ge::GetPrimaryFormat(out->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ ||
+        (x1Scale != nullptr && ge::GetPrimaryFormat(x1Scale->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) ||
+        ge::GetPrimaryFormat(x2Scale->GetStorageFormat()) == Format::FORMAT_FRACTAL_NZ) {
         OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
-            OP_NAME, "x1, out",
-            Ops::NN::FormatString(
-                "%s, %s",
-                op::ToString(x1->GetStorageFormat()).GetString(),
-                op::ToString(out->GetStorageFormat()).GetString())
+            OP_NAME, "x1, out, x1Scale, x2Scale",
+            Ops::NN::FormatString("%s, %s, %s, %s", op::ToString(x1->GetStorageFormat()).GetString(),
+                                  op::ToString(out->GetStorageFormat()).GetString(),
+                                  op::ToString(x1Scale->GetStorageFormat()).GetString(),
+                                  op::ToString(x2Scale->GetStorageFormat()).GetString())
                 .c_str(),
-            Ops::NN::FormatString("The formats of %s cannot be %s", "x1, out", "FRACTAL_NZ").c_str());
+            Ops::NN::FormatString("The formats of %s cannot be %s", "x1, out, x1Scale, x2Scale", "FRACTAL_NZ").c_str());
         return ACLNN_ERR_PARAM_INVALID;
     }
     // MxFp8场景groupSize判断

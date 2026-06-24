@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C、MX、T-C[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，支持K-C、mx、T-C[量化模式](../../../docs/zh/context/量化介绍.md)。仅支持三维的Tensor传入。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
 - 示例：
   假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -125,7 +125,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>        
         <ul>
           <li>K-C量化场景，shape支持一维且需要等于[m]。</li>
-          <li>MX量化场景，shape支持四维。</li>
+          <li>mx量化场景，shape支持四维。</li>
           <li>T-C量化场景，shape支持为空，非空场景支持1维且需要等于[1]。</li>
         </ul>
         </td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>        
         <ul>
           <li>K-C、T-C量化场景，shape支持一维且需要等于[n]。</li>
-          <li>MX量化场景，shape支持四维。</li>
+          <li>mx量化场景，shape支持四维。</li>
         </ul>
         </td>
         <td>FLOAT32、FLOAT8_E8M0、UINT64</td>
@@ -194,7 +194,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
         <td>  
         <ul>        
           <li>K-C量化场景，支持[0, 1, 2]。</li>
-          <li>MX、T-C量化场景，支持[0, 1, 2]或[0, 2, 1]。</li>
+          <li>mx、T-C量化场景，支持[0, 1, 2]或[0, 2, 1]。</li>
         </ul> 
         </td>
         <td>INT64</td>
@@ -352,10 +352,10 @@ aclnnStatus aclnnTransposeQuantBatchMatMul(
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
     - K-C量化场景，K仅支持512，N仅支持128。x1Scale和x2Scale仅支持1维，并且x1Scale要求shape为(M,), x2Scale要求shape为(N,)，group_size仅支持配置为0，其他取值不生效。
-    - MX量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
+    - mx量化场景，K仅支持64的倍数。 x1Scale和x2Scale仅支持4维，并且x1Scale要求shape为(M, B, K/64, 2),当permX2为[0, 1, 2]时，x2Scale要求shape为(B, K/64, N, 2)；当permX2为[0, 2, 1]时，x2Scale要求shape为(B, N, K/64, 2)。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
     - T-C量化场景，仅支持静态量化，x1Scale支持配置为空或(1,)，x2Scale要求shape为(N,)，group_size配置不生效。T-C量化场景当前仅支持静态量化场景，x2Scale需经过[trans_quant_param](../../../quant/trans_quant_param_v2/docs/aclnnTransQuantParamV2.md)预处理转换为uint64类型。
     - groupSize相关约束：
-      - 仅在MX量化场景中生效。
+      - 仅在mx量化场景中生效。
       - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
       
     $$
