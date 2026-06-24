@@ -230,7 +230,7 @@ __aicore__ inline void BlockReduceSumFP32(
 }
 
 template <typename T, typename U, typename R>
-__aicore__ inline void DataCopyCustom(U dstTensorV1, R srcTensor, uint32_t count)
+__aicore__ inline void DataCopyCustom(const U& dstTensorV1, const R& srcTensor, const uint32_t count)
 {
 #if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
     DataCopyParams copyParams;
@@ -253,13 +253,7 @@ __aicore__ inline void DataCopyCustom(U dstTensorV1, R srcTensor, uint32_t count
             DataCopy(dstTensorV1, srcTensor, num);
         } else {
             if (count < numPerBlock) {
-                for (int32_t i = 0; i < count; i++) {
-                    T tensorValue = srcTensor.GetValue(i);
-                    dstTensorV1.SetValue(i, tensorValue);
-                }
-                SetFlag<HardEvent::S_V>(EVENT_ID0);
-                WaitFlag<HardEvent::S_V>(EVENT_ID0);
-                DataCacheCleanAndInvalid<T, CacheLine::SINGLE_CACHE_LINE>(dstTensorV1);
+                DataCopy(dstTensorV1, srcTensor, numPerBlock);
             } else {
                 int32_t num = count / numPerBlock * numPerBlock;
                 DataCopy(dstTensorV1, srcTensor, num);

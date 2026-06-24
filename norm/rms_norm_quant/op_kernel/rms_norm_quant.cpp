@@ -61,9 +61,6 @@ public:
             num_col_align_f32 = slice_size_;
             num_col_align_f32_long = (num_col_ + REPEAT_TIME_64 - 1) / REPEAT_TIME_64 * REPEAT_TIME_64;
         }
-        uint32_t align_256 = REPEAT_TIME_256 / sizeof(T);
-        num_col_align_256 = (num_col_ + align_256 - 1) / align_256 * align_256;
-
         quantMin_ = tiling_data.quantMin;
         dstType = tiling_data.dstType;
         gm_x_.SetGlobalBuffer((__gm__ T*)x + AscendC::GetBlockIdx() * gm_offset_);
@@ -343,7 +340,6 @@ private:
     uint32_t num_col_align_f32{0};
     uint32_t num_col_align_f32_long{0};
     uint32_t num_col_temp;
-    uint32_t num_col_align_256{0};
     half quantMin_{-128};
     uint32_t slice_size_{0};
     uint32_t num_slice_{0};
