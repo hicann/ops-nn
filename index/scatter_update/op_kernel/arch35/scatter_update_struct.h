@@ -68,6 +68,13 @@ public:
     uint64_t maskNormBlockLen;
     uint64_t maskTailBlockLen;
     uint64_t indicesCastMode;
+    uint64_t updateOneColAlign;
+    uint64_t updateUbProNum;
+    uint64_t indicesUbForUpLoopSize;
+    uint64_t indicesUbForUpTailLoopNum;
+    uint64_t indicesTailForUpLoopSize;
+    uint64_t indicesTailForUpTailLoopNum;
+    bool updateColMany;
     int32_t rowFormerNum;
     int32_t colFormerNum;
     bool coreNeedSplitRow[CORE_TYPE];
