@@ -179,30 +179,12 @@ static aclnnStatus InputPreProcess(
     CHECK_RET(IsDimSupport(input, DIM_RANGE_ONLY_TWO_DIM, inputName), ACLNN_ERR_PARAM_INVALID);
     auto viewShape = input->GetViewShape();
     auto viewShapeDim = viewShape.GetDimNum();
-    bool isTranspose = false;
-    if (isTranspose) {
-        // 当 isTranspose=true 时，shape 的倒数第 2 维要放大 2 倍， 即 (k/2, n) -> (k, n)
-        viewShape[viewShapeDim - 2] = viewShape[viewShapeDim - 2] * FP4_NUMS_IN_INT8;
-    } else {
-        // 当 isTranspose=false 时，shape 的最后一维要放大 2 倍， 即 (k, n/2) -> (k, n)
-        viewShape[viewShapeDim - 1] = viewShape[viewShapeDim - 1] * FP4_NUMS_IN_INT8;
-    }
+    // shape 的最后一维要放大 2 倍， 即 (k, n/2) -> (k, n)
+    viewShape[viewShapeDim - 1] = viewShape[viewShapeDim - 1] * FP4_NUMS_IN_INT8;
     auto inputTemp = executor->CreateView(input, viewShape, input->GetViewOffset());
     CHECK_RET(inputTemp != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    if (isTranspose) {
-        op::Strides newStrides = input->GetViewStrides();
-        auto strideSize = newStrides.size();
-        OP_CHECK(
-            strideSize >= DIM_RANGE_ONLY_TWO_DIM.front() && strideSize <= DIM_RANGE_ONLY_TWO_DIM.back(),
-            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-                kOpName, "input", std::to_string(strideSize).c_str(), "The shape dim of input must be 2D"),
-            return ACLNN_ERR_PARAM_INVALID);
-        // 当 isTranspose=true 时，strides 的最后一维要放大 2 倍， 即(1, k/2) -> (1, k)
-        newStrides[strideSize - 1] *= FP4_NUMS_IN_INT8;
-        inputTemp->SetViewStrides(newStrides);
-    }
     if (IsNzFormat(input)) {
-        CHECK_RET(SetShapeStrideForNZ(input, inputTemp, isTranspose), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(SetShapeStrideForNZ(input, inputTemp, false), ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(SetNZC0FormatToNZFormat(inputTemp) == ACLNN_SUCCESS, ACLNN_ERR_INNER_NULLPTR);
     }
     if (input->GetDataType() == DataType::DT_INT8) {
@@ -225,6 +207,7 @@ static aclnnStatus InputTensorProcess(TupleRequiredTensor mandatoryTensors, aclO
             kOpName, "x2", op::ToString(x2->GetDataType()).GetString(),
             "INT8"),
         return ACLNN_ERR_PARAM_INVALID);
+    // 当前 InputPreProcess 的处理逻辑是以 x2 为转置且连续为前提
     CHECK_RET(InputPreProcess(x2, x2Ref, "x2", executor) == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
 
     return ACLNN_SUCCESS;
