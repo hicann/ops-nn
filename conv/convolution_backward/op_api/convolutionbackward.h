@@ -175,7 +175,7 @@ bool IsConv2DBpFilterTo3Dcase(const ConvBackpropParams &params);
 bool CheckN2HEnable(const aclTensor *weight, const aclTensor *&output,
                            aclIntArray *stride5, aclIntArray *dilation5, aclIntArray *pad6, int groups);
 
-bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input, aclIntArray *stride5, int groups);
+bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input, const aclIntArray *stride5, int groups);
 
 aclnnStatus N2HOptimize(const aclTensor *&weight, const aclTensor *&outBackprop, AdaptParam *adptParams, aclOpExecutor *executor);
 

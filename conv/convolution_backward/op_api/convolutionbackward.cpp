@@ -1073,7 +1073,7 @@ bool CheckN2HEnable(const aclTensor *weight, const aclTensor *&output,
 }
 
 bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input,
-                                          aclIntArray *stride5, int groups) {
+                                          const aclIntArray *stride5, int groups) {
     OP_LOGD("Enter CheckWeightPreTransposeEnable.");
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return false;

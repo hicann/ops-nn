@@ -2465,7 +2465,7 @@ static aclnnStatus PrepareConv3DBackpropInputParams(ConvolutionBackwardInputTens
   if (Ops::NN::AclnnUtil::IsRegbase() && CheckN2HEnable(tempTensor.weight, tempTensor.input, stride5, dilation5, pad6, params.groups)) {
     auto ret = N2HOptimize(tempTensor.weight, tempTensor.gradOutput, &adptParams, executor);
     if (ret != ACLNN_SUCCESS) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Conv3DBackpropInput N2HOptimize failed.");
+      OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "Conv3DBackpropInput N2HOptimize failed.");
       return ACLNN_ERR_INNER_NULLPTR;
     }
   }
