@@ -133,6 +133,7 @@ static __aicore__ inline void LoadL0Zero(
     load3dA.channelSize = k0A;
     load3dA.kStartPt = 0;
     load3dA.mStartPt = 0;
+    load3dA.mExtension = AlignUp(baseM, BLOCK_CUBE);
     load3dA.kExtension = k0A;
 
     load3dB.filterW = 1;
@@ -147,13 +148,12 @@ static __aicore__ inline void LoadL0Zero(
     load3dB.l1H = 1;
     load3dB.l1W = 32;
 
-    load3dB.channelSize = k0B;
+    load3dB.channelSize = AlignUp(baseN, BLOCK_CUBE);
     load3dB.kStartPt = 0;
     load3dB.mStartPt = 0;
-    load3dB.kExtension = k0B;
-
-    load3dA.mExtension = AlignUp(baseM, BLOCK_CUBE);
-    load3dB.mExtension = AlignUp(baseN, BLOCK_CUBE);
+    load3dB.mExtension = k0B;
+    load3dB.kExtension = AlignUp(baseN, BLOCK_CUBE);
+    
 #if defined(ASC_DEVKIT_VERSION_NUM) && (ASC_DEVKIT_VERSION_NUM >= 90000000)
     LoadDataRepeatParamWithStride repeat = {};
     repeat.repeatTime = 1;
