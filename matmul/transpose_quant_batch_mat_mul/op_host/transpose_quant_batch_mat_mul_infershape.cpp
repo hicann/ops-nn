@@ -48,27 +48,42 @@ static inline bool IsMicroScaling(const ge::DataType& dtypeX1Scale, const ge::Da
     return dtypeX1Scale == ge::DT_FLOAT8_E8M0 && dtypeX2Scale == ge::DT_FLOAT8_E8M0;
 }
 
+static inline bool IsHIFP8(const ge::DataType& dtypeX1, const ge::DataType& dtypeX2)
+{
+    return dtypeX1 == ge::DT_HIFLOAT8 && dtypeX2 == ge::DT_HIFLOAT8;
+}
+
 static bool CheckDtypeValid(
     const ge::DataType& dtypeX1, const ge::DataType& dtypeX2, const ge::DataType& dtypeX1Scale,
     const ge::DataType& dtypeX2Scale)
 {
-    if (!IsMicroScaling(dtypeX1Scale, dtypeX2Scale)) {
+    // MXFP8
+    if (IsMicroScaling(dtypeX1Scale, dtypeX2Scale)) {
+        CHECK(
+            dtypeX1 != ge::DT_FLOAT8_E4M3FN || dtypeX2 != ge::DT_FLOAT8_E4M3FN,
+            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input is only supported FLOAT8_E4M3FN."),
+            return false);
+    // FP8
+    } else if (!IsHIFP8(dtypeX1, dtypeX2)) {
         CHECK(
             (dtypeX1 != ge::DT_FLOAT8_E4M3FN && dtypeX1 != ge::DT_FLOAT8_E5M2) ||
                 (dtypeX2 != ge::DT_FLOAT8_E4M3FN && dtypeX2 != ge::DT_FLOAT8_E5M2),
             CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input is only supported FLOAT8_E4M3FN or FLOAT8_E5M2."),
-            return ge::GRAPH_FAILED);
+            return false);
+    }
+    // MXFP8/FP8 scale dtype check
+    if (!IsHIFP8(dtypeX1, dtypeX2)) {
+        CHECK(
+            (dtypeX1Scale != ge::DT_FLOAT && dtypeX1Scale != ge::DT_FLOAT8_E8M0) ||
+                (dtypeX2Scale != ge::DT_FLOAT && dtypeX2Scale != ge::DT_FLOAT8_E8M0),
+            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of scale is only supported FLOAT or FLOAT8_E8M0."),
+            return false);
     } else {
         CHECK(
-            dtypeX1 != ge::DT_FLOAT8_E4M3FN || dtypeX2 != ge::DT_FLOAT8_E4M3FN,
-            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of input is only supported FLOAT8_E4M3FN."),
-            return ge::GRAPH_FAILED);
+            dtypeX2Scale != ge::DT_UINT64,
+            CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of scale is only supported UINT64."),
+            return false);
     }
-    CHECK(
-        (dtypeX1Scale != ge::DT_FLOAT && dtypeX1Scale != ge::DT_FLOAT8_E8M0) ||
-            (dtypeX1Scale != ge::DT_FLOAT && dtypeX1Scale != ge::DT_FLOAT8_E8M0),
-        CUBE_INNER_ERR_REPORT("TQBMM", "the dtype of scale is only supported FLOAT or FLOAT8_E8M0."),
-        return ge::GRAPH_FAILED);
     return true;
 }
 
@@ -171,15 +186,17 @@ static ge::graphStatus InferShapeForTransposeQuantBatchMatMul(InferShapeContext*
     CHECK(
         tensorX1 == nullptr || tensorX2 == nullptr, CUBE_INNER_ERR_REPORT(nameOp, "x1 or x2 is null."),
         return ge::GRAPH_FAILED);
+    ge::DataType dtypeX1 = tensorX1->GetDataType();
+    ge::DataType dtypeX2 = tensorX2->GetDataType();
+    bool isHIFP8 = IsHIFP8(dtypeX1, dtypeX2);
     // 当前不允许x1Scale或者x2Scale为空
     auto tensorX1Scale = context->GetOptionalInputDesc(kX1ScaleIdx);
     auto tensorX2Scale = context->GetOptionalInputDesc(kX2ScaleIdx);
     CHECK(
-        tensorX1Scale == nullptr || tensorX2Scale == nullptr,
+        (!isHIFP8 && tensorX1Scale == nullptr) || tensorX2Scale == nullptr,
         CUBE_INNER_ERR_REPORT(nameOp, "X1Scale or x2Scale is null."), return ge::GRAPH_FAILED);
-    ge::DataType dtypeX1 = tensorX1->GetDataType();
-    ge::DataType dtypeX2 = tensorX2->GetDataType();
-    ge::DataType dtypeX1Scale = tensorX1Scale->GetDataType();
+
+    ge::DataType dtypeX1Scale = isHIFP8 ? ge::DT_UINT64 : tensorX1Scale->GetDataType();
     ge::DataType dtypeX2Scale = tensorX2Scale->GetDataType();
     CHECK(
         !CheckDtypeValid(dtypeX1, dtypeX2, dtypeX1Scale, dtypeX2Scale),

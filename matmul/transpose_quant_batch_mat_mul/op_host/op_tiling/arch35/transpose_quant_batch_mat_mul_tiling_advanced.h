@@ -38,6 +38,9 @@ protected:
 
     ge::graphStatus CheckScale(const int64_t b, const int64_t m, const int64_t n, const int64_t k,
                                const int64_t* bPerm) const;
+
+    bool isMXFP8_ = false;
+    bool isHIFP8_ = false;
 };
 } // namespace transpose_quant_batch_mat_mul_advanced
 } // namespace optiling

@@ -369,9 +369,7 @@ TEST_F(TransposeQuantBatchMatMulInferShape, TQBMM_mxfp8)
                       .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                       .Build();
 
-    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_SUCCESS);
-    auto output = holder.GetContext<gert::InferShapeContext>()->GetOutputShape(0);
-    ASSERT_EQ(Ops::Base::ToString(*output), Ops::Base::ToString(expect_output_shape));
+    ASSERT_EQ(inferShapeFunc(holder.GetContext<gert::InferShapeContext>()), ge::GRAPH_FAILED);
 }
 
 TEST_F(TransposeQuantBatchMatMulInferShape, InvalidPermX1)

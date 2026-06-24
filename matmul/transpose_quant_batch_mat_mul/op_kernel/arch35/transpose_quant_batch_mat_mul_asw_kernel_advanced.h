@@ -21,12 +21,13 @@
 
 using namespace Cmct::Gemm;
 
-#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                         \
-    template <                                                                                                  \
-        class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType, bool aTrans, \
-        bool bTrans, CubeFormat bFormat, class l0cDtype, class blockType, const MatmulConfig& mmCfg>
-#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS \
-    aType, bType, scaleType, biasType, ptScaleType, cType, aTrans, bTrans, bFormat, l0cDtype, blockType, mmCfg
+#define LOCAL_TEMPLATE_CLASS_MIX_PARAMS                                                                                \
+    template <class aType, class bType, class scaleType, class biasType, class ptScaleType, class cType,               \
+              int8_t precisionMode, bool aTrans, bool bTrans, CubeFormat bFormat, class l0cDtype, class blockType,     \
+              const MatmulConfig& mmCfg>
+#define LOCAL_TEMPLATE_FUNC_MIX_PARAMS                                                                                 \
+    aType, bType, scaleType, biasType, ptScaleType, cType, precisionMode, aTrans, bTrans, bFormat, l0cDtype, blockType,\
+    mmCfg
 
 namespace TransposeQuantBatchMatMulAdvanced {
 using AscendC::AIC;
@@ -83,17 +84,17 @@ public:
         AscendC::MatmulType<TPosition::GM, bFormat, bType, bTrans>>::type;
     using biasT = AscendC::MatmulType<TPosition::GM, CubeFormat::ND, biasType>;
     using cT = typename AscendC::Conditional<
-        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
+            precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8),
         AscendC::MatmulType<AscendC::TPosition::GM, CubeFormat::ND, cType>,
         AscendC::MatmulType<TPosition::VECIN, CubeFormat::ND_ALIGN, l0cDtype>>::type;
     using MmType = typename AscendC::Conditional<
-        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>(),
-        AscendC::MatmulImpl<
-            aT, bT, cT, biasT, mmCfg, MatmulCallBackFunc<nullptr, nullptr, nullptr>,
-            AscendC::Impl::Detail::MatmulWithScalePolicy>,
-        AscendC::MatmulImpl<
-            aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
-            AscendC::TQBmmCustomMatmulPolicy>>::type;
+        TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
+            precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8),
+        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg,
+                           MatmulCallBackFunc<nullptr, nullptr, nullptr>, AscendC::Impl::Detail::MatmulWithScalePolicy>,
+        AscendC::MatmulImpl<aT, bT, cT, biasT, mmCfg, AscendC::MatmulCallBackFunc<nullptr, nullptr, nullptr>,
+                            AscendC::TQBmmCustomMatmulPolicy>>::type;
     MmType mm;
     constexpr static uint32_t BUFFER_NUM = 2;
     constexpr static uint8_t AIC_SYNC_AIV_MODE = 4;
@@ -140,6 +141,7 @@ protected:
     GlobalTensor<bType> bGlobal_;
     GlobalTensor<cType> cGlobal_;
     GlobalTensor<scaleType> scaleGlobal_;
+    GlobalTensor<uint64_t> scaleVectorGlobal_;
     GlobalTensor<ptScaleType> pertokenScaleGlobal_;
     LocalTensor<l0cDtype> l0cOutUb_;
     LocalTensor<scaleType> scaleUb_;
@@ -161,7 +163,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
 {
     pipe_ = pipe;
     tilingData_ = static_cast<const BatchMatMulV3TilingData*>(tilingData);
-    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
+        precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
         if ASCEND_IS_AIV {
             return;
         }
@@ -223,6 +226,9 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
         pertokenScaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)ptScaleGM);
         scaleGlobal_.SetGlobalBuffer((__gm__ fp8_e8m0_t*)scaleGM);
         cGlobal_.SetGlobalBuffer((__gm__ cType*)cGM);
+    } else if constexpr (precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
+        scaleVectorGlobal_.SetGlobalBuffer((__gm__ uint64_t*)scaleGM);
+        cGlobal_.SetGlobalBuffer((__gm__ cType*)cGM);
     } else {
         if ASCEND_IS_AIV {
             scaleGlobal_.SetGlobalBuffer((__gm__ scaleType*)scaleGM);
@@ -242,7 +248,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
         if (block_.params_.index < block_.params_.totalCnt) {
             block_.UpdateBlockParams();
             if (block_.params_.singleCoreM > 0 && block_.params_.singleCoreN > 0) {
-                block_.template CalcGMOffset<bTrans, bFormat>(TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>());
+                block_.template CalcGMOffset<bTrans, bFormat, precisionMode>(
+                    TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>());
                 if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
                     if ASCEND_IS_AIV {
                         return;
@@ -252,6 +259,14 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
                         tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
                     mm.SetTensorScaleA(pertokenScaleGlobal_[block_.offset_.offsetPerTokenScale], aTrans);
                     mm.SetTensorScaleB(scaleGlobal_[block_.offset_.offsetScale], bTrans);
+                    MMCompute();
+                } else if constexpr (precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
+                    if ASCEND_IS_AIV {
+                        return;
+                    }
+                    mm.SetSingleShape(block_.params_.singleCoreM, block_.params_.singleCoreN,
+                                      tilingData_->matMulTilingData.tCubeTiling.singleCoreK);
+                    mm.SetQuantVector(scaleVectorGlobal_[block_.offset_.offsetScale]);
                     MMCompute();
                 } else {
                     if ASCEND_IS_AIC {
@@ -288,7 +303,8 @@ __aicore__ inline void TransposeQuantBatchMatMulAswKernel<LOCAL_TEMPLATE_FUNC_MI
     mm.SetTensorA(aGlobal_[block_.offset_.offsetA], aTrans);
     mm.SetTensorB(bGlobal_[block_.offset_.offsetB], bTrans);
     mm.Iterate();
-    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>()) {
+    if constexpr (TransposeQuantBatchMatMulAdvanced::IsMxType<scaleType>() ||
+                  precisionMode == static_cast<int8_t>(TQBMMPrecisionMode::PRECISION_MODE_HIFP8)) {
         mm.GetTensorC(cGlobal_[block_.offset_.offsetC]);
     } else {
         mm.GetTensorC(l0cOutUb_, 0, true);
