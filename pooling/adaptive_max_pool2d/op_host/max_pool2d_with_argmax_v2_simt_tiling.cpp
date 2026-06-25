@@ -82,7 +82,10 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckPlatformAndGetShapes() {
     OP_CHECK_IF(
         inputShape.GetDim(N_IDX) < 1 || inputShape.GetDim(C_IDX) < 1 ||
         inputShape.GetDim(H_IDX) < 1 || inputShape.GetDim(W_IDX) < 1,
-        OP_LOGE(context_->GetNodeName(), "Invalid shape. Maybe empty tensor."), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "x",
+            Ops::Base::ToString(inputShape).c_str(),
+            "The dimensions N, C, Hi, Wi must be at least 1"),
+        return ge::GRAPH_FAILED);
 
     inputData.inputShape =
         array<uint64_t, NCHW_DIMS>{uint64_t(inputShape.GetDim(N_IDX)), uint64_t(inputShape.GetDim(C_IDX)),
@@ -133,12 +136,16 @@ ge::graphStatus AdaMaxPool2dTilingSIMT::CheckDataTypeAndAttrs() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, outputSizePtr);
     OP_CHECK_IF(
         outputSizePtr->GetSize() != DOUB,
-        OP_LOGE(context_->GetNodeName(), "the size of outputsize only support 2"),
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "output_size",
+            std::to_string(outputSizePtr->GetSize()).c_str(), "2"),
         return ge::GRAPH_FAILED);
     const int64_t* outputSize = static_cast<const int64_t*>(outputSizePtr->GetData());
     OP_CHECK_IF(
         outputSize[0] <= 0 || outputSize[1] <= 0,
-        OP_LOGE(context_->GetNodeName(), "the value of outputsize should > 0"), return ge::GRAPH_FAILED);
+        OP_LOGE_WITH_INVALID_ATTR(context_->GetNodeName(), "output_size",
+            (std::to_string(outputSize[0]) + ", " + std::to_string(outputSize[1])).c_str(),
+            "> 0"),
+        return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
 }
