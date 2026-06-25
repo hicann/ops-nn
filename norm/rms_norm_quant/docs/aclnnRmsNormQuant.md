@@ -253,6 +253,7 @@ aclnnStatus aclnnRmsNormQuant(
 
 ## 约束说明
 
+- 当输入参数scale或offset的值为NaN，或者RmsNorm的计算结果（对应计算公式中的$quant\_in_i$）为NaN时，该接口的最终输出结果为0。
 - <term>Atlas 推理系列产品</term>：x、y的尾轴长度，以及gamma的尾轴长度必须大于等于32Bytes。
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT4时，`x`、`gamma`以及`beta`的最后一维必须为偶数。
 - <term>Ascend 950PR/Ascend 950DT</term>：当`y`的数据类型为INT32时，`y`的最后一维必须是`x`最后一维的1/8。
