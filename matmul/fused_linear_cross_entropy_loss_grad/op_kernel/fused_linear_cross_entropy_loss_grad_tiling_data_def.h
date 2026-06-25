@@ -136,12 +136,12 @@ struct FusedLinearCrossEntropyLossGradHighPerfTilingData {
 #define COPY_TILING_WITH_STRUCT(tiling_struct, src_ptr, dst_ptr) \
     tiling_struct dst_ptr##_obj; \
     tiling_struct *dst_ptr = &dst_ptr##_obj; \
-    memcpy(dst_ptr, src_ptr, sizeof(tiling_struct))
+    memcpy_s(dst_ptr, sizeof(tiling_struct), src_ptr, sizeof(tiling_struct))
 
 #define GET_TILING_DATA_PTR_WITH_STRUCT(tiling_struct, dst_ptr, tiling_ptr) \
     tiling_struct dst_ptr##_obj; \
     tiling_struct *dst_ptr = &dst_ptr##_obj; \
-    memcpy(dst_ptr, tiling_ptr, sizeof(tiling_struct))
+    memcpy_s(dst_ptr, sizeof(tiling_struct), tiling_ptr, sizeof(tiling_struct))
 
 #endif  // FUSED_LINEAR_CROSS_ENTROPY_LOSS_GRAD_TILING_DATA_DEF_H
 #endif  // __CCE_KT_TEST__
