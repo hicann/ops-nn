@@ -271,13 +271,13 @@ static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t&
 }
 
 static const aclTensor* HandleIndexPutV2WithTypeConversion(
-    aclOpExecutor* executor, const aclTensor* selfView, const aclTensor* sourceView, const aclTensorList* indicesList,
+    aclOpExecutor* executor, aclTensor* selfView, aclTensor* sourceView, const aclTensorList* indicesList,
     const aclTensor* maskTensor, DataType originalDtype, DataType intermediateDtype)
 {
-    const_cast<aclTensor*>(selfView)->SetDataType(intermediateDtype);
-    const_cast<aclTensor*>(sourceView)->SetDataType(intermediateDtype);
+    selfView->SetDataType(intermediateDtype);
+    sourceView->SetDataType(intermediateDtype);
 
-    aclTensor* out = const_cast<aclTensor*>(selfView);
+    aclTensor* out = selfView;
     const aclTensor* kernelOut = l0op::IndexPutV2(selfView, indicesList, sourceView, maskTensor, false, out, executor);
     if (kernelOut != nullptr) {
         const_cast<aclTensor*>(kernelOut)->SetDataType(originalDtype);

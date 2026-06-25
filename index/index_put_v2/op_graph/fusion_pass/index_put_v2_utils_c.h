@@ -17,6 +17,15 @@
 extern "C" {
 #endif
 
+constexpr int32_t kPortSelfRef = 0;
+constexpr int32_t kPortValues = 1;
+constexpr int32_t kPortMasks = 2;
+constexpr int32_t kPortIndicesBase = 3;
+constexpr int32_t kSortPortSelf = 0;
+constexpr int32_t kSortPortLinearIndex = 1;
+constexpr int32_t kSortPortPosIdx = 2;
+constexpr int32_t kSortPortValues = 3;
+
 static inline EsCTensorHolder *EsIndexPutV3(
     EsCTensorHolder *selfRef,
     EsCTensorHolder *values,
@@ -52,13 +61,13 @@ static inline EsCTensorHolder *EsIndexPutV3(
       })
       .Build();
 
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, selfRef->GetProducer(), selfRef->GetOutIndex(), node, 0));
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, values->GetProducer(), values->GetOutIndex(), node, 1));
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, masks->GetProducer(), masks->GetOutIndex(), node, 2));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, selfRef->GetProducer(), selfRef->GetOutIndex(), node, kPortSelfRef));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, values->GetProducer(), values->GetOutIndex(), node, kPortValues));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, masks->GetProducer(), masks->GetOutIndex(), node, kPortMasks));
 
   for (int64_t i = 0; i < indices_num; ++i) {
     ES_ASSERT_GRAPH_SUCCESS(
-        ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, indices[i]->GetProducer(), indices[i]->GetOutIndex(), node, static_cast<int32_t>(3 + i)));
+        ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, indices[i]->GetProducer(), indices[i]->GetOutIndex(), node, static_cast<int32_t>(kPortIndicesBase + i)));
   }
 
   return builder.GetTensorHolderFromNode(std::move(node), 0);
@@ -112,10 +121,10 @@ static inline EsCTensorHolder *EsIndexPutWithSortV2(
       .Build();
 
   // 3. Connect inputs to node
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, self->GetProducer(), self->GetOutIndex(), node, 0));
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, linear_index->GetProducer(), linear_index->GetOutIndex(), node, 1));
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, pos_idx->GetProducer(), pos_idx->GetOutIndex(), node, 2));
-  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, values->GetProducer(), values->GetOutIndex(), node, 3));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, self->GetProducer(), self->GetOutIndex(), node, kSortPortSelf));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, linear_index->GetProducer(), linear_index->GetOutIndex(), node, kSortPortLinearIndex));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, pos_idx->GetProducer(), pos_idx->GetOutIndex(), node, kSortPortPosIdx));
+  ES_ASSERT_GRAPH_SUCCESS(ge::es::AddEdgeAndUpdatePeerDesc(*ge_graph, values->GetProducer(), values->GetOutIndex(), node, kSortPortValues));
 
   // 4. Return TensorHolder from node output
   return builder.GetTensorHolderFromNode(std::move(node), 0);

@@ -95,7 +95,6 @@ ge::graphStatus InplaceIndexFillTilingBase::CheckDataType()
     inputData.xDtypeSize = ge::GetSizeByDataType(xDType);
     inputData.indicesDtypeSize = ge::GetSizeByDataType(indicesDType);
     inputData.indicesDtype = indicesDType;
-
     return ge::GRAPH_SUCCESS;
 }
 

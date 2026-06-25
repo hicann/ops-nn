@@ -17,8 +17,6 @@
 #include "util/platform_util.h"
 #include "util/math_util.h"
 
-
-
 #include "register/op_impl_registry.h"
 #include "register/tilingdata_base.h"
 

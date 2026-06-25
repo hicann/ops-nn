@@ -90,9 +90,6 @@ void ScatterNdCommonSimdSortTiling::SetTilingData()
     tilingData->singleCol = singleCol_;
 }
 
-
-
-
 void ScatterNdCommonSimdSortTiling::DoOpTilingSplitIndicesSingleCol()
 {
     int64_t indicesDtypeCastSize = indiceCastMode_ ? indiceCastDtypeSize_ : 0;

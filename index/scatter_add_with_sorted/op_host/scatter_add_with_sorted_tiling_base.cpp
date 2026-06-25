@@ -90,7 +90,6 @@ ge::graphStatus ScatterAddWithSortedBaseTiling::GetShapeAttrsInfo()
     auto updateShape = updates->GetStorageShape();
     updatesSize_ = updateShape.GetShapeSize();
     uint64_t updatesDims = updateShape.GetDimNum();
-
     if (updatesDims == 0 || (updatesDims == 1 && updatesSize_ == 1)) {
         isUpdateScalar_ = 1;
     } else {

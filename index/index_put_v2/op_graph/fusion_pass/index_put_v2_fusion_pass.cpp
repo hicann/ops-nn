@@ -41,6 +41,16 @@ constexpr size_t kIdxValue = 1;
 constexpr size_t kIdxIndexedSizes = 2;
 constexpr size_t kIdxIndexedStrides = 3;
 constexpr size_t kFixedInputNum = 4;
+constexpr int64_t DYNAMIC_SHAPE_UNKNOWN = -1;
+constexpr int64_t DYNAMIC_SHAPE_RANGE = -2;
+constexpr int32_t kPortSelfRef = 0;
+constexpr int32_t kPortValues = 1;
+constexpr int32_t kPortMasks = 2;
+constexpr int32_t kPortIndicesBase = 3;
+constexpr int32_t kSortPortSelf = 0;
+constexpr int32_t kSortPortSortIdx = 1;
+constexpr int32_t kSortPortPosIdx = 2;
+constexpr int32_t kSortPortValue = 3;
 
 bool CheckDtype(DataType dtype, const std::vector<DataType>& validTypes)
 {
@@ -73,7 +83,7 @@ bool ShapeIsDynamic(const TensorDesc& Desc)
 {
     auto shapes = Desc.GetShape().GetDims();
     for (auto it : shapes) {
-        if (it == -1 || it == -2) {
+        if (it == DYNAMIC_SHAPE_UNKNOWN || it == DYNAMIC_SHAPE_RANGE) {
             return true;
         }
     }
@@ -130,19 +140,19 @@ void UpdateTensorDescsSortV2(const IndexPutV2InputInfo &info,
     
     // IndexPutWithSortV2 输入输出描述
     TensorDesc indexPutInputXDesc(Shape(info.xDims), info.xFmt, info.xDtype);
-    indexPutWithSort.GetProducer()->UpdateInputDesc(0, indexPutInputXDesc);
+    indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortSelf, indexPutInputXDesc);
     TensorDesc indexPutInputSortIdxDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
-    indexPutWithSort.GetProducer()->UpdateInputDesc(1, indexPutInputSortIdxDesc);
+    indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortSortIdx, indexPutInputSortIdxDesc);
     TensorDesc indexPutInputPosDesc(Shape(linearIndexDims), FORMAT_ND, DT_INT32);
-    indexPutWithSort.GetProducer()->UpdateInputDesc(2, indexPutInputPosDesc);
+    indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortPosIdx, indexPutInputPosDesc);
     TensorDesc indexPutInputValueDesc(Shape(info.valueDims), info.valueFmt, info.valueDtype);
-    indexPutWithSort.GetProducer()->UpdateInputDesc(3, indexPutInputValueDesc);
+    indexPutWithSort.GetProducer()->UpdateInputDesc(kSortPortValue, indexPutInputValueDesc);
     TensorDesc indexPutOutputDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPutWithSort.GetProducer()->UpdateOutputDesc(0, indexPutOutputDesc);
 }
 }
 
-bool IndexPutV2FusionPass::CheckPlatform()
+bool IndexPutV2FusionPass::CheckPlatform() const
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
@@ -158,7 +168,7 @@ bool IndexPutV2FusionPass::CheckPlatform()
     return true;
 }
 
-bool IndexPutV2FusionPass::CheckDeterministic(ge::CustomPassContext& passContext)
+bool IndexPutV2FusionPass::CheckDeterministic(ge::CustomPassContext& passContext) const
 {
     ge::AscendString optionValue;
     ge::AscendString optionKey = ge::configure_option::DETERMINISTIC;
@@ -179,7 +189,7 @@ bool IndexPutV2FusionPass::CheckDeterministic(ge::CustomPassContext& passContext
     return false;
 }
 
-bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum)
+bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum) const
 {
     std::vector<DataType> dtypes = {DT_BOOL, DT_INT8, DT_UINT8, DT_FLOAT16, DT_BF16, DT_INT32, DT_FLOAT, DT_INT64};
     std::vector<DataType> deterministicDtypes = {DT_FLOAT16, DT_BF16, DT_FLOAT};
@@ -254,7 +264,7 @@ bool IndexPutV2FusionPass::CheckDtypes(const GNode &node, int64_t indicesNum)
     return true;
 }
 
-bool IndexPutV2FusionPass::CheckDynamic(const GNode &node, int64_t indicesNum)
+bool IndexPutV2FusionPass::CheckDynamic(const GNode &node, int64_t indicesNum) const
 {
     TensorDesc xDesc;
     if (node.GetInputDesc(kIdxX, xDesc) != SUCCESS) {
@@ -311,7 +321,7 @@ bool IndexPutV2FusionPass::CheckNode(const GNode &node)
     return true;
 }
 
-IndexPutV2InputInfo IndexPutV2FusionPass::GetInputInfo(const GNode &node)
+IndexPutV2InputInfo IndexPutV2FusionPass::GetInputInfo(const GNode &node) const
 {
     IndexPutV2InputInfo info;
     
@@ -359,14 +369,14 @@ void UpdateTensorDescsIndexPutV3(const IndexPutV2InputInfo &info,
                        const es::EsTensorHolder &indexPut)
 {
     TensorDesc indexPutInputXDesc(Shape(info.xDims), info.xFmt, info.xDtype);
-    indexPut.GetProducer()->UpdateInputDesc(0, indexPutInputXDesc);
+    indexPut.GetProducer()->UpdateInputDesc(kPortSelfRef, indexPutInputXDesc);
     TensorDesc indexPutInputValueDesc(Shape(info.valueDims), info.valueFmt, info.valueDtype);
-    indexPut.GetProducer()->UpdateInputDesc(1, indexPutInputValueDesc);
+    indexPut.GetProducer()->UpdateInputDesc(kPortValues, indexPutInputValueDesc);
     TensorDesc indexPutInputMasksDesc(Shape(info.indexedSizeDims), info.indexedSizeFmt, info.indexedSizeDtype);
-    indexPut.GetProducer()->UpdateInputDesc(2, indexPutInputMasksDesc);
+    indexPut.GetProducer()->UpdateInputDesc(kPortMasks, indexPutInputMasksDesc);
     for (int64_t i = 0; i < info.indicesNum; ++i) {
         TensorDesc indicesDesc(Shape(info.indicesDims[i]), info.indicesFmt, info.indicesDtypes[i]);
-        indexPut.GetProducer()->UpdateInputDesc(static_cast<uint32_t>(3 + i), indicesDesc);
+        indexPut.GetProducer()->UpdateInputDesc(static_cast<uint32_t>(kPortIndicesBase + i), indicesDesc);
     }
     TensorDesc indexPutOutputDesc(Shape(info.xDims), info.xFmt, info.xDtype);
     indexPut.GetProducer()->UpdateOutputDesc(0, indexPutOutputDesc);
@@ -417,7 +427,7 @@ GraphUniqPtr IndexPutV2FusionPass::CreateReplacement(const GNode &node)
     return builder.BuildAndReset(outputs);
 }
 
-std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const GNode &node)
+std::unique_ptr<SubgraphBoundary> IndexPutV2FusionPass::ConstructBoundary(const GNode &node) const
 {
     auto boundary = std::make_unique<SubgraphBoundary>();
 

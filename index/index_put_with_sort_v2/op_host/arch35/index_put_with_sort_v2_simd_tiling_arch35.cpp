@@ -186,7 +186,6 @@ ge::graphStatus IndexPutWithSortV2SIMDTiling::GetWorkspaceSize()
     return ge::GRAPH_SUCCESS;
 }
 
-
 void IndexPutWithSortV2SIMDTiling::LogTilingResult()
 {
     OP_LOGI(context_->GetNodeName(), "indexedDimSize_: %ld, nonIndexedDimSize_: %ld", indexedDimSize_, nonIndexedDimSize_);

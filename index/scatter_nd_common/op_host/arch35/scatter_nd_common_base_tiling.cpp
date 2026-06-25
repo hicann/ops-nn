@@ -189,8 +189,6 @@ ge::graphStatus ScatterNdCommonBaseTiling::GetShapeAttrsInfo()
     return ge::GRAPH_SUCCESS;
 }
 
-
-
 bool ScatterNdCommonBaseTiling::IsCapable()
 {
     return true;

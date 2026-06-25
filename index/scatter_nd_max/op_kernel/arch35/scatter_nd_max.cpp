@@ -191,5 +191,4 @@ __global__ __aicore__ void scatter_nd_max(
         }
     }
 
-
 }

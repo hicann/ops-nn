@@ -39,6 +39,7 @@ namespace {
 
 const std::string PASS_NAME = "GatherToGatherV2FusionPass";
 const int64_t CAPTURE_IDX_OUTPUT = 0l;
+constexpr int32_t GE_COMPILER_VERSION_9_0 = 90000000;
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------
@@ -92,7 +93,7 @@ CustomPassStage GetGatherFusionPassStage()
 {
     int32_t version = 0;
     aclsysGetVersionNum("ge_compiler", &version);
-    if (version >= 90000000) {
+    if (version >= GE_COMPILER_VERSION_9_0) {
         return CustomPassStage::kCompatibleInherited;
     }
     return CustomPassStage::kBeforeInferShape;
@@ -154,7 +155,7 @@ bool GatherToGatherV2FusionPass::MeetRequirements(const std::unique_ptr<MatchRes
 
     int32_t version = 0;
     aclsysGetVersionNum("ge_compiler", &version);
-    if (version < 90000000) {
+    if (version < GE_COMPILER_VERSION_9_0) {
         OPS_LOG_D(PASS_NAME.c_str(), "Runtime version below 9.0.0, skip fusion.");
         return false;
     }

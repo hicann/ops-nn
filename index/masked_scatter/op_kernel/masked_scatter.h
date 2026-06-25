@@ -22,6 +22,7 @@
 #include "masked_scatter_tiling_key.h"
 
 namespace MaskedScatterNS {
+constexpr uint32_t DEFAULT_MASK_TILE_LENGTH = 1024;
 
 class MaskedScatter : public MaskedScatterBase {
 public:
@@ -87,7 +88,7 @@ private:
         totalUpdatesNum = tilingData->totalUpdatesNum;
         updatesNum = tilingData->updatesNum;
         if (updatesLineNum == 1) {
-            maskTileLength = 1024;
+            maskTileLength = DEFAULT_MASK_TILE_LENGTH;
         }
 
         PrepareBaseData();

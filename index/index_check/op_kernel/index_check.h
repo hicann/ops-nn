@@ -20,6 +20,8 @@ using namespace AscendC;
 
 constexpr uint32_t BUFFER_NUM = 1;
 constexpr uint32_t BLOCK_BYTES = 32;
+constexpr int32_t SIGN_BIT_SHIFT = 31;
+constexpr uint32_t MAX_TENSOR_NUM = 8;
 
 template <typename T>
 class IndexCheckKernel
@@ -156,7 +158,7 @@ private:
             PipeBarrier<PIPE_V>();
         }
 
-        ShiftRight(tempLocal, workingLocal, 31, count);
+        ShiftRight(tempLocal, workingLocal, SIGN_BIT_SHIFT, count);
         PipeBarrier<PIPE_V>();
         Muls(tempLocal, tempLocal, static_cast<int32_t>(bounds_[tensorIdx]), count);
         PipeBarrier<PIPE_V>();
@@ -238,8 +240,8 @@ private:
     uint64_t tensorId_ = 0;
     uint64_t maxBatchSize_ = 0;
     uint32_t alignedBatch_ = 0;
-    uint64_t tensorLens_[8];
-    int64_t bounds_[8];
+    uint64_t tensorLens_[MAX_TENSOR_NUM];
+    int64_t bounds_[MAX_TENSOR_NUM];
 };
 
 #endif // INDEX_CHECK_H

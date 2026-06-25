@@ -33,27 +33,35 @@ constexpr uint64_t HP_INDEX_TILE_ALIGN = 32;
 constexpr uint64_t HP_UPDATE_UB_RATIO = 2;
 constexpr uint64_t HP_DOUBLE_BUFFER = 2;
 constexpr uint64_t HP_ROWS_PER_BATCH_MAX = 256;
+constexpr uint64_t INDEX_TYPE_INT32 = 1;
+constexpr uint64_t INDEX_TYPE_INT64 = 2;
+constexpr uint64_t INDEX_TYPE_INT64_LARGE = 3;
+constexpr uint64_t TILING_KEY_BASE = 10;
+constexpr uint64_t LINEAR_INDEX_COEFF_OFFSET = 3;
+constexpr uint64_t DTYPE_SIZE_BF16 = 2;
+constexpr uint64_t DTYPE_SIZE_FP16 = 2;
+constexpr uint64_t DTYPE_SIZE_BOOL = 1;
 
 inline void ScatterNdUpdateArch32Tiling::SetTilingKeyMode()
 {
     // tilingKey: indexType * 10 + sortFlag (indexType: 1=int32, 2=int64(cast), 3=int64(large))
     uint64_t indexType;
     if (!isInt64Indices_) {
-        indexType = 1;
+        indexType = INDEX_TYPE_INT32;
     } else if (needLargeIndexKernel_) {
-        indexType = 3;
+        indexType = INDEX_TYPE_INT64_LARGE;
     } else {
-        indexType = 2;
+        indexType = INDEX_TYPE_INT64;
     }
-    uint64_t sortFlag = (indexType == 3) ? 0 : (isSort_ ? 1 : 0);
-    tilingKey_ = indexType * 10 + sortFlag;
+    uint64_t sortFlag = (indexType == INDEX_TYPE_INT64_LARGE) ? 0 : (isSort_ ? 1 : 0);
+    tilingKey_ = indexType * TILING_KEY_BASE + sortFlag;
 
     tilingContext_->SetTilingKey(tilingKey_);
 }
 
-inline bool ScatterNdUpdateArch32Tiling::IsLinearIndex(uint64_t totalLength) { return totalLength <= MAX_LENGTH_INT32; }
+inline bool ScatterNdUpdateArch32Tiling::IsLinearIndex(uint64_t totalLength) const { return totalLength <= MAX_LENGTH_INT32; }
 
-inline bool ScatterNdUpdateArch32Tiling::IsSort(uint64_t totalLength) { return totalLength <= MAX_FLOAT_EXPRESS_INT32; }
+inline bool ScatterNdUpdateArch32Tiling::IsSort(uint64_t totalLength) const { return totalLength <= MAX_FLOAT_EXPRESS_INT32; }
 
 inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, uint64_t indexDim)
 {
@@ -63,7 +71,7 @@ inline void ScatterNdUpdateArch32Tiling::Tiling4LinearIndex(uint64_t indexRow, u
         indicesMask_[i] = strides;
         strides *= varRefShape.GetDim(i);
     }
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim + 3) : (indexDim + 3);
+    uint64_t coeff = isInt64Indices_ ? (2 * indexDim + LINEAR_INDEX_COEFF_OFFSET) : (indexDim + LINEAR_INDEX_COEFF_OFFSET);
     uint64_t maxBlockLength = ubSize_ / coeff / sizeof(int);
     blockLength_ = (maxBlockLength / ALIGNED_SIZE) * ALIGNED_SIZE;
     blockLength_ = std::min(blockLength_, (uint64_t)SORT_BLOCK_LENGTH);
@@ -165,7 +173,7 @@ inline uint64_t ScatterNdUpdateArch32Tiling::Tiling4HpScatterShape()
 inline void ScatterNdUpdateArch32Tiling::Tiling4HpIndexTile(uint64_t updateUbBytes)
 {
     uint64_t ubForIndex = (ubSize_ > updateUbBytes) ? (ubSize_ - updateUbBytes) : 0;
-    uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + 3) : (indexDim_ + 3);
+    uint64_t coeff = isInt64Indices_ ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) : (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
     if (coeff == 0) {
         coeff = 1;
     }
@@ -246,28 +254,28 @@ inline void ScatterNdUpdateArch32Tiling::GetDtypeSize()
     uint64_t varDtype = tilingContext_->GetInputDesc(0)->GetDataType();
     switch (varDtype) {
         case ge::DT_FLOAT:
-            dataTypeSize_ = 4;
+            dataTypeSize_ = sizeof(float);
             break;
         case ge::DT_BF16:
-            dataTypeSize_ = 2;
+            dataTypeSize_ = DTYPE_SIZE_BF16;
             break;
         case ge::DT_FLOAT16:
-            dataTypeSize_ = 2;
+            dataTypeSize_ = DTYPE_SIZE_FP16;
             break;
         case ge::DT_BOOL:
-            dataTypeSize_ = 1;
+            dataTypeSize_ = DTYPE_SIZE_BOOL;
             break;
         case ge::DT_INT64:
-            dataTypeSize_ = 8;
+            dataTypeSize_ = sizeof(int64_t);
             break;
         case ge::DT_INT32:
-            dataTypeSize_ = 4;
+            dataTypeSize_ = sizeof(int32_t);
             break;
         case ge::DT_INT16:
-            dataTypeSize_ = 2;
+            dataTypeSize_ = sizeof(int16_t);
             break;
         case ge::DT_INT8:
-            dataTypeSize_ = 1;
+            dataTypeSize_ = sizeof(int8_t);
             break;
         default:
             break;
@@ -424,7 +432,7 @@ struct ScatterInitInfo {
 };
 } // namespace
 
-static ScatterInitInfo ParseScatterShapes(gert::TilingContext* ctx, uint64_t scatterLengthInit)
+static ScatterInitInfo ParseScatterShapes(const gert::TilingContext* ctx, uint64_t scatterLengthInit)
 {
     ScatterInitInfo info{};
     info.scatterLength = scatterLengthInit;

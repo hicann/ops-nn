@@ -272,7 +272,7 @@ public:
 
 private:
     void SetTilingData(ScatterElementsV2TilingData& tiling);
-    void LogTilingData();
+    void LogTilingData() const;
     size_t CalculateWorkspaceSize();
     void ParseAttrs();
     void ProcessUpdatesShape(gert::Shape& updatesShape, const gert::Shape& indicesShape);
@@ -815,7 +815,7 @@ void ScatterElementsV2Tiling::SetTilingData(ScatterElementsV2TilingData& tiling)
     tiling.set_updatesDim1(updatesDim1);
 }
 
-void ScatterElementsV2Tiling::LogTilingData() {
+void ScatterElementsV2Tiling::LogTilingData() const {
     OP_LOGD(tilingContext, "batchSize: %lu.", batchSize);
     OP_LOGD(tilingContext, "realDim: %lu.", realDim);
     OP_LOGD(tilingContext, "mode: %d.", mode);

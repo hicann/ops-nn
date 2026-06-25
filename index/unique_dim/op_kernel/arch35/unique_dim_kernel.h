@@ -468,7 +468,6 @@ private:
         int64_t outPerCore = CeilDiv64(numOut, coreNum_);
         int64_t outStart = coreId_ * outPerCore;
         int64_t outEnd = Min64(outStart + outPerCore, numOut);
-
         if (outStart < outEnd) {
             asc_vf_call<SimtGatherRows<T>>(
                 dim3(blockDimX_),
@@ -503,7 +502,6 @@ private:
         int64_t cntPerCore = CeilDiv64(numOut, coreNum_);
         int64_t cntStart = coreId_ * cntPerCore;
         int64_t cntEnd = Min64(cntStart + cntPerCore, numOut);
-
         if (cntStart < cntEnd) {
             asc_vf_call<SimtComputeCounts>(
                 dim3(blockDimX_),

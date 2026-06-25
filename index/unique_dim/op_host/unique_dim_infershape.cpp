@@ -58,7 +58,6 @@ static ge::graphStatus InferShape4UniqueDim(gert::InferShapeContext *context)
 
     size_t xDimNum = xShape->GetDimNum();
     int64_t xSize = xShape->GetShapeSize();
-
     if (xSize == 0) {
         // empty input → all outputs are empty
         yShape->SetDimNum(xDimNum);

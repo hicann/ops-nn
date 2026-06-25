@@ -41,6 +41,9 @@ namespace {
 const std::string PASS_NAME = "TensorScatterAddFusionPass";
 const int64_t CAPTURE_IDX_OUTPUT = 0l;
 const std::set<std::string> SUPPORTED_OP_TYPES = {"TensorScatterAdd", "ScatterNonAliasingAdd"};
+constexpr int32_t kPortSelf = 0;
+constexpr int32_t kPortIndices = 1;
+constexpr int32_t kPortUpdates = 2;
 
 // ---------------------------------------------------------------------------
 // 工具函数
@@ -108,9 +111,9 @@ static PatternUniqPtr MakePattern(const std::string& opType)
     GNode xNode = *x.GetProducer();
     GNode indicesNode = *indices.GetProducer();
     GNode updatesNode = *updates.GetProducer();
-    es::AddEdgeAndUpdatePeerDesc(*graphPtr, xNode, 0, opNode, 0);
-    es::AddEdgeAndUpdatePeerDesc(*graphPtr, indicesNode, 0, opNode, 1);
-    es::AddEdgeAndUpdatePeerDesc(*graphPtr, updatesNode, 0, opNode, 2);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, xNode, 0, opNode, kPortSelf);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, indicesNode, 0, opNode, kPortIndices);
+    es::AddEdgeAndUpdatePeerDesc(*graphPtr, updatesNode, 0, opNode, kPortUpdates);
 
     es::EsTensorHolder output(graphBuilder.GetCGraphBuilder()->GetTensorHolderFromNode(opNode, 0));
 
@@ -209,9 +212,9 @@ GraphUniqPtr TensorScatterAddFusionPass::Replacement(const std::unique_ptr<Match
 
     // 7. 刷新 ScatterNdAdd 节点所有输入的 Format（InferShape 不推导 Format）
     GNode scatterNdAddNode = *scatterNdAddOutput.GetProducer();
-    UpdateInputFormat(scatterNdAddNode, 0, inputFormats[0]);
-    UpdateInputFormat(scatterNdAddNode, 1, inputFormats[1]);
-    UpdateInputFormat(scatterNdAddNode, 2, inputFormats[2]);
+    UpdateInputFormat(scatterNdAddNode, kPortSelf, inputFormats[0]);
+    UpdateInputFormat(scatterNdAddNode, kPortIndices, inputFormats[1]);
+    UpdateInputFormat(scatterNdAddNode, kPortUpdates, inputFormats[2]);
 
     // 8. 构建替换图
     GraphUniqPtr replaceGraph = builder.BuildAndReset({scatterNdAddOutput});
