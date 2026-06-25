@@ -11,6 +11,7 @@
 #include <iostream>
 #include "infershape_test_util.h"
 #include "ut_op_common.h"
+#include "platform/platform_info.h"
 
 using namespace ge;
 using namespace std;
@@ -36,6 +37,13 @@ protected:
 
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_0)
 {
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -76,6 +84,13 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_0)
 
 TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_1)
 {
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto infer_shape_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_shape;
     ASSERT_NE(infer_shape_func, nullptr);
@@ -117,6 +132,13 @@ TEST_F(RotateQuantInferShape, RotateQuant_infershape_case_1)
 // InferDataType: INT8输出
 TEST_F(RotateQuantInferShape, RotateQuant_InferDtype_case_0)
 {
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optiCompilationInfo;
+    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.str_info.short_soc_version = "Ascend910B";
+    optiCompilationInfo.soc_version = "Ascend910B";
+    fe::PlatformInfoManager::Instance().platform_info_map_["Ascend910B"] = platformInfo;
+    fe::PlatformInfoManager::Instance().SetOptionalCompilationInfo(optiCompilationInfo);
     ASSERT_NE(gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant"), nullptr);
     auto data_type_func = gert::OpImplRegistry::GetInstance().GetOpImpl("RotateQuant")->infer_datatype;
     if (data_type_func != nullptr) {
