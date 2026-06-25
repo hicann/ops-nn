@@ -384,6 +384,7 @@
 | [aclnnScatterMax](../../index/scatter_max/docs/aclnnScatterMax.md) | 实现兼容tf.scatter_max的功能，按索引将var与updates逐切片取最大值。 | - | 默认确定性实现 |
 | [aclnnScatterMin](../../index/scatter_min/docs/aclnnScatterMin.md) | 实现兼容tf.scatter_min的功能，按索引将var与updates逐切片取最小值。 | - | 默认确定性实现 |
 | [aclnnScatterMul](../../index/scatter_mul/docs/aclnnScatterMul.md) | 实现兼容tf.scatter_mul的功能，按索引将updates逐切片乘到var上。 | - | 默认非确定性实现，支持通过aclrtCtxSetSysParamOpt开启确定性 |
+| [aclnnScatterReduce&aclnnInplaceScatterReduce](../../index/scatter_elements_v2/docs/aclnnScatterReduce&aclnnInplaceScatterReduce.md) | 对输入Tensor完成带规约语义的scatter操作，支持替换、累加、累乘、取最大值、取最小值、取平均值六种规约模式，可通过includeSelf控制是否将self中的原始值参与规约计算。 | 默认非确定性实现，支持配置开启 | - |
 | [aclnnScatterValue&aclnnInplaceScatterValue](../../index/scatter_elements_v2/docs/aclnnScatterValue&aclnnInplaceScatterValue.md) | 将scalar value中的值按指定的轴和方向和对应的位置关系逐个填入tensor self中。 | 默认确定性实现 | 默认非确定性实现，支持配置开启 |
 | [aclnnScaledMaskedSoftmax](../../vfusion/scaled_masked_softmax_v2/docs/aclnnScaledMaskedSoftmax.md) | 将输入的数据x先进行scale缩放和mask，然后执行softmax的输出。 | 默认确定性实现 | - |
 | [aclnnScaledMaskedSoftmaxBackward](../../vfusion/scaled_masked_softmax_grad_v2/docs/aclnnScaledMaskedSoftmaxBackward.md) | softmax的反向传播，并对结果进行缩放以及掩码。 | 默认非确定性实现，支持配置开启。 | - |

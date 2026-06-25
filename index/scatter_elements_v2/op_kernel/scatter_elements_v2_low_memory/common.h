@@ -25,6 +25,15 @@ constexpr uint32_t HALF_BYTE_ALIGNMENT = 16;
 constexpr uint32_t BASE_TILE_SIZE = 128;
 constexpr uint32_t HALF_TILE_SIZE = 64;
 
+constexpr uint64_t SCATTER_MODE_NONE = 1;
+constexpr uint64_t SCATTER_MODE_ADD = 2;
+constexpr uint64_t SCATTER_MODE_MUL = 3;
+constexpr uint64_t SCATTER_MODE_MIN = 4;
+constexpr uint64_t SCATTER_MODE_MAX = 5;
+constexpr uint64_t SCATTER_MODE_MEAN = 6;
+constexpr uint64_t SCATTER_MODE_REDUCTION_BEGIN = SCATTER_MODE_ADD;
+constexpr uint64_t SCATTER_MODE_REDUCTION_END = SCATTER_MODE_MEAN;
+
 constexpr uint64_t X_LOCAL_LENGTH = 40000;
 constexpr uint64_t INDICES_LOCAL_LENGTH = 2048;
 constexpr uint64_t BLOCK_SIZE = 32;
@@ -40,6 +49,53 @@ constexpr uint32_t LOOP_UNROLL_SIZE = 8;          // 循环展开大小
 constexpr uint32_t AGG_INDICES_NUM = 1024;           // 聚合indices数
 
 using namespace AscendC;
+
+__aicore__ inline int64_t FloorDivInt64(int64_t value, int32_t divisor)
+{
+    if (divisor == 0) {
+        return 0;
+    }
+    int64_t quotient = value / static_cast<int64_t>(divisor);
+    int64_t remainder = value % static_cast<int64_t>(divisor);
+    if (remainder != 0 && value < 0) {
+        --quotient;
+    }
+    return quotient;
+}
+
+template <typename T>
+__aicore__ inline T MeanDivideValue(T value, int32_t divisor)
+{
+    if (divisor == 0) {
+        return static_cast<T>(0);
+    }
+    return value / static_cast<T>(divisor);
+}
+
+template <>
+__aicore__ inline int8_t MeanDivideValue<int8_t>(int8_t value, int32_t divisor)
+{
+    return static_cast<int8_t>(FloorDivInt64(static_cast<int64_t>(value), divisor));
+}
+
+template <>
+__aicore__ inline int16_t MeanDivideValue<int16_t>(int16_t value, int32_t divisor)
+{
+    return static_cast<int16_t>(FloorDivInt64(static_cast<int64_t>(value), divisor));
+}
+
+template <>
+__aicore__ inline int32_t MeanDivideValue<int32_t>(int32_t value, int32_t divisor)
+{
+    return static_cast<int32_t>(FloorDivInt64(static_cast<int64_t>(value), divisor));
+}
+
+template <>
+__aicore__ inline int64_t MeanDivideValue<int64_t>(int64_t value, int32_t divisor)
+{
+    return FloorDivInt64(value, divisor);
+}
+
 // cpu等待vector计算单元完成计算
 __aicore__ inline void PIPE_V_S() {
     event_t eventIDVToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_S));

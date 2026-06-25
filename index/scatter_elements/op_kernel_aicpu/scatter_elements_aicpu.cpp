@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <complex>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -30,11 +31,176 @@ const uint32_t kUpdatesInputIndex = 2;
 const uint8_t kReductionNone = 0;
 const uint8_t kReductionAdd = 1;
 const uint8_t kReductionMul = 2;
+const uint8_t kReductionMax = 3;
+const uint8_t kReductionMin = 4;
+const uint8_t kReductionMean = 5;
+const int64_t kBoolMajorityDivisor = 2;
+
+inline int64_t FloorDiv(int64_t value, int64_t divisor) {
+  if (divisor == 0) {
+    return 0;
+  }
+  int64_t quotient = value / divisor;
+  int64_t remainder = value % divisor;
+  if (remainder != 0 && value < 0) {
+    --quotient;
+  }
+  return quotient;
+}
+
+template <typename T>
+inline T MeanDivide(T sum, int64_t count) {
+  if (count == 0) {
+    return T(0);
+  }
+  return sum / static_cast<T>(count);
+}
+
+template <>
+inline int8_t MeanDivide<int8_t>(int8_t sum, int64_t count) {
+  if (count == 0) {
+    return 0;
+  }
+  return static_cast<int8_t>(FloorDiv(static_cast<int64_t>(sum), count));
+}
+
+template <>
+inline int16_t MeanDivide<int16_t>(int16_t sum, int64_t count) {
+  if (count == 0) {
+    return 0;
+  }
+  return static_cast<int16_t>(FloorDiv(static_cast<int64_t>(sum), count));
+}
+
+template <>
+inline int32_t MeanDivide<int32_t>(int32_t sum, int64_t count) {
+  if (count == 0) {
+    return 0;
+  }
+  return static_cast<int32_t>(FloorDiv(static_cast<int64_t>(sum), count));
+}
+
+template <>
+inline int64_t MeanDivide<int64_t>(int64_t sum, int64_t count) {
+  if (count == 0) {
+    return 0;
+  }
+  return FloorDiv(sum, count);
+}
+
+template <typename T>
+class MeanReductionHelper {
+ public:
+  explicit MeanReductionHelper(int64_t size) : size_(size) {
+    counts_.resize(size, 0);
+    sums_.resize(size, T(0));
+  }
+
+  void AddUpdate(int64_t index, T value) {
+    sums_[index] += value;
+    counts_[index]++;
+  }
+
+  void Finalize(T *output) {
+    for (int64_t i = 0; i < size_; ++i) {
+      if (counts_[i] > 0) {
+        output[i] = MeanDivide(sums_[i], counts_[i]);
+      }
+    }
+  }
+
+ private:
+  int64_t size_;
+  std::vector<int64_t> counts_;
+  std::vector<T> sums_;
+};
+
+template <>
+class MeanReductionHelper<std::complex<float>> {
+ public:
+  explicit MeanReductionHelper(int64_t size) : size_(size) {
+    counts_.resize(size, 0);
+    sums_.resize(size, std::complex<float>(0.0f, 0.0f));
+  }
+
+  void AddUpdate(int64_t index, std::complex<float> value) {
+    sums_[index] += value;
+    counts_[index]++;
+  }
+
+  void Finalize(std::complex<float> *output) {
+    for (int64_t i = 0; i < size_; ++i) {
+      if (counts_[i] > 0) {
+        output[i] = sums_[i] / static_cast<float>(counts_[i]);
+      }
+    }
+  }
+
+ private:
+  int64_t size_;
+  std::vector<int64_t> counts_;
+  std::vector<std::complex<float>> sums_;
+};
+
+template <>
+class MeanReductionHelper<std::complex<double>> {
+ public:
+  explicit MeanReductionHelper(int64_t size) : size_(size) {
+    counts_.resize(size, 0);
+    sums_.resize(size, std::complex<double>(0.0, 0.0));
+  }
+
+  void AddUpdate(int64_t index, std::complex<double> value) {
+    sums_[index] += value;
+    counts_[index]++;
+  }
+
+  void Finalize(std::complex<double> *output) {
+    for (int64_t i = 0; i < size_; ++i) {
+      if (counts_[i] > 0) {
+        output[i] = sums_[i] / static_cast<double>(counts_[i]);
+      }
+    }
+  }
+
+ private:
+  int64_t size_;
+  std::vector<int64_t> counts_;
+  std::vector<std::complex<double>> sums_;
+};
+
+template <>
+class MeanReductionHelper<bool> {
+ public:
+  explicit MeanReductionHelper(int64_t size) : size_(size) {
+    counts_.resize(size, 0);
+    sums_.resize(size, 0);
+  }
+
+  void AddUpdate(int64_t index, bool value) {
+    sums_[index] += value ? 1 : 0;
+    counts_[index]++;
+  }
+
+  void Finalize(bool *output) {
+    for (int64_t i = 0; i < size_; ++i) {
+      if (counts_[i] > 0) {
+          output[i] = sums_[i] > (counts_[i] / kBoolMajorityDivisor);
+      }
+    }
+  }
+
+ private:
+  int64_t size_;
+  std::vector<int64_t> counts_;
+  std::vector<int64_t> sums_;
+};
 
 struct ScatterElementsComputeInfo {
   int64_t total_value_num = 0;
   int64_t axis_value = 0;
   uint8_t reduction_flag = kReductionNone;
+  bool include_self = true;
   int64_t value_dim_num_x1 = 0;
   int64_t value_dim_num_x2 = 0;
   int64_t value_dim_num_x3 = 0;
@@ -60,35 +226,279 @@ std::vector<int64_t> GetTensorDims(const std::shared_ptr<TensorShape> &shape, in
 }
 
 uint8_t GetReductionFlag(const std::string &rdt_value) {
-  if (rdt_value == "add") {
+  if (rdt_value == "add" || rdt_value == "sum") {
     return kReductionAdd;
   }
-  if (rdt_value == "mul") {
+  if (rdt_value == "mul" || rdt_value == "prod") {
     return kReductionMul;
   }
-
+  if (rdt_value == "max" || rdt_value == "amax") {
+    return kReductionMax;
+  }
+  if (rdt_value == "min" || rdt_value == "amin") {
+    return kReductionMin;
+  }
+  if (rdt_value == "mean") {
+    return kReductionMean;
+  }
   return kReductionNone;
 }
 
 template <typename T>
-inline void ApplyReduction(const T *updates, T *output, int64_t index_value, int64_t update_index, uint8_t flag) {
-  if (flag == kReductionNone) {
-    output[index_value] = updates[update_index];
-  } else if (flag == kReductionAdd) {
-    output[index_value] += updates[update_index];
+inline void AddComputeWithSelf(T *output, const T *update, int64_t index, int64_t update_idx) {
+  output[index] += update[update_idx];
+}
+
+template <typename T>
+inline void MulComputeWithSelf(T *output, const T *update, int64_t index, int64_t update_idx) {
+  output[index] *= update[update_idx];
+}
+
+template <typename T>
+inline void MaxComputeWithSelf(T *output, const T *update, int64_t index, int64_t update_idx) {
+  if (update[update_idx] > output[index]) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <typename T>
+inline void MinComputeWithSelf(T *output, const T *update, int64_t index, int64_t update_idx) {
+  if (update[update_idx] < output[index]) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <typename T>
+inline void AddComputeWithoutSelf(T *output, const T *update, int64_t index, int64_t update_idx,
+                                  int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
   } else {
-    output[index_value] *= updates[update_index];
+    output[index] += update[update_idx];
+  }
+}
+
+template <typename T>
+inline void MulComputeWithoutSelf(T *output, const T *update, int64_t index, int64_t update_idx,
+                                  int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else {
+    output[index] *= update[update_idx];
+  }
+}
+
+template <typename T>
+inline void MaxComputeWithoutSelf(T *output, const T *update, int64_t index, int64_t update_idx,
+                                  int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else if (update[update_idx] > output[index]) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <typename T>
+inline void MinComputeWithoutSelf(T *output, const T *update, int64_t index, int64_t update_idx,
+                                  int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else if (update[update_idx] < output[index]) {
+    output[index] = update[update_idx];
   }
 }
 
 template <>
-inline void ApplyReduction(const bool *updates, bool *output, int64_t index_value, int64_t update_index, uint8_t flag) {
-  if (flag == kReductionAdd) {
-    output[index_value] = output[index_value] || updates[update_index];
-  } else if (flag == kReductionMul) {
-    output[index_value] = output[index_value] && updates[update_index];
+inline void AddComputeWithSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx) {
+  output[index] = output[index] || update[update_idx];
+}
+
+template <>
+inline void MulComputeWithSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx) {
+  output[index] = output[index] && update[update_idx];
+}
+
+template <>
+inline void MaxComputeWithSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx) {
+  output[index] = output[index] || update[update_idx];
+}
+
+template <>
+inline void MinComputeWithSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx) {
+  output[index] = output[index] && update[update_idx];
+}
+
+template <>
+inline void AddComputeWithoutSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx,
+                                        int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
   } else {
-    output[index_value] = updates[update_index];
+    output[index] = output[index] || update[update_idx];
+  }
+}
+
+template <>
+inline void MulComputeWithoutSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx,
+                                        int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else {
+    output[index] = output[index] && update[update_idx];
+  }
+}
+
+template <>
+inline void MaxComputeWithoutSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx,
+                                        int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else {
+    output[index] = output[index] || update[update_idx];
+  }
+}
+
+template <>
+inline void MinComputeWithoutSelf<bool>(bool *output, const bool *update, int64_t index, int64_t update_idx,
+                                        int64_t update_count) {
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+  } else {
+    output[index] = output[index] && update[update_idx];
+  }
+}
+
+template <>
+inline void MaxComputeWithSelf<std::complex<float>>(std::complex<float> *output, const std::complex<float> *update,
+                                                    int64_t index, int64_t update_idx) {
+  auto update_norm = std::norm(update[update_idx]);
+  auto output_norm = std::norm(output[index]);
+  if (update_norm > output_norm) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <>
+inline void MinComputeWithSelf<std::complex<float>>(std::complex<float> *output, const std::complex<float> *update,
+                                                    int64_t index, int64_t update_idx) {
+  auto update_norm = std::norm(update[update_idx]);
+  auto output_norm = std::norm(output[index]);
+  if (update_norm < output_norm) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <>
+inline void MaxComputeWithSelf<std::complex<double>>(std::complex<double> *output,
+                                                     const std::complex<double> *update, int64_t index,
+                                                     int64_t update_idx) {
+  auto update_norm = std::norm(update[update_idx]);
+  auto output_norm = std::norm(output[index]);
+  if (update_norm > output_norm) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <>
+inline void MinComputeWithSelf<std::complex<double>>(std::complex<double> *output,
+                                                     const std::complex<double> *update, int64_t index,
+                                                     int64_t update_idx) {
+  auto update_norm = std::norm(update[update_idx]);
+  auto output_norm = std::norm(output[index]);
+  if (update_norm < output_norm) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <typename T, bool kGreater>
+inline void ComplexComputeWithoutSelf(T *output, const T *update, int64_t index, int64_t update_idx,
+                                      int64_t update_count) {
+  auto update_norm = std::norm(update[update_idx]);
+  if (update_count == 0) {
+    output[index] = update[update_idx];
+    return;
+  }
+  auto output_norm = std::norm(output[index]);
+  if ((kGreater && update_norm > output_norm) || (!kGreater && update_norm < output_norm)) {
+    output[index] = update[update_idx];
+  }
+}
+
+template <>
+inline void MaxComputeWithoutSelf<std::complex<float>>(std::complex<float> *output,
+                                                       const std::complex<float> *update, int64_t index,
+                                                       int64_t update_idx, int64_t update_count) {
+  ComplexComputeWithoutSelf<std::complex<float>, true>(output, update, index, update_idx, update_count);
+}
+
+template <>
+inline void MinComputeWithoutSelf<std::complex<float>>(std::complex<float> *output,
+                                                       const std::complex<float> *update, int64_t index,
+                                                       int64_t update_idx, int64_t update_count) {
+  ComplexComputeWithoutSelf<std::complex<float>, false>(output, update, index, update_idx, update_count);
+}
+
+template <>
+inline void MaxComputeWithoutSelf<std::complex<double>>(std::complex<double> *output,
+                                                        const std::complex<double> *update, int64_t index,
+                                                        int64_t update_idx, int64_t update_count) {
+  ComplexComputeWithoutSelf<std::complex<double>, true>(output, update, index, update_idx, update_count);
+}
+
+template <>
+inline void MinComputeWithoutSelf<std::complex<double>>(std::complex<double> *output,
+                                                        const std::complex<double> *update, int64_t index,
+                                                        int64_t update_idx, int64_t update_count) {
+  ComplexComputeWithoutSelf<std::complex<double>, false>(output, update, index, update_idx, update_count);
+}
+
+template <typename T>
+inline void NoneCompute(T *output, const T *update, int64_t index, int64_t update_idx) {
+  output[index] = update[update_idx];
+}
+
+inline bool NeedUpdateCounts(const ScatterElementsComputeInfo &info) {
+  return !info.include_self &&
+         (info.reduction_flag == kReductionAdd || info.reduction_flag == kReductionMul ||
+          info.reduction_flag == kReductionMax || info.reduction_flag == kReductionMin);
+}
+
+template <typename T>
+inline void ApplyScatterReduction(const ScatterElementsComputeInfo &info, const T *updates, T *output,
+                                  int64_t index_value, int64_t update_idx, std::vector<int64_t> &update_counts,
+                                  MeanReductionHelper<T> *mean_helper) {
+  if (info.reduction_flag == kReductionNone) {
+    NoneCompute(output, updates, index_value, update_idx);
+  } else if (info.reduction_flag == kReductionAdd) {
+    if (NeedUpdateCounts(info)) {
+      AddComputeWithoutSelf(output, updates, index_value, update_idx, update_counts[index_value]);
+      update_counts[index_value]++;
+    } else {
+      AddComputeWithSelf(output, updates, index_value, update_idx);
+    }
+  } else if (info.reduction_flag == kReductionMul) {
+    if (NeedUpdateCounts(info)) {
+      MulComputeWithoutSelf(output, updates, index_value, update_idx, update_counts[index_value]);
+      update_counts[index_value]++;
+    } else {
+      MulComputeWithSelf(output, updates, index_value, update_idx);
+    }
+  } else if (info.reduction_flag == kReductionMax) {
+    if (NeedUpdateCounts(info)) {
+      MaxComputeWithoutSelf(output, updates, index_value, update_idx, update_counts[index_value]);
+      update_counts[index_value]++;
+    } else {
+      MaxComputeWithSelf(output, updates, index_value, update_idx);
+    }
+  } else if (info.reduction_flag == kReductionMin) {
+    if (NeedUpdateCounts(info)) {
+      MinComputeWithoutSelf(output, updates, index_value, update_idx, update_counts[index_value]);
+      update_counts[index_value]++;
+    } else {
+      MinComputeWithSelf(output, updates, index_value, update_idx);
+    }
+  } else if (info.reduction_flag == kReductionMean && mean_helper != nullptr) {
+    mean_helper->AddUpdate(index_value, updates[update_idx]);
   }
 }
 
@@ -98,8 +508,10 @@ uint32_t InitScatterElementsInfo(const CpuKernelContext &ctx, ScatterElementsCom
   auto *updates_tensor = ctx.Input(kUpdatesInputIndex);
   auto *axis = ctx.GetAttr("axis");
   auto *reduction = ctx.GetAttr("reduction");
+  auto *include_self_attr = ctx.GetAttr("include_self");
   info.total_value_num = data_tensor->NumElements();
   info.axis_value = axis == nullptr ? 0 : axis->GetInt();
+  info.include_self = include_self_attr == nullptr ? true : include_self_attr->GetBool();
   info.reduction_flag = GetReductionFlag(reduction == nullptr ? "none" : reduction->GetString());
   info.value_dim_num_x1 = data_tensor->GetTensorShape()->GetDims();
   info.value_dim_num_x2 = indices_tensor->GetTensorShape()->GetDims();
@@ -133,10 +545,10 @@ uint32_t BuildScatterElementsInfo(ScatterElementsComputeInfo &info) {
     }
     if (i > 0) {
       sub_data_fix *= info.value_dim_x1[i];
-      sub_index_fix *= info.value_dim_x2[i];
-      sub_src_fix *= info.value_dim_x3[i];
       info.data_dim_vec.push_back(sub_data_fix);
+      sub_index_fix *= info.value_dim_x2[i];
       info.index_dim_vec.push_back(sub_index_fix);
+      sub_src_fix *= info.value_dim_x3[i];
       info.src_dim_vec.push_back(sub_src_fix);
     }
   }
@@ -147,9 +559,9 @@ uint32_t BuildScatterElementsInfo(ScatterElementsComputeInfo &info) {
 
 template <typename TI>
 uint32_t NormalizeIndicesValue(const ScatterElementsComputeInfo &info, TI raw_value, int64_t &indices_value) {
-  KERNEL_CHECK_FALSE(raw_value >= info.axis_dim_value * -1 && raw_value < info.axis_dim_value, KERNEL_STATUS_PARAM_INVALID,
-                     "Indices value %ld is out of bound %ld", static_cast<int64_t>(raw_value),
-                     static_cast<int64_t>(info.axis_dim_value));
+  KERNEL_CHECK_FALSE(raw_value >= info.axis_dim_value * -1 && raw_value < info.axis_dim_value,
+                     KERNEL_STATUS_PARAM_INVALID, "Indices value %ld is out of bound %ld",
+                     static_cast<int64_t>(raw_value), static_cast<int64_t>(info.axis_dim_value));
   indices_value = raw_value < 0 ? raw_value + info.axis_dim_value : raw_value;
   return KERNEL_STATUS_OK;
 }
@@ -172,37 +584,45 @@ uint32_t CalcScatterIndices(const ScatterElementsComputeInfo &info, int64_t flat
   return KERNEL_STATUS_OK;
 }
 
-template <typename T, typename TI>
-uint32_t ScatterSameNum(const ScatterElementsComputeInfo &info, const TI *indices_data, const T *updates, T *output) {
-  for (int64_t i = 0; i < info.update_value_num; ++i) {
-    int64_t indices_value = 0;
-    int64_t index_value = 0;
-    int64_t src_index = 0;
-    auto ret = NormalizeIndicesValue(info, indices_data[i], indices_value);
-    KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "NormalizeIndicesValue failed");
-    CalcScatterIndices(info, i, indices_value, index_value, src_index);
-    KERNEL_CHECK_FALSE(index_value < info.total_value_num, KERNEL_STATUS_PARAM_INVALID,
-                       "Update index %ld greater than %ld which is overflow", index_value, info.total_value_num);
-    ApplyReduction(updates, output, index_value, i, info.reduction_flag);
+template <typename TI>
+uint32_t ResolveScatterIndex(const ScatterElementsComputeInfo &info, const TI *indices_data, int64_t flat_index,
+                             bool check_src_index, int64_t &index_value, int64_t &src_index) {
+  int64_t indices_value = 0;
+  auto ret = NormalizeIndicesValue(info, indices_data[flat_index], indices_value);
+  KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "NormalizeIndicesValue failed");
+  CalcScatterIndices(info, flat_index, indices_value, index_value, src_index);
+  KERNEL_CHECK_FALSE(index_value < info.total_value_num, KERNEL_STATUS_PARAM_INVALID,
+                     "Update index %ld greater than %ld which is overflow", index_value, info.total_value_num);
+  if (check_src_index) {
+    KERNEL_CHECK_FALSE(src_index < info.update_src_num, KERNEL_STATUS_PARAM_INVALID,
+                       "src index %ld greater than src total numbers %ld which is overflow", src_index,
+                       info.update_src_num);
   }
   return KERNEL_STATUS_OK;
 }
 
 template <typename T, typename TI>
-uint32_t ScatterDiffNum(const ScatterElementsComputeInfo &info, const TI *indices_data, const T *updates, T *output) {
+uint32_t ScatterSameNum(const ScatterElementsComputeInfo &info, const TI *indices_data, const T *updates, T *output,
+                        std::vector<int64_t> &update_counts, MeanReductionHelper<T> *mean_helper) {
   for (int64_t i = 0; i < info.update_value_num; ++i) {
-    int64_t indices_value = 0;
     int64_t index_value = 0;
     int64_t src_index = 0;
-    auto ret = NormalizeIndicesValue(info, indices_data[i], indices_value);
-    KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "NormalizeIndicesValue failed");
-    CalcScatterIndices(info, i, indices_value, index_value, src_index);
-    KERNEL_CHECK_FALSE(index_value < info.total_value_num, KERNEL_STATUS_PARAM_INVALID,
-                       "Update index %ld greater than %ld which is overflow", index_value, info.total_value_num);
-    KERNEL_CHECK_FALSE(src_index < info.update_src_num, KERNEL_STATUS_PARAM_INVALID,
-                       "src index %ld greater than src total numbers %ld which is overflow", src_index,
-                       info.update_src_num);
-    ApplyReduction(updates, output, index_value, src_index, info.reduction_flag);
+    auto ret = ResolveScatterIndex(info, indices_data, i, false, index_value, src_index);
+    KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "ResolveScatterIndex failed");
+    ApplyScatterReduction(info, updates, output, index_value, i, update_counts, mean_helper);
+  }
+  return KERNEL_STATUS_OK;
+}
+
+template <typename T, typename TI>
+uint32_t ScatterDiffNum(const ScatterElementsComputeInfo &info, const TI *indices_data, const T *updates, T *output,
+                        std::vector<int64_t> &update_counts, MeanReductionHelper<T> *mean_helper) {
+  for (int64_t i = 0; i < info.update_value_num; ++i) {
+    int64_t index_value = 0;
+    int64_t src_index = 0;
+    auto ret = ResolveScatterIndex(info, indices_data, i, true, index_value, src_index);
+    KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "ResolveScatterIndex failed");
+    ApplyScatterReduction(info, updates, output, index_value, src_index, update_counts, mean_helper);
   }
   return KERNEL_STATUS_OK;
 }
@@ -308,15 +728,38 @@ uint32_t ScatterElementsCpuKernel::DoCompute(const CpuKernelContext &ctx) {
     KERNEL_LOG_INFO("[%s] input of updates is empty tensor.", ctx.GetOpType().c_str());
     return UpdateOutput<T>(ctx, info.total_value_num);
   }
+
   ret = BuildScatterElementsInfo(info);
   KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "BuildScatterElementsInfo failed");
   ret = UpdateOutput<T>(ctx, info.total_value_num);
   KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "UpdateOutput failed");
+
   auto *indices_data = reinterpret_cast<TI *>(ctx.Input(1)->GetData());
   auto *updates = reinterpret_cast<T *>(ctx.Input(kUpdatesInputIndex)->GetData());
   auto *output = reinterpret_cast<T *>(ctx.Output(0)->GetData());
-  return info.update_value_num == info.update_src_num ? ScatterSameNum(info, indices_data, updates, output)
-                                                      : ScatterDiffNum(info, indices_data, updates, output);
+  std::vector<int64_t> update_counts;
+  if (NeedUpdateCounts(info)) {
+    update_counts.resize(info.total_value_num, 0);
+  }
+  std::unique_ptr<MeanReductionHelper<T>> mean_helper;
+  if (info.reduction_flag == kReductionMean) {
+    mean_helper.reset(new MeanReductionHelper<T>(info.total_value_num));
+    if (info.include_self) {
+      auto *input_data = reinterpret_cast<T *>(ctx.Input(0)->GetData());
+      for (int64_t i = 0; i < info.total_value_num; ++i) {
+        mean_helper->AddUpdate(i, input_data[i]);
+      }
+    }
+  }
+
+  ret = info.update_value_num == info.update_src_num
+            ? ScatterSameNum(info, indices_data, updates, output, update_counts, mean_helper.get())
+            : ScatterDiffNum(info, indices_data, updates, output, update_counts, mean_helper.get());
+  KERNEL_CHECK_FALSE(ret == KERNEL_STATUS_OK, ret, "ScatterElements reduce failed");
+  if (info.reduction_flag == kReductionMean && mean_helper != nullptr) {
+    mean_helper->Finalize(output);
+  }
+  return KERNEL_STATUS_OK;
 }
 
 REGISTER_CPU_KERNEL(kScatterElements, ScatterElementsCpuKernel);
