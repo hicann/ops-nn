@@ -329,6 +329,7 @@ function(add_graph_plugin_modules)
     endif()
     target_include_directories(${GRAPH_PLUGIN_NAME}_obj PRIVATE 
       ${OP_PROTO_INCLUDE}
+      ${JSON_INCLUDE}
       ${PROJECT_SOURCE_DIR}/common/inc
       ${PROJECT_SOURCE_DIR}/common/graph_fusion
       ${ASCEND_DIR}/include
