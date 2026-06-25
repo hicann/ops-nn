@@ -461,6 +461,7 @@ protected:
     ge::DataType dataType;
     ge::DataType weightDataType;
     ge::Format format;
+    NpuArch arch = NpuArch::DAV_3510;
 };
 } // namespace optiling
 #endif // BATCH_NORM_V3_TILING_H

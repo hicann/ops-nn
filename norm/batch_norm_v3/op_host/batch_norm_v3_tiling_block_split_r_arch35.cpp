@@ -76,11 +76,18 @@ protected:
                 return false;
             }
         }
-        if (a > SPLIT_R_TEMPLATE_A_THRESHOLD && r1 <= SPLIT_R_TEMPLATE_R_THRESHOLD) {
-            return false;
-        }
-        if (a > SPLIT_R_TEMPLATE_BIG_A_THRESHOLD) {
-            return false;
+        if (arch == NpuArch::DAV_5102) {
+            // DAV_5102只过滤A轴大于256的场景
+            if (a > SPLIT_R_TEMPLATE_A_THRESHOLD) {
+                return false;
+            }
+        } else {
+            if (a > SPLIT_R_TEMPLATE_A_THRESHOLD && r1 <= SPLIT_R_TEMPLATE_R_THRESHOLD) {
+                return false;
+            }
+            if (a > SPLIT_R_TEMPLATE_BIG_A_THRESHOLD) {
+                return false;
+            }
         }
         return true;
     }

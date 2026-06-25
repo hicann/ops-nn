@@ -63,22 +63,25 @@ namespace optiling {
 ge::graphStatus BatchNormV3RegbaseTilingBase::GetPlatformInfo()
 {
     auto platformInfo = context_->GetPlatformInfo();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, platformInfo);
     auto compileInfoPtr = reinterpret_cast<const BatchNormV3CompileInfo*>(context_->GetCompileInfo());
     OP_CHECK_IF(
         compileInfoPtr == nullptr, OP_LOGE(context_->GetNodeName(), "compile info is null"), return ge::GRAPH_FAILED);
     vl = compileInfoPtr->vectorLength / sizeof(float);
     blockSize = compileInfoPtr->blockSize;
 
-    if (platformInfo != nullptr) {
-        auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
-        aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
-        uint64_t ubSizePlatForm;
-        ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
-        aicoreParams_.ubSize = ubSizePlatForm;
-    } else {
-        aicoreParams_.numBlocks = compileInfoPtr->coreNum;
-        aicoreParams_.ubSize = compileInfoPtr->ubSize;
-    }
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    aicoreParams_.numBlocks = ascendcPlatform.GetCoreNumAiv();
+    OP_CHECK_IF(
+        aicoreParams_.numBlocks <= 0, OP_LOGE(context_->GetNodeName(), "numBlocks should not be less than or equal to zero."),
+        return ge::GRAPH_FAILED);
+    arch = ascendcPlatform.GetCurNpuArch();
+    uint64_t ubSizePlatForm;
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSizePlatForm);
+    aicoreParams_.ubSize = ubSizePlatForm;
+    OP_CHECK_IF(
+        aicoreParams_.ubSize <= 0, OP_LOGE(context_->GetNodeName(), "ubSize should not be less than or equal to zero."),
+        return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
