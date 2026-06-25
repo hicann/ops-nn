@@ -86,9 +86,11 @@ protected:
     void SetBf16Compat();
     virtual void SetTilingData();
     uint32_t CalUsedCoreNum();
-    virtual bool CalcBasicBlock() = 0;
+    virtual bool CalcBasicBlock();
     virtual void CalcTailBasicBlock();
     virtual void CalcTailBasicBlockAfullLoad();
+    virtual void CalcTailBasicBlockBfullLoad();
+    virtual void CalcTailBasicBlock4MmadS8S4();
     uint64_t GetTailBasicBlockSplitMax(bool isMSplit, uint64_t tileMax, uint64_t splitSize) const;
     bool CanIncreaseTailSplit(bool isPreSplitM, bool isPreSplit, uint64_t preSplit, uint64_t secSplit,
                               uint64_t splitMax);
@@ -96,7 +98,7 @@ protected:
     void CalcTailBasicBlockSplit(bool isPreSplitM, uint64_t preSplitMax, uint64_t secSplitMax,
                                  uint64_t preSplitSize, uint64_t secSplitSize);
     virtual void AnalyseFullLoadInfo() = 0;
-    virtual void CalcTailRoundBasicBlockSplit() = 0;
+    virtual void CalcTailRoundBasicBlockSplit();
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;

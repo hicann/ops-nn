@@ -18,6 +18,8 @@
 #include "error_util.h"
 
 namespace {
+constexpr uint64_t CUBE_BLOCK = 16UL;
+constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
 constexpr uint64_t L1_ALIGN_SIZE = 32UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
 constexpr uint64_t BASIC_BLOCK_SIZE_512 = 512UL;
@@ -25,6 +27,10 @@ constexpr uint64_t MTE2_MIN_LOAD_SIZE = 32768UL;
 constexpr uint64_t L2_ALIGN_SIZE = 128UL;
 constexpr uint64_t MX_GROUP_SIZE = 32UL;
 constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2UL;
+constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32 * 1024UL;
+constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64 * 1024UL;
+constexpr uint64_t CACHE_LINE_512B = 512UL;
+constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
 constexpr uint32_t DB_SIZE = 2U;
 constexpr uint32_t NUM_HALF = 2U;
 constexpr uint32_t SCALER_FACTOR_MAX = 127U;
@@ -37,6 +43,21 @@ uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
     }
     return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
 }
+
+uint64_t GetSizeWithDataTypeLut(uint64_t shape, ge::DataType dtype)
+{
+    // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
+    bool is4BitInput = (dtype == ge::DT_INT2 || dtype == ge::DT_UINT1);
+    bool is8BitInput = dtype == ge::DT_INT4;
+    
+    if (is4BitInput) {
+        return (shape + 1) >> 1;
+    } else if (is8BitInput) {
+        return shape;
+    } else {
+        return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
+    }
+}
 } // namespace
 
 namespace optiling {
@@ -44,7 +65,11 @@ namespace optiling {
 L1TilingDataCalculator::L1TilingDataCalculator(
     const QuantBatchMatmulInfo& inputParams, const QuantBatchMatmulV3CompileInfo& compileInfo, uint64_t baseM,
     uint64_t baseN, uint64_t baseK)
-    : inputParams_(inputParams), compileInfo_(compileInfo), baseM_(baseM), baseN_(baseN), baseK_(baseK)
+    : inputParams_(inputParams),
+      compileInfo_(compileInfo),
+      baseM_(baseM),
+      baseN_(baseN),
+      baseK_(baseK)
 {}
 
 bool L1TilingDataCalculator::Compute(L1TilingMode mode)
@@ -55,7 +80,29 @@ bool L1TilingDataCalculator::Compute(L1TilingMode mode)
     }
     switch (mode) {
         case L1TilingMode::A_L1_FULL_LOAD:
+            isAFullLoad_ = true;
             return ComputeL1TilingAL1FullLoad();
+        case L1TilingMode::B_L1_FULL_LOAD:
+            isBFullLoad_ = true;
+            return ComputeL1TilingBL1FullLoad();
+        case L1TilingMode::PASS_OPTIMIZED:
+            return ComputeL1TilingMmadS8S4();
+        case L1TilingMode::PASS_OPTIMIZED_A_FULL_LOAD:
+            isAFullLoad_ = true;
+            return ComputeL1TilingMmadS8S4();
+        case L1TilingMode::PASS_OPTIMIZED_B_FULL_LOAD:
+            isBFullLoad_ = true;
+            return ComputeL1TilingMmadS8S4();
+        case L1TilingMode::PASS_OPTIMIZED_AB_FULL_LOAD:
+            isAFullLoad_ = true;
+            isBFullLoad_ = true;
+            isABFullLoad_ = true;
+            return ComputeL1TilingMmadS8S4();
+        case L1TilingMode::DEPTH_MAXIMIZED:
+            return ComputeL1TilingMmadS8S4LUT();
+        case L1TilingMode::DEPTH_MAXIMIZED_A_FULL_LOAD:
+            isAFullLoad_ = true;
+            return ComputeL1TilingMmadS8S4LUT();
         case L1TilingMode::DEFAULT:
         default:
             return ComputeL1TilingDefault();
@@ -165,8 +212,7 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
     l1TilingData_.stepKa_ = ops::CeilDiv(inputParams_.kSize, baseK_);
     l1TilingData_.depthKa_ = l1TilingData_.stepKa_;
 
-    uint64_t singleCoreASize = GetSizeWithDataType(baseM_ * inputParams_.kSize, inputParams_.aDtype);
-    uint64_t alignedSingleCoreASize = ops::CeilAlign(singleCoreASize, L1_ALIGN_SIZE);
+    uint64_t alignedSingleCoreASize = GetSingleCoreAFullLoadSize();
     OP_TILING_CHECK(
         leftL1Size_ < alignedSingleCoreASize,
         CUBE_INNER_ERR_REPORT(
@@ -206,6 +252,25 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
         l1TilingData_.stepKb_ =
             l1TilingData_.depthKb_ == 1UL ? l1TilingData_.depthKb_ : l1TilingData_.depthKb_ / DB_SIZE;
     }
+    return true;
+}
+
+bool L1TilingDataCalculator::ComputeL1TilingBL1FullLoad()
+{
+    l1TilingData_.stepKb_ = ops::CeilDiv(inputParams_.kSize, baseK_);
+    l1TilingData_.depthKb_ = l1TilingData_.stepKb_;
+
+    uint64_t alignedSingleCoreBSize = GetSingleCoreBFullLoadSize();
+    OP_TILING_CHECK(
+        leftL1Size_ < alignedSingleCoreBSize,
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - alignedSingleCoreBSize(%lu).",
+            leftL1Size_, alignedSingleCoreBSize),
+        return false);
+    uint64_t leftL1SizeAfterFullB = leftL1Size_ - alignedSingleCoreBSize;
+    l1TilingData_.depthKa_ = GetDepthA1BfullLoad(leftL1SizeAfterFullB);
+    l1TilingData_.stepKa_ =
+            l1TilingData_.depthKa_ == 1UL ? l1TilingData_.depthKa_ : l1TilingData_.depthKa_ / DB_SIZE;
     return true;
 }
 
@@ -386,6 +451,36 @@ uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
     return stepKbBase * DB_SIZE;
 }
 
+uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
+{
+    // Align inner axis to 128B.
+    uint64_t stepKaBase = 1UL;
+    if (!inputParams_.transA) {
+        uint64_t singleBaseKSize = GetSizeWithDataType(baseK_, inputParams_.aDtype);
+        if (singleBaseKSize != 0UL && singleBaseKSize < L2_ALIGN_SIZE) {
+            stepKaBase = ops::CeilDiv(L2_ALIGN_SIZE, singleBaseKSize);
+        }
+    }
+
+    uint64_t baseASize = GetSizeWithDataType(baseM_ * baseK_ * stepKaBase, inputParams_.aDtype);
+    if (baseASize == 0UL) {
+        return DB_SIZE;
+    }
+    uint64_t stepKaBaseScale = 1UL;
+    if (leftSize >= MTE2_MIN_LOAD_SIZE * DB_SIZE) {
+        stepKaBaseScale = ops::CeilDiv(MTE2_MIN_LOAD_SIZE, baseASize);
+    } else {
+        stepKaBaseScale = ops::CeilDiv(leftSize / DB_SIZE, baseASize);
+    }
+    stepKaBase *= stepKaBaseScale;
+
+    uint64_t refinedStepKa = 2UL;
+    if (stepKaBase == 1UL && inputParams_.kSize > baseK_ && leftSize > baseASize * refinedStepKa) {
+        stepKaBase = refinedStepKa;
+    }
+    return stepKaBase * DB_SIZE;
+}
+
 uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) const
 {
     uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE);
@@ -420,6 +515,253 @@ uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) con
         }
     }
     return scaleFactorB;
+}
+
+bool L1TilingDataCalculator::ComputeL1TilingMmadS8S4()
+{
+    l1TilingData_.stepKa_ = 1UL;
+    l1TilingData_.stepKb_ = 1UL;
+    l1TilingData_.depthKa_ = 1UL;
+    l1TilingData_.depthKb_ = 1UL;
+    if (isABFullLoad_) {
+        return true;
+    }
+
+    uint64_t maxStepK = ops::CeilDiv(inputParams_.kSize, baseK_);
+    CarryDataSizePass(leftL1Size_, maxStepK);
+    BalanceStepKPass(leftL1Size_);
+    PostCacheLinePass(leftL1Size_, maxStepK);
+
+    l1TilingData_.stepKa_ = isAFullLoad_ ? 1UL : l1TilingData_.stepKa_;
+    l1TilingData_.depthKa_ = isAFullLoad_ ? l1TilingData_.stepKa_ : l1TilingData_.stepKa_ * DB_SIZE;
+    l1TilingData_.stepKb_ = isBFullLoad_ ? 1UL : l1TilingData_.stepKb_;
+    l1TilingData_.depthKb_ = isBFullLoad_ ? l1TilingData_.stepKb_ : l1TilingData_.stepKb_ * DB_SIZE;
+    return true;
+}
+
+bool L1TilingDataCalculator::ComputeL1TilingMmadS8S4LUT()
+{
+    // LUT 场景采用mm api Norm模板，stepK无意义，默认1
+    l1TilingData_.stepKa_ = 1UL;
+    l1TilingData_.stepKb_ = 1UL;
+
+    // LUT 场景采用mm api Norm模板，depthA1 depthB1尽可能用满L1空间。分asw和al1full两种情况讨论
+    l1TilingData_.depthKa_ = 1UL;
+    l1TilingData_.depthKb_ = 1UL;
+
+    uint64_t maxDepth = ops::CeilDiv(inputParams_.kSize, baseK_);
+
+    uint64_t oneBaseADataSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype);
+    uint64_t oneBaseBDataSize = GetSizeWithDataTypeLut(baseN_ * baseK_, inputParams_.bDtype);
+
+    if (isAFullLoad_) {
+        OP_TILING_CHECK(leftL1Size_ < GetSingleCoreAFullLoadSize(),
+                        CUBE_INNER_ERR_REPORT(inputParams_.opName,
+                                              "Subtraction underflow: leftL1Size(%lu) - alignedSingleCoreASize(%lu).",
+                                              leftL1Size_, GetSingleCoreAFullLoadSize()),
+                        return false);
+        l1TilingData_.depthKb_ =
+            std::min(ops::FloorDiv(leftL1Size_ - GetSingleCoreAFullLoadSize(), oneBaseBDataSize), maxDepth);
+    } else {
+        l1TilingData_.depthKa_ = std::min(ops::FloorDiv(leftL1Size_, oneBaseADataSize + oneBaseBDataSize), maxDepth);
+        l1TilingData_.depthKb_ = l1TilingData_.depthKa_;
+    }
+    return true;
+}
+
+uint64_t L1TilingDataCalculator::GetSingleCoreAFullLoadSize() const
+{
+    return baseM_ *
+           (inputParams_.transA ?
+                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
+                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+}
+
+uint64_t L1TilingDataCalculator::GetSingleCoreBFullLoadSize() const
+{
+    return baseN_ *
+           (inputParams_.transB ?
+                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
+                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.bDtype));
+}
+
+bool L1TilingDataCalculator::CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const
+{
+    uint64_t singleCoreASize = tempStepKa * GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * DB_SIZE;
+    uint64_t singleCoreBSize = tempStepKb * GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * DB_SIZE;
+
+    if (isAFullLoad_) {
+        singleCoreASize = GetSingleCoreAFullLoadSize();
+    } else if (isBFullLoad_) {
+        singleCoreBSize = GetSingleCoreBFullLoadSize();
+    }
+    return leftL1Size >= singleCoreASize + singleCoreBSize;
+}
+
+void L1TilingDataCalculator::AdjustStepK(
+    uint64_t leftL1Size, uint64_t& tempStepKa, uint64_t& tempStepKb, bool isStepKa) const
+{
+    uint64_t oneBaseADataSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * DB_SIZE;
+    uint64_t oneBaseBDataSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * DB_SIZE;
+    if (isStepKa) {
+        uint64_t singleCoreBSize = tempStepKb * oneBaseBDataSize;
+        if (isBFullLoad_) {
+            singleCoreBSize = GetSingleCoreBFullLoadSize();
+        }
+        if (leftL1Size < singleCoreBSize + oneBaseADataSize) {
+            return;
+        }
+        tempStepKa = (leftL1Size - singleCoreBSize) / oneBaseADataSize;
+    } else {
+        uint64_t singleCoreASize = tempStepKa * oneBaseADataSize;
+        if (isAFullLoad_) {
+            singleCoreASize = GetSingleCoreAFullLoadSize();
+        }
+        if (leftL1Size < singleCoreASize + oneBaseBDataSize) {
+            return;
+        }
+        tempStepKb = (leftL1Size - singleCoreASize) / oneBaseBDataSize;
+    }
+}
+
+void L1TilingDataCalculator::CarryDataSizePass(uint64_t leftL1Size, uint64_t maxStepK)
+{
+    uint64_t tempStepKa = l1TilingData_.stepKa_;
+    uint64_t tempStepKb = l1TilingData_.stepKb_;
+    if (!isAFullLoad_) {
+        tempStepKa = ops::CeilDiv(MIN_CARRY_DATA_SIZE_32K, GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype));
+        tempStepKa = std::min(tempStepKa, maxStepK);
+        if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb)) {
+            AdjustStepK(leftL1Size, tempStepKa, tempStepKb, true);
+        }
+    }
+    if (!isBFullLoad_) {
+        tempStepKb = ops::CeilDiv(MIN_CARRY_DATA_SIZE_32K, GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype));
+        tempStepKb = std::min(tempStepKb, maxStepK);
+        if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb)) {
+            AdjustStepK(leftL1Size, tempStepKa, tempStepKb, false);
+        }
+    }
+
+    if (tempStepKa < l1TilingData_.stepKa_ || tempStepKb < l1TilingData_.stepKb_) {
+        return;
+    }
+    l1TilingData_.stepKa_ = tempStepKa;
+    l1TilingData_.stepKb_ = tempStepKb;
+}
+
+void L1TilingDataCalculator::BalanceStepKPass(uint64_t leftL1Size)
+{
+    if (isAFullLoad_ || isBFullLoad_ || l1TilingData_.stepKa_ == l1TilingData_.stepKb_) {
+        return;
+    }
+    uint64_t biggerStepK = std::max(l1TilingData_.stepKa_, l1TilingData_.stepKb_);
+    if (CheckL1Size(leftL1Size, biggerStepK, biggerStepK)) {
+        l1TilingData_.stepKa_ = biggerStepK;
+        l1TilingData_.stepKb_ = biggerStepK;
+        return;
+    }
+
+    uint64_t tempStepKa = l1TilingData_.stepKa_;
+    uint64_t tempStepKb = l1TilingData_.stepKb_;
+    if (tempStepKa > tempStepKb && tempStepKa % tempStepKb == 0UL) {
+        uint64_t bestStepKb = tempStepKa;
+        for (; bestStepKb >= tempStepKb; --bestStepKb) {
+            if (tempStepKa % bestStepKb == 0UL && CheckL1Size(leftL1Size, tempStepKa, bestStepKb)) {
+                break;
+            }
+        }
+        tempStepKb = bestStepKb;
+    } else if (tempStepKb > tempStepKa && tempStepKb % tempStepKa == 0UL) {
+        uint64_t bestStepKa = tempStepKb;
+        for (; bestStepKa >= tempStepKa; --bestStepKa) {
+            if (tempStepKb % bestStepKa == 0UL && CheckL1Size(leftL1Size, bestStepKa, tempStepKb)) {
+                break;
+            }
+        }
+        tempStepKa = bestStepKa;
+    } else {
+        return;
+    }
+    l1TilingData_.stepKa_ = tempStepKa;
+    l1TilingData_.stepKb_ = tempStepKb;
+}
+
+void L1TilingDataCalculator::L1FullLoadCacheLinePass(
+    uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine)
+{
+    if(aCacheLine == 0 || bCacheLine == 0) {
+        OP_LOGE(inputParams_.opName, "Invalid aCacheLine or bCacheLine.");
+        return;
+    }
+    uint32_t maxStepKWithSmallCase = 4U * DB_SIZE;
+    if (ops::CeilDiv(inputParams_.kSize, baseK_) < maxStepKWithSmallCase) {
+        return;
+    }
+    bool isEnableA = CACHE_LINE_512B % aCacheLine == 0UL;
+    bool isEnableB = CACHE_LINE_512B % bCacheLine == 0UL;
+    if (isAFullLoad_) {
+        if (inputParams_.transB && isEnableB && (baseN_ * bCacheLine <= FULL_LOAD_DATA_SIZE_64K)) {
+            tempStepKb *= (CACHE_LINE_512B / bCacheLine);
+        }
+    } else {
+        if (ops::CeilDiv(inputParams_.kSize, baseK_) < MAX_STEPK_With_BL1_FULL) {
+            return;
+        }
+        if (!inputParams_.transA && isEnableA && (baseM_ * aCacheLine <= FULL_LOAD_DATA_SIZE_64K)) {
+            tempStepKa *= (CACHE_LINE_512B / aCacheLine);
+        }
+    }
+}
+
+void L1TilingDataCalculator::NONL1FullLoadCacheLinePass(
+    uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine)
+{
+    if(aCacheLine == 0 || bCacheLine == 0) {
+        OP_LOGE(inputParams_.opName, "Invalid aCacheLine or bCacheLine.");
+        return;
+    }
+    bool isEnableA = CACHE_LINE_512B % aCacheLine == 0UL;
+    bool isEnableB = CACHE_LINE_512B % bCacheLine == 0UL;
+    uint64_t aDataSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * tempStepKa;
+    uint64_t bDataSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * tempStepKb;
+    uint64_t factor = 1UL;
+    if (inputParams_.transA && inputParams_.transB) {
+        factor = isEnableB ? CACHE_LINE_512B / bCacheLine : 1UL;
+    } else if (!inputParams_.transA && !inputParams_.transB) {
+        factor = isEnableA ? CACHE_LINE_512B / aCacheLine : 1UL;
+    } else {
+        if (aDataSize > bDataSize && aCacheLine > bCacheLine && isEnableA) {
+            factor = CACHE_LINE_512B / aCacheLine;
+        } else if (aDataSize < bDataSize && aCacheLine < bCacheLine && isEnableB) {
+            factor = CACHE_LINE_512B / bCacheLine;
+        }
+    }
+    tempStepKa *= factor;
+    tempStepKb *= factor;
+}
+
+void L1TilingDataCalculator::PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK)
+{
+    if (inputParams_.transA && !inputParams_.transB) {
+        return;
+    }
+    uint64_t tempStepKa = l1TilingData_.stepKa_;
+    uint64_t tempStepKb = l1TilingData_.stepKb_;
+    uint64_t aCacheLine = GetSizeWithDataType(baseK_, inputParams_.aDtype) * tempStepKa;
+    uint64_t bCacheLine = GetSizeWithDataType(baseK_, inputParams_.bDtype) * tempStepKb;
+
+    if (isAFullLoad_ || isBFullLoad_) {
+        L1FullLoadCacheLinePass(tempStepKa, tempStepKb, aCacheLine, bCacheLine);
+    } else {
+        NONL1FullLoadCacheLinePass(tempStepKa, tempStepKb, aCacheLine, bCacheLine);
+    }
+
+    if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb) || tempStepKa > maxStepK || tempStepKb > maxStepK) {
+        return;
+    }
+    l1TilingData_.stepKa_ = tempStepKa;
+    l1TilingData_.stepKb_ = tempStepKb;
 }
 
 } // namespace optiling

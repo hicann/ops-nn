@@ -19,6 +19,7 @@
 #include "quant_batch_matmul_v3_tiling_util.h"
 #include "../../../op_kernel/arch35/quant_batch_matmul_v3_apt_tiling_key.h"
 #include <securec.h>
+#include "base_block_calculator.h"
 
 using Ops::NN::MathUtil;
 using namespace QuantBatchMatmulV3Arch35TilingKey;
@@ -520,6 +521,21 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlockSplit(
     }
 }
 
+bool AdaptiveSlidingWindowTiling::CalcBasicBlock()
+{
+    BaseBlockMode mode = compileInfo_.supportMmadS8S4 ? BaseBlockMode::MMAD_S8S4 : BaseBlockMode::DEFAULT;
+    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
+    if (!calculator.Compute(mode)) {
+        return false;
+    }
+    const BaseBlockRes& baseBlockRes = calculator.GetOutput();
+    adaptiveWin_.baseM = baseBlockRes.baseM;
+    adaptiveWin_.baseN = baseBlockRes.baseN;
+    adaptiveWin_.baseK = baseBlockRes.baseK;
+    adaptiveWin_.useTailWinLogic = baseBlockRes.useTailWinLogic;
+    return true;
+}
+
 void AdaptiveSlidingWindowTiling::CalcTailBasicBlock()
 {
     if (adaptiveWin_.tailWinBlockCnt == 0UL) {
@@ -553,6 +569,62 @@ void AdaptiveSlidingWindowTiling::CalcTailBasicBlockAfullLoad()
         }
     }
     adaptiveWin_.nTailTile = nTileValid;
+}
+
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlockBfullLoad()
+{
+    adaptiveWin_.nTailTile = 1UL;
+
+    uint64_t mTile = 1UL;
+    constexpr uint64_t MIN_BASEN_PER_TILE = 16UL;
+
+    if (adaptiveWin_.tailWinBlockCnt != 0UL) {
+        while (CalUsedCoreNum((mTile + 1UL), adaptiveWin_.nTailTile) <= aicoreParams_.aicNum &&
+               adaptiveWin_.baseM / (mTile + 1UL) >= MIN_BASEN_PER_TILE) {
+            mTile += 1UL;
+        }
+    }
+    adaptiveWin_.mTailTile = mTile;
+}
+
+void AdaptiveSlidingWindowTiling::CalcTailBasicBlock4MmadS8S4()
+{
+    if (adaptiveWin_.tailWinBlockCnt == 0UL) {
+        return;
+    }
+
+    uint64_t mTile = 1UL;
+    uint64_t nTile = 1UL;
+    uint64_t preSplit = 1UL;
+    uint64_t secSplit = 1UL;
+    auto& preSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTile : nTile;
+    auto& secSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTile : mTile;
+    while (CalUsedCoreNum(preSplit + 1UL, secSplit) <= aicoreParams_.aicNum) {
+        preSplit += 1UL;
+        preSplitValid = !IsInValidWeighNzTailSplit(preSplit, true) ? preSplit : preSplitValid;
+        if (CalUsedCoreNum(preSplit, secSplit + 1UL) <= aicoreParams_.aicNum) {
+            secSplit += 1UL;
+            secSplitValid = !IsInValidWeighNzTailSplit(secSplit, false) ? secSplit : secSplitValid;
+        }
+    }
+    adaptiveWin_.mTailTile = mTile;
+    adaptiveWin_.nTailTile = nTile;
+}
+
+void AdaptiveSlidingWindowTiling::CalcTailRoundBasicBlockSplit()
+{
+    if (!adaptiveWin_.useTailWinLogic) {
+        return;
+    }
+    if (isAFullLoad_) {
+        CalcTailBasicBlockAfullLoad();
+    } else if (isBFullLoad_) {
+        CalcTailBasicBlockBfullLoad();
+    } else if (compileInfo_.supportMmadS8S4) {
+        CalcTailBasicBlock4MmadS8S4();
+    } else {
+        CalcTailBasicBlock();
+    }
 }
 
 void AdaptiveSlidingWindowTiling::GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain)

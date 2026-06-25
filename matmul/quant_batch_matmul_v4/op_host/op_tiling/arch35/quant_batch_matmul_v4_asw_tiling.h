@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_cube_tiling.h"
+#include "../../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/l1_tiling_data_calculator.h"
 #include "../quant_batch_matmul_v4_compile_info.h"
 
 
@@ -75,15 +76,12 @@ protected:
     void UpdateABFullLoadStatus() override;
     void UpdateBFullLoadStatus() override;
     void CalcTailBasicBlockAfullLoad() override;
-    void CalcTailBasicBlock() override;
-    bool IsCalL1TilingDepth4MmadS8S4() const override;
-    void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size) override;
+    void CalcTailBasicBlock4MmadS8S4() override;
+    bool CalL1Tiling() override;
     bool Is4BitInput(ge::DataType dtype, bool isLut = false) const;
     bool Is8BitInput(ge::DataType dtype, bool isLut = false) const;
     // 根据size(字节数)和数据类型，计算得出shape(元素个数)
     uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype, bool isLut = false) const;
-    // 根据shape(元素个数)和数据类型，计算得出size(字节数)
-    uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype, bool isLut = false) const;
     bool SetPlatformInfoForTiling() override;
     bool CheckCoreNum() const override;
 

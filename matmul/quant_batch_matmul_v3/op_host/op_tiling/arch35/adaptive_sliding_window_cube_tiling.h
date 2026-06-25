@@ -26,32 +26,11 @@ public:
 
 protected:
     bool IsCapable() override;
-    bool CalcBasicBlock() override;
     bool CalL1Tiling() override;
-    virtual bool IsCalL1TilingDepth4MmadS8S4() const;
     void AnalyseFullLoadInfo() override;
-    void CalcTailRoundBasicBlockSplit() override;
-    virtual void CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size);
     virtual void UpdateAFullLoadStatus();
     virtual void UpdateBFullLoadStatus();
     virtual void UpdateABFullLoadStatus();
-
-    uint64_t singleCoreASizeWithFullLoad_ = 0;
-    uint64_t singleCoreBSizeWithFullLoad_ = 0;
-
-private:
-    bool CalL1Tiling3510();
-    bool CalL1TilingMmadS8S4();
-    void CalcTailBasicBlockBfullLoad();
-    void CalcTailBasicBlock4MmadS8S4();
-    bool CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const;
-    void AdjustStepK(uint64_t leftL1Size, uint64_t& tempStepKa, uint64_t& tempStepKb, bool isStepKa) const;
-    void CarryDataSizePass(uint64_t leftL1Size, uint64_t maxStepK);
-    void BalanceStepKPass(uint64_t leftL1Size);
-    void PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK);
-    void L1FullLoadCacheLinePass(uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
-    void NONL1FullLoadCacheLinePass(
-        uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
 };
 
 } // namespace optiling

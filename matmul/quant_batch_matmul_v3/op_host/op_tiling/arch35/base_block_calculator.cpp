@@ -358,9 +358,9 @@ bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(uint64_t oriBlock)
     uint64_t nMaxtile = MathUtil::CeilDivision(inputParams_.nSize, baseNAlignNum);
     uint64_t tempBaseM = baseMAlignNum;
     uint64_t tempBaseN = baseNAlignNum;
-    uint64_t aicNum = static_cast<uint64_t>(compileInfo_.aicNum);
+    uint64_t coreNumMN = static_cast<uint64_t>(compileInfo_.aicNum) / batchCoreCnt_;
     bool optimalFound = false;
-    if (mMaxtile * nMaxtile < oriBlock && mMaxtile != 1UL && nMaxtile != 1UL) {
+    if (mMaxtile * nMaxtile < (oriBlock / batchCoreCnt_) && mMaxtile != 1UL && nMaxtile != 1UL) {
         return true;
     }
     if (mMaxtile == 1UL || nMaxtile == 1UL) {
@@ -368,12 +368,12 @@ bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(uint64_t oriBlock)
             mMaxtile == 1UL ?
                 baseMAlignNum :
                 std::max(
-                    baseMAlignNum, ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, aicNum), baseMAlignNum));
+                    baseMAlignNum, ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, coreNumMN), baseMAlignNum));
         tempBaseN =
             nMaxtile == 1UL ?
                 baseNAlignNum :
                 std::max(
-                    baseNAlignNum, ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, aicNum), baseNAlignNum));
+                    baseNAlignNum, ops::CeilAlign(MathUtil::CeilDivision(inputParams_.nSize, coreNumMN), baseNAlignNum));
         optimalFound = true;
     } else {
         optimalFound = CalculateOptimalSplit(tempBaseM, tempBaseN, baseMAlignNum, baseNAlignNum, baseKAlignNum);
@@ -410,8 +410,8 @@ bool BaseBlockCalculator::CalculateOptimalSplit(
     uint64_t maxUsedCore = MathUtil::CeilDivision(inputParams_.mSize, baseBlockRes_.baseM) *
                            MathUtil::CeilDivision(inputParams_.nSize, baseBlockRes_.baseN);
     uint64_t maxDiff = UINT64_MAX;
-    uint64_t iterMSplite = std::min(mMaxtile, static_cast<uint64_t>(compileInfo_.aicNum));
-    uint64_t iterNSplite = std::min(nMaxtile, static_cast<uint64_t>(compileInfo_.aicNum));
+    uint64_t iterMSplite = std::min(mMaxtile, static_cast<uint64_t>(compileInfo_.aicNum / batchCoreCnt_));
+    uint64_t iterNSplite = std::min(nMaxtile, static_cast<uint64_t>(compileInfo_.aicNum / batchCoreCnt_));
     uint64_t l0aHalfShape = GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, inputParams_.aDtype);
     bool optimalFound = false;
     for (uint64_t mFactor = 1UL; mFactor <= iterMSplite; ++mFactor) {
@@ -423,7 +423,7 @@ bool BaseBlockCalculator::CalculateOptimalSplit(
             uint64_t usedCore = mCore * nCore;
             uint64_t diff = (tempMBase >= tempNBase) ? tempMBase - tempNBase : tempNBase - tempMBase;
             uint64_t kValueMax = l0aHalfShape / std::max(tempMBase, tempNBase);
-            if (usedCore > compileInfo_.aicNum) {
+            if (usedCore > compileInfo_.aicNum / batchCoreCnt_) {
                 continue;
             }
             if ((usedCore > maxUsedCore || (usedCore == maxUsedCore && diff < maxDiff)) && kValueMax >= baseKAlignNum) {

@@ -77,21 +77,6 @@ bool AdaptiveSlidingWindowCubeTiling::IsCapable()
             inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ);
 }
 
-bool AdaptiveSlidingWindowCubeTiling::CalcBasicBlock()
-{
-    BaseBlockMode mode = compileInfo_.supportMmadS8S4 ? BaseBlockMode::MMAD_S8S4 : BaseBlockMode::DEFAULT;
-    BaseBlockCalculator calculator(inputParams_, compileInfo_, GetBatchCoreCnt());
-    if (!calculator.Compute(mode)) {
-        return false;
-    }
-    const BaseBlockRes& baseBlockRes = calculator.GetOutput();
-    adaptiveWin_.baseM = baseBlockRes.baseM;
-    adaptiveWin_.baseN = baseBlockRes.baseN;
-    adaptiveWin_.baseK = baseBlockRes.baseK;
-    adaptiveWin_.useTailWinLogic = baseBlockRes.useTailWinLogic;
-    return true;
-}
-
 bool AdaptiveSlidingWindowCubeTiling::CalL1Tiling()
 {
     basicTiling_.usedCoreNum = CalUsedCoreNum();
@@ -112,21 +97,21 @@ bool AdaptiveSlidingWindowCubeTiling::CalL1Tiling()
          CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
             DB_SIZE :
             1U;
-
-    switch (compileInfo_.npuArch) {
-        case NpuArch::DAV_3510:
-            return CalL1Tiling3510();
-        case NpuArch::DAV_RESV:
-            return CalL1TilingMmadS8S4();
-        default:
-            OP_LOGE(inputParams_.opName, "Failed to find the CalL1Tiling function for the current NPU architecture.");
-            return false;
+    L1TilingMode mode = L1TilingMode::DEFAULT;
+    if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
+        if (isABFullLoad_) {
+            mode = L1TilingMode::PASS_OPTIMIZED_AB_FULL_LOAD;
+        } else if (isAFullLoad_) {
+            mode = L1TilingMode::PASS_OPTIMIZED_A_FULL_LOAD;
+        } else if (isBFullLoad_) {
+            mode = L1TilingMode::PASS_OPTIMIZED_B_FULL_LOAD;
+        } else {
+            mode = L1TilingMode::PASS_OPTIMIZED;
+        }
+    } else if (isAFullLoad_) {
+        mode = L1TilingMode::A_L1_FULL_LOAD;
     }
-}
 
-bool AdaptiveSlidingWindowCubeTiling::CalL1Tiling3510()
-{
-    L1TilingMode mode = isAFullLoad_ ? L1TilingMode::A_L1_FULL_LOAD : L1TilingMode::DEFAULT;
     L1TilingDataCalculator l1Calculator(
         inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
     if (!l1Calculator.Compute(mode)) {
@@ -140,40 +125,6 @@ bool AdaptiveSlidingWindowCubeTiling::CalL1Tiling3510()
     return true;
 }
 
-bool AdaptiveSlidingWindowCubeTiling::CalL1TilingMmadS8S4()
-{
-    if (!IsCalL1TilingDepth4MmadS8S4()) {
-        return CalL1Tiling3510();
-    }
-    uint64_t biasDtypeSize = ge::GetSizeByDataType(inputParams_.biasDtype);
-    uint64_t scaleDtypeSize = ge::GetSizeByDataType(inputParams_.scaleDtype);
-    if (inputParams_.cDtype == ge::DT_INT32) {
-        scaleDtypeSize = 0;
-    }
-    uint64_t singleCoreBiasSize = inputParams_.hasBias ? basicTiling_.baseN * biasDtypeSize : 0UL;
-    uint64_t singleCoreScaleSize = inputParams_.isPerChannel ? basicTiling_.baseN * scaleDtypeSize : 0UL;
-    OP_TILING_CHECK(
-        aicoreParams_.l1Size < singleCoreBiasSize ||
-            aicoreParams_.l1Size - singleCoreBiasSize < singleCoreScaleSize,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "L1 size is insufficient after reserving bias and scale. L1Size: %lu, BiasSize: %lu, ScaleSize: %lu.",
-            aicoreParams_.l1Size, singleCoreBiasSize, singleCoreScaleSize),
-        return false);
-    uint64_t leftL1Size = aicoreParams_.l1Size - singleCoreBiasSize - singleCoreScaleSize;
-    CalL1TilingDepth4MmadS8S4(leftL1Size);
-    return true;
-}
-
-bool AdaptiveSlidingWindowCubeTiling::IsCalL1TilingDepth4MmadS8S4() const
-{
-    bool a8w8Flag = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT8;
-    bool a8w4Flag = inputParams_.aDtype == ge::DT_INT8 && inputParams_.bDtype == ge::DT_INT4;
-    bool a4w4Flag = inputParams_.aDtype == ge::DT_INT4 && inputParams_.bDtype == ge::DT_INT4;
-    bool quantModeSupport = inputParams_.isPerChannel || inputParams_.isPerTensor;
-    return compileInfo_.supportMmadS8S4 && (a8w8Flag || a8w4Flag || a4w4Flag) && quantModeSupport;
-}
-
 void AdaptiveSlidingWindowCubeTiling::UpdateAFullLoadStatus()
 {
     if (inputParams_.batchA != 1UL || IsMxKOdd() || IsMxBackwardTrans() || isTilingOut_ || inputParams_.isPerBlock ||
@@ -184,7 +135,7 @@ void AdaptiveSlidingWindowCubeTiling::UpdateAFullLoadStatus()
     uint64_t realBaseMSize = compileInfo_.supportMmadS8S4 || adaptiveWin_.mBaseTailSplitCnt == 1UL ?
                                  adaptiveWin_.baseM :
                                  adaptiveWin_.mTailMain;
-    singleCoreASizeWithFullLoad_ =
+    uint64_t singleCoreASizeWithFullLoad =
         realBaseMSize *
         (inputParams_.transA ?
              GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
@@ -195,7 +146,7 @@ void AdaptiveSlidingWindowCubeTiling::UpdateAFullLoadStatus()
         blockCntCmp = true;
     }
     isAFullLoad_ =
-        singleCoreASizeWithFullLoad_ <= A_L1_LOAD_THRESHOLD && blockCntCmp &&
+        singleCoreASizeWithFullLoad <= A_L1_LOAD_THRESHOLD && blockCntCmp &&
         (((adaptiveWin_.mBlockCnt == 1UL || adaptiveWin_.mBlockCnt == 2UL || adaptiveWin_.mBlockCnt == 4UL) &&
           aicoreParams_.aicNum >= adaptiveWin_.mBlockCnt && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0) ||
          adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum);
@@ -216,14 +167,14 @@ void AdaptiveSlidingWindowCubeTiling::UpdateBFullLoadStatus()
         isBFullLoad_ = false;
         return;
     }
-    singleCoreBSizeWithFullLoad_ =
+    uint64_t singleCoreBSizeWithFullLoad =
         adaptiveWin_.baseN *
         (inputParams_.transB ?
              ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
              GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.bDtype));
 
     isBFullLoad_ =
-        singleCoreBSizeWithFullLoad_ <= aicoreParams_.l1Size / NUM_HALF &&
+        singleCoreBSizeWithFullLoad <= aicoreParams_.l1Size / NUM_HALF &&
         adaptiveWin_.mBlockCnt > adaptiveWin_.nBlockCnt &&
         (((adaptiveWin_.nBlockCnt == 1UL || adaptiveWin_.nBlockCnt == 2UL || adaptiveWin_.nBlockCnt == 4UL) &&
           aicoreParams_.aicNum >= adaptiveWin_.nBlockCnt && aicoreParams_.aicNum % adaptiveWin_.nBlockCnt == 0) ||
@@ -238,12 +189,12 @@ void AdaptiveSlidingWindowCubeTiling::UpdateABFullLoadStatus()
         isABFullLoad_ = false;
         return;
     }
-    singleCoreASizeWithFullLoad_ =
+    uint64_t singleCoreASizeWithFullLoad =
         adaptiveWin_.baseM *
         (inputParams_.transA ?
              GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
              ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
-    singleCoreBSizeWithFullLoad_ =
+    uint64_t singleCoreBSizeWithFullLoad =
         adaptiveWin_.baseN *
         (inputParams_.transB ?
              ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
@@ -256,17 +207,17 @@ void AdaptiveSlidingWindowCubeTiling::UpdateABFullLoadStatus()
     constexpr uint64_t AB_L1_SINGLE_LOAD_THRESHOLD = 64 * 1024UL;
     constexpr uint64_t AB_L1_BOTH_LOAD_THRESHOLD = 272 * 1024UL;
     bool hasEnoughL1 =
-        aicoreParams_.l1Size >= singleCoreASizeWithFullLoad_ &&
-        aicoreParams_.l1Size - singleCoreASizeWithFullLoad_ >= singleCoreBSizeWithFullLoad_ &&
-        aicoreParams_.l1Size - singleCoreASizeWithFullLoad_ - singleCoreBSizeWithFullLoad_ >= singleCoreBiasSize &&
-        aicoreParams_.l1Size - singleCoreASizeWithFullLoad_ - singleCoreBSizeWithFullLoad_ - singleCoreBiasSize >=
+        aicoreParams_.l1Size >= singleCoreASizeWithFullLoad &&
+        aicoreParams_.l1Size - singleCoreASizeWithFullLoad >= singleCoreBSizeWithFullLoad &&
+        aicoreParams_.l1Size - singleCoreASizeWithFullLoad - singleCoreBSizeWithFullLoad >= singleCoreBiasSize &&
+        aicoreParams_.l1Size - singleCoreASizeWithFullLoad - singleCoreBSizeWithFullLoad - singleCoreBiasSize >=
             singleCoreScaleSize;
-    bool isABSizeInRange = AB_L1_BOTH_LOAD_THRESHOLD >= singleCoreASizeWithFullLoad_ &&
-                           AB_L1_BOTH_LOAD_THRESHOLD - singleCoreASizeWithFullLoad_ >= singleCoreBSizeWithFullLoad_;
+    bool isABSizeInRange = AB_L1_BOTH_LOAD_THRESHOLD >= singleCoreASizeWithFullLoad &&
+                           AB_L1_BOTH_LOAD_THRESHOLD - singleCoreASizeWithFullLoad >= singleCoreBSizeWithFullLoad;
 
     isABFullLoad_ = hasEnoughL1 && adaptiveWin_.mBlockCnt * adaptiveWin_.nBlockCnt <= aicoreParams_.aicNum &&
-                    (singleCoreASizeWithFullLoad_ <= AB_L1_SINGLE_LOAD_THRESHOLD ||
-                     singleCoreBSizeWithFullLoad_ <= AB_L1_SINGLE_LOAD_THRESHOLD) &&
+                    (singleCoreASizeWithFullLoad <= AB_L1_SINGLE_LOAD_THRESHOLD ||
+                     singleCoreBSizeWithFullLoad <= AB_L1_SINGLE_LOAD_THRESHOLD) &&
                     isABSizeInRange;
 }
 
@@ -279,281 +230,6 @@ void AdaptiveSlidingWindowCubeTiling::AnalyseFullLoadInfo()
     }
     UpdateAFullLoadStatus();
     UpdateBFullLoadStatus();
-}
-
-void AdaptiveSlidingWindowCubeTiling::CalcTailRoundBasicBlockSplit()
-{
-    if (!adaptiveWin_.useTailWinLogic) {
-        return;
-    }
-    if (isAFullLoad_) {
-        CalcTailBasicBlockAfullLoad();
-    } else if (isBFullLoad_) {
-        CalcTailBasicBlockBfullLoad();
-    } else if (compileInfo_.supportMmadS8S4) {
-        CalcTailBasicBlock4MmadS8S4();
-    } else {
-        CalcTailBasicBlock();
-    }
-}
-
-void AdaptiveSlidingWindowCubeTiling::CalcTailBasicBlockBfullLoad()
-{
-    adaptiveWin_.nTailTile = 1UL;
-
-    uint64_t mTile = 1UL;
-    constexpr uint64_t MIN_BASEN_PER_TILE = 16UL;
-
-    if (adaptiveWin_.tailWinBlockCnt != 0UL) {
-        while (CalUsedCoreNum((mTile + 1UL), adaptiveWin_.nTailTile) <= aicoreParams_.aicNum &&
-               adaptiveWin_.baseM / (mTile + 1UL) >= MIN_BASEN_PER_TILE) {
-            mTile += 1UL;
-        }
-    }
-    adaptiveWin_.mTailTile = mTile;
-}
-
-void AdaptiveSlidingWindowCubeTiling::CalcTailBasicBlock4MmadS8S4()
-{
-    if (adaptiveWin_.tailWinBlockCnt == 0UL) {
-        return;
-    }
-
-    uint64_t mTile = 1UL;
-    uint64_t nTile = 1UL;
-    uint64_t preSplit = 1UL;
-    uint64_t secSplit = 1UL;
-    auto& preSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? mTile : nTile;
-    auto& secSplitValid = adaptiveWin_.mTail >= adaptiveWin_.nTail ? nTile : mTile;
-    while (CalUsedCoreNum(preSplit + 1UL, secSplit) <= aicoreParams_.aicNum) {
-        preSplit += 1UL;
-        preSplitValid = !IsInValidWeighNzTailSplit(preSplit, true) ? preSplit : preSplitValid;
-        if (CalUsedCoreNum(preSplit, secSplit + 1UL) <= aicoreParams_.aicNum) {
-            secSplit += 1UL;
-            secSplitValid = !IsInValidWeighNzTailSplit(secSplit, false) ? secSplit : secSplitValid;
-        }
-    }
-    adaptiveWin_.mTailTile = mTile;
-    adaptiveWin_.nTailTile = nTile;
-}
-
-bool AdaptiveSlidingWindowCubeTiling::CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const
-{
-    uint64_t singleCoreASize =
-        tempStepKa *
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype) *
-        DB_SIZE;
-    uint64_t singleCoreBSize =
-        tempStepKb *
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype) *
-        DB_SIZE;
-
-    if (isAFullLoad_) {
-        singleCoreASize = singleCoreASizeWithFullLoad_;
-    } else if (isBFullLoad_) {
-        singleCoreBSize = singleCoreBSizeWithFullLoad_;
-    }
-    return leftL1Size >= singleCoreASize + singleCoreBSize;
-}
-
-void AdaptiveSlidingWindowCubeTiling::AdjustStepK(
-    uint64_t leftL1Size, uint64_t& tempStepKa, uint64_t& tempStepKb, bool isStepKa) const
-{
-    uint64_t oneBaseADataSize =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype) *
-        DB_SIZE;
-    uint64_t oneBaseBDataSize =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype) *
-        DB_SIZE;
-    if (isStepKa) {
-        uint64_t singleCoreBSize = tempStepKb * oneBaseBDataSize;
-        if (isBFullLoad_) {
-            singleCoreBSize = singleCoreBSizeWithFullLoad_;
-        }
-        if (leftL1Size < singleCoreBSize + oneBaseADataSize) {
-            return;
-        }
-        tempStepKa = (leftL1Size - singleCoreBSize) / oneBaseADataSize;
-    } else {
-        uint64_t singleCoreASize = tempStepKa * oneBaseADataSize;
-        if (isAFullLoad_) {
-            singleCoreASize = singleCoreASizeWithFullLoad_;
-        }
-        if (leftL1Size < singleCoreASize + oneBaseBDataSize) {
-            return;
-        }
-        tempStepKb = (leftL1Size - singleCoreASize) / oneBaseBDataSize;
-    }
-}
-
-void AdaptiveSlidingWindowCubeTiling::CarryDataSizePass(uint64_t leftL1Size, uint64_t maxStepK)
-{
-    uint64_t tempStepKa = static_cast<uint64_t>(basicTiling_.stepKa);
-    uint64_t tempStepKb = static_cast<uint64_t>(basicTiling_.stepKb);
-    if (!isAFullLoad_) {
-        tempStepKa = ops::CeilDiv(
-            MIN_CARRY_DATA_SIZE_32K,
-            GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype));
-        tempStepKa = std::min(tempStepKa, maxStepK);
-        if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb)) {
-            AdjustStepK(leftL1Size, tempStepKa, tempStepKb, true);
-        }
-    }
-    if (!isBFullLoad_) {
-        tempStepKb = ops::CeilDiv(
-            MIN_CARRY_DATA_SIZE_32K,
-            GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype));
-        tempStepKb = std::min(tempStepKb, maxStepK);
-        if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb)) {
-            AdjustStepK(leftL1Size, tempStepKa, tempStepKb, false);
-        }
-    }
-
-    if (tempStepKa < static_cast<uint64_t>(basicTiling_.stepKa) ||
-        tempStepKb < static_cast<uint64_t>(basicTiling_.stepKb)) {
-        return;
-    }
-    basicTiling_.stepKa = static_cast<uint32_t>(tempStepKa);
-    basicTiling_.stepKb = static_cast<uint32_t>(tempStepKb);
-    OP_LOGD(inputParams_.opName, "CarryDataSizePass: stepKa stepKb %u %u", basicTiling_.stepKa, basicTiling_.stepKb);
-}
-
-void AdaptiveSlidingWindowCubeTiling::BalanceStepKPass(uint64_t leftL1Size)
-{
-    if (isAFullLoad_ || isBFullLoad_) {
-        return;
-    }
-    if (basicTiling_.stepKa == basicTiling_.stepKb) {
-        return;
-    }
-    uint64_t biggerStepK = static_cast<uint64_t>(std::max(basicTiling_.stepKa, basicTiling_.stepKb));
-    if (CheckL1Size(leftL1Size, biggerStepK, biggerStepK)) {
-        basicTiling_.stepKa = biggerStepK;
-        basicTiling_.stepKb = biggerStepK;
-        return;
-    }
-
-    uint64_t tempStepKa = static_cast<uint64_t>(basicTiling_.stepKa);
-    uint64_t tempStepKb = static_cast<uint64_t>(basicTiling_.stepKb);
-    if (tempStepKa > tempStepKb && tempStepKa % tempStepKb == 0UL) {
-        uint64_t bestStepKb = tempStepKa;
-        for (; bestStepKb >= tempStepKb; --bestStepKb) {
-            if (tempStepKa % bestStepKb == 0UL && CheckL1Size(leftL1Size, tempStepKa, bestStepKb)) {
-                break;
-            }
-        }
-        tempStepKb = bestStepKb;
-    } else if (tempStepKb > tempStepKa && tempStepKb % tempStepKa == 0UL) {
-        uint64_t bestStepKa = tempStepKb;
-        for (; bestStepKa >= tempStepKa; --bestStepKa) {
-            if (tempStepKb % bestStepKa == 0UL && CheckL1Size(leftL1Size, bestStepKa, tempStepKb)) {
-                break;
-            }
-        }
-        tempStepKa = bestStepKa;
-    } else {
-        return;
-    }
-    basicTiling_.stepKa = static_cast<uint32_t>(tempStepKa);
-    basicTiling_.stepKb = static_cast<uint32_t>(tempStepKb);
-    OP_LOGD(inputParams_.opName, "BalanceStepKPass: stepKa stepKb %u %u", basicTiling_.stepKa, basicTiling_.stepKb);
-}
-
-void AdaptiveSlidingWindowCubeTiling::L1FullLoadCacheLinePass(
-    uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine)
-{
-    uint32_t maxStepKWithSmallCase = 4U * DB_SIZE;
-    if (ops::CeilDiv(basicTiling_.singleCoreK, basicTiling_.baseK) < maxStepKWithSmallCase) {
-        return;
-    }
-    bool isEnableA = CACHE_LINE_512B % aCacheLine == 0;
-    bool isEnableB = CACHE_LINE_512B % bCacheLine == 0;
-    if (isAFullLoad_) {
-        if (inputParams_.transB && isEnableB && (basicTiling_.baseN * bCacheLine <= FULL_LOAD_DATA_SIZE_64K)) {
-            tempStepKb *= (CACHE_LINE_512B / bCacheLine);
-        }
-    } else {
-        if (ops::CeilDiv(basicTiling_.singleCoreK, basicTiling_.baseK) < MAX_STEPK_With_BL1_FULL) {
-            return;
-        }
-        if (!inputParams_.transA && isEnableA && (basicTiling_.baseM * aCacheLine <= FULL_LOAD_DATA_SIZE_64K)) {
-            tempStepKa *= (CACHE_LINE_512B / aCacheLine);
-        }
-    }
-}
-
-void AdaptiveSlidingWindowCubeTiling::NONL1FullLoadCacheLinePass(
-    uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine)
-{
-    bool isEnableA = CACHE_LINE_512B % aCacheLine == 0;
-    bool isEnableB = CACHE_LINE_512B % bCacheLine == 0;
-    uint64_t aDataSize =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype) *
-        tempStepKa;
-    uint64_t bDataSize =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype) *
-        tempStepKb;
-    uint64_t factor = 1UL;
-    if (inputParams_.transA && inputParams_.transB) {
-        factor = isEnableB ? CACHE_LINE_512B / bCacheLine : 1UL;
-    } else if (!inputParams_.transA && !inputParams_.transB) {
-        factor = isEnableA ? CACHE_LINE_512B / aCacheLine : 1UL;
-    } else {
-        if (aDataSize > bDataSize && aCacheLine > bCacheLine && isEnableA) {
-            factor = CACHE_LINE_512B / aCacheLine;
-        } else if (aDataSize < bDataSize && aCacheLine < bCacheLine && isEnableB) {
-            factor = CACHE_LINE_512B / bCacheLine;
-        }
-    }
-    tempStepKa *= factor;
-    tempStepKb *= factor;
-}
-
-void AdaptiveSlidingWindowCubeTiling::PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK)
-{
-    if (inputParams_.transA && !inputParams_.transB) {
-        return;
-    }
-    uint64_t tempStepKa = static_cast<uint64_t>(basicTiling_.stepKa);
-    uint64_t tempStepKb = static_cast<uint64_t>(basicTiling_.stepKb);
-    uint64_t aCacheLine =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseK), inputParams_.aDtype) * tempStepKa;
-    uint64_t bCacheLine =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseK), inputParams_.bDtype) * tempStepKb;
-
-    if (isAFullLoad_ || isBFullLoad_) {
-        L1FullLoadCacheLinePass(tempStepKa, tempStepKb, aCacheLine, bCacheLine);
-    } else {
-        NONL1FullLoadCacheLinePass(tempStepKa, tempStepKb, aCacheLine, bCacheLine);
-    }
-
-    if (!CheckL1Size(leftL1Size, tempStepKa, tempStepKb) || tempStepKa > maxStepK || tempStepKb > maxStepK) {
-        return;
-    }
-    basicTiling_.stepKa = static_cast<uint32_t>(tempStepKa);
-    basicTiling_.stepKb = static_cast<uint32_t>(tempStepKb);
-    OP_LOGD(inputParams_.opName, "PostCacheLinePass: stepKa stepKb %u %u", basicTiling_.stepKa, basicTiling_.stepKb);
-}
-
-void AdaptiveSlidingWindowCubeTiling::CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size)
-{
-    basicTiling_.stepKa = 1U;
-    basicTiling_.stepKb = 1U;
-    basicTiling_.depthA1 = 1U;
-    basicTiling_.depthB1 = 1U;
-    if (isABFullLoad_) {
-        return;
-    }
-
-    uint64_t maxStepK = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(basicTiling_.baseK));
-    CarryDataSizePass(leftL1Size, maxStepK);
-    BalanceStepKPass(leftL1Size);
-    PostCacheLinePass(leftL1Size, maxStepK);
-
-    basicTiling_.stepKa = isAFullLoad_ ? 1U : basicTiling_.stepKa;
-    basicTiling_.depthA1 = isAFullLoad_ ? basicTiling_.stepKa : basicTiling_.stepKa * DB_SIZE;
-    basicTiling_.stepKb = isBFullLoad_ ? 1U : basicTiling_.stepKb;
-    basicTiling_.depthB1 = isBFullLoad_ ? basicTiling_.stepKb : basicTiling_.stepKb * DB_SIZE;
 }
 
 REGISTER_TILING_TEMPLATE_WITH_ARCH(

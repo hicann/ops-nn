@@ -31,8 +31,15 @@ struct L1TilingData {
 
 enum class L1TilingMode
 {
-    DEFAULT = 0,
-    A_L1_FULL_LOAD
+    DEFAULT = 0,                // 默认模式：A和B均不全载，标准L1切分策略
+    A_L1_FULL_LOAD,             // A矩阵L1全载，根据剩余L1空间切分B
+    B_L1_FULL_LOAD,             // B矩阵L1全载，根据剩余L1空间切分A
+    PASS_OPTIMIZED,             // 多遍优化模式：搬运数据量+stepK平衡+cacheline对齐三轮pass优化，A和B均不全载
+    PASS_OPTIMIZED_A_FULL_LOAD, // 多遍优化模式 + A矩阵全载
+    PASS_OPTIMIZED_B_FULL_LOAD, // 多遍优化模式 + B矩阵全载
+    PASS_OPTIMIZED_AB_FULL_LOAD,// 多遍优化模式 + A和B均全载，stepK和depthK均为1
+    DEPTH_MAXIMIZED,            // depth最大化模式：LUT查表场景，stepK固定为1，depth尽可能用满L1空间
+    DEPTH_MAXIMIZED_A_FULL_LOAD // depth最大化模式 + A矩阵全载，剩余L1空间用于最大化B的depth
 };
 
 class L1TilingDataCalculator {
@@ -50,11 +57,25 @@ private:
     bool InitLeftL1Size();
     bool ComputeL1TilingDefault();
     bool ComputeL1TilingAL1FullLoad();
+    bool ComputeL1TilingBL1FullLoad();
+    bool ComputeL1TilingMmadS8S4();
+    bool ComputeL1TilingMmadS8S4LUT();
     bool CalStepKs();
     bool CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
     uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit) const;
     uint64_t GetDepthB1AfullLoad(uint64_t leftSize) const;
+    uint64_t GetDepthA1BfullLoad(uint64_t leftSize) const;
     uint64_t GetScaleFactorBAfullLoad(uint64_t leftSize) const;
+    bool CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const;
+    void AdjustStepK(uint64_t leftL1Size, uint64_t& tempStepKa, uint64_t& tempStepKb, bool isStepKa) const;
+    void CarryDataSizePass(uint64_t leftL1Size, uint64_t maxStepK);
+    void BalanceStepKPass(uint64_t leftL1Size);
+    void PostCacheLinePass(uint64_t leftL1Size, uint64_t maxStepK);
+    void L1FullLoadCacheLinePass(uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
+    void NONL1FullLoadCacheLinePass(
+        uint64_t& tempStepKa, uint64_t& tempStepKb, uint64_t aCacheLine, uint64_t bCacheLine);
+    uint64_t GetSingleCoreAFullLoadSize() const;
+    uint64_t GetSingleCoreBFullLoadSize() const;
 
     const QuantBatchMatmulInfo& inputParams_;
     const QuantBatchMatmulV3CompileInfo& compileInfo_;
@@ -62,6 +83,9 @@ private:
     uint64_t baseN_ = 0UL;
     uint64_t baseK_ = 0UL;
     uint64_t leftL1Size_ = 0UL;
+    bool isAFullLoad_ = false;
+    bool isBFullLoad_ = false;
+    bool isABFullLoad_ = false;
     L1TilingData l1TilingData_;
 };
 

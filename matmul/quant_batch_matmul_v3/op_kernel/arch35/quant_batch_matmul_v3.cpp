@@ -207,10 +207,11 @@ constexpr CubeFormat format_y = CubeFormat::ND;
     } while (0)
 #endif
 
+// ASCEND_IS_NOT_AIV 等价于 (分离架构ASCEND_IS_AIC OR 耦合架构)
 #if CUBE_TEMPLATE_ND
 #define QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(aLayout, bLayout, cLayout, fullLoadMode)                               \
     do {                                                                                                        \
-        if ASCEND_IS_AIC {                                                                                      \
+        if ASCEND_IS_NOT_AIV {                                                                                  \
             GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3BasicAPITilingData, tilingData, tiling);  \
             QbmmCubeBasicApiKernel<                                                                             \
                 DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, cLayout, fullLoadMode>( \
@@ -658,63 +659,130 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
     }
 #endif
 
-// supportMmadS8S4平台独有模板
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-    if constexpr (TPL_BIASMODE == TPL_EXCLUDE_FROM_TEMPLATE) {
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            MatMulASWKernel<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
-        }
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
-        }
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI) {
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
-        }
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI) {
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::QbmmIterBatchKernel<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
-        }
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT) {
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::QbmmIterBatchKernel<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH_NO_BATCH_OUT>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
-        }
-        if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI) {
-            GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
-            QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad<
-                DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
-                static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
-                op;
-            op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
-            op.Process();
+/*
+ * 纯cube场景
+ * IS_BLAZE && WEIGHT_ND  -> 3510(blaze asw/al1)       5102(none)
+ * IS_BLAZE && WEIGHT_NZ  -> 3510(blaze asw/al1)       5102(none)
+ * !IS_BLAZE && WEIGHT_ND -> 3510(cmct asw/al1)        5102(cmct asw/al1/bl1; highapi iterbatch)
+ * !IS_BLAZE && WEIGHT_NZ -> 3510(highapi asw/al1)     5102(highapi asw/al1/bl1/abl1/iterbatch)
+*/
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102) 
+    // high api iterbatch
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI) {
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        QuantBatchMatmulV3::QbmmIterBatchKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT) {
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        QuantBatchMatmulV3::QbmmIterBatchKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS), MM_CFG_MULTI_BATCH_NO_BATCH_OUT>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
+
+#if CUBE_TEMPLATE_ND && defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT8) && \
+    ORIG_DTYPE_X1 == DT_INT8 && ORIG_DTYPE_X2 == DT_INT8
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0;
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign,
+                0);
+        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, 0);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                Cmct::Gemm::layout::RowMajorAlign, 0);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, 0);
         }
     }
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1;
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign,
+                Cmct::Gemm::A_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::A_FULL_LOAD_MODE);
+        }
+    }
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI) {
+        if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::RowMajorAlign,
+                Cmct::Gemm::B_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 0 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::RowMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 0) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::RowMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
+        } else if constexpr (TPL_ATRANS == 1 && TPL_BTRANS == 1) {
+            QUANT_BMMV3_CUBE_CMCT_IMPL_CLASS(
+                Cmct::Gemm::layout::ColumnMajor, Cmct::Gemm::layout::ColumnMajor,
+                Cmct::Gemm::layout::RowMajorAlign, Cmct::Gemm::B_FULL_LOAD_MODE);
+        }
+    }
+#else
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI) { // Kernel Type = 0; 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
+        MatMulASWKernel< 
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
+            op; 
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
+        op.Process(); 
+    } 
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI) { // Kernel Type = 1; 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
+        QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad< 
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
+            op; 
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
+        op.Process(); 
+    } 
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI) { 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
+        QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad< 
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
+            op; 
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
+        op.Process(); 
+    } 
+    if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI) { 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
+        QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad< 
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
+            op; 
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
+        op.Process(); 
+    } 
+#endif
 #endif
 }

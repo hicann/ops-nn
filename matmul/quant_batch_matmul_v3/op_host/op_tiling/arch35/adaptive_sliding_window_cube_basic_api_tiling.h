@@ -32,15 +32,14 @@ private:
     void Reset();
     void CalculateNBufferNum4Cube();
     void UpdateAFullLoadStatus();
+    void UpdateBFullLoadStatus();
 
 protected:
     bool IsCapable() override;
     ge::graphStatus GetWorkspaceSize() override;
     uint64_t GetBatchCoreCnt() const override;
     const void* GetTilingData() const override;
-    bool CalcBasicBlock() override;
     void AnalyseFullLoadInfo() override;
-    void CalcTailRoundBasicBlockSplit() override;
     bool CalL1Tiling() override;
     void SetTilingData() override;
 

@@ -23,4 +23,5 @@ add_kernel_sources(
 add_kernel_sources(
     KERNEL_SRC arch35/quant_batch_matmul_v3.cpp
     COMPUTE_UNITS mc62
+    OPTIONS "--cce-no-dcache-flush"
 )

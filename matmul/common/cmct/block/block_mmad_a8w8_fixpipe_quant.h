@@ -52,6 +52,8 @@ class BlockMmadA8W8FixpipeQuant<DispatchPolicy_, L1TileShape_, L0TileShape_, ATy
                     AscendC::Std::enable_if_t<
                         AscendC::Std::is_base_of_v<MatmulWithScale<>, DispatchPolicy_> ||
                         AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, A_FULL_LOAD_MODE>,
+                                                   DispatchPolicy_> ||
+                        AscendC::Std::is_base_of_v<MatmulWithScale<AscendC::Shape<_0, _0, _0, _0>, B_FULL_LOAD_MODE>,
                                                    DispatchPolicy_>>> {
 public:
     using AType = AType_;
@@ -149,37 +151,13 @@ public:
         if (isBias_) {
             biasL1OneBuffer_ = baseN_ * sizeof(BiasType);
         }
-        if constexpr (DispatchPolicy::fullLoadMode != 0) {
-            kBL1_ = kBL1;
-            kAL1_ = kBL1_;
-            kL1_ = kBL1;
-            uint64_t mAlign = Cmct::Gemm::Align(baseM_, transA ? C0_SIZE : BLOCK_CUBE);
-            uint64_t kAlign = Cmct::Gemm::Align(k_, transA ? BLOCK_CUBE : C0_SIZE);
-            aL1OneBuffer_ = mAlign * kAlign;
-            bL1OneBuffer_ = baseN_ * kL1_;
-            kL1Iter_ = CeilDiv(k_, kL1_);
+        if constexpr (DispatchPolicy::fullLoadMode == A_FULL_LOAD_MODE) {
+            InitAFullLoad(kBL1);
+        } else if constexpr (DispatchPolicy::fullLoadMode == B_FULL_LOAD_MODE) {
+            InitBFullLoad(kAL1);
         } else {
-            if (l1BufferNum == AB_L1_TWO_BUFFER) {
-                kAL1_ = kAL1;
-                kBL1_ = kBL1;
-                aL1OneBuffer_ = baseM_ * kAL1_;
-                bL1OneBuffer_ = baseN_ * kBL1_;
-                kAL1Iter_ = CeilDiv(k_, kAL1_);
-                kBL1Iter_ = CeilDiv(k_, kBL1_);
-                if (kAL1 == kBL1) {
-                    kL1_ = kAL1;
-                    kL1Iter_ = CeilDiv(k_, kL1_);
-                }
-            } else {
-                kL1_ = Cmct::Gemm::Min(kAL1, kBL1);
-                aL1OneBuffer_ = baseM_ * kL1_;
-                bL1OneBuffer_ = baseN_ * kL1_;
-                kL1Iter_ = CeilDiv(k_, kL1_);
-                kAL1_ = kL1_;
-                kBL1_ = kL1_;
-            }
+            InitNormal(kAL1, kBL1, l1BufferNum);
         }
-        GetL1BufferOffset();
     }
 
     template <typename T>
@@ -234,38 +212,88 @@ public:
     }
 
 private:
-    __aicore__ inline void GetL1BufferOffset()
+    __aicore__ inline void InitAFullLoad(const uint64_t &kBL1)
     {
-        if constexpr (DispatchPolicy::fullLoadMode == 0) {
-             for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
-                 // 2 buffer: L1 space is : A0|B0|Scale0|bias0|...|A1|B1|Scale1|bias1|...
-                 // 4 buffer: L1 space is : A0A2|B0B2|Scale0|bias0|...|A1A3|B1B3|Scale1|bias1|...
-                 uint64_t l1Offset = (AscendC::TOTAL_L1_SIZE >> 1) * (bufferId & 1);
-                 l1BufferAOffset_[bufferId] = l1Offset + aL1OneBuffer_ * (bufferId >> 1);
-                 l1BufferBOffset_[bufferId] =
-                     l1Offset + aL1OneBuffer_ * (l1BufNum_ >> 1) + bL1OneBuffer_ * (bufferId >> 1);
-             }
-             for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
-                 l1BufferX2ScaleOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
-                 l1BufferBiasOffset_[bufferId] = l1BufferX2ScaleOffset_[bufferId] + x2ScaleL1OneBuffer_;
-             }
-         } else {
-             uint64_t mAlign = Cmct::Gemm::Align(baseM_, transA ? C0_SIZE : BLOCK_CUBE);
-             uint64_t kAlign = Cmct::Gemm::Align(k_, transA ? BLOCK_CUBE : C0_SIZE);
-             aL1OneBuffer_ = mAlign * kAlign;
-             // 2 buffer: L1 space is : B0|Scale0|bias0|A|...|B1|Scale1|bias1|
-             // 4 buffer: L1 space is : B0B2|Scale0|bias0|A|...|B1B3|Scale1|bias1|...
-             l1BufferAOffset_[0] = bL1OneBuffer_ * (l1BufNum_ >> 1) + x2ScaleL1OneBuffer_ + biasL1OneBuffer_;
-             uint64_t b1Offset = l1BufferAOffset_[0] + aL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
-                                 ? l1BufferAOffset_[0] + aL1OneBuffer_ : (AscendC::TOTAL_L1_SIZE >> 1);
-             for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
-                 l1BufferBOffset_[bufferId] = b1Offset * (bufferId & 1) + bL1OneBuffer_ * (bufferId >> 1);
-             }
-             for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
-                 l1BufferX2ScaleOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
-                 l1BufferBiasOffset_[bufferId] = l1BufferX2ScaleOffset_[bufferId] + x2ScaleL1OneBuffer_;
-             }
-         }
+        kBL1_ = kBL1;
+        kAL1_ = kBL1_;
+        kL1_ = kBL1;
+        uint64_t mAlign = Cmct::Gemm::Align(baseM_, transA ? C0_SIZE : BLOCK_CUBE);
+        uint64_t kAlign = Cmct::Gemm::Align(k_, transA ? BLOCK_CUBE : C0_SIZE);
+        aL1OneBuffer_ = mAlign * kAlign;
+        bL1OneBuffer_ = baseN_ * kL1_;
+        kL1Iter_ = CeilDiv(k_, kL1_);
+        // 2 buffer: L1 space is : B0|Scale0|bias0|A|...|B1|Scale1|bias1|
+        // 4 buffer: L1 space is : B0B2|Scale0|bias0|A|...|B1B3|Scale1|bias1|...
+        l1BufferAOffset_[0] = bL1OneBuffer_ * (l1BufNum_ >> 1) + x2ScaleL1OneBuffer_ + biasL1OneBuffer_;
+        uint64_t b1Offset = l1BufferAOffset_[0] + aL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
+                            ? l1BufferAOffset_[0] + aL1OneBuffer_ : (AscendC::TOTAL_L1_SIZE >> 1);
+        for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
+            l1BufferBOffset_[bufferId] = b1Offset * (bufferId & 1) + bL1OneBuffer_ * (bufferId >> 1);
+        }
+        for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
+            l1BufferX2ScaleOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
+            l1BufferBiasOffset_[bufferId] = l1BufferX2ScaleOffset_[bufferId] + x2ScaleL1OneBuffer_;
+        }
+    }
+
+    __aicore__ inline void InitBFullLoad(const uint64_t &kAL1)
+    {
+        kAL1_ = kAL1;
+        kBL1_ = kAL1_;
+        kL1_ = kAL1;
+        aL1OneBuffer_ = baseM_ * kL1_;
+        uint64_t nAlign = Cmct::Gemm::Align(baseN_, transB ? BLOCK_CUBE : C0_SIZE);
+        uint64_t kAlign = Cmct::Gemm::Align(k_, transB ? C0_SIZE : BLOCK_CUBE);
+        bL1OneBuffer_ = nAlign * kAlign;
+        kL1Iter_ = CeilDiv(k_, kL1_);
+        // 2 buffer: L1 space is : A0|Scale0|bias0|B|...|A1|Scale1|bias1|
+        // 4 buffer: L1 space is : A0A2|Scale0|bias0|B|...|A1A3|Scale1|bias1|...
+        l1BufferBOffset_[0] = aL1OneBuffer_ * (l1BufNum_ >> 1) + x2ScaleL1OneBuffer_ + biasL1OneBuffer_;
+        uint64_t a1Offset = l1BufferBOffset_[0] + bL1OneBuffer_ >= (AscendC::TOTAL_L1_SIZE >> 1)
+                             ? l1BufferBOffset_[0] + bL1OneBuffer_
+                             : (AscendC::TOTAL_L1_SIZE >> 1);
+        for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
+            l1BufferAOffset_[bufferId] = a1Offset * (bufferId & 1) + aL1OneBuffer_ * (bufferId >> 1);
+        }
+        for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
+            l1BufferX2ScaleOffset_[bufferId] = l1BufferAOffset_[bufferId] + aL1OneBuffer_ * (l1BufNum_ >> 1);
+            l1BufferBiasOffset_[bufferId] = l1BufferX2ScaleOffset_[bufferId] + x2ScaleL1OneBuffer_;
+        }
+    }
+
+    __aicore__ inline void InitNormal(const uint64_t &kAL1, const uint64_t &kBL1, const uint64_t &l1BufferNum)
+    {
+        if (l1BufferNum == AB_L1_TWO_BUFFER) {
+            kAL1_ = kAL1;
+            kBL1_ = kBL1;
+            aL1OneBuffer_ = baseM_ * kAL1_;
+            bL1OneBuffer_ = baseN_ * kBL1_;
+            kAL1Iter_ = CeilDiv(k_, kAL1_);
+            kBL1Iter_ = CeilDiv(k_, kBL1_);
+            if (kAL1 == kBL1) {
+                kL1_ = kAL1;
+                kL1Iter_ = CeilDiv(k_, kL1_);
+            }
+        } else {
+            kL1_ = Cmct::Gemm::Min(kAL1, kBL1);
+            aL1OneBuffer_ = baseM_ * kL1_;
+            bL1OneBuffer_ = baseN_ * kL1_;
+            kL1Iter_ = CeilDiv(k_, kL1_);
+            kAL1_ = kL1_;
+            kBL1_ = kL1_;
+        }
+        // 2 buffer: L1 space is : A0|B0|Scale0|bias0|...|A1|B1|Scale1|bias1|...
+        // 4 buffer: L1 space is : A0A2|B0B2|Scale0|bias0|...|A1A3|B1B3|Scale1|bias1|...
+        for (uint16_t bufferId = 0; bufferId < l1BufNum_; bufferId++) {
+            uint64_t l1Offset = (AscendC::TOTAL_L1_SIZE >> 1) * (bufferId & 1);
+            l1BufferAOffset_[bufferId] = l1Offset + aL1OneBuffer_ * (bufferId >> 1);
+            l1BufferBOffset_[bufferId] =
+                l1Offset + aL1OneBuffer_ * (l1BufNum_ >> 1) + bL1OneBuffer_ * (bufferId >> 1);
+        }
+        for (uint16_t bufferId = 0; bufferId < SCALE_BUFFER_NUM; bufferId++) {
+            l1BufferX2ScaleOffset_[bufferId] = l1BufferBOffset_[bufferId] + bL1OneBuffer_ * (l1BufNum_ >> 1);
+            l1BufferBiasOffset_[bufferId] = l1BufferX2ScaleOffset_[bufferId] + x2ScaleL1OneBuffer_;
+        }
     }
 
     __aicore__ inline void DataCopyA(AscendC::GlobalTensor<AType> aGlobal, uint64_t curML1, uint64_t curKL1,
@@ -290,7 +318,7 @@ private:
                                      uint64_t l1Iter, uint16_t l1BufId)
     {
         uint64_t offsetA = transA ? l1Iter * kAL1_ * m_ : l1Iter * kAL1_;
-        if constexpr (DispatchPolicy::fullLoadMode == 0) {
+        if constexpr (DispatchPolicy::fullLoadMode != A_FULL_LOAD_MODE) {
             uint64_t offsetAL1 = l1BufferAOffset_[l1BufId];
             DataCopyA(aGlobal, curML1, curKL1, offsetA, offsetAL1);
         } else {
@@ -318,7 +346,15 @@ private:
         nd2nzParams.dstNzC0Stride = Cmct::Gemm::CeilAlign(transB ? curNL1 : curKL1, BLOCK_CUBE);
         nd2nzParams.dstNzNStride = 1;
         nd2nzParams.dstNzMatrixStride = 1;
-        AscendC::DataCopy(bL1Local_[l1BufferBOffset_[l1BufId]], bGlobal[offsetB], nd2nzParams);
+        uint64_t offsetBL1 = l1BufferBOffset_[l1BufId];
+        if constexpr (DispatchPolicy::fullLoadMode == B_FULL_LOAD_MODE) {
+            if (abL1LoopCnt_ >= kL1Iter_) {
+                return;
+            }
+            offsetBL1 = l1BufferBOffset_[0] +
+                        l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curNL1, transB ? BLOCK_CUBE : C0_SIZE);
+        }
+        AscendC::DataCopy(bL1Local_[offsetBL1], bGlobal[offsetB], nd2nzParams);
     }
 
     __aicore__ inline void CopyBiasInL1(const AscendC::GlobalTensor<BiasType> &biasGlobal,
@@ -466,7 +502,7 @@ private:
     {
         uint64_t kL0Iter = Cmct::Gemm::CeilDiv(curInnerKL1, baseK_);
         uint64_t offsetAL1 = 0;
-        if constexpr (DispatchPolicy::fullLoadMode == 0) {
+        if constexpr (DispatchPolicy::fullLoadMode != A_FULL_LOAD_MODE) {
             uint64_t kBL1Multiple = kAL1_ >= kBL1_ ? (l1Iter % (kAL1_ / kBL1_)) * kBL1_ *
                                                          (transA ? C0_SIZE : Cmct::Gemm::CeilAlign(curML1, BLOCK_CUBE))
                                                    : 0;
@@ -476,7 +512,10 @@ private:
                 l1BufferAOffset_[0] + l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curML1, transA ? C0_SIZE : BLOCK_CUBE);
         }
         uint64_t offsetBL1 = l1BufferBOffset_[bL1BufId];
-        if constexpr (DispatchPolicy::fullLoadMode == 0) {
+        if constexpr (DispatchPolicy::fullLoadMode == B_FULL_LOAD_MODE) {
+            offsetBL1 = l1BufferBOffset_[0] +
+                        l1Iter * kL1_ * Cmct::Gemm::CeilAlign(curNL1, transB ? BLOCK_CUBE : C0_SIZE);
+        } else if constexpr (DispatchPolicy::fullLoadMode == 0) {
             uint64_t kAL1Multiple = kBL1_ >= kAL1_ ? (l1Iter % (kBL1_ / kAL1_)) * kAL1_ *
                                                          (transB ? Cmct::Gemm::CeilAlign(curNL1, BLOCK_CUBE) : C0_SIZE)
                                                    : 0;

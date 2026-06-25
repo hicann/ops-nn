@@ -36,6 +36,7 @@ constexpr uint32_t BASIC_BLOCK_SIZE_256 = 256;
 constexpr uint32_t DB_SIZE = 2;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t LAST_SECOND_DIM_INDEX = 2;
+constexpr uint32_t DATA_SIZE_L0C = 4;
 }  // namespace
 
 namespace optiling {
@@ -272,7 +273,7 @@ void AdaptiveSlidingWindowTilingV4::CalcTailBasicBlockAfullLoad()
     return;
 }
 
-void AdaptiveSlidingWindowTilingV4::CalcTailBasicBlock()
+void AdaptiveSlidingWindowTilingV4::CalcTailBasicBlock4MmadS8S4()
 {
     if (adaptiveWin_.tailWinBlockCnt == 0UL) {
         return;
@@ -288,36 +289,37 @@ void AdaptiveSlidingWindowTilingV4::CalcTailBasicBlock()
     adaptiveWin_.nTailTile = nTile;
 }
 
-bool AdaptiveSlidingWindowTilingV4::IsCalL1TilingDepth4MmadS8S4() const
+bool AdaptiveSlidingWindowTilingV4::CalL1Tiling()
 {
-    // LUT scenario uses the specialized L1 depth calculation.
-    return true;
-}
+    basicTiling_.usedCoreNum = CalUsedCoreNum();
+    basicTiling_.baseM = adaptiveWin_.baseM;
+    basicTiling_.baseN = adaptiveWin_.baseN;
+    basicTiling_.baseK = adaptiveWin_.baseK;
 
-void AdaptiveSlidingWindowTilingV4::CalL1TilingDepth4MmadS8S4(uint64_t leftL1Size)
-{
-    // LUT 场景采用mm api Norm模板，stepK无意义，默认1
-    basicTiling_.stepKa = 1U;
-    basicTiling_.stepKb = 1U;
+    basicTiling_.stepM = 1U;
+    basicTiling_.stepN = 1U;
+    basicTiling_.singleCoreM = std::min(inputParams_.mSize, static_cast<uint64_t>(basicTiling_.baseM));
+    basicTiling_.singleCoreN = std::min(inputParams_.nSize, static_cast<uint64_t>(basicTiling_.baseN));
+    basicTiling_.singleCoreK = inputParams_.kSize;
 
-    // LUT 场景采用mm api Norm模板，depthA1 depthB1尽可能用满L1空间。分asw和al1full两种情况讨论
-    basicTiling_.depthA1 = 1U;
-    basicTiling_.depthB1 = 1U;
-
-    uint64_t maxDepth = ops::CeilDiv(inputParams_.kSize, static_cast<uint64_t>(basicTiling_.baseK));
-
-    uint64_t oneBaseADataSize =
-        GetSizeWithDataType(static_cast<uint64_t>(basicTiling_.baseM) * basicTiling_.baseK, inputParams_.aDtype);
-    uint64_t oneBaseBDataSize = GetSizeWithDataType(
-        static_cast<uint64_t>(basicTiling_.baseN) * basicTiling_.baseK, inputParams_.bDtype, inputParams_.isLut);
-
-    if (isAFullLoad_) {
-        basicTiling_.depthB1 =
-            std::min(ops::FloorDiv(leftL1Size - singleCoreASizeWithFullLoad_, oneBaseBDataSize), maxDepth);
-    } else {
-        basicTiling_.depthA1 = std::min(ops::FloorDiv(leftL1Size, oneBaseADataSize + oneBaseBDataSize), maxDepth);
-        basicTiling_.depthB1 = basicTiling_.depthA1;
+    basicTiling_.iterateOrder = 0U;
+    basicTiling_.dbL0c =
+        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
+         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
+            DB_SIZE :
+            1U;
+    L1TilingDataCalculator l1Calculator(
+        inputParams_, compileInfo_, basicTiling_.baseM, basicTiling_.baseN, basicTiling_.baseK);
+    L1TilingMode l1TilingMode = isAFullLoad_ ? L1TilingMode::DEPTH_MAXIMIZED_A_FULL_LOAD : L1TilingMode::DEPTH_MAXIMIZED;
+    if (!l1Calculator.Compute(l1TilingMode)) {
+        return false;
     }
+    const L1TilingData& l1TilingData = l1Calculator.GetOutput();
+    basicTiling_.depthA1 = static_cast<uint32_t>(l1TilingData.depthKa_);
+    basicTiling_.depthB1 = static_cast<uint32_t>(l1TilingData.depthKb_);
+    basicTiling_.stepKa = static_cast<uint32_t>(l1TilingData.stepKa_);
+    basicTiling_.stepKb = static_cast<uint32_t>(l1TilingData.stepKb_);
+    return true;
 }
 bool AdaptiveSlidingWindowTilingV4::Is4BitInput(ge::DataType dtype, bool isLut) const
 {
@@ -345,17 +347,6 @@ uint64_t AdaptiveSlidingWindowTilingV4::GetShapeWithDataType(uint64_t size, ge::
         return size;
     } else {
         return size / static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
-    }
-}
-
-uint64_t AdaptiveSlidingWindowTilingV4::GetSizeWithDataType(uint64_t shape, ge::DataType dtype, bool isLut) const
-{
-    if (Is4BitInput(dtype, isLut)) {
-        return (shape + 1) >> 1;
-    } else if (Is8BitInput(dtype, isLut)) {
-        return shape;
-    } else {
-        return shape * static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
     }
 }
 

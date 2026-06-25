@@ -33,7 +33,8 @@ inline const std::vector<int32_t>& GetQuantBatchMatmulV3Priorities(NpuArch npuAr
     static const std::vector<int32_t> dav3510Priorities = {
         strategy::MX_BASIC_API_ASW, strategy::CUBE_BASIC_API_ASW, strategy::CUBE_ASW, strategy::MIX_ASW,
         strategy::PERBLOCK_BASIC_API_ASW};
-    static const std::vector<int32_t> davResvPriorities = {strategy::ITER_BATCH, strategy::CUBE_ASW};
+    static const std::vector<int32_t> davResvPriorities = {
+        strategy::ITER_BATCH, strategy::CUBE_BASIC_API_ASW, strategy::CUBE_ASW};
     static const std::vector<int32_t> emptyPriorities = {};
     switch (npuArch) {
         case NpuArch::DAV_3510:

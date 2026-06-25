@@ -234,6 +234,8 @@ public:
         int64_t nSplitIdx = 0;
         if constexpr (FullLoadMode_ == A_FULL_LOAD_MODE) {
             nSplitIdx = blockIdx_ / mCnt_ % nTailTile_;
+        } else if constexpr (FullLoadMode_ == B_FULL_LOAD_MODE) {
+            mSplitIdx = blockIdx_ / nCnt_ % mTailTile_;
         } else {
             nSplitIdx = (blockIdx_ % totalTailTile_) / mTailTile_;
         }
@@ -282,6 +284,13 @@ public:
             roundIdx_++;
             return true;
         }
+        if constexpr (FullLoadMode_ == B_FULL_LOAD_MODE) {
+            Get<MNK_N>(blockCoord) = blockIdx_ % nCnt_;
+            int64_t curMTailTile = (roundIdx_ == round_ - 1) ? mTailTile_ : 1;
+            Get<MNK_M>(blockCoord) = roundIdx_ * blockNum_ / nCnt_ % mCnt_ + blockIdx_ / nCnt_ / curMTailTile;
+            roundIdx_++;
+            return true;
+        }
         if (blockIdx_ < startBlockIdx_) {
             tileIdx += blockNum_ - startBlockIdx_;
         } else if (endBlockIdx_ + 1 >= totalTailTile_ * totalCnt_) {
@@ -317,6 +326,12 @@ template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool Tran
 struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<A_FULL_LOAD_MODE>,
                               TransA_, TransB_, AType_> {
     using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, A_FULL_LOAD_MODE, TransA_, TransB_, AType_>;
+};
+
+template <class ProblemShape_, class L1TileShape_, class L0TileShape_, bool TransA_, bool TransB_, class AType_>
+struct BlockSchedulerSelector<ProblemShape_, L1TileShape_, L0TileShape_, Cmct::Gemm::QuantBatchMatmulV3Scheduler<B_FULL_LOAD_MODE>,
+                              TransA_, TransB_, AType_> {
+    using SchedulerOp = BlockSchedulerQuantBatchMatmulV3<ProblemShape_, L1TileShape_, L0TileShape_, B_FULL_LOAD_MODE, TransA_, TransB_, AType_>;
 };
 }  // namespace Block
 }  // namespace Gemm
