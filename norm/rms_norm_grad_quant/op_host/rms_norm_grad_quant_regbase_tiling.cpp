@@ -48,6 +48,8 @@ constexpr uint32_t DG_SPLIT_KEY = 1;
 constexpr uint32_t STATIC_QUANT_MODE = 0;
 constexpr uint32_t LOG_2 = 2;
 constexpr int64_t RETAINED_SIZE_1K = 1024;
+constexpr int64_t MIN_DIMS_DY_X_DX = 2;
+constexpr int64_t MAX_DIMS_DY_X_DX = 8;
 
 const std::string OP_NAME = "RmsNormGradQuant";
 
@@ -92,6 +94,55 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeBeSameWithOne(gert::Sha
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeDimNum(
+    gert::Shape& shape, int64_t minDimNum, int64_t maxDimNum, const char* name)
+{
+    auto dimNum = static_cast<int64_t>(shape.GetDimNum());
+    OP_CHECK_IF(
+        dimNum < minDimNum || dimNum > maxDimNum,
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), name, ToString(shape).c_str(),
+            "The dimNum of input is out of supported range"),
+        return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapePrefixMatch(
+    gert::Shape& prefixShape, gert::Shape& fullShape, const char* prefixName, const char* fullName)
+{
+    OP_CHECK_IF(
+        prefixShape.GetDimNum() > fullShape.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), prefixName, ToString(prefixShape).c_str(),
+            "The dimNum should not exceed the dimNum of the full shape"),
+        return ge::GRAPH_FAILED);
+    for (size_t i = 0; i < prefixShape.GetDimNum(); i++) {
+        OP_CHECK_IF(
+            prefixShape.GetDim(i) != fullShape.GetDim(i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), prefixName, ToString(prefixShape).c_str(),
+                "The shape should be the prefix of the full shape"),
+            return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapeSuffixMatch(
+    gert::Shape& suffixShape, gert::Shape& fullShape, const char* suffixName, const char* fullName)
+{
+    OP_CHECK_IF(
+        suffixShape.GetDimNum() > fullShape.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), suffixName, ToString(suffixShape).c_str(),
+            "The dimNum should not exceed the dimNum of the full shape"),
+        return ge::GRAPH_FAILED);
+    size_t offset = fullShape.GetDimNum() - suffixShape.GetDimNum();
+    for (size_t i = 0; i < suffixShape.GetDimNum(); i++) {
+        OP_CHECK_IF(
+            suffixShape.GetDim(i) != fullShape.GetDim(offset + i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), suffixName, ToString(suffixShape).c_str(),
+                "The shape should be the suffix of the full shape"),
+            return ge::GRAPH_FAILED);
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1)
 {
     OP_CHECK_IF(
@@ -133,6 +184,9 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     if (CheckShapeAllPositive(storageShape0) != ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "dy", ToString(storageShape0).c_str(),
             "The shape of input dy can not be an empty tensor or an invalid tensor with a negative dim");
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckShapeDimNum(storageShape0, MIN_DIMS_DY_X_DX, MAX_DIMS_DY_X_DX, "dy") != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -203,6 +257,41 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CheckInputsShape()
     }
 
     CalcRowsAndCols(storageShape0, storageShape3);
+    OP_CHECK_IF(
+        storageShape0.GetDimNum() != storageShape2.GetDimNum() + storageShape3.GetDimNum(),
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "x, rstd and gamma",
+            (ToString(storageShape0) + ", " + ToString(storageShape2) + " and " + ToString(storageShape3)).c_str(),
+            "The dimNum of x should be equal to the sum of dimNum of rstd and gamma"),
+        return ge::GRAPH_FAILED);
+    if (CheckShapePrefixMatch(storageShape2, storageShape0, "rstd", "x") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckShapeSuffixMatch(storageShape3, storageShape0, "gamma", "x") != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    // check output dxOut shape equal to dy shape
+    auto outputShape = context_->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    auto storageShapeDxOut = outputShape->GetStorageShape();
+    if (CheckShapesEqual(storageShapeDxOut, storageShape0) != ge::GRAPH_SUCCESS) {
+        std::string shapeMsg = ToString(storageShapeDxOut) + " and " + ToString(storageShape0);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dxOut and dy", shapeMsg.c_str(),
+            "The shape of output dxOut should be the same as the shape of input dy");
+        return ge::GRAPH_FAILED;
+    }
+
+    // check output dgammaOut shape equal to gamma shape
+    outputShape = context_->GetOutputShape(1);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, outputShape);
+    auto storageShapeDgammaOut = outputShape->GetStorageShape();
+    if (CheckShapesEqual(storageShapeDgammaOut, storageShape3) != ge::GRAPH_SUCCESS) {
+        std::string shapeMsg = ToString(storageShapeDgammaOut) + " and " + ToString(storageShape3);
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "dgammaOut and gamma", shapeMsg.c_str(),
+            "The shape of output dgammaOut should be the same as the shape of input gamma");
+        return ge::GRAPH_FAILED;
+    }
+
     OP_CHECK_IF(
         cols_ == 0,
         OP_LOGE(context_->GetNodeName(), "The shape of input gamma should not be zero."),
@@ -397,33 +486,7 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CalcTilingDataDx()
 {
     blockFactorDx_ = Ops::Base::CeilDiv(rows_, static_cast<int64_t>(aivCoreNum_));
     usedCoreNumDx_ = Ops::Base::CeilDiv(rows_, blockFactorDx_);
-
-    int64_t dyDtypeSize = dyDtype_ == ge::DataType::DT_FLOAT ? FLOAT_BYTE_SIZE : HALF_BYTE_SIZE;
-    int64_t gammaDtypeSize = gammaDtype_ == ge::DataType::DT_FLOAT ? FLOAT_BYTE_SIZE : HALF_BYTE_SIZE;
-    int64_t dxDtypeSize = INT8_BYTE_SIZE;
-    int64_t numColAlignFullLoad =
-        CeilDiv(cols_ * dyDtypeSize, static_cast<int64_t>(blockSize_)) * blockSize_ / dyDtypeSize;
-    int64_t numColAlignB8 = CeilDiv(cols_ * dxDtypeSize, static_cast<int64_t>(blockSize_)) * blockSize_ / dxDtypeSize;
-    int64_t numColAlign2VL =
-        CeilDiv(cols_ * FLOAT_BYTE_SIZE, static_cast<int64_t>(vlFp32_ * DOUBLE_VL)) * (vlFp32_ * DOUBLE_VL) / FLOAT_BYTE_SIZE;
-    uint32_t powerFactor = 1;
-    if (numColAlignFullLoad > 1) {
-        powerFactor = std::floor(std::log(numColAlignFullLoad - 1) / std::log(2));
-        powerFactor = std::pow(LOG_2, powerFactor); // 公式保持一致add_rms_norm
-    }
-    int64_t firstVcaddLength = CeilDiv(CeilDiv(powerFactor, vlFp32_), blockSize_) * blockSize_;
-    int64_t ubFactor;
-
-    // RETAINED_SIZE_1K : rstd + tmpSumBuf align to blockSize_ + scales + offsetX
-    ubFactor = (static_cast<int64_t>(ubSize_) - RETAINED_SIZE_1K - numColAlignFullLoad * gammaDtypeSize) /     // gamma
-               (numColAlignFullLoad * dyDtypeSize * TWO * BUFFER_NUM + // Dy + x
-                FLOAT_BYTE_SIZE * BUFFER_NUM +                                      // rstd
-                numColAlignB8 * dxDtypeSize * BUFFER_NUM +                        // dx
-                numColAlign2VL * FLOAT_BYTE_SIZE +                                         // reduceBuf
-                1 * FLOAT_BYTE_SIZE +                                                      // tmpSumBuf
-                firstVcaddLength * FLOAT_BYTE_SIZE);                                       // reduceTmpBuf
-    
-    if (ubFactor < 1) {
+    if (cols_ > DX_UB_FACTOR) {
         // tilingKey_ += DX_SPLIT_KEY;
         computeModeDx_ = ComputeModeDx::SPLIT_D;
         bodyPart_ = 1; // only for splitD
@@ -433,9 +496,7 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::CalcTilingDataDx()
             bodyPart_ = std::pow(TWO, powerofTwoValueDx);
         }
     } else {
-        ubFactor = std::min(ubFactor, static_cast<int64_t>(blockFactorDx_));
-        bodyPart_ = powerFactor;
-        ubFactor_ = ubFactor;
+        bodyPart_ = 1;
     }
 
     return ge::GRAPH_SUCCESS;
@@ -555,7 +616,6 @@ ge::graphStatus RmsNormGradQuantRegbaseTiling::DoOpTiling()
     tilingData_.dxTilingData.blockFactorDx = blockFactorDx_;
     tilingData_.dxTilingData.bodyPart = bodyPart_;
     tilingData_.dxTilingData.usedCoreNumDx = usedCoreNumDx_;
-    tilingData_.dxTilingData.ubFactor = ubFactor_;
 
     tilingData_.blockSize = blockSize_;
     tilingData_.usedCoreNumDG = usedCoreNumDG_;

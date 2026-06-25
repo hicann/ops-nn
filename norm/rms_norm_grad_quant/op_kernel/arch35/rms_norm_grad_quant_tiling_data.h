@@ -20,7 +20,6 @@ struct RmsNormGradQuantRegbaseDxTilingData {
     uint64_t rows;
     uint64_t cols;
     uint64_t blockFactorDx;
-    uint64_t ubFactor;
     uint64_t bodyPart;
     uint64_t usedCoreNumDx;
 };

@@ -120,7 +120,6 @@ protected:
     int64_t rows_{0}; // A轴
     int64_t cols_{0}; // R轴
     int64_t blockFactorDx_{0};
-    int64_t ubFactor_{0};
     int64_t bodyPart_{0};
     int64_t colsPerCore_{0};
     int64_t rowsPerCore_{0};
@@ -161,6 +160,11 @@ protected:
     RmsNormGradQuantRegbaseTilingData tilingData_;
     ge::graphStatus CheckShapeBeSameWithOne(gert::Shape& shape);
     ge::graphStatus CheckShapeAllPositive(gert::Shape& shape);
+    ge::graphStatus CheckShapeDimNum(gert::Shape& shape, int64_t minDimNum, int64_t maxDimNum, const char* name);
+    ge::graphStatus CheckShapePrefixMatch(
+        gert::Shape& prefixShape, gert::Shape& fullShape, const char* prefixName, const char* fullName);
+    ge::graphStatus CheckShapeSuffixMatch(
+        gert::Shape& suffixShape, gert::Shape& fullShape, const char* suffixName, const char* fullName);
     ge::graphStatus CheckInputsShape();
     ge::graphStatus CheckInputsDtype();
     ge::graphStatus CheckShapesEqual(gert::Shape& shape0, gert::Shape& shape1);

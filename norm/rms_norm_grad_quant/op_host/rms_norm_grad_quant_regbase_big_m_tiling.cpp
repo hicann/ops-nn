@@ -66,7 +66,6 @@ ge::graphStatus RmsNormGradQuantBigMTiling::DoOpTiling()
     tilingData_.dxTilingData.rows = rows_;
     tilingData_.dxTilingData.blockFactorDx = blockFactorDx_;
     tilingData_.dxTilingData.bodyPart = bodyPart_;
-    tilingData_.dxTilingData.ubFactor = ubFactor_;
 
     return ge::GRAPH_SUCCESS;
 }

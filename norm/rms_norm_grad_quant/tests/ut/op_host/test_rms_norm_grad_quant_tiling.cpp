@@ -917,3 +917,207 @@ TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_regbase_dx_full_load_2)
     EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
         ge::GRAPH_SUCCESS);
 }
+
+// Shape validation tests for CheckInputsShape
+static void BuildValidShapes(
+    gert::StorageShape& dy_shape, gert::StorageShape& x_shape, gert::StorageShape& rstd_shape,
+    gert::StorageShape& gamma_shape, gert::StorageShape& scales_x_shape, gert::StorageShape& dx_out_shape,
+    gert::StorageShape& dgamma_out_shape)
+{
+    dy_shape = {{8, 64}, {8, 64}};
+    x_shape = {{8, 64}, {8, 64}};
+    rstd_shape = {{8}, {8}};
+    gamma_shape = {{64}, {64}};
+    scales_x_shape = {{1}, {1}};
+    dx_out_shape = {{8, 64}, {8, 64}};
+    dgamma_out_shape = {{64}, {64}};
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dy_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    dy_shape = {{64}, {64}}; // dimNum=1, invalid
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_x_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    x_shape = {{1, 1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1, 1}}; // dimNum=9, invalid
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    rstd_shape = {{1, 1, 1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1, 1, 1}}; // dimNum=8, invalid
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    gamma_shape = {{}, {}}; // dimNum=0, invalid
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_scalesx_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    scales_x_shape = {{1, 1}, {1, 1}}; // dimNum=2, invalid
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_offsetx_dim_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    gert::StorageShape offset_x_shape = {{1, 1}, {1, 1}}; // dimNum=2, invalid
+
+    std::vector<gert::StorageShape*> inputs = {
+        &dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape, &offset_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {
+        ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_INT32};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 1};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dimnum_relation_invalid)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    rstd_shape = {{8, 8}, {8, 8}}; // x.dimNum(2) != rstd.dimNum(2) + gamma.dimNum(1)
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_rstd_prefix_mismatch)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    x_shape = {{4, 64}, {4, 64}}; // rstd[0]=8 != x[0]=4
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_gamma_suffix_mismatch)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    gamma_shape = {{32}, {32}}; // gamma[0]=32 != x[1]=64
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dxout_mismatch)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    dx_out_shape = {{8, 32}, {8, 32}}; // dxOut != dy
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}
+
+TEST_F(RmsNormGradQuantTilingTest, rms_norm_grad_quant_shape_dgammaout_mismatch)
+{
+    gert::StorageShape dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape;
+    BuildValidShapes(dy_shape, x_shape, rstd_shape, gamma_shape, scales_x_shape, dx_out_shape, dgamma_out_shape);
+    dgamma_out_shape = {{32}, {32}}; // dgammaOut != gamma
+
+    std::vector<gert::StorageShape*> inputs = {&dy_shape, &x_shape, &rstd_shape, &gamma_shape, &scales_x_shape};
+    std::vector<gert::StorageShape*> outputs = {&dx_out_shape, &dgamma_out_shape};
+    std::vector<ge::DataType> inputDtypes = {ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_FLOAT};
+    std::vector<ge::DataType> outputDtypes = {ge::DT_HIFLOAT8, ge::DT_FLOAT};
+    std::vector<uint32_t> irInstanceNum = {1, 1, 1, 1, 1, 0};
+
+    uint64_t tilingKey = 0;
+    EXPECT_EQ(RunRmsNormGradQuantTiling(inputs, outputs, inputDtypes, outputDtypes, irInstanceNum, true, tilingKey),
+        ge::GRAPH_FAILED);
+}

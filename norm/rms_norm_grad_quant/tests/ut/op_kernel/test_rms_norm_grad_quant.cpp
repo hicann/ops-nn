@@ -107,7 +107,6 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_full_load)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = 1;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -195,7 +194,6 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_big_m)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = 1;
-    tilingData->dxTilingData.ubFactor = 32;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -341,7 +339,6 @@ TEST_F(rms_norm_grad_quant_test, test_full_load_dgamma_with_large_rows)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = rows;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -422,7 +419,6 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_full_load_with_pad)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = 1;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -503,7 +499,6 @@ TEST_F(rms_norm_grad_quant_test, test_dgamma_with_large_rows_unalign)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = rows;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -591,7 +586,6 @@ TEST_F(rms_norm_grad_quant_test, test_big_m_with_fold)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = 1;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = rows;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
@@ -673,7 +667,6 @@ TEST_F(rms_norm_grad_quant_test, test_split_d_dgamma_full_load)
     tilingData->dxTilingData.rows = rows;
     tilingData->dxTilingData.cols = cols;
     tilingData->dxTilingData.blockFactorDx = rows;
-    tilingData->dxTilingData.ubFactor = rows;
     tilingData->dxTilingData.bodyPart = 4096;
     tilingData->dxTilingData.usedCoreNumDx = 1;
 
