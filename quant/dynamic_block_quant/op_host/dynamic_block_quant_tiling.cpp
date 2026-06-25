@@ -40,6 +40,7 @@ constexpr int64_t BYTES_OF_OUTPUT_TYPE = 1;
 constexpr int64_t DIGIT_ZERO = 0;
 constexpr int64_t DIGIT_ONE = 1;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t DIGIT_THOUSAND = 1000;
 constexpr int64_t DIGIT_HUNDRED = 100;
 constexpr int64_t DIGIT_TEN = 10;
@@ -53,7 +54,7 @@ constexpr int64_t EXIST_NODE_NUM = 3;
 constexpr int64_t AXIS_NUM_AFTER_MERGE = 3;
 constexpr int64_t NEW_SHAPE_INDEX_TWO = 2;
 constexpr int64_t WORKSPACE_SIZE = 0;
-const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16};
+const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = {ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
 const std::set<int64_t> DST_SUPPORT_DTYPE_SET = {ge::DT_INT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN,
     ge::DT_FLOAT8_E5M2};
 const std::set<ge::DataType> Y_SUPPORT_DTYPE_SET = {ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2};
@@ -131,7 +132,8 @@ static ge::graphStatus CheckBlockSizeAndDstTypeMax(
     OP_CHECK_IF(
         ROW_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeRow) == 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "row_block_size", std::to_string(tilingParam.blockSizeRow), "The value of row_block_size must be 1, 128, 256, or 512"),
+            context->GetNodeName(), "row_block_size", std::to_string(tilingParam.blockSizeRow),
+            "The value of row_block_size must be 1, 128, 256, or 512"),
         return ge::GRAPH_FAILED);
 
     auto* attrBlockSizeCol = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_BLOCK_SIZE_COL);
@@ -140,7 +142,8 @@ static ge::graphStatus CheckBlockSizeAndDstTypeMax(
     OP_CHECK_IF(
         COL_BLOCK_SIZE_SUPPORT_DTYPE.count(tilingParam.blockSizeCol) == 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "col_block_size", std::to_string(tilingParam.blockSizeCol), "The value of col_block_size must be 64, 128, 192, or 256"),
+            context->GetNodeName(), "col_block_size", std::to_string(tilingParam.blockSizeCol),
+            "The value of col_block_size must be 64, 128, 192, or 256"),
         return ge::GRAPH_FAILED);
 
     auto* attrDstTypeMax = attrs->GetAttrPointer<float>(INDEX_ATTR_DST_DTYPE_MAX);
@@ -149,13 +152,15 @@ static ge::graphStatus CheckBlockSizeAndDstTypeMax(
     OP_CHECK_IF(
         DST_TYPE_MAX_SUPPORT_DTYPE.count(tilingParam.dstTypeMax) == 0,
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax), "The value of dst_type_max must be 0.0, 15.0, 56.0, 224.0, or 32768.0"),
+            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax),
+            "The value of dst_type_max must be 0.0, 15.0, 56.0, 224.0, or 32768.0"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
         (!Ops::Base::IsFloatEqual(tilingParam.dstTypeMax, 0.0f) && tilingParam.dstType != ge::DT_HIFLOAT8),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax), "If the dtype of dst_type is not DT_HIFLOAT8, parameter dst_type_max must be 0.0"),
+            context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax),
+            "If the dtype of dst_type is not DT_HIFLOAT8, parameter dst_type_max must be 0.0"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -213,7 +218,8 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicBlockQ
     OP_CHECK_IF(
         (tilingParam.minScale < 0.0),
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-            context->GetNodeName(), "min_scale", std::to_string(tilingParam.minScale), "The value of min_scale must be greater than or equal to 0"),
+            context->GetNodeName(), "min_scale", std::to_string(tilingParam.minScale),
+            "The value of min_scale must be greater than or equal to 0"),
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -248,7 +254,9 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     OP_CHECK_IF(
         INPUT_SUPPORT_DTYPE_SET.count(xDtype) == 0,
         OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype), "The dtype of x must be DT_FLOAT16 or DT_BF16"),
+            context->GetNodeName(), "x", ge::TypeUtils::DataTypeToSerialString(xDtype),
+            "The dtype of x must be DT_FLOAT16, DT_BF16 or DT_FLOAT"),
+
         return ge::GRAPH_FAILED);
 
     auto outputYPtr = context->GetOutputDesc(0);
@@ -265,7 +273,8 @@ static ge::graphStatus CheckDtype(const gert::TilingContext* context)
     auto scaleDtype = outputScalePtr->GetDataType();
     OP_CHECK_IF(
         OUTPUT_SUPPORT_DTYPE_SET.count(scaleDtype) == 0,
-        OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "scale", ge::TypeUtils::DataTypeToSerialString(scaleDtype), "DT_FLOAT"),
+        OP_LOGE_FOR_INVALID_DTYPE(
+            context->GetNodeName(), "scale", ge::TypeUtils::DataTypeToSerialString(scaleDtype), "DT_FLOAT"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -286,8 +295,10 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     auto scaleShape = scaleShapePtr->GetStorageShape();
 
     OP_CHECK_IF(
-        xShape != yShape, OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
-            context->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape), "The shapes of x and y must be the same"),
+        xShape != yShape,
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
+            context->GetNodeName(), "x, y", Ops::Base::ToString(xShape) + ", " + Ops::Base::ToString(yShape),
+            "The shapes of x and y must be the same"),
         return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -299,7 +310,8 @@ static ge::graphStatus CheckShape(const gert::TilingContext* context, const Dyna
     OP_CHECK_IF(
         static_cast<int64_t>(scaleShape.GetDimNum()) != 2 && static_cast<int64_t>(scaleShape.GetDimNum()) != 3,
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(
-            context->GetNodeName(), "scale", std::to_string(scaleShape.GetDimNum()), "The shape dim of scale must be 2 or 3"),
+            context->GetNodeName(), "scale", std::to_string(scaleShape.GetDimNum()),
+            "The shape dim of scale must be 2 or 3"),
         return ge::GRAPH_FAILED);
 
     if (xShape.GetDimNum() == INPUT_DIM_NUM_TOW) {
@@ -335,8 +347,17 @@ inline static void CalcTilingKey(
 {
     // 千分位表示 RoundMode
     int64_t thousandDigit = tilingParam.roundMode;
-    // 百位数为1、2，分别表示输入类型是float16、bfloat16;
-    int64_t hundredDigit = inputType == DT_FLOAT16 ? 1 : DIGIT_TWO;
+    // 百位数为1、2、3，分别表示输入类型是float16、bfloat16、float32;
+    int64_t hundredDigit;
+    if (inputType == DT_FLOAT16) {
+        hundredDigit = 1;
+    } else if (inputType == ge::DT_BF16) {
+        hundredDigit = DIGIT_TWO;
+    } else if (inputType == ge::DT_FLOAT) {
+        hundredDigit = DIGIT_THREE;
+    } else {
+        hundredDigit = 1;
+    }
     // 十位数为0、1、2、3，分别表示输出类型是float8_e5m2、float8_e4m3fn、hifloat8、int8
     // 前面已做过Dtype校验
     int64_t tenDigit = 0;
@@ -373,16 +394,22 @@ static void CalcAxisSize(DynamicBlockQuantTilingParam& tilingParam, const gert::
     tilingParam.colBlockLoopNum = Ops::Base::CeilDiv(tilingParam.colNum, tilingParam.blockSizeCol);
 }
 
-inline static int64_t CalcPerBlockUbSize(DynamicBlockQuantTilingParam& tilingParam)
+inline static int64_t CalcPerBlockUbSize(DynamicBlockQuantTilingParam& tilingParam, ge::DataType inputType)
 {
     // 每个block需要的临时ub大小
     int64_t perBlockTmpUbSize = 0;
 
     // 每个block需要的ub大小
     int64_t perBlockUbSize = 0;
+
+    // 根据输入类型计算字节数
+    int64_t inputBytes = BYTES_OF_INPUT_TYPE;
+    if (inputType == ge::DT_FLOAT) {
+        inputBytes = BYTES_OF_FLOAT_TYPE;
+    }
+
     // input and output size
-    perBlockTmpUbSize +=
-        tilingParam.blockSizeRow * tilingParam.blockSizeCol * (BYTES_OF_INPUT_TYPE + BYTES_OF_OUTPUT_TYPE);
+    perBlockTmpUbSize += tilingParam.blockSizeRow * tilingParam.blockSizeCol * (inputBytes + BYTES_OF_OUTPUT_TYPE);
     // scale size
     perBlockUbSize = perBlockTmpUbSize + BLOCK_SIZE;
 
@@ -514,7 +541,7 @@ static ge::graphStatus DoTiling(const gert::TilingContext* context, DynamicBlock
     tilingParam.colTailCoreNum = tilingParam.colTileNum - tilingParam.colNormalCoreNum;
 
     // 每个block需要的ub大小
-    int64_t perBlockUbSize = CalcPerBlockUbSize(tilingParam);
+    int64_t perBlockUbSize = CalcPerBlockUbSize(tilingParam, inDtype);
     perBlockUbSize = perBlockUbSize != 0 ? perBlockUbSize : 1;
 
     // 计算ub可以放下的block块数量

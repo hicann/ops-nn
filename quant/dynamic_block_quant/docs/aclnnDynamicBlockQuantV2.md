@@ -91,7 +91,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
       <td>输入</td>
       <td>表示算子输入的Tensor。对应公式中的`x`。</td>
       <td>不支持空Tensor。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>2-3</td>
       <td>√</td>

@@ -22,7 +22,7 @@ namespace ge {
 * @brief Online quantizes the input tensor per block.
 
 * @par Inputs:
-- x: A tensor of type float16 or bfloat16. Shape must be 2-dimensional or 3-dimensional.
+- x: A tensor of type float16, bfloat16 or float32. Shape must be 2-dimensional or 3-dimensional.
 
 * @par Attributes:
 - min_scale: (Optional) Minimum scale value for quantization. Must be a positive float.
@@ -52,7 +52,7 @@ namespace ge {
 * Custom operator with no direct mapping in Caffe/ONNX/TensorFlow/PyTorch.
 */
 REG_OP(DynamicBlockQuant)
-    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16}))
+    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OUTPUT(y, TensorType({DT_INT8, DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2}))
     .OUTPUT(scale, TensorType({DT_FLOAT}))
     .ATTR(min_scale, Float, 0.0)

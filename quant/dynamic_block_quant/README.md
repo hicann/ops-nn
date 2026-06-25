@@ -53,7 +53,7 @@
       <td>x</td>
       <td>输入</td>
       <td>表示算子输入的Tensor，对应公式中的`x`。shape支持2-3维。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>

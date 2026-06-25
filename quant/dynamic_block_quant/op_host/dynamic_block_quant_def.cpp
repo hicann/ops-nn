@@ -20,46 +20,52 @@ static constexpr int32_t DEFAULT_BLOCK_SIZE_ROW = 1;
 static constexpr int32_t DEFAULT_BLOCK_SIZE_COL = 128;
 static constexpr int32_t BLOCK_QUANT_DEFAULT_DST_TYPE = 35;
 static constexpr int32_t DYNAMIC_BLOCK_QUANT_VERSION_V2 = 2;
+
+static const std::vector<ge::DataType> INPUT_DATA_TYPE = {
+    ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT,
+    ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT};
+
+static const std::vector<ge::DataType> OUTPUT_Y_DATA_TYPE = {
+    ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,      ge::DT_HIFLOAT8,    ge::DT_FLOAT8_E4M3FN,
+    ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2, ge::DT_FLOAT8_E5M2,
+    ge::DT_FLOAT8_E5M2,   ge::DT_INT8,          ge::DT_INT8,        ge::DT_INT8};
+
+static const std::vector<ge::DataType> OUTPUT_SCALE_DATA_TYPE = {
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
+    ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT};
+
+static const std::vector<ge::Format> FORMAT_ND = {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
+                                                  ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND};
+
 class DynamicBlockQuant : public OpDef {
 public:
     explicit DynamicBlockQuant(const char* name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16, ge::DT_FLOAT16, ge::DT_BF16,
-                ge::DT_FLOAT16, ge::DT_BF16})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat(
-                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND})
+            .DataType(INPUT_DATA_TYPE)
+            .Format(FORMAT_ND)
+            .UnknownShapeFormat(FORMAT_ND)
             .AutoContiguous();
         this->Output("y")
             .ParamType(REQUIRED)
-            .DataType(
-                {ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E5M2,
-                 ge::DT_FLOAT8_E5M2, ge::DT_INT8, ge::DT_INT8})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat(
-                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType(OUTPUT_Y_DATA_TYPE)
+            .Format(FORMAT_ND)
+            .UnknownShapeFormat(FORMAT_ND);
         this->Output("scale")
             .ParamType(REQUIRED)
-            .DataType({ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT,
-                ge::DT_FLOAT, ge::DT_FLOAT})
-            .Format({ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                ge::FORMAT_ND, ge::FORMAT_ND})
-            .UnknownShapeFormat(
-                {ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND,
-                    ge::FORMAT_ND, ge::FORMAT_ND});
+            .DataType(OUTPUT_SCALE_DATA_TYPE)
+            .Format(FORMAT_ND)
+            .UnknownShapeFormat(FORMAT_ND);
+
         this->Attr("min_scale").AttrType(OPTIONAL).Float(0.0);
         this->Attr("round_mode").AttrType(OPTIONAL).String("rint");
         this->Attr("dst_type").AttrType(OPTIONAL).Int(BLOCK_QUANT_DEFAULT_DST_TYPE);
         this->Attr("row_block_size").AttrType(OPTIONAL).Int(DEFAULT_BLOCK_SIZE_ROW);
         this->Attr("col_block_size").AttrType(OPTIONAL).Int(DEFAULT_BLOCK_SIZE_COL);
         this->Attr("dst_type_max").AttrType(OPTIONAL).Version(DYNAMIC_BLOCK_QUANT_VERSION_V2).Float(0.0);
-        
+
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)
             .DynamicFormatFlag(false)
