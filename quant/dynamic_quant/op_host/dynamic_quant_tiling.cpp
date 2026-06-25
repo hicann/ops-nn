@@ -102,21 +102,22 @@ public:
 
 private:
     void SetTilingKey(gert::TilingContext* context, ge::DataType dataType, bool useDb);
-    ge::graphStatus CheckInputDtype(gert::TilingContext* context);
-    ge::graphStatus CheckOutputDtype(gert::TilingContext* context);
-    ge::graphStatus CheckOpInpuShape(gert::TilingContext* context);
-    ge::graphStatus CheckOpOutputShape(gert::TilingContext* context);
-    ge::graphStatus CheckAttrs(gert::TilingContext* context);
-    ge::graphStatus CheckOpShape(gert::TilingContext* context);
+    ge::graphStatus CheckInputDtype(const gert::TilingContext* context);
+    ge::graphStatus CheckOutputDtype(const gert::TilingContext* context);
+    ge::graphStatus CheckOpInputShape(const gert::TilingContext* context);
+    ge::graphStatus CheckSmoothShape(const gert::TilingContext* context, int64_t xDimLast);
+    ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context);
+    ge::graphStatus CheckAttrs(const gert::TilingContext* context);
+    ge::graphStatus CheckOpShape(const gert::TilingContext* context);
     ge::graphStatus CheckOpDim(
         const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim);
-    ge::graphStatus CheckOpParams(gert::TilingContext* context);
+    ge::graphStatus CheckOpParams(const gert::TilingContext* context);
     void ResetLargeTilingParams();
     void SetTilingData(gert::TilingContext* context, ge::DataType xDtype);
     void CalculateMaxUbSizePerRow(ge::DataType xDtype);
     bool SetSpecialTilingForDs(gert::TilingContext* context);
     bool CalcTilingForMultiRow(gert::TilingContext* context);
-    bool CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen);
+    bool CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen) const;
     void CalculateMultiRowCoreDistribution(uint32_t maxUbLen, uint32_t& perCoreLoop, uint32_t& extraRows);
     ge::graphStatus GetCompileInfo(gert::TilingContext* context);
 
@@ -197,7 +198,7 @@ ge::graphStatus DynamicQuantTiling::CheckOpDim(
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckOpInputShape(const gert::TilingContext* context)
 {
     auto xShape = context->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -212,59 +213,69 @@ ge::graphStatus DynamicQuantTiling::CheckOpInpuShape(gert::TilingContext* contex
     if (yDtype == ge::DT_INT4) {
         OP_CHECK_IF(
             (xDimLast % EVEN_FACTOR),
-	    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", 
-		    Ops::Base::ToString(xShape->GetStorageShape()),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x",
+                    Ops::Base::ToString(xShape->GetStorageShape()),
                     "When the yDtype is DT_INT4, the tail axis of x must be an even number"),
             return ge::GRAPH_FAILED);
     }
 
     auto smoothShape = context->GetOptionalInputShape(SMOOTH_INDEX);
     if (smoothShape != nullptr) {
-        auto groupShape = context->GetOptionalInputShape(GROUP_INDEX);
-        if (groupShape != nullptr) {
-            groupNum = groupShape->GetStorageShape().GetDim(groupShape->GetStorageShape().GetDimNum() - 1);
-            OP_CHECK_IF(
-                (groupNum > MAX_EXPERT_NUM),
-                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
-                                               "The value of groupNum must be less than or equal to 1024"),
-                return ge::GRAPH_FAILED);
-        }
-
-        size_t smoothDimNum = smoothShape->GetStorageShape().GetDimNum();
-        // 针对moe场景下的校验
-        if (groupNum >= 1U) {
-            OP_CHECK_IF(
-                (smoothDimNum != MOE_SMOOTH_NUM),
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
-                                              "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
-                return ge::GRAPH_FAILED);
-            int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
-            if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
-                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "smooth_scales, group_index",
-                                                std::to_string(smoothDimFirst) + ", " + std::to_string(groupNum),
-                                                "The value of smooth_scales first dim and group_num must be the same");
-                return ge::GRAPH_FAILED;
-            }
-        } else {
-            if (smoothDimNum != 1U) {
-                OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
-                                              "The shape dim of smooth_scales must be 1");
-                return ge::GRAPH_FAILED;
-            }
-        }
-        int64_t smoothDimLast = smoothShape->GetStorageShape().GetDim(smoothDimNum - 1);
-        if (xDimLast != smoothDimLast) {
-            OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
-                                                std::to_string(xDimLast) + ", " + std::to_string(smoothDimLast),
-                                                "last dim of x and smooth_scales must be equal");
-            return ge::GRAPH_FAILED;
-        }
-        hasSmooth = true;
+        OP_CHECK_IF(
+            (CheckSmoothShape(context, xDimLast) != ge::GRAPH_SUCCESS),
+            OP_LOGE(context, "smooth shape check failed!"), return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckSmoothShape(const gert::TilingContext* context, int64_t xDimLast)
+{
+    auto groupShape = context->GetOptionalInputShape(GROUP_INDEX);
+    if (groupShape != nullptr) {
+        size_t groupDimNum = groupShape->GetStorageShape().GetDimNum();
+        groupNum = groupShape->GetStorageShape().GetDim(groupDimNum > 0U ? groupDimNum - 1U : 0U);
+        OP_CHECK_IF(
+            (groupNum > MAX_EXPERT_NUM),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context->GetNodeName(), "groupNum", std::to_string(groupNum),
+                                           "The value of groupNum must be less than or equal to 1024"),
+            return ge::GRAPH_FAILED);
+    }
+
+    auto smoothShape = context->GetOptionalInputShape(SMOOTH_INDEX);
+    size_t smoothDimNum = smoothShape->GetStorageShape().GetDimNum();
+    // 针对moe场景下的校验
+    if (groupNum >= 1U) {
+        OP_CHECK_IF(
+            (smoothDimNum != MOE_SMOOTH_NUM),
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
+                                          "When groupNum is more than 0, the shape dim of smooth_scales must be equal to 2"),
+            return ge::GRAPH_FAILED);
+        int64_t smoothDimFirst = smoothShape->GetStorageShape().GetDim(0);
+        if (groupNum != static_cast<uint32_t>(smoothDimFirst)) {
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context->GetNodeName(), "smooth_scales, group_index",
+                                            std::to_string(smoothDimFirst) + ", " + std::to_string(groupNum),
+                                            "The value of smooth_scales first dim and group_num must be the same");
+            return ge::GRAPH_FAILED;
+        }
+    } else {
+        if (smoothDimNum != 1U) {
+            OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context->GetNodeName(), "smooth_scales", std::to_string(smoothDimNum),
+                                          "The shape dim of smooth_scales must be 1");
+            return ge::GRAPH_FAILED;
+        }
+    }
+    int64_t smoothDimLast = smoothShape->GetStorageShape().GetDim(smoothDimNum - 1);
+    if (xDimLast != smoothDimLast) {
+        OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "x, smooth_scales",
+                                            std::to_string(xDimLast) + ", " + std::to_string(smoothDimLast),
+                                            "last dim of x and smooth_scales must be equal");
+        return ge::GRAPH_FAILED;
+    }
+    hasSmooth = true;
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(const gert::TilingContext* context)
 {
     auto xShape = context->GetInputShape(X_INDEX);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -290,10 +301,10 @@ ge::graphStatus DynamicQuantTiling::CheckOpOutputShape(gert::TilingContext* cont
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOpShape(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckOpShape(const gert::TilingContext* context)
 {
     OP_CHECK_IF(
-        (CheckOpInpuShape(context) != ge::GRAPH_SUCCESS),
+        (CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
         OP_LOGE(context, "input shape check failed!"), return ge::GRAPH_FAILED);
 
     OP_CHECK_IF(
@@ -302,7 +313,7 @@ ge::graphStatus DynamicQuantTiling::CheckOpShape(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOutputDtype(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckOutputDtype(const gert::TilingContext* context)
 {
     auto yDesc = context->GetOutputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
@@ -332,7 +343,7 @@ ge::graphStatus DynamicQuantTiling::CheckOutputDtype(gert::TilingContext* contex
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckInputDtype(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckInputDtype(const gert::TilingContext* context)
 {
     auto xDesc = context->GetInputDesc(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
@@ -369,7 +380,7 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(gert::TilingContext* context
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckAttrs(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckAttrs(const gert::TilingContext* context)
 {
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
@@ -386,7 +397,7 @@ ge::graphStatus DynamicQuantTiling::CheckAttrs(gert::TilingContext* context)
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckOpParams(gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckOpParams(const gert::TilingContext* context)
 {
     OP_CHECK_IF(
         (CheckInputDtype(context) != ge::GRAPH_SUCCESS),
@@ -562,7 +573,7 @@ bool DynamicQuantTiling::SetSpecialTilingForDs(gert::TilingContext* context)
     return true;
 }
 
-bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen)
+bool DynamicQuantTiling::CheckMultiRowPreconditions(const gert::TilingContext* context, uint32_t& maxUbLen) const
 {
     // 仅非moe场景、对称量化可以使用当前模板
     auto groupDesc = context->GetOptionalInputDesc(GROUP_INDEX);
