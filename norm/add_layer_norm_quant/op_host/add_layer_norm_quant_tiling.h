@@ -103,6 +103,10 @@ TILING_DATA_FIELD_DEF(uint32_t, firstDimPerTimeTail);
 TILING_DATA_FIELD_DEF(uint32_t, rowTailPerBlock);
 TILING_DATA_FIELD_DEF(uint32_t, rowTailLastBlock);
 TILING_DATA_FIELD_DEF(uint64_t, gmOffset);
+TILING_DATA_FIELD_DEF(uint32_t, sliceSizeAligned);
+TILING_DATA_FIELD_DEF(uint32_t, tailSliceSizeAligned);
+TILING_DATA_FIELD_DEF(uint32_t, sliceSizeAlignedFp32);
+TILING_DATA_FIELD_DEF(uint32_t, tailSliceSizeAlignedFp32);
 END_TILING_DATA_DEF;
 
 

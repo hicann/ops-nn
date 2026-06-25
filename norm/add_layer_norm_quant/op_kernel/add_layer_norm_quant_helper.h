@@ -33,7 +33,7 @@ constexpr uint32_t UINT32_ZERO = 0;
 constexpr uint32_t UINT32_ONE = 1;
 constexpr uint32_t UINT32_TWO = 2;
 // 双缓冲队列深度
-constexpr int32_t BUFFER_NUM_SPLIT_D = 2;
+constexpr int32_t BUFFER_NUM_SPLIT_D = 1;
 // 32-byte 对齐块大小
 constexpr int32_t BLOCK_SIZE_SPLIT_D = 32;
 // float 类型每块元素数 (32/4=8)

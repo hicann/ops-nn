@@ -55,7 +55,8 @@ static constexpr int32_t ONE_BLK_SIZE = 32;
 static constexpr int32_t INNUM_TWO = 2;
 static constexpr int32_t INNUM_THREE = 3;
 static constexpr int32_t INPUT_TENSOR = 4;
-static constexpr int32_t SLICE_D_BUFFER_NUM = 2;
+static constexpr int32_t SLICE_D_BUFFER_NUM = 1;
+static constexpr int32_t BLOCK_SIZE_SPLIT_D = 32;
 
 const std::string OP_NAME = "AddLayerNormQuant";
 
@@ -182,6 +183,18 @@ inline TILING_TYPE AddLayerNormQuantTilingImpl(
     return TILING_TYPE::SLICE_EXT;
 }
 
+static inline void AddAlignParams(AddLayerNormQuantV2TilingData* tiling, uint32_t colPerTime, uint32_t colTail, int64_t dtSize)
+{
+    uint32_t sliceSizeAligned = dtSize > 0 ? (((colPerTime * dtSize + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / dtSize) : 0;
+    uint32_t tailSliceSizeAligned = dtSize > 0 ? (((colTail * dtSize + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / dtSize) : 0;
+    uint32_t sliceSizeAlignedFp32 = ((colPerTime * sizeof(float) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(float);
+    uint32_t tailSliceSizeAlignedFp32 = ((colTail * sizeof(float) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(float);
+    tiling->set_sliceSizeAligned(sliceSizeAligned);
+    tiling->set_tailSliceSizeAligned(tailSliceSizeAligned);
+    tiling->set_sliceSizeAlignedFp32(sliceSizeAlignedFp32);
+    tiling->set_tailSliceSizeAlignedFp32(tailSliceSizeAlignedFp32);
+}
+
 inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* tiling, uint32_t optionalScaleOffsetMode,
     uint64_t maxUbSize, int64_t& dtSize, int32_t bufferNum, int32_t numCol, int32_t firstdimPerCore, bool enableXOut,
     enum BIAS_TYPE biasType, uint32_t& rowPerTime, uint32_t& colPerTime)
@@ -218,7 +231,8 @@ inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* 
     }
     rowPerTime = 1;
     int64_t biasUbPerCol = (biasType != BIAS_TYPE::NO_BIAS) ? (dtSize * SLICE_D_BUFFER_NUM) : 0;
-    int64_t ubPerCol = dtSize * 4 * SLICE_D_BUFFER_NUM + biasUbPerCol + SLICE_D_BUFFER_NUM + dtSize * SLICE_D_BUFFER_NUM + 16 + 20;
+    int64_t ubPerCol = dtSize * 2 * SLICE_D_BUFFER_NUM + biasUbPerCol + dtSize * 2 * SLICE_D_BUFFER_NUM + sizeof(int8_t) * SLICE_D_BUFFER_NUM + dtSize * SLICE_D_BUFFER_NUM + 20;
+
     int64_t ubFixed = 352 + UB_RESERVED_BYTE;
     auto tmpCol = static_cast<double>(static_cast<long>(maxUbSize) - ubFixed) / static_cast<double>(ubPerCol);
     colPerTime = floor(tmpCol);
@@ -236,7 +250,7 @@ inline TILING_TYPE AddLayerNormQuantTilingImplV2(AddLayerNormQuantV2TilingData* 
         colPerTime = colPerTime - ONE_BLK_SIZE;
         colTail = numCol - (CEIL_DIV(numCol, colPerTime) - 1) * colPerTime;
     }
-
+    AddAlignParams(tiling, colPerTime, colTail, dtSize);
     tiling->set_sliceSize(colPerTime);
     tiling->set_sliceNum(colMoveCnt);
     tiling->set_tailSliceSize(colTail);
