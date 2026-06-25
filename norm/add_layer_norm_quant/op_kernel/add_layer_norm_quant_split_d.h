@@ -112,10 +112,10 @@ public:
         sliceNum = tiling->sliceNum;
         tailSliceSize = tiling->tailSliceSize;
 
-        sliceSizeAligned = ((sliceSize * sizeof(T) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(T);
-        tailSliceSizeAligned = ((tailSliceSize * sizeof(T) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(T);
-        sliceSizeAlignedFp32 = ((sliceSize * sizeof(float) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(float);
-        tailSliceSizeAlignedFp32 = ((tailSliceSize * sizeof(float) + BLOCK_SIZE_SPLIT_D - 1) / BLOCK_SIZE_SPLIT_D) * BLOCK_SIZE_SPLIT_D / sizeof(float);
+        sliceSizeAligned = tiling->sliceSizeAligned;
+        tailSliceSizeAligned = tiling->tailSliceSizeAligned;
+        sliceSizeAlignedFp32 = tiling->sliceSizeAlignedFp32;
+        tailSliceSizeAlignedFp32 = tiling->tailSliceSizeAlignedFp32;
     }
 
     __aicore__ inline void InitSplitDGlobalTensors(GM_ADDR scales1, GM_ADDR scales2,
@@ -172,8 +172,6 @@ public:
         Ppipe->InitBuffer(xBufFp32, ubFactor * sizeof(float));
         Ppipe->InitBuffer(yBufFp32, ubFactor * sizeof(float));
         Ppipe->InitBuffer(zBufFp32, ubFactor * sizeof(float));
-        Ppipe->InitBuffer(meanBuf, NUM_PER_BLK_FP32_SPLIT_D * sizeof(float));
-        Ppipe->InitBuffer(varBuf, NUM_PER_BLK_FP32_SPLIT_D * sizeof(float));
         Ppipe->InitBuffer(reduceBuf, ELEM_PER_REP_FP32_SPLIT_D * sizeof(float));
         Ppipe->InitBuffer(scalesBuf, ubFactor * sizeof(float));
         if (isZeroPoint1Exist || isZeroPoint2Exist) {
@@ -237,7 +235,6 @@ private:
         LocalTensor<float> xFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yFp32 = yBufFp32.Get<float>();
         CastToFloat<T>(xFp32, x1x2Local, curSliceSize);
-        PipeBarrier<PIPE_V>();
         CastToFloat<T>(yFp32, x1x2Local[curSliceAligned], curSliceSize);
         PipeBarrier<PIPE_V>();
         Add(xFp32, xFp32, yFp32, curSliceSize);
@@ -367,10 +364,6 @@ private:
                 WaitFlag<HardEvent::V_MTE3>(eventVMTE3);
                 CopyOutX(colOffset, curSliceSize);
             }
-            
-            event_t eventMTE3V = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_V));
-            SetFlag<HardEvent::MTE3_V>(eventMTE3V);
-            WaitFlag<HardEvent::MTE3_V>(eventMTE3V);
 
             AccumulateSumAndWriteWorkspace(colOffset, curSliceSize, sumTensor);
         }
@@ -478,7 +471,6 @@ private:
         WaitFlag<HardEvent::MTE2_V>(eventMTE2V);
 
         // 计算 x = (x - mean) * rstd
-        PipeBarrier<PIPE_V>();
         Adds(xFp32, xFp32, -mean, size);
         PipeBarrier<PIPE_V>();
         Muls(xFp32, xFp32, rstd, size);
@@ -561,7 +553,6 @@ private:
         LocalTensor<float> xFp32 = xBufFp32.Get<float>();
         LocalTensor<float> yFp32 = yBufFp32.Get<float>();
         LocalTensor<int8_t> yLocal = outQueY.AllocTensor<int8_t>();
-        PipeBarrier<PIPE_V>();
 
         if (scales1Exist) {
             if (this->isPerTensor) {
@@ -640,8 +631,6 @@ private:
     TBuf<TPosition::VECCALC> xBufFp32;
     TBuf<TPosition::VECCALC> yBufFp32;
     TBuf<TPosition::VECCALC> zBufFp32;
-    TBuf<TPosition::VECCALC> meanBuf;
-    TBuf<TPosition::VECCALC> varBuf;
     TBuf<TPosition::VECCALC> reduceBuf;
     TBuf<TPosition::VECCALC> scalesBuf;
     TBuf<TPosition::VECCALC> offsetBuf;
