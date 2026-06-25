@@ -30,8 +30,6 @@ class ThresholdTiling {
 public:
     explicit ThresholdTiling(gert::TilingContext* context) : tilingContext(context) {};
     ge::graphStatus RunTiling();
-
-protected:
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();

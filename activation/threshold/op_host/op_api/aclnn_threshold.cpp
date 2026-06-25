@@ -119,7 +119,8 @@ aclnnStatus ExecThresholdGetWorkspaceSize(
     CHECK_RET(selfContiguous != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     const aclTensor* selfCast = selfContiguous;
-    if (selfContiguous->GetDataType() == op::DataType::DT_INT16) {
+    if (GetCurrentPlatformInfo().GetCurNpuArch() < NpuArch::DAV_3510 &&
+        selfContiguous->GetDataType() == op::DataType::DT_INT16) {
         selfCast = l0op::Cast(selfContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
     }
     CHECK_RET(selfCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
