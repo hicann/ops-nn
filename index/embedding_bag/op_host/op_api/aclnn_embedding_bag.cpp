@@ -371,8 +371,17 @@ aclnnStatus aclnnEmbeddingBagGetWorkspaceSize(
     const aclTensor* offsetsCast = nullptr;
     // indices、offsets类型转换。
     if (Ops::NN::AclnnUtil::IsRegbase()) {
-        indicesCast = indicesContiguous;
-        offsetsCast = offsetsContiguous;
+        if (indices->GetDataType() == op::DataType::DT_INT32 || indices->GetDataType() == op::DataType::DT_INT64) {
+            indicesCast = indicesContiguous;
+        } else {
+            indicesCast = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+        }
+
+        if (offsets->GetDataType() == op::DataType::DT_INT32 || offsets->GetDataType() == op::DataType::DT_INT64) {
+            offsetsCast = offsetsContiguous;
+        } else {
+            offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
+        }
     }else {
         indicesCast = l0op::Cast(indicesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
         offsetsCast = l0op::Cast(offsetsContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
