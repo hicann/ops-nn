@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * \brief
  */
 #include "gru_tiling.h"
+#include "../op_kernel/gru_tiling_key.h"
 
 using namespace AscendC;
 namespace optiling {
@@ -214,46 +215,37 @@ ge::graphStatus GruTilingOp::CalcTilingKey() {
     //  判断是否需要切分L0c输出，分次搬入UB
     int64_t tilingKey = 0;
     if (gruParams_.dataType == 2) {
-        tilingKey = static_cast<int64_t>(GruTilingKey::MM_FP16_SPLIT);
+        tilingKey = GET_TPL_TILING_KEY(GRU_TPL_MM_FP16_SPLIT);
     } else if (gruParams_.dataType == 4) {
-        tilingKey = static_cast<int64_t>(GruTilingKey::MM_FP32_SPLIT);
+        tilingKey = GET_TPL_TILING_KEY(GRU_TPL_MM_FP32_SPLIT);
     }
     gruParams_.tilingKey = tilingKey;
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus GruTilingOp::SetTilingData(GruTilingData& tilingData) {
-    tilingData.set_tilingKey(gruParams_.tilingKey);
-    tilingData.set_usedCoreNum(gruParams_.usedCoreNum);
-    tilingData.set_timeStep(gruParams_.timeStep);
-    tilingData.set_batch(gruParams_.batch);
-    tilingData.set_inputSize(gruParams_.inputSize);
-    tilingData.set_hiddenSize(gruParams_.hiddenSize);
-    tilingData.set_isBias(gruParams_.isBias);
-    tilingData.set_isInith(gruParams_.isInith);
-    tilingData.set_isSeqLength(gruParams_.isSeqLength);
-    tilingData.set_direction(gruParams_.direction);
-    tilingData.set_isTraining(gruParams_.isTraining);
-    tilingData.set_totalSteps(gruParams_.totalSteps);
+    tilingData.tilingKey = gruParams_.tilingKey;
+    tilingData.usedCoreNum = gruParams_.usedCoreNum;
+    tilingData.timeStep = gruParams_.timeStep;
+    tilingData.batch = gruParams_.batch;
+    tilingData.inputSize = gruParams_.inputSize;
+    tilingData.hiddenSize = gruParams_.hiddenSize;
+    tilingData.isBias = gruParams_.isBias;
+    tilingData.isInith = gruParams_.isInith;
+    tilingData.isSeqLength = gruParams_.isSeqLength;
+    tilingData.direction = gruParams_.direction;
+    tilingData.isTraining = gruParams_.isTraining;
+    tilingData.totalSteps = gruParams_.totalSteps;
 
     //  vector data
-    tilingData.set_singleCoreM(gruParams_.singleCoreM);
-    tilingData.set_singleCoreMTail(gruParams_.singleCoreMTail);
-    tilingData.set_singleCoreN(gruParams_.singleCoreN);
-    tilingData.set_singleCoreNTail(gruParams_.singleCoreNTail);
-    tilingData.set_mCnt(gruParams_.mCnt);
-    tilingData.set_nCnt(gruParams_.nCnt);
-    tilingData.set_baseM(gruParams_.baseM);
-    tilingData.set_baseN(gruParams_.baseN);
-
-    gert::TilingData* gruRawTilingData = context_->GetRawTilingData();
-    OP_LOGE_IF(gruRawTilingData == nullptr, ge::GRAPH_FAILED, context_->GetNodeType(), "GetRawTilingData failed.");
-    OP_TILING_CHECK(tilingData.GetDataSize() > gruRawTilingData->GetCapacity(),
-                    VECTOR_INNER_ERR_REPORT_TILIING(context_, "actual tiling data size %zu > context tiling data size %zu",
-                                                    tilingData.GetDataSize(), gruRawTilingData->GetCapacity()),
-                                                return ge::GRAPH_FAILED);
-    tilingData.SaveToBuffer(gruRawTilingData->GetData(), gruRawTilingData->GetCapacity());
-    gruRawTilingData->SetDataSize(tilingData.GetDataSize());
+    tilingData.singleCoreM = gruParams_.singleCoreM;
+    tilingData.singleCoreMTail = gruParams_.singleCoreMTail;
+    tilingData.singleCoreN = gruParams_.singleCoreN;
+    tilingData.singleCoreNTail = gruParams_.singleCoreNTail;
+    tilingData.mCnt = gruParams_.mCnt;
+    tilingData.nCnt = gruParams_.nCnt;
+    tilingData.baseM = gruParams_.baseM;
+    tilingData.baseN = gruParams_.baseN;
 
     return ge::GRAPH_SUCCESS;
 }
@@ -310,18 +302,24 @@ ge::graphStatus GruTilingOp::Init() {
 }
 
 ge::graphStatus GruTilingOp::DoTiling() {
-    GruTilingData tilingData;
     // 910B/C AscendC
 
     auto dataType = context_->GetInputDesc(0)->GetDataType();
 
-    GetMMTiling(tilingData, static_cast<matmul_tiling::DataType>(dataType));
+    GruTilingData* tilingData = context_->GetTilingData<GruTilingData>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, tilingData);
+    OP_CHECK_IF(
+        memset_s(tilingData, sizeof(GruTilingData), 0, sizeof(GruTilingData)) != EOK,
+        OP_LOGE(context_->GetNodeName(), "set tiling data error"),
+        return ge::GRAPH_FAILED);
+
+    GetMMTiling(*tilingData, static_cast<matmul_tiling::DataType>(dataType));
 
     GetVectorTiling();
 
     CalcTilingKey();
 
-    SetTilingData(tilingData);
+    SetTilingData(*tilingData);
 
     auto launchCore = (gruParams_.usedCoreNum + DEFAULT_INDEX_TWO - 1) / DEFAULT_INDEX_TWO;
     context_->SetBlockDim(launchCore);
@@ -353,7 +351,6 @@ ge::graphStatus TilingPrepareForGru(gert::TilingParseContext* context) {
 }
 
 IMPL_OP_OPTILING(Gru)
-    // .TilingInputsDataDependency({5})
     .Tiling(TilingForGru)
     .TilingParse<GruCompileInfo>(TilingPrepareForGru);
 }   // namespace optiling

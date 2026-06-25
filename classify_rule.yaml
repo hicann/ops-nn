@@ -476,6 +476,7 @@ conv_backward-c@ops-nn:
       style:
         - ops/ops-nn/rnn/dynamic_rnn/
         - ops/ops-nn/rnn/dynamic_rnnv2/
+        - ops/ops-nn/rnn/gru/
         - ops/ops-nn/rnn/single_layer_lstm_grad/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell/
         - ops/ops-nn/rnn/thnn_fused_lstm_cell_grad/
@@ -573,6 +574,8 @@ conv_backward-c@ops-nn:
         - ops/ops-nn/conv/convolution_backward/examples/
         - ops/ops-nn/rnn/dynamic_rnn/tests/
         - ops/ops-nn/rnn/dynamic_rnn/examples/
+        - ops/ops-nn/rnn/gru/tests/
+        - ops/ops-nn/rnn/gru/examples/
         - ops/ops-nn/rnn/dynamic_rnnv2/tests/
         - ops/ops-nn/rnn/dynamic_rnnv2/examples/
         - ops/ops-nn/rnn/single_layer_lstm_grad/tests/

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #include "error_util.h"
 #include "platform/platform_infos_def.h"
 #include "tiling/tiling_api.h"
+#include "rnn/gru/op_kernel/gru_tiling_data.h"
 
 constexpr int32_t DEFAULT_SHAPE_LIST_SIZE = 3;
 constexpr int32_t DEFAULT_INDEX_TWO = 2;
@@ -41,40 +42,6 @@ constexpr int32_t CONST_TWO = 2;
 constexpr size_t INPUT_LENGTHS_IDX = 5;
 
 namespace optiling {
-BEGIN_TILING_DATA_DEF(GruTilingData)
-    TILING_DATA_FIELD_DEF(int64_t, tilingKey);
-    TILING_DATA_FIELD_DEF(int64_t, usedCoreNum);
-
-    //  gru input tiling
-    TILING_DATA_FIELD_DEF(int64_t, timeStep);
-    TILING_DATA_FIELD_DEF(int64_t, batch);
-    TILING_DATA_FIELD_DEF(int64_t, inputSize);
-    TILING_DATA_FIELD_DEF(int64_t, hiddenSize);
-    TILING_DATA_FIELD_DEF(int64_t, isBias);
-    TILING_DATA_FIELD_DEF(int64_t, isInith);
-    TILING_DATA_FIELD_DEF(int64_t, isSeqLength);
-    TILING_DATA_FIELD_DEF(int64_t, totalSteps);
-
-    // gru attr
-    TILING_DATA_FIELD_DEF(int64_t, direction);
-    TILING_DATA_FIELD_DEF(int64_t, isTraining);
-
-    // vector block params
-    TILING_DATA_FIELD_DEF(int64_t, singleCoreM);
-    TILING_DATA_FIELD_DEF(int64_t, singleCoreMTail);
-    TILING_DATA_FIELD_DEF(int64_t, singleCoreN);
-    TILING_DATA_FIELD_DEF(int64_t, singleCoreNTail);
-    TILING_DATA_FIELD_DEF(int64_t, baseN);
-    TILING_DATA_FIELD_DEF(int64_t, baseM);
-    TILING_DATA_FIELD_DEF(int64_t, mCnt);
-    TILING_DATA_FIELD_DEF(int64_t, nCnt);
-
-    TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, inputMMParam);
-    TILING_DATA_FIELD_DEF_STRUCT(TCubeTiling, hiddenMMParam);
-END_TILING_DATA_DEF;
-
-REGISTER_TILING_DATA_CLASS(Gru, GruTilingData)
-
 struct GruTiling {
     // include 2 matmul tiling
     int64_t tilingKey{0};
@@ -114,11 +81,6 @@ struct GruTiling {
 
 struct GruCompileInfo {
     int64_t test;
-};
-
-enum class GruTilingKey : int64_t {
-    MM_FP16_SPLIT = 10000001,
-    MM_FP32_SPLIT
 };
 
 class GruTilingOp {

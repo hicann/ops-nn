@@ -70,7 +70,7 @@ TEST_F(GruTiling, case_fixed_length_fp16_with_bias_init_h) {
         kInputIrInstanceBiasInitH, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000001ULL; // MM_FP16_SPLIT
+    uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
@@ -110,7 +110,7 @@ TEST_F(GruTiling, case_fixed_length_fp32_no_bias_no_init_h) {
         kInputIrInstanceNoOpt, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000002ULL; // MM_FP32_SPLIT
+    uint64_t expectTilingKey = 1; // GRU_TPL_MM_FP32_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
@@ -151,7 +151,7 @@ TEST_F(GruTiling, case_variable_length_fp16_with_bias) {
         kInputIrInstanceBiasBatchSz, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000001ULL; // MM_FP16_SPLIT
+    uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
@@ -192,7 +192,7 @@ TEST_F(GruTiling, case_variable_length_fp32_no_bias_no_init_h) {
         kInputIrInstanceBatchSzOnly, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000002ULL; // MM_FP32_SPLIT
+    uint64_t expectTilingKey = 1; // GRU_TPL_MM_FP32_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
@@ -232,7 +232,7 @@ TEST_F(GruTiling, case_fixed_length_fp16_no_bias_with_init_h) {
         kInputIrInstanceNoOpt, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000001ULL; // MM_FP16_SPLIT
+    uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
@@ -272,7 +272,7 @@ TEST_F(GruTiling, case_fixed_length_bidirectional_fp16) {
         kInputIrInstanceBiasInitH, kOutputIrInstance,
         &compileInfo, "Ascend910B", 1U, 262144ULL, 8192);
 
-    uint64_t expectTilingKey = 10000001ULL; // MM_FP16_SPLIT
+    uint64_t expectTilingKey = 0; // GRU_TPL_MM_FP16_SPLIT
     ExecuteTestCase(para, ge::GRAPH_SUCCESS, expectTilingKey);
 }
 
