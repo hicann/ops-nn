@@ -45,14 +45,16 @@ protected:
     }
 };
 
-std::vector<int64_t> ToVectorForFused(const gert::Shape& shape) {
-  size_t shape_size = shape.GetDimNum();
-  std::vector<int64_t> shape_vec(shape_size, 0);
+namespace {
+    std::vector<int64_t> ToVectorForFused(const gert::Shape& shape) {
+        size_t shape_size = shape.GetDimNum();
+        std::vector<int64_t> shape_vec(shape_size, 0);
 
-  for (size_t i = 0; i < shape_size; i++) {
-    shape_vec[i] = shape.GetDim(i);
-  }
-  return shape_vec;
+        for (size_t i = 0; i < shape_size; i++) {
+            shape_vec[i] = shape.GetDim(i);
+        }
+        return shape_vec;
+    }
 }
 
 TEST_F(FusedSgdInferShape, test_fused_sgd_infershape_same_shape)
