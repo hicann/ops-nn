@@ -471,6 +471,7 @@ static const aclTensor* GetMatMulOp(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, MmOpInfo& mmOpInfo, const bool transposeX1,
     const bool transposeX2, const bool offsetX, const int64_t opImplModeEnum, aclOpExecutor* executor)
 {
+    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
     bool enable16In32Out = NeedEnableFp32Output(
         mmOpInfo.support_info.self_dtype, mmOpInfo.support_info.mat2_dtype, mmOpInfo.support_info.output_dtype,
         KEEP_DTYPE, bias);
@@ -479,8 +480,12 @@ static const aclTensor* GetMatMulOp(
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_FLOAT16) ||
                            (mmOpInfo.support_info.self_dtype == DataType::DT_BF16 &&
                             mmOpInfo.support_info.mat2_dtype == DataType::DT_BF16);
+    bool supportNdNz = mmOpInfo.support_info.self_format == ge::FORMAT_ND &&
+                       mmOpInfo.support_info.mat2_format == ge::FORMAT_FRACTAL_NZ;
+    bool isA2A3 = npuArch == NpuArch::DAV_2201;
+    bool addmmWeightNz16In32OutForA2 = enable16In32Out && supportNdNz && isA2A3;
     if (CheckMatmulV3Support(x1, x2, bias, mmOpInfo, transposeX1, transposeX2, opImplModeEnum) ||
-        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo))) {
+        (CheckMMV3NzNzNdSupport(mmOpInfo) && CheckSupportInfoFormatNzNzNd(mmOpInfo)) || addmmWeightNz16In32OutForA2) {
         OP_LOGI("Hit matmul_v3 scenario.");
         
         if ((enable16In32Out && IsNpuArch3510Series())) {
