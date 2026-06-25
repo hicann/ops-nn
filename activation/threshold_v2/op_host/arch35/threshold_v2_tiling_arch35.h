@@ -32,6 +32,7 @@ public:
     ge::graphStatus RunTiling();
 
 protected:
+    ge::graphStatus ValidateParams();
     ge::graphStatus CalcOutputDtype();
     ge::graphStatus CalcInputDtype();
     ge::graphStatus CheckShape();

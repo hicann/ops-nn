@@ -24,7 +24,7 @@ using namespace Ops::Base;
 
 constexpr int CAST_NONE = 0;
 constexpr int CAST_RINT = 1;
-constexpr int VSEL_TENSOR_TENSOR_MODE = 2;
+constexpr int VSEL_TENSOR_SCALAR_MODE = 1;
 constexpr int CMPMODE_LE = 3;
 
 template <typename U, typename T>
@@ -45,7 +45,7 @@ struct ThresholdDag {
 
     using OpCompare = Bind<Vec::Compare<uint8_t, T, CMPMODE_LE>, OpCopyInX, ThresholdScalarHolder>;
     using OpSelectResult =
-        Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_TENSOR_MODE>, OpCompare, ValueScalarHolder, OpCopyInX>;
+        Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolder, OpCopyInX>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;
 
@@ -61,7 +61,7 @@ struct ThresholdDagNoValue {
 
     using OpCompare = Bind<Vec::Compare<uint8_t, T, CMPMODE_LE>, OpCopyInX, ThresholdScalarHolder>;
     using ConstValueZero = MAKE_CONST(T, 0);
-    using OpSelectResult = Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_TENSOR_MODE>, OpCompare, ConstValueZero, OpCopyInX>;
+    using OpSelectResult = Bind<Vec::Select<uint8_t, T, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ConstValueZero, OpCopyInX>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;
 
@@ -82,7 +82,7 @@ struct ThresholdCastDag {
 
     using OpCompare = Bind<Vec::Compare<uint8_t, U, CMPMODE_LE>, OpCopyInXCast, ThresholdScalarHolderCast>;
     using OpSelect =
-        Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_TENSOR_MODE>, OpCompare, ValueScalarHolderCast, OpCopyInXCast>;
+        Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ValueScalarHolderCast, OpCopyInXCast>;
     using OpSelectResult = Bind<Vec::Cast<T, U, CAST_RINT>, OpSelect>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;
@@ -102,7 +102,7 @@ struct ThresholdCastDagNoValue {
 
     using OpCompare = Bind<Vec::Compare<uint8_t, U, CMPMODE_LE>, OpCopyInXCast, ThresholdScalarHolderCast>;
     using ConstValueZero = MAKE_CONST(U, 0);
-    using OpSelect = Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_TENSOR_MODE>, OpCompare, ConstValueZero, OpCopyInXCast>;
+    using OpSelect = Bind<Vec::Select<uint8_t, U, VSEL_TENSOR_SCALAR_MODE>, OpCompare, ConstValueZero, OpCopyInXCast>;
     using OpSelectResult = Bind<Vec::Cast<T, U, CAST_RINT>, OpSelect>;
 
     using OpCopyOut = Bind<Vec::CopyOut<T>, Placeholder::Out0<T>, OpSelectResult>;

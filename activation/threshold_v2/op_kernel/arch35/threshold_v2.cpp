@@ -32,11 +32,12 @@ __global__ __aicore__ void threshold_v2(
 
     using T = std::conditional_t<dType == TPL_BF16, bfloat16_t,
             std::conditional_t<dType == TPL_FP16, half,
-                std::conditional_t<dType == TPL_FP32, float,
-                std::conditional_t<dType == TPL_UINT8, uint8_t,
-                    std::conditional_t<dType == TPL_INT8, int8_t,
-                    std::conditional_t<dType == TPL_INT32, int32_t,
-                        std::conditional_t<dType == TPL_INT64, int64_t, void>>>>>>>;
+            std::conditional_t<dType == TPL_FP32, float,
+            std::conditional_t<dType == TPL_UINT8, uint8_t,
+            std::conditional_t<dType == TPL_INT8, int8_t,
+            std::conditional_t<dType == TPL_INT16, int16_t,
+            std::conditional_t<dType == TPL_INT32, int32_t,
+            std::conditional_t<dType == TPL_INT64, int64_t, void>>>>>>>>;
 
     TPipe pipe;
     if constexpr (dType == TPL_BF16) {
