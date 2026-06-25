@@ -802,7 +802,7 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/swish/op_api/
         - ops/ops-nn/activation/swish_grad/op_api/
         - ops/ops-nn/activation/threshold/
-        - ops/ops-nn/activation/threshold_grad_v2_d/
+        - ops/ops-nn/activation/threshold_grad_v2_d/op_api/
         - ops/ops-nn/rnn/bidirection_lstm/op_host/bidirection_lstm_tiling.cpp
       opensource_style: null
       kernel_style: null
@@ -1065,7 +1065,10 @@ foreach-c@ops-nn:
         - ops/ops-nn/foreach/foreach_pow_scalar/op_host/foreach_pow_scalar_def.cpp
         - ops/ops-nn/foreach/foreach_pow_scalar/op_kernel/foreach_pow_scalar.cpp
         - ops/ops-nn/foreach/foreach_pow_scalar_and_tensor/
-        - ops/ops-nn/foreach/foreach_pow_scalar_list/
+        - ops/ops-nn/foreach/foreach_pow_scalar_list/op_graph/
+        - ops/ops-nn/foreach/foreach_pow_scalar_list/op_host/foreach_pow_scalar_list_def.cpp
+        - ops/ops-nn/foreach/foreach_pow_scalar_list/op_kernel/foreach_pow_scalar_list.cpp
+        - ops/ops-nn/foreach/foreach_pow_scalar_list/op_kernel/foreach_pow_scalar_list.h
         - ops/ops-nn/foreach/foreach_reciprocal/op_graph/
         - ops/ops-nn/foreach/foreach_reciprocal/op_host/foreach_reciprocal_def.cpp
         - ops/ops-nn/foreach/foreach_reciprocal/op_kernel/foreach_reciprocal.cpp
