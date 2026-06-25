@@ -15,7 +15,31 @@
 
 ## 功能说明
 
-[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
+- 算子功能：[aclnnCtcLoss](../../ctc_loss_v2/docs/aclnnCtcLoss.md)的反向传播，计算CTC的损失梯度。
+- 计算公式：
+定义$y_{k}^{t}$表示在时刻$t$时真实字符为$k$的概率。(一般地，$y_{k}^{t}$是经过softmax之后的输出矩阵中的一个元素)。将字符集$L^{'}$可以构成的所有序列的集合称为$L^{'T}$，将$L^{'T}$中的任意一个序列称为路径，并标记为$π$。$π$的分布为公式(1)：
+
+  $$
+  p(π|x)=\prod_{t=1}^{T}y^{t}_{π_{t}} , \forall π \in L'^{T}. \tag{1}
+  $$
+
+  定义多对一(many to one)映射B: $L^{'T} \to L^{\leq T}$，通过映射B计算得到$l \in L^{\leq T}$的条件概率，等于对应于$l$的所有可能路径的概率之和，公式(2):
+
+  $$
+  p(l|x)=\sum_{π \in B^{-1}(l)}p(π|x).\tag{2}
+  $$
+
+  将找到使$p(l|x)$值最大的$l$的路径的任务称为解码，公式(3)：
+
+  $$
+  h(x)=^{arg \  max}_{l \in L^{ \leq T}} \ p(l|x).\tag{3}
+  $$
+
+  当zeroInfinity为True时
+
+  $$
+  h(x)=\begin{cases}0,&h(x) == inf \text{ or } h(x) == -inf \\h(x),&\text { else }\end{cases}
+  $$
 
 ## 函数原型
 
