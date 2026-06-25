@@ -276,7 +276,6 @@ static ge::graphStatus Tiling4ScatterNdAdd(gert::TilingContext* context) {
   return tilingObj.DoTiling();
 }
 
-// register tiling interface of the ScatterNdSubTiling op.
+// register tiling interface of the ScatterNdAdd op.
 IMPL_OP_OPTILING(ScatterNdAdd).Tiling(Tiling4ScatterNdAdd).TilingParse<ScatterCompileInfo>(TilingPrepare4Scatter);
-IMPL_OP_OPTILING(ScatterNdSub).Tiling(Tiling4ScatterNdAdd).TilingParse<ScatterCompileInfo>(TilingPrepare4Scatter);
 }  // namespace optiling
