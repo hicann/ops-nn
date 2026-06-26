@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，相较于原有aclnnTransposeQuantBatchMatMul接口，新接口仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。支持mx[量化模式](../../../docs/zh/context/量化介绍.md)。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
+- 接口功能：完成张量x1与张量x2量化的矩阵乘计算，相较于原有aclnnTransposeQuantBatchMatMul接口，新接口仅支持x1为ND格式，x2为NZ格式，只支持x1为3维，x2为5维。支持MX[量化模式](../../../docs/zh/context/量化介绍.md)。Tensor支持转置，转置序列根据传入的数列进行变更。permX1代表张量x1的转置序列，permX2代表张量x2的转置序列，序列值为0的是batch维度，其余两个维度做矩阵乘法。
 
 - 示例：（x2的NZ转换为ND对应的viewshape视角）
   - 假设x1的shape是(M, B, K)，x2的shape是(B, K, N)，x1Scale和x2Scale不为None，batchSplitFactor等于1时，计算输出out的shape是(M, B, N)。
@@ -342,7 +342,7 @@ aclnnStatus aclnnTransposeQuantBatchMatMulWeightNz(
   - x1只支持3维, x2只支持昇腾私有格式，调用此接口之前，必须完成x2从ND到昇腾私有格式的转换。
   - K仅支持64的倍数。group_size的groupSizeM和groupSizeN仅支持0或1，groupSizeK仅支持32。
   - groupSize相关约束：
-    - 仅在mx量化场景中生效。
+    - 仅在MX量化场景中生效。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示M方向量化分组值由接口推断，推断公式为groupSizeM = M / scaleM（需保证M能被scaleM整除），其中M与x1 shape中的M一致，scaleM与x1Scale shape中的M一致。
     
   $$

@@ -164,10 +164,10 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
-        <td>在pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对weight进行反量化计算的groupSize输入，描述Reduce轴被分组的每组大小。</td>
+        <td>在pergroup和MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对weight进行反量化计算的groupSize输入，描述Reduce轴被分组的每组大小。</td>
         <td>
         pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，取值范围为[32, k-1]且要求是32的倍数；<br>
-        mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
+        MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值固定要求传32；<br>
         perchannel<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，值传0。<br>
         </td>
         <td>UINT64</td>
@@ -293,7 +293,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
 ## 约束说明
 
   - 确定性说明：aclnnWeightQuantBatchMatmulNz默认确定性实现。
-  - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
+  - 支持的量化模式：perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)。
   - 输入和输出支持以下数据类型和shape组合：
     - <term>Ascend 950PR/Ascend 950DT</term>：
 
@@ -307,8 +307,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulNz(
       |  pergroup  | FLOAT16  | INT32/INT4        | FLOAT16     | null/FLOAT16  | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null/(ceil(k/antiquantGroupSize), n) |
       |  pergroup  | BFLOAT16 | FLOAT/FLOAT4_E2M1 | BFLOAT16    | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/antiquantGroupSize), n) | null                                 |
       |  pergroup  | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT16     | null          | null/FLOAT16          | FLOAT16  | (ceil(k/antiquantGroupSize), n) | null                                 |
-      |     mx     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/32), n)                 | null                                 |
-      |     mx     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (ceil(k/32), n)                 | null                                 |
+      |     MX     | BFLOAT16 | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/BFLOAT16         | BFLOAT16 | (ceil(k/32), n)                 | null                                 |
+      |     MX     | FLOAT16  | FLOAT/FLOAT4_E2M1 | FLOAT8_E8M0 | null          | null/FLOAT16          | FLOAT16  | (ceil(k/32), n)                 | null                                 |
       
       - x的shape均为(m, k)，y的shape均为(m, n)，biasOptional的shape为null/(1, n)/(n,)。
       - weight的数据类型为INT32或FLOAT时，表示紧密排布的INT4或FLOAT4_E2M1，需要满足以下约束：

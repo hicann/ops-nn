@@ -81,7 +81,7 @@
       out = (x1@x2 + bias) * x2Scale
       $$
 
-    - mx[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
+    - MX[量化模式](../../docs/zh/context/量化介绍.md)中， x1，x2为FLOAT4_E2M1/FLOAT8_E4M3FN/FLOAT8_E5M2，x1Scale为FLOAT8_E8M0，x2Scale为FLOAT8_E8M0，无x2Offset，可选参数bias的dtype为FLOAT32：
 
       $$
       out = (x1* x1Scale)@(x2* x2Scale) + bias

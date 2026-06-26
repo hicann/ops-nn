@@ -21,7 +21,7 @@
     兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能。完成量化的矩阵乘计算，最小支持输入维度为1维，最大支持输入维度为2维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）。
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、mx [量化模式](../../../docs/zh/context/量化介绍.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
+    兼容aclnnQuantMatmulV3、aclnnQuantMatmulV4接口功能，并在其基础上新增支持G-B、B-B、T-CG、MX [量化模式](../../../docs/zh/context/量化介绍.md)等特性；x1、x2输入新增支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8、FLOAT4_E2M1等数据类型。完成量化的矩阵乘计算，最小支持输入维度为2维，最大支持输入维度为6维。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。
 
 - 计算公式：
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
@@ -130,7 +130,7 @@
 
   - <term>Ascend 950PR/Ascend 950DT</term>：
 
-    支持T-C && T-T、K-C && K-T、G-B、B-B、mx、T-CG、K-G [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
+    支持T-C && T-T、K-C && K-T、G-B、B-B、MX、T-CG、K-G [量化模式](../../../docs/zh/context/量化介绍.md)，不同量化模式对应的输入输出数据类型组合参见[约束说明](#约束说明)。
 
     <details>
     
@@ -201,13 +201,13 @@
 
     <details>
 
-    <summary><strong>G-B && B-B && mx量化模式</strong></summary>
+    <summary><strong>G-B && B-B && MX量化模式</strong></summary>
 
       $$
       out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
       $$
 
-      其中，gsM，gsN和gsK分别代表groupSizeM，groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围[0, kLoops)，kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。仅mx量化模式下包含bias。对于G-B，B-B和mx量化模式，[groupSizeM，groupSizeN，groupSizeK]取值组合仅分别支持[1，128，128]，[128，128，128]和[1，1，32]。
+      其中，gsM，gsN和gsK分别代表groupSizeM，groupSizeN和groupSizeK；x1Slice代表x1第m行长度为groupSizeK的向量，x2Slice代表x2第n列长度为groupSizeK的向量；K轴均从j*groupSizeK起始切片，j的取值范围[0, kLoops)，kLoops = ceil(K / groupSizeK)，K为K轴长度，支持最后的切片长度不足groupSizeK。仅MX量化模式下包含bias。对于G-B，B-B和MX量化模式，[groupSizeM，groupSizeN，groupSizeK]取值组合仅分别支持[1，128，128]，[128，128，128]和[1，1，32]。
 
     </details>
 
@@ -764,7 +764,7 @@ aclnnStatus aclnnQuantMatmulV5(
     - 当out的shape为4、5、6维时，bias的shape支持1维(n,)。
     - 当out的shape为3维时，bias的shape支持1维(n,)或3维(batch, 1, n)。
   - groupSize相关约束：
-    - 仅在mx、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
+    - 仅在MX、G-B、B-B、K-G、T-CG[量化模式](../../../docs/zh/context/量化介绍.md)中生效。
     - 只有当x1Scale和x2Scale输入都是2维及以上数据时，groupSize取值有效，其他场景需传入0。
     - 传入的groupSize内部会按如下公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0，会根据x1/x2/x1Scale/x2Scale输入shape重新设置groupSizeM、groupSizeN、groupSizeK用于计算。原理：假设groupSizeM=0，表示m方向量化分组值由接口推断，推断公式为groupSizeM = m / scaleM（需保证m能被scaleM整除），其中m与x1 shape中的m一致，scaleM与x1Scale shape中的m一致。
 
@@ -879,31 +879,31 @@ aclnnStatus aclnnQuantMatmulV5(
 
   <details>
 
-  <summary><strong>mx量化场景约束：</strong></summary>
-  <a id="mx量化"></a>
+  <summary><strong>MX量化场景约束：</strong></summary>
+  <a id="MX量化"></a>
 
   - 输入和输出支持以下数据类型组合：
-  <a id="输入和输出支持以下数据类型组合mx"></a>
+  <a id="输入和输出支持以下数据类型组合MX"></a>
 
       |量化类型| x1                        | x2                        | x1Scale     | x2Scale     |   x2Offset | yScale | bias    | out                                    |
       |-------| ------------------------- | ------------------------- | ----------- | ----------- |   -------- | -------| ------- | -------------------------------------- |
-      |mx全量化| FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-      |mx全量化| FLOAT4_E2M1                | FLOAT4_E2M1                | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
-      |mx伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16/FLOAT16 |  BFLOAT16/FLOAT16                               |
+      |MX全量化| FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E4M3FN/FLOAT8_E5M2 | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+      |MX全量化| FLOAT4_E2M1                | FLOAT4_E2M1                | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/FLOAT32 | FLOAT16/BFLOAT16/FLOAT32               |
+      |MX伪量化| FLOAT8_E4M3FN             | FLOAT4_E2M1               | FLOAT8_E8M0 |   FLOAT8_E8M0       | null     | null     | null/BFLOAT16/FLOAT16 |  BFLOAT16/FLOAT16                               |
 
   - x1数据类型、x2数据类型、x1、x2、x1Scale、x2Scale和groupSize的取值关系：
   
     |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[gsM，gsN，gsK]|groupSize|
     |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-    |mx全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-    |mx全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-    |mx伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
+    |MX全量化|FLOAT8_E4M3FN/FLOAT8_E5M2|FLOAT8_E4M3FN/FLOAT8_E5M2|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li><li>转置：(batch, k, m)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li><li>转置：(ceil(k / 64), m, 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+    |MX伪量化|FLOAT8_E4M3FN|FLOAT4_E2M1|(m, k)|(n, k)|(m, ceil(k / 64), 2)|(n, ceil(k / 64), 2)|(1，n)|null|[0, 0, 32]/[1, 1, 32]|32/4295032864|
 
   - 注：上表中gsM、gsK和gsN分别表示groupSizeM、groupSizeK和groupSizeN。gsM、gsK和gsN为0的维度会自动推导，上表中是不用自动推导的情况。
-  - mx全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
-  - mx全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
-  - mx伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
-  - mx伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
+  - MX全量化场景下，当x2数据类型为FLOAT8_E4M3FN/FLOAT8_E5M2时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致(当shape轴里有1，并且非动态图NZ场景，x和scale的转置属性可以不一致)。
+  - MX全量化场景下，当x2数据类型为FLOAT4_E2M1时，x1和x2的内轴必须为偶数，且k必须大于2。
+  - MX伪量化场景下，当x2数据类型为FLOAT4_E2M1时，transposeX1为false且transposeX2为true，不支持batch轴。数据格式支持ND格式。要求支持k是8的倍数。
+  - MX伪量化场景下，bias为可选参数。数据类型支持BFLOAT16或FLOAT16，数据类型要求与输出类型保持一致。数据格式支持ND，shape支持2维，shape表示(1，n)。如不需要使用该参数，传入nullptr。
 
   </details>
 

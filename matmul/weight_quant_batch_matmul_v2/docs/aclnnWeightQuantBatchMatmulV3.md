@@ -385,13 +385,13 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
   
   - **公共约束**
     - `x`和`weight`矩阵m、k、n大小在[1, 2^31-1]范围内。`weight`的Reduce维度k需要与`x`的Reduce维度k大小相等。
-    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
+    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)。
     - `x`不支持转置，因此不支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，weight仅转置场景支持非连续的Tensor；antiquantScale、antiquantOffsetOptional非连续Tensor仅支持转置场景并且连续性要求和weight保持一致。
     - `antiquantScale`不同量化模式支持的shape：
       - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：(1,)或(1,1)。
       - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
       - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
-      - mx[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
+      - MX[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
     - `quantScaleOptional`和`quantOffsetOptional`为预留参数，暂未使用，固定传入空指针。
     - `innerPrecise`参数不生效。
 
@@ -455,7 +455,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV3(
 
     - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；
     - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：当[数据格式](../../../docs/zh/context/数据格式.md)为ND时，推荐使用转置后的`weight`输入；
-    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
+    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
 
     </details>
 

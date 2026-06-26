@@ -13,7 +13,7 @@
 
 ## 功能说明
 
-- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、mx [量化模式](../../../docs/zh/context/量化介绍.md)。
+- 接口功能：完成量化的矩阵乘计算。相似接口有aclnnMm（仅支持2维Tensor作为输入的矩阵乘）和aclnnBatchMatMul（仅支持三维的矩阵乘，其中第一维是Batch维度）。支持T-C、T-T、K-C、K-T、MX [量化模式](../../../docs/zh/context/量化介绍.md)。
 
 - 计算公式：
 
@@ -84,7 +84,7 @@
     <details>
     <summary><term>Ascend 950PR/Ascend 950DT</term></summary>
  
-    - mx量化模式：
+    - MX量化模式：
 
         $$
         out[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice))* (x1Scale[m/gsM, j] * x2Scale[j, n/gsN]))+bias[n]
@@ -556,10 +556,10 @@ aclnnStatus aclnnQuantMatmulWeightNz(
     - K-C量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(n,)，其中m与x1的m一致，n与x2的n一致;
     - K-T量化场景下，x1Scale的shape为(m,)，x2Scale的shape为(1,)，其中m与x1的m一致。
   
-  - **mx量化场景约束：**
-  <a id="mx量化"></a>
+  - **MX量化场景约束：**
+  <a id="MX量化"></a>
     - 输入和输出支持以下数据类型组合：
-  <a id="输入和输出支持以下数据类型组合mx"></a>
+  <a id="输入和输出支持以下数据类型组合MX"></a>
 
       | x1            | x2            | x1Scale     | x2Scale     | x2Offset | yScale | bias         | out                         |
       |---------------| ------------- | ----------- | ----------- | -------- | ------ | -------------| --------------------------- |
@@ -570,11 +570,11 @@ aclnnStatus aclnnQuantMatmulWeightNz(
 
       |量化类型|x1数据类型|x2数据类型|x1 shape|x2 shape|x1Scale shape|x2Scale shape|bias shape|yScale shape|[groupSizeM, groupSizeN, groupSizeK]|groupSize|
       |-------|--------|--------|--------|--------|-------------|-------------|------------|---------------------------------------|--|--|
-      |mx全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
-      |mx全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+      |MX全量化|FLOAT8_E4M3FN|FLOAT8_E4M3FN|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
+      |MX全量化|FLOAT4_E2M1|FLOAT4_E2M1|<li>非转置：(batch, m, k)</li>|<li>非转置：(batch, k, n)</li><li>转置：(batch, n, k)</li>|<li>非转置：(m, ceil(k / 64), 2)</li>|<li>非转置：(ceil(k / 64), n, 2)</li><li>转置：(n, ceil(k / 64), 2)</li>|(n,)或(batch, 1, n)|null|[1, 1, 32]|4295032864|
 
-    - mx全量化场景下，当x1与x2数据类型为FLOAT8_E4M3FN/FLOAT4_E2M1时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
-    - mx全量化场景下，当x1与x2数据类型为FLOAT4_E2M1时，需满足以下条件：
+    - MX全量化场景下，当x1与x2数据类型为FLOAT8_E4M3FN/FLOAT4_E2M1时，x1和x1Scale的转置属性需要保持一致，x2和x2Scale的转置属性需要保持一致。
+    - MX全量化场景下，当x1与x2数据类型为FLOAT4_E2M1时，需满足以下条件：
       - x1和x2的内轴必须为偶数，且k必须大于2。
       - transposeX1必须为false。
       - 当transposeX2为false时，n必须大于2。
@@ -584,8 +584,8 @@ aclnnStatus aclnnQuantMatmulWeightNz(
   
     |量化类型|x1 dtype       |x2 dtype     | x1Scale dtype  |x2Scale dtype |bias dtype| yScale dtype  | out dtype | x1 shape  | x2 shape| x1Scale shape | x2Scale shape     |bias shape | yScale shape| [groupSizeM, groupSizeN, groupSizeK]|
     |---------------| ------------| -------------- |--------------|-------------|--------- | -------- |--------| ---------- | --------------| ------------      |---------- | ------------| ---------------------------------------|-------|
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
-    | mx量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | MX量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k)  |(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
+    | MX量化 |FLOAT8_E4M3FN  |FLOAT32      |FLOAT8_E8M0     |FLOAT8_E8M0   |null/BFLOAT16/FLOAT16| null |BFLOAT16/FLOAT16|(m, k)  |(n, k/8)|(m, ceil(k / 64), 2)    |(n, ceil(k / 64), 2)        |(1, n)    | null        | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT4_E2M1  |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n)  |null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
     | T-CG量化 |FLOAT8_E4M3FN  |FLOAT32      |null            |BFLOAT16/FLOAT16      |null| uint64/int64 |BFLOAT16/FLOAT16|(m, k)  |(k, n/8)|null           |(k/32, n)        |null       |(1, n)      | [0, 0, 32] / [1, 1, 32]                |
 

@@ -171,8 +171,8 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
       <tr>
         <td>antiquantGroupSize</td>
         <td>输入</td>
-        <td>表示在伪量化pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对输入<code>weight</code>进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。</td>
-        <td>当伪量化算法不为pergroup和mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入0。<br>当伪量化算法为pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入值的范围为[32, k-1]且值要求是32的倍数。<br>在mx<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>，仅支持32。</td>
+        <td>表示在伪量化pergroup和MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>下，对输入<code>weight</code>进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。</td>
+        <td>当伪量化算法不为pergroup和MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入0。<br>当伪量化算法为pergroup<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>时传入值的范围为[32, k-1]且值要求是32的倍数。<br>在MX<a href="../../../docs/zh/context/量化介绍.md" target="_blank">量化模式</a>，仅支持32。</td>
         <td>-</td>
         <td>-</td>
         <td>-</td>
@@ -364,7 +364,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
     - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
   - `quantOffsetOptional`（aclTensor *,计算输入）：数据类型支持FLOAT，[数据格式](../../../docs/zh/context/数据格式.md)支持ND。可选输入,当不需要时为空指针；存在时shape要求与`quantScaleOptional`一致。不支持[非连续的Tensor](../../../docs/zh/context/非连续的Tensor.md)。
   - `biasOptional`（aclTensor *,计算输入）：维度支持1维或2维，shape支持(n,)或(1, n)。数据类型支持FLOAT16、FLOAT。当`x`的数据类型为BFLOAT16时，本参数要求为FLOAT；当`x`的数据类型为FLOAT16时，本参数要求为FLOAT16。
-  - `antiquantGroupSize`（int,计算输入）：表示在伪量化pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法不为pergroup和mx[量化模式](../../../docs/zh/context/量化介绍.md)时传入0；当伪量化算法为pergroup[量化模式](../../../docs/zh/context/量化介绍.md)时传入值的范围为[32, k-1]且值要求是32的倍数；在mx[量化模式](../../../docs/zh/context/量化介绍.md)，仅支持32。
+  - `antiquantGroupSize`（int,计算输入）：表示在伪量化pergroup和MX[量化模式](../../../docs/zh/context/量化介绍.md)下，对输入`weight`进行反量化计算的groupSize输入，描述一组反量化参数对应的待反量化数据量在Reduce方向的大小。当伪量化算法不为pergroup和MX[量化模式](../../../docs/zh/context/量化介绍.md)时传入0；当伪量化算法为pergroup[量化模式](../../../docs/zh/context/量化介绍.md)时传入值的范围为[32, k-1]且值要求是32的倍数；在MX[量化模式](../../../docs/zh/context/量化介绍.md)，仅支持32。
   - `y`（aclTensor *,计算输出）：维度支持2维，shape支持(m, n)。数据类型支持FLOAT16、BFLOAT16、INT8。当`quantScaleOptional`存在时，数据类型为INT8；当`quantScaleOptional`不存在时，数据类型支持FLOAT16、BFLOAT16，且与输入`x`的数据类型一致。
 
   - 性能优化建议：
@@ -414,13 +414,13 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
   
   - **公共约束**
     - `x`和`weight`矩阵m、k、n大小在[1, 2^31-1]范围内。`weight`Reduce维度k需要与`x`的Reduce维度k大小相等。
-    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)。
+    - 支持的量化模式：pertensor[量化模式](../../../docs/zh/context/量化介绍.md)、perchannel[量化模式](../../../docs/zh/context/量化介绍.md)、pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)。
     - `x`不支持转置，因此不支持[非连续Tensor](../../../docs/zh/context/非连续的Tensor.md)，weight仅转置场景支持非连续的Tensor；antiquantScale、antiquantOffsetOptional非连续Tensor仅支持转置场景并且连续性要求和weight保持一致。
     - `antiquantScale`不同量化模式支持的shape：
       - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：(1,)或(1,1)。
       - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(1, n)或(n,)。
       - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小。
-      - mx[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
+      - MX[量化模式](../../../docs/zh/context/量化介绍.md)：输入shape为(⌈k/group_size⌉, n)，其中group_size表示k要分组的每组的大小，仅支持32。
     - `quantScaleOptional`和`quantOffsetOptional`为预留参数，暂未使用，固定传入空指针。
 
     <a id="a16w8场景约束"></a>
@@ -481,7 +481,7 @@ aclnnStatus aclnnWeightQuantBatchMatmulV2(
 
     - pertensor[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用转置后的`weight`输入。
     - perchannel[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用转置后的`weight`输入。
-    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和mx[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
+    - pergroup[量化模式](../../../docs/zh/context/量化介绍.md)和MX[量化模式](../../../docs/zh/context/量化介绍.md)：推荐使用非转置的`weight`输入。
 
     </details>
 

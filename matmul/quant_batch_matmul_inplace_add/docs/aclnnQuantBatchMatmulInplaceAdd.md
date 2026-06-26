@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  - **mx量化：**
+  - **MX量化：**
 
     $$
     y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
@@ -270,7 +270,7 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
     $$
     groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32
     $$
-- 动态量化（mx量化）场景约束：
+- 动态量化（MX量化）场景约束：
   - 输入和输出支持以下数据类型组合：
 
     | x1 | x2 | x1Scale | x2Scale | yRef |

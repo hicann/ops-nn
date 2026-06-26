@@ -17,7 +17,7 @@
 
 - 计算公式：
 
-  - **mx量化：**
+  - **MX量化：**
 
     $$
     y[m,n] = \sum_{j=0}^{kLoops-1} ((\sum_{k=0}^{gsK-1} (x1Slice * x2Slice)) * (scale1[m, j] * scale2[j, n])) + y[m,n]
@@ -62,14 +62,14 @@
     <td class="tg-22a9">x1Scale</td>
     <td class="tg-22a9">可选输入</td>
     <td class="tg-22a9">量化参数中由x1量化引入的缩放因子，对应公式的scale1。</td>
-    <td class="tg-22a9">FLOAT8_E8M0（mx）、FLOAT32（HIFLOAT8 TT）</td>
+    <td class="tg-22a9">FLOAT8_E8M0（MX）、FLOAT32（HIFLOAT8 TT）</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
     <td class="tg-22a9">x2Scale</td>
     <td class="tg-22a9">输入</td>
     <td class="tg-22a9">量化参数中由x2量化引入的缩放因子，对应公式的scale2。</td>
-    <td class="tg-22a9">FLOAT8_E8M0（mx）、FLOAT32（HIFLOAT8 TT）</td>
+    <td class="tg-22a9">FLOAT8_E8M0（MX）、FLOAT32（HIFLOAT8 TT）</td>
     <td class="tg-22a9">ND</td>
   </tr>
   <tr>
@@ -104,7 +104,7 @@
 
 - <term>Ascend 950PR/Ascend 950DT</term>：
   - x1、x2支持FLOAT8_E4M3FN、FLOAT8_E5M2、HIFLOAT8数据类型。
-  - x1Scale、x2Scale支持FLOAT8_E8M0（mx）和FLOAT32（HIFLOAT8 TT）数据类型。
+  - x1Scale、x2Scale支持FLOAT8_E8M0（MX）和FLOAT32（HIFLOAT8 TT）数据类型。
   - yRef只支持FLOAT32数据类型。
   - 当前仅支持transposeX1=true且transposeX2=false。
   - groupSize由groupSizeM、groupSizeN、groupSizeK拼接组成：groupSize = groupSizeK | groupSizeN << 16 | groupSizeM << 32。
@@ -113,7 +113,7 @@
 
 - 支持连续tensor，[非连续tensor](../../docs/zh/context/非连续的Tensor.md)支持转置场景。
 - groupSize相关约束：传入的groupSize内部会按公式分解得到groupSizeM、groupSizeN、groupSizeK，当其中有1个或多个为0时，会根据x1/x2/x1Scale/x2Scale输入shape重新推断。
-- 动态量化（mx量化）场景约束：
+- 动态量化（MX量化）场景约束：
   - 输入和输出支持以下数据类型组合：x1、x2为FLOAT8_E5M2/FLOAT8_E4M3FN，x1Scale、x2Scale为FLOAT8_E8M0，yRef为FLOAT32。
   - x1 shape为(k, m)，x2 shape为(k, n)，x1Scale shape为(ceil(k/64), m, 2)，x2Scale shape为(ceil(k/64), n, 2)，yRef shape为(m, n)，[gsM, gsN, gsK] 为 [1, 1, 32]，groupSize为32。
 - HIFLOAT8 T-T场景约束：
