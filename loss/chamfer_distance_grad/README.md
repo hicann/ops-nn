@@ -55,11 +55,11 @@
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1200px"><colgroup>
-  <col style="width: 60px">
-  <col style="width: 70px">
-  <col style="width: 150px">
-  <col style="width: 80px">
-  <col style="width: 80px">
+  <col style="width: 170px">
+  <col style="width: 170px">
+  <col style="width: 352px">
+  <col style="width: 213px">
+  <col style="width: 100px">
   </colgroup>
   <thead>
     <tr>
