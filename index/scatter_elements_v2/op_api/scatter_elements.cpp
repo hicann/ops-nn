@@ -33,11 +33,6 @@ static const int32_t V2_MAX_LOOPS = 50;
 static const int32_t BLOCK_8 = 32;
 static const int32_t BLOCK_16 = 16;
 static const int32_t BLOCK_32 = 8;
-static const int32_t SIZE_OF_FP16 = 2;
-static const int32_t SIZE_OF_FP32 = 4;
-static const int32_t SIZE_OF_INT32 = 4;
-static const int32_t SIZE_OF_INT64 = 8;
-static const int32_t SIZE_OF_UINT8 = 1;
 
 constexpr size_t UB_DATA_RATIO_LAST_AXIS = 2;
 constexpr size_t BYTES_PER_BLOCK = 32;
@@ -45,8 +40,6 @@ constexpr size_t BYTES_PER_BLOCK = 32;
 static const int32_t UBSIZE_910BC = 192 * 1024;  // ASCEND910B 和 ASCEND910_93的UB size
 static const int32_t UBSIZE_NORMAL = 256 * 1024; // 其余芯片的UB size
 static const int32_t VAR_TAIL_LENGTH = 48000; // 310P走aicore的尾轴上限
-static const int32_t CACHE_OP_INDICES_LOCAL_LENGTH = 2048;
-static const int32_t CACHE_OP_AGG_INDICES_NUM = 1024;
 
 static const int64_t TWO_DIM = 2;
 static const int64_t THREE_DIM = 3;
@@ -154,68 +147,6 @@ static int32_t GetUBSizeBytes()
     bool is910BC = (socVersion == SocVersion::ASCEND910B || socVersion == SocVersion::ASCEND910_93);
     int32_t ubSize = is910BC ? UBSIZE_910BC : UBSIZE_NORMAL;
     return ubSize;
-}
-
-static uint64_t GetCacheOpUbTypeSize(op::DataType dataType, const std::string& reduction)
-{
-    bool needHitCount = reduction != "none";
-    if (needHitCount && (dataType == op::DataType::DT_FLOAT16 || dataType == op::DataType::DT_BF16)) {
-        return SIZE_OF_FP32;
-    }
-    if (dataType == op::DataType::DT_FLOAT || dataType == op::DataType::DT_INT32) {
-        return SIZE_OF_FP32;
-    }
-    if (dataType == op::DataType::DT_FLOAT16 || dataType == op::DataType::DT_BF16) {
-        return SIZE_OF_FP16;
-    }
-    if (dataType == op::DataType::DT_INT8 || dataType == op::DataType::DT_UINT8 || dataType == op::DataType::DT_BOOL) {
-        return SIZE_OF_UINT8;
-    }
-    return 0;
-}
-
-static uint64_t GetCacheOpMaxXDim1(op::DataType dataType, const std::string& reduction)
-{
-    if (reduction == "none") {
-        return NO_TRANSPOSE_AXIS_MAX - 1;
-    }
-    uint64_t ubTypeSize = GetCacheOpUbTypeSize(dataType, reduction);
-    if (ubTypeSize == 0) {
-        return 0;
-    }
-    uint64_t tailBytes = static_cast<uint64_t>(CACHE_OP_INDICES_LOCAL_LENGTH) * SIZE_OF_INT64 +
-                         static_cast<uint64_t>(CACHE_OP_INDICES_LOCAL_LENGTH) * ubTypeSize +
-                         static_cast<uint64_t>(CACHE_OP_AGG_INDICES_NUM) * SIZE_OF_INT32 * 2;
-    if (tailBytes >= static_cast<uint64_t>(UBSIZE_910BC)) {
-        return 0;
-    }
-    return (static_cast<uint64_t>(UBSIZE_910BC) - tailBytes) / (ubTypeSize + SIZE_OF_INT32);
-}
-
-static uint64_t CalculateCacheOpXDim1(const aclTensor* data, uint64_t axis)
-{
-    auto dataShape = data->GetViewShape();
-    auto dataDimNum = dataShape.GetDimNum();
-    uint64_t xDim1 = 1;
-    for (size_t i = axis + 1; i < dataDimNum; i++) {
-        xDim1 *= dataShape.GetDim(i);
-    }
-    if (axis == dataDimNum - 1) {
-        xDim1 = dataShape.GetDim(axis);
-    }
-    return xDim1;
-}
-
-static bool CheckArch22CacheOpRowCapacity(const aclTensor* data, uint64_t axis, const std::string& reduction)
-{
-    uint64_t xDim1 = CalculateCacheOpXDim1(data, axis);
-    uint64_t maxXDim1 = GetCacheOpMaxXDim1(data->GetDataType(), reduction);
-    if (xDim1 > maxXDim1) {
-        OP_LOGD("ScatterElementsV2 cache-op disabled because xDim1(%lu) exceeds row UB capacity(%lu).",
-                xDim1, maxXDim1);
-        return false;
-    }
-    return true;
 }
 
 // 每次data循环搬入次数不超过50时，ScatterElementsV2的性能占优，循环搬入次数 = 每段data使用核数 * 每个核的搬入次数
@@ -370,11 +301,9 @@ bool UseScatterElementsV2(
         return false;
     }
 
-    if (!CheckArch22CacheOpRowCapacity(data, static_cast<uint64_t>(axis), reduction)) {
-        return false;
-    }
-
     if (ShouldPreferScatterElementsV2OnArch22(reduction)) {
+        // Cache-op specific shape/UB limits are checked in arch22 tiling. The host only decides
+        // whether ScatterElementsV2 remains a viable family of implementations for this case.
         OP_LOGD("ScatterElementsV2 preferred on arch22, deterministic selection will be handled in tiling.");
         return true;
     }
