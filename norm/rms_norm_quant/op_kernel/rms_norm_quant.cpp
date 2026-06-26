@@ -91,7 +91,7 @@ private:
     __aicore__ inline void CopyIn(uint64_t offset, uint32_t numel)
     {
         AscendC::LocalTensor<T> fp16_x = fp16_x_que_.AllocTensor<T>();
-        DataCopyCustom<T>(fp16_x, gm_x_[offset], numel);
+        DataCopyCustomQuant<T>(fp16_x, gm_x_[offset], numel);
         fp16_x_que_.EnQue(fp16_x);
     }
 
@@ -99,7 +99,7 @@ private:
     {
         AscendC::LocalTensor<T> fp16_g = fp32_xy_buf_.Get<T>(num_col_align_f32);
         AscendC::LocalTensor<float> fp32_g = calc_buf_.Get<float>(num_col_align_f16);
-        DataCopyCustom<T>(fp16_g, gm_g_, num_col_);
+        DataCopyCustomQuant<T>(fp16_g, gm_g_, num_col_);
         AscendC::SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         AscendC::WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Cast(fp32_g[OFFSET_GAMMA * num_col_align_f32], fp16_g, AscendC::RoundMode::CAST_NONE, num_col_);
@@ -107,7 +107,7 @@ private:
         AscendC::WaitFlag<HardEvent::V_MTE2>(EVENT_ID0);
         if constexpr (EN_BETA) {
             AscendC::LocalTensor<T> fp16_buffer = fp16_buf_.Get<T>();
-            DataCopyCustom<T>(fp16_buffer, gm_b_, num_col_);
+            DataCopyCustomQuant<T>(fp16_buffer, gm_b_, num_col_);
         }
         uint64_t pid = 0;
         while (pid < row_work_) {
@@ -143,7 +143,7 @@ private:
                 uint64_t totalOffset = row_offset + sliceOffset;
                 if constexpr (EN_BETA) {
                     AscendC::LocalTensor<T> fp16_buffer = fp16_buf_.Get<T>();
-                    DataCopyCustom<T>(fp16_buffer, gm_b_[sliceOffset], copyNum);
+                    DataCopyCustomQuant<T>(fp16_buffer, gm_b_[sliceOffset], copyNum);
                 }
                 CopyInGama(sliceOffset, copyNum);
                 AscendC::PipeBarrier<PIPE_ALL>();
@@ -162,7 +162,7 @@ private:
     {
         AscendC::LocalTensor<T> fp16_g = fp32_xy_buf_.Get<T>(slice_size_);
         AscendC::LocalTensor<float> fp32_g = calc_buf_.Get<float>(slice_size_);
-        DataCopyCustom<T>(fp16_g, gm_g_[sliceOffset], numel);
+        DataCopyCustomQuant<T>(fp16_g, gm_g_[sliceOffset], numel);
         AscendC::SetFlag<HardEvent::MTE2_V>(EVENT_ID0);
         AscendC::WaitFlag<HardEvent::MTE2_V>(EVENT_ID0);
         Cast(fp32_g[OFFSET_GAMMA * slice_size_], fp16_g, AscendC::RoundMode::CAST_NONE, numel);
@@ -305,7 +305,7 @@ private:
             int4_y_que_.FreeTensor(int4_y);
         } else {
             AscendC::LocalTensor<int8_t> int8_y = int8_y_que_.DeQue<int8_t>();
-            DataCopyCustom<int8_t>(gm_y_[offset], int8_y, numel);
+            DataCopyCustomQuant<int8_t>(gm_y_[offset], int8_y, numel);
             int8_y_que_.FreeTensor(int8_y);
         }
     }

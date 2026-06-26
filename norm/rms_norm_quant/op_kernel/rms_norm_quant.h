@@ -459,3 +459,56 @@ __aicore__ inline void GetScaleAndOffset(
     AscendC::WaitFlag<HardEvent::MTE2_S>(EVENT_ID0);
     varOffset = (float)(tmpInt8.GetValue(0));
 }
+
+template <typename T, typename U, typename R>
+__aicore__ inline void DataCopyCustomQuant(U dstTensorV1, R srcTensor, uint32_t count)
+{
+#if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3003 || __NPU_ARCH__ == 3113))
+    DataCopyParams copyParams;
+    copyParams.blockLen = count * sizeof(T);
+    copyParams.blockCount = 1;
+    if constexpr (is_same<U, AscendC::LocalTensor<T>>::value) {
+        DataCopyPadParams padParams;
+        DataCopyPad(dstTensorV1, srcTensor, copyParams, padParams);
+    } else {
+        DataCopyPad(dstTensorV1, srcTensor, copyParams);
+    }
+#else
+    // only support count greater than 32byte
+    int32_t numPerBlock = ONE_BLK_SIZE / sizeof(T);
+    if (count % numPerBlock == 0) {
+        DataCopy(dstTensorV1, srcTensor, count);
+    } else {
+        if constexpr (is_same<U, AscendC::LocalTensor<T>>::value) {
+            int32_t num = AlignUp(count, numPerBlock);
+            DataCopy(dstTensorV1, srcTensor, num);
+        } else {
+            if (count < numPerBlock) {
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 2002))
+                for (int32_t i = 0; i < count; i++) {
+                    T tensorValue = srcTensor.GetValue(i);
+                    dstTensorV1.SetValue(i, tensorValue);
+                }
+                SetFlag<HardEvent::S_V>(EVENT_ID0);
+                WaitFlag<HardEvent::S_V>(EVENT_ID0);
+                DataCacheCleanAndInvalid<T, CacheLine::SINGLE_CACHE_LINE>(dstTensorV1);
+#else
+                DataCopy(dstTensorV1, srcTensor, numPerBlock);
+#endif
+            } else {
+                int32_t num = count / numPerBlock * numPerBlock;
+                DataCopy(dstTensorV1, srcTensor, num);
+                SetFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                WaitFlag<HardEvent::MTE3_S>(EVENT_ID0);
+                for (int32_t i = 0; i < numPerBlock; i++) {
+                    T tensorValue = srcTensor.GetValue(count - numPerBlock + i);
+                    srcTensor.SetValue(i, tensorValue);
+                }
+                SetFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                WaitFlag<HardEvent::S_MTE3>(EVENT_ID0);
+                DataCopy(dstTensorV1[count - numPerBlock], srcTensor, numPerBlock);
+            }
+        }
+    }
+#endif
+}
