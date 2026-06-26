@@ -255,17 +255,17 @@ public:
             if (tensorDataCountList[i] == 0) {
                 continue;
             }
-            int64_t cursorStart_5 = 0;
+            int64_t cursorStart = 0;
             int64_t cursorEnd = tensorDataCountList[i] - 1;
             int64_t dataCount = 0;
             if (i == tensorStart) {
-                cursorStart_5 = tensorStartOffset;
+                cursorStart = tensorStartOffset;
             }
             if (i == tensorEnd) {
                 cursorEnd = tensorEndOffset;
             }
-            dataCount = cursorEnd - cursorStart_5 + 1;
-            inTensorGM.SetGlobalBuffer(GetTensorAddr(i, inTensorPtr) + cursorStart_5);
+            dataCount = cursorEnd - cursorStart + 1;
+            inTensorGM.SetGlobalBuffer(GetTensorAddr(i, inTensorPtr) + cursorStart);
 
             // coreMiddleOffset : describe this core's offset for middle value of tensor
             SingleTensorProcess(dataCount, coreMiddleOffset + i - tensorStart);
@@ -312,24 +312,47 @@ private:
     __aicore__ inline void SingleTensorProcess(int64_t dataCount, uint16_t offset)
     {
         // Batch handling and calculation.
-        uint32_t copyTimes = dataCount / maxDataCount;
+        uint64_t copyTimes = dataCount / maxDataCount;
         uint32_t datacountRemainder = dataCount % maxDataCount;
 
         if (datacountRemainder > 0) {
             copyTimes++;
         }
-        LocalTensor<P> tempLocal = calcBuf.Get<P>(CeilA2B(copyTimes, BYTE_BLOCK / sizeof(P)) * BYTE_BLOCK / sizeof(P));
+        // Keep slot 0 as the running accumulator; cache partial sums from a 32B-aligned offset.
+        uint16_t tempLocalCount = byteLen / sizeof(P);
+        uint16_t partialStartOffset = BYTE_BLOCK / sizeof(P);
+        uint16_t cachedPartialCountMax = tempLocalCount - partialStartOffset;
+        uint16_t cachedPartialCount = 0;
+        bool hasAccumulator = false;
+        LocalTensor<P> tempLocal = calcBuf.Get<P>(tempLocalCount);
         uint32_t tempDataCount = maxDataCount;
-        for (uint32_t i = 0; i < copyTimes; i++) {
+        for (uint64_t i = 0; i < copyTimes; i++) {
             if (i == copyTimes - 1 && datacountRemainder > 0) {
                 tempDataCount = datacountRemainder;
             }
             CopyInStage1(i, tempDataCount);
-            SquareAndReduceRound1(i, tempDataCount, tempLocal);
+            if (!hasAccumulator) {
+                SquareAndReduceRound1(0, tempDataCount, tempLocal);
+                hasAccumulator = true;
+                continue;
+            }
+
+            cachedPartialCount++;
+            SquareAndReduceRound1(partialStartOffset + cachedPartialCount - 1, tempDataCount, tempLocal);
+            if (cachedPartialCount == cachedPartialCountMax || i == copyTimes - 1) {
+                if (cachedPartialCount > 1) {
+                    PipeBarrier<PIPE_V>();
+                    ReduceSum<P>(
+                        tempLocal[partialStartOffset], tempLocal[partialStartOffset], tempLocal[partialStartOffset],
+                        cachedPartialCount);
+                }
+                PipeBarrier<PIPE_V>();
+                Add(tempLocal, tempLocal, tempLocal[partialStartOffset], 1);
+                PipeBarrier<PIPE_V>();
+                cachedPartialCount = 0;
+            }
         }
 
-        PipeBarrier<PIPE_V>();
-        ReduceSum<P>(tempLocal, tempLocal, tempLocal, copyTimes);
         PipeBarrier<PIPE_V>();
 
         event_t eventIDVToMTE3 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
@@ -346,7 +369,7 @@ private:
     }
 
     // CopyIn, Compute and CopyOut
-    __aicore__ inline void CopyInStage1(uint16_t index, int64_t dataCount)
+    __aicore__ inline void CopyInStage1(uint64_t index, int64_t dataCount)
     {
         LocalTensor<T> dataLocal = dataQueue.AllocTensor<T>();
 
