@@ -437,7 +437,7 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
     }
     return true;
 }
-static bool CheckBatchAndKDimsValid(op::Shape x1Shape, op::Shape x2Shape, int64_t x1KDim, int64_t x2KDim,
+static bool CheckBatchAndKDimsValid(op::Shape& x1Shape, op::Shape& x2Shape, int64_t x1KDim, int64_t x2KDim,
                                     int64_t x1BatchDim, int64_t x2BatchDim)
 {
     if (x1BatchDim != x2BatchDim) {
@@ -587,7 +587,7 @@ inline static aclnnStatus CheckParams(
             OP_NAME, "x1, out, x1Scale, x2Scale",
             Ops::NN::FormatString("%s, %s, %s, %s", op::ToString(x1->GetStorageFormat()).GetString(),
                                   op::ToString(out->GetStorageFormat()).GetString(),
-                                  op::ToString(x1Scale->GetStorageFormat()).GetString(),
+                                  x1Scale != nullptr ? op::ToString(x1Scale->GetStorageFormat()).GetString() : "null",
                                   op::ToString(x2Scale->GetStorageFormat()).GetString())
                 .c_str(),
             Ops::NN::FormatString("The formats of %s cannot be %s", "x1, out, x1Scale, x2Scale", "FRACTAL_NZ").c_str());
