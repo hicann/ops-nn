@@ -33,7 +33,7 @@ template<typename inputT, typename filterT, typename biasT, typename scaleT, typ
          int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
          int8_t IterOrder>
 __global__ __aicore__ void conv3dv2_template(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR scale, GM_ADDR offset,
-    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, Ops::NN::Conv3dV2::Conv3DV2TilingData tiling)
+    GM_ADDR offset_w, GM_ADDR y, GM_ADDR workspace, Ops::NN::Conv3dV2::Conv3DV2TilingDataV2 tiling)
 {
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
     using fmapType = ConvType<TPosition::GM, fmapFormat, inputT>;

@@ -23,18 +23,9 @@ include(FindPackageHandleStandardArgs)
 set(JSON_ROOT_DIR       ${CMAKE_BINARY_DIR}/third_party/json)
 set(JSON_DOWNLOAD_DIR   ${CMAKE_BINARY_DIR}/third_party/download/json)
 
-find_path(JSON_INCLUDE
-    NAMES nlohmann/json.hpp
-    PATHS ${JSON_ROOT_DIR}/include
-    NO_DEFAULT_PATH
-)
+set(JSON_INCLUDE "${JSON_ROOT_DIR}/include" CACHE PATH "nlohmann json include directory")
 
-find_package_handle_standard_args(json
-    FOUND_VAR json_FOUND
-    REQUIRED_VARS JSON_INCLUDE
-)
-
-if(json_FOUND AND NOT FORCE_REBUILD_CANN_3RD)
+if(EXISTS "${JSON_ROOT_DIR}/include/nlohmann/json.hpp" AND NOT FORCE_REBUILD_CANN_3RD)
     message(STATUS "json found in build dir: ${JSON_INCLUDE}")
     add_custom_target(nlohmann_json)
 else()

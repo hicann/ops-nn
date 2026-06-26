@@ -84,6 +84,7 @@ macro(add_sources ARGS)
     # set target name
     set(TARGET_NAME ${OP_NAME}_obj)
     add_library(${TARGET_NAME} OBJECT ${SOURCE_FILES})
+    add_dependencies(${TARGET_NAME} nlohmann_json)
     target_compile_options(${TARGET_NAME} PRIVATE ${COMPILE_OPTIONS})
     target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${INCLUDE_DIRECTORIES})
 
