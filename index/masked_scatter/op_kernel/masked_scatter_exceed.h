@@ -61,8 +61,13 @@ public:
             if (i == circleNum - 1 && tailMaskTileLength != 0) {
                 tempMaskTileLength = tailMaskTileLength;
             }
-            Compute(updateOffset, tempMaskOffset, tempMaskTileLength);
+            CopyIn(tempMaskOffset, tempMaskTileLength);
             PipeBarrier<PIPE_ALL>();
+            Compute(tempMaskTileLength);
+            PipeBarrier<PIPE_ALL>();
+            CopyOut(updateOffset, tempMaskOffset, tempMaskTileLength);
+            PipeBarrier<PIPE_ALL>();
+            tempMaskOffset += tempMaskTileLength;
         }
         inQueueMask.FreeTensor(maskLocal);
         inQueuePreMask.FreeTensor(preMaskLocal);
@@ -103,48 +108,50 @@ private:
         alignedMaskLengthHf = CeilAlign(maxMaskComputeNum, static_cast<uint32_t>(ONE_BLK_SIZE / sizeof(half)));
     }
 
-    __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t& maskOffset, uint32_t maskTileNum)
+    __aicore__ inline void CopyIn(uint32_t maskOffset, uint32_t maskTileNum)
     {
-        if (updatesIndex >= updatesNum) {
-            return;
-        }
-        remainUpdates = updatesNum - updatesIndex;
-        uint32_t index = 0;
         CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskTileNum);
+    }
+
+    __aicore__ inline void Compute(uint32_t maskTileNum)
+    {
+        aviUpdates = 0;
         for (uint32_t i = 0; i < maskTileNum; i++) {
-            if (index >= remainUpdates) {
-                break;
-            }
-            if (maskLocal.GetValue(i)) {
-                uint32_t tempUpdatesComputeNum = updatesComputeNum;
-                uint32_t tempUpdatesOffset = 0;
-                for (uint32_t j = 0; j < updatesLoopNum; j++) {
-                    if (j == updatesLoopNum - 1 && tailUpdatesComputeNum != 0) {
-                        tempUpdatesComputeNum = tailUpdatesComputeNum;
-                    }
-                    CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset + tempUpdatesOffset, 1, tempUpdatesComputeNum);
-                    PipeBarrier<PIPE_ALL>();
-                    CopyOut(maskOffset, maskTileNum, tempUpdatesComputeNum, tempUpdatesOffset);
-                    PipeBarrier<PIPE_ALL>();
-                    tempUpdatesOffset += tempUpdatesComputeNum;
-                }
-                updateOffset += updatesLineNum;
-                index++;
+            if (maskLocal.GetValue(i) && updatesIndex < updatesNum) {
+                aviUpdates++;
                 updatesIndex++;
             }
-            maskOffset++;
         }
     }
 
-    __aicore__ inline void CopyOut(uint32_t maskOffset, uint32_t maskCount, uint32_t updatesCopyNum, uint32_t updatesOffset)
+    __aicore__ inline void CopyOut(uint32_t& updateOffset, uint32_t maskOffset, uint32_t maskTileNum)
     {
-        DataCopyExtParams outCopyOutParams;
-        outCopyOutParams.blockCount = 1;
-        outCopyOutParams.blockLen = updatesCopyNum * sizeof(DTYPE_X);
-        outCopyOutParams.dstStride = 0;
-        outCopyOutParams.srcStride = 0;
-        outCopyOutParams.rsv = 0;
-        DataCopyPad(yGm[maskOffset * updatesLineNum + updatesOffset], updatesLocal, outCopyOutParams);
+        uint32_t usedUpdates = 0;
+        for (uint32_t i = 0; i < maskTileNum; i++) {
+            if (maskLocal.GetValue(i) && usedUpdates < aviUpdates) {
+                CopyOneLine(updatesGm, updateOffset, maskOffset + i);
+                updateOffset += updatesLineNum;
+                usedUpdates++;
+            } else {
+                CopyOneLine(xGm, (maskOffset + i) * updatesLineNum, maskOffset + i);
+            }
+        }
+    }
+
+    __aicore__ inline void CopyOneLine(GlobalTensor<DTYPE_X>& srcGm, uint32_t srcOffset, uint32_t maskPos)
+    {
+        uint32_t tempUpdatesComputeNum = updatesComputeNum;
+        uint32_t tempSrcOffset = 0;
+        for (uint32_t j = 0; j < updatesLoopNum; j++) {
+            if (j == updatesLoopNum - 1 && tailUpdatesComputeNum != 0) {
+                tempUpdatesComputeNum = tailUpdatesComputeNum;
+            }
+            CommonCopyIn<DTYPE_X>(updatesLocal, srcGm, srcOffset + tempSrcOffset, 1, tempUpdatesComputeNum);
+            PipeBarrier<PIPE_ALL>();
+            CommonCopyOut<DTYPE_X>(yGm, maskPos * updatesLineNum + tempSrcOffset, updatesLocal, 1, tempUpdatesComputeNum);
+            PipeBarrier<PIPE_ALL>();
+            tempSrcOffset += tempUpdatesComputeNum;
+        }
     }
 
 private:

@@ -89,6 +89,13 @@ protected:
         DataCopyPad(selfLocal, selfGm[offset], copyParams, padParams);
     }
 
+    template <typename T>
+    __aicore__ inline void CommonCopyOut(GlobalTensor<T>& selfGm, uint32_t offset, LocalTensor<T>& selfLocal, uint16_t blockCount, uint32_t blockLen)
+    {
+        DataCopyExtParams copyParams{static_cast<uint16_t>(blockCount), static_cast<uint32_t>(blockLen * sizeof(T)), 0, 0, 0};
+        DataCopyPad(selfGm[offset], selfLocal, copyParams);
+    }
+
     __aicore__ inline uint32_t ComputeMaskTrueCount(LocalTensor<bool>& maskLocalTensor, uint32_t calCount)
     {
         LocalTensor<float> maskFp32Temp = maskFp32Buf.Get<float>();
@@ -100,9 +107,7 @@ protected:
         LocalTensor<uint8_t> maskLocalUint8Tensor = maskLocalTensor.ReinterpretCast<uint8_t>();
         Cast(maskLocalHfTensor, maskLocalUint8Tensor, RoundMode::CAST_NONE, calCount);
         Cast(maskLocalFp32Tensor, maskLocalHfTensor, RoundMode::CAST_NONE, calCount);
-        PipeBarrier<PIPE_ALL>();
         ReduceSum<float>(maskFp32Temp, maskLocalFp32Tensor, reduceLocalBuf, calCount);
-        PipeBarrier<PIPE_ALL>();
         Cast(calInt32Temp, maskFp32Temp, RoundMode::CAST_RINT, calCount);
         PipeBarrier<PIPE_ALL>();
 
@@ -147,6 +152,7 @@ protected:
         alignedMaskLengthFp32, alignedMaskLengthHf, circleNum, loopNum, remainNum, alignedPreMaskTileLength, totalUpdatesNum,
         preMaskLoopNum, preMaskComputeNum, tailPreMaskNum, tailMaskTileLength, updatesLineNum, totalPreMaskLength, updatesNum, remainUpdates;
     uint32_t updatesIndex = 0;
+    uint32_t aviUpdates = 0;
 };
 
 } // namespace MaskedScatterNS
