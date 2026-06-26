@@ -204,9 +204,6 @@ struct ConvPreProcess {
                 if (self->ctx.convTilingData->biasFullLoadFlag && self->ctx.enableBias) {
                     self->ctx.biasL1 = self->ctx.queueBiasL1.template AllocTensor<typename Intf::BiasT>();
                     uint64_t biasLoadNum = self->ctx.singleCoreCo;
-                    if constexpr (Intf::groupOptPreloadFlag) {
-                        biasLoadNum *= self->ctx.singleGroupOpt;
-                    }
                     self->ctx.loadBiasL1Ins.LoadChannelWiseL1FullLoad(self->ctx.biasL1, self->ctx.biasgm,
                         biasLoadNum, 0);
                     self->ctx.queueBiasL1.EnQue(self->ctx.biasL1);
@@ -219,9 +216,6 @@ struct ConvPreProcess {
                         WaitFlag<HardEvent::FIX_MTE2>(eventId);
                     }
                     uint64_t scaleLoadNum = self->ctx.singleCoreCo;
-                    if constexpr (Intf::groupOptPreloadFlag) {
-                        scaleLoadNum *= self->ctx.singleGroupOpt;
-                    }
                     if (self->ctx.enableVectorQuant) {
                         self->ctx.scaleL1 = self->ctx.queueScaleL1.template AllocTensor<typename Intf::ScaleT>();
                         if constexpr (Intf::isExtendConv2d) {

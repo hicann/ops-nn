@@ -43,11 +43,20 @@ public:
         const GlobalTensor<ChannelWiseT> &tensorGm, uint64_t loadNum, uint64_t gmStartAddr)
     {
         uint64_t byteNum = sizeof(ChannelWiseT);
-        InitConstValueParams<ChannelWiseT> initParams(
-            1, static_cast<uint16_t>(AlignB(loadNum, BLOCK_L0_N) * byteNum / C0_SIZE), 0, 0);
+        InitConstValueParams<ChannelWiseT> initParams;
+        DataCopyParams dataCopyParams;
+        uint16_t initDataNum = AlignB(loadNum, BLOCK_L0_N) * byteNum / C0_SIZE;
+        if constexpr (Intf::groupOptPreloadFlag) {
+            initParams = InitConstValueParams<ChannelWiseT>(1,
+                static_cast<uint16_t>(initDataNum * self_->ctx.singleGroupOpt), 0, 0);
+            dataCopyParams = DataCopyParams(self_->ctx.singleGroupOpt, loadNum * byteNum,
+                (self_->ctx.convTilingData->coutOpt - loadNum) * byteNum, 0);
+        } else {
+            initParams = InitConstValueParams<ChannelWiseT>(1, static_cast<uint16_t>(initDataNum), 0, 0);
+            dataCopyParams = DataCopyParams(1, loadNum * byteNum, 0, 0);
+        }
         InitConstValue<ChannelWiseT>(tensorL1, initParams);
         PipeBarrier<PIPE_MTE2>();
-        DataCopyParams dataCopyParams(1, loadNum * byteNum, 0, 0);
         uint8_t rightPadding = (uint8_t)(AlignB(loadNum * byteNum, PADDING_ALIGN_SIZE) / byteNum - loadNum);
         DataCopyPadParams padParams(true, 0, rightPadding, 0);
         DataCopyPad<ChannelWiseT>(tensorL1, tensorGm[gmStartAddr], dataCopyParams, padParams);
@@ -100,9 +109,7 @@ public:
                           self_->ctx.nL0Iter * self_->ctx.convTilingData->nL0;
             }
             if constexpr (Intf::groupOptPreloadFlag) {
-                offset += self_->ctx.groupOptIter * self_->ctx.convTilingData->orgCo /
-                          self_->ctx.convTilingData->groups *
-                          self_->ctx.convTilingData->enlarge;
+                offset += self_->ctx.groupOptIter * currentNL0_;
             }
         }
 
