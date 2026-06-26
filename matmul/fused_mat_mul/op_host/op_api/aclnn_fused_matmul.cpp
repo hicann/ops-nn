@@ -48,6 +48,8 @@ static const std::vector<const char*> kSupportedFp32OpTypes = {"", "relu", "add"
 static const std::vector<const char*> kSupportedX3OpTypes = {"add", "mul"};
 static const std::vector<const char*> kSupportedIn16CastOut32OpTypes = {"16cast32"};
 static const std::vector<const char*> kSupportedEmptyTensorOpTypes = {"", "relu", "gelu_erf", "gelu_tanh", "add", "mul"};
+static constexpr int64_t INNER_PRECISE_HIGH_PRECISION = 0;
+static constexpr int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1;
 
 bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*>& types) {
     if (fusedOpType == nullptr) {
@@ -60,6 +62,19 @@ bool IsInSupportedOpTypes(const char* fusedOpType, const std::vector<const char*
         }
     }
     return false;
+}
+
+// inner_precise默认为0；仅当cubeMathType不是USE_FP32_ADD，且fusedOpType为add/mul，
+// x/x2/x3均为同一种fp16或bf16类型时，inner_precise取1。
+static int64_t GetInnerPrecise(
+    const aclTensor* x, const aclTensor* x2, const aclTensor* x3, const char* fusedOpType, int8_t cubeMathType)
+{
+    if (cubeMathType != USE_FP32_ADD && IsInSupportedOpTypes(fusedOpType, kSupportedX3OpTypes) &&
+        (x->GetDataType() == DataType::DT_FLOAT16 || x->GetDataType() == DataType::DT_BF16) &&
+        x->GetDataType() == x2->GetDataType() && x3 != nullptr && x3->GetDataType() == x->GetDataType()) {
+        return INNER_PRECISE_HIGH_PERFORMANCE;
+    }
+    return INNER_PRECISE_HIGH_PRECISION;
 }
 
 // 校验fusedOpType是否合法
@@ -358,15 +373,16 @@ static const aclTensor* BuildFusedMatMulGraph(
         contiguousX3 = l0op::ReFormat(contiguousX3, op::Format::FORMAT_ND);
         CHECK_RET(contiguousX3 != nullptr, nullptr);
     }
+    int64_t innerPrecise = GetInnerPrecise(x, x2, x3, fusedOpType, cubeMathType);
     const aclTensor* mmOut = nullptr;
     if (std::strcmp(fusedOpType, "16cast32") == 0) {
         mmOut = l0op::FusedMatMul16Cast32(
             selfCastOut, mat2CastOut, contiguousBias, contiguousX3, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, executor);
+            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, innerPrecise, executor);
     } else {
         mmOut = l0op::FusedMatMulNd(
             selfCastOut, mat2CastOut, contiguousBias, contiguousX3, mmOpInfo.shapeInfo.transposeX1,
-            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, executor);
+            mmOpInfo.shapeInfo.transposeX2, mmOpInfo.enableHf32, fusedOpType, innerPrecise, executor);
     }
     CHECK_RET(mmOut != nullptr, nullptr);
     // output cast

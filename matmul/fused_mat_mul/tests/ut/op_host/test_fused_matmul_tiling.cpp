@@ -171,7 +171,8 @@ static void TestOneParamCase(const TilingTestParam &param) {
                     .NodeAttrs({{"adj_x1", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_a)},
                                 {"adj_x2", Ops::NN::AnyValue::CreateFrom<bool>(param.trans_b)},
                                 {"enable_hf32", Ops::NN::AnyValue::CreateFrom<int64_t>(param.enable_hf32)},
-                                {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>(param.fused_op_type)}})
+                                {"fused_op_type", Ops::NN::AnyValue::CreateFrom<string>(param.fused_op_type)},
+                                {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                     .NodeInputTd(0, param.input_dtype, param.x1_ori_format, param.x1_format)
                     .NodeInputTd(1, param.input_dtype, param.x2_ori_format, param.x2_format)
                     .NodeInputTd(2, param.input_dtype, param.x2_ori_format, param.x2_format)

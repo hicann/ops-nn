@@ -40,6 +40,7 @@ namespace ge {
  * @li enable_hf32: A bool. This input is supported for the the following fused_op_types: "","relu","add","mul".
  * @li fused_op_type: A string. The fused_op_type include "","add","mul","gelu_erf","gelu_tanh","relu".
  * Default type is defined as "".
+ * @li inner_precise: An int. 0 means high precision vector fusion, 1 means high performance vector fusion.
  * @par Outputs:
  * y: The result matrix tensor. Must be one of the following types: float16, bfloat16, float32,
  */
@@ -53,6 +54,7 @@ REG_OP(FusedMatMul)
     .ATTR(transpose_x2, Bool, false)
     .ATTR(enable_hf32, Bool, false)
     .ATTR(fused_op_type, String, "")
+    .ATTR(inner_precise, Int, 0)
     .OP_END_FACTORY_REG(FusedMatMul)
 } // namespace ge
 

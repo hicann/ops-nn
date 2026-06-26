@@ -56,6 +56,9 @@
          this->Attr("fused_op_type")
              .AttrType(OPTIONAL)
              .String("");
+         this->Attr("inner_precise")
+             .AttrType(OPTIONAL)
+             .Int(0);
 
          OpAICoreConfig aicConfig;
          aicConfig.DynamicCompileStaticFlag(true)

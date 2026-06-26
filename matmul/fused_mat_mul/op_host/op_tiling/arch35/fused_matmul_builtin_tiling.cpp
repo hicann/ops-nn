@@ -421,6 +421,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::CheckArgs()
     }
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX));
+    if (!CheckInnerPrecise(*context_, "built-in tiling")) {
+        return ge::GRAPH_FAILED;
+    }
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     if (opType == "mul" || opType == "add") {
         args_.hasX3Input = true;

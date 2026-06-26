@@ -358,7 +358,8 @@ bool FusedMatMulTiling::CheckArgs() const
 {
     return (
         CheckFormat(*context_, hasX3Input_) && CheckDtype(*context_, hasX3Input_, hasBias_) &&
-        CheckShape(*context_, hasX3Input_, hasBias_) && CheckFusedOpType(*context_));
+        CheckShape(*context_, hasX3Input_, hasBias_) && CheckFusedOpType(*context_) &&
+        CheckInnerPrecise(*context_, "non-built-in tiling"));
 }
 
 ge::graphStatus FusedMatMulTiling::CheckArgsPtr()
@@ -382,6 +383,7 @@ ge::graphStatus FusedMatMulTiling::CheckArgsPtr()
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_TRANS_X1_IDX));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_TRANS_X2_IDX));
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX));
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX));
 
     if (*attrs->GetAttrPointer<bool>(ATTR_ENABLE_HF32_IDX)) {
         OP_LOGW(opName_, "invalid context not support hf32");

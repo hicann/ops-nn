@@ -13,8 +13,10 @@
  * \brief
  */
 #pragma once
+#include <cstdint>
 #include <map>
 #include <set>
+#include "error_util.h"
 #include "exe_graph/runtime/tiling_context.h"
 #include "matmul/fused_mat_mul/op_kernel/arch35/fused_mat_mul_tilingkey.h"
 
@@ -30,9 +32,25 @@ constexpr size_t ATTR_TRANS_X1_IDX = 0UL;
 constexpr size_t ATTR_TRANS_X2_IDX = 1UL;
 constexpr size_t ATTR_ENABLE_HF32_IDX = 2UL;
 constexpr size_t ATTR_OP_TYPE_IDX = 3UL;
+constexpr size_t ATTR_INNER_PRECISE_IDX = 4UL;
 
 constexpr size_t TRANS_MODE_BIT_WIDTH = 4UL;
 constexpr size_t FUSED_MATMUL_MATMUL_DIM_NUM = 2UL;
+constexpr int64_t INNER_PRECISE_HIGH_PRECISION = 0L;
+constexpr int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1L;
+
+inline bool CheckInnerPrecise(const gert::TilingContext& context, const char* logPrefix)
+{
+    auto attrs = context.GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, attrs);
+    auto innerPrecise = attrs->GetAttrPointer<int64_t>(ATTR_INNER_PRECISE_IDX);
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, innerPrecise);
+    OP_TILING_CHECK(
+        *innerPrecise != INNER_PRECISE_HIGH_PRECISION && *innerPrecise != INNER_PRECISE_HIGH_PERFORMANCE,
+        CUBE_INNER_ERR_REPORT(context.GetNodeName(), "inner_precise only supports 0 or 1"), return false);
+    OP_LOGI(context.GetNodeName(), "FusedMatMul %s inner_precise is %ld", logPrefix, *innerPrecise);
+    return true;
+}
 
 enum class FusedMatmulTrans : std::uint8_t
 {

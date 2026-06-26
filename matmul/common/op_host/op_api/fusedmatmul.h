@@ -9,16 +9,18 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #include "opdev/op_executor.h"
 
 namespace l0op {
 const aclTensor* FusedMatMulNd(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, bool transposeX1,
-    bool transposeX2, bool enableHf32, const char* fusedOpType, aclOpExecutor* executor);
+    bool transposeX2, bool enableHf32, const char* fusedOpType, int64_t innerPrecise, aclOpExecutor* executor);
 
 const aclTensor* FusedMatMul16Cast32(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* bias, const aclTensor* x3, bool transposeX1,
-    bool transposeX2, bool enableHf32, const char* fusedOpType, aclOpExecutor* executor);
+    bool transposeX2, bool enableHf32, const char* fusedOpType, int64_t innerPrecise, aclOpExecutor* executor);
 
 } // namespace l0op
 

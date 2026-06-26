@@ -79,6 +79,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": ""
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -159,6 +164,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": ""
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -239,6 +249,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": ""
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
 
         ]
@@ -320,6 +335,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": ""
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
 
         ]
@@ -401,6 +421,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": ""
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -481,6 +506,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": "16cast32"
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -561,6 +591,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": "16cast32"
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -641,6 +676,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": "16cast32"
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       },
@@ -721,6 +761,11 @@
             "name": "fused_op_type",
             "dtype": "string",
             "value": "16cast32"
+          },
+          {
+            "name": "inner_precise",
+            "dtype": "int",
+            "value": 0
           }
         ]
       }

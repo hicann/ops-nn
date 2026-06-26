@@ -47,5 +47,6 @@ FusedMatMul CreateFusedMatmulOp(OP_TUPLE x1, OP_TUPLE x2, OP_TUPLE bias, OP_TUPL
   op.SetAttr("transpose_x2", transpose_x2);
   op.SetAttr("enable_hf32", enable_hf32);
   op.SetAttr("fused_op_type", fused_op_type);
+  op.SetAttr("inner_precise", static_cast<int64_t>(0));
   return op;
 }

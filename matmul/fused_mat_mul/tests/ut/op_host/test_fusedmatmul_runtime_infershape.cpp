@@ -71,7 +71,8 @@ gert::KernelRunContextHolder CreateFusedMatMulHolder(gert::StorageShape& shape_x
                          .NodeAttrs({{"transpose_x1", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x1)},
                                      {"transpose_x2", Ops::NN::AnyValue::CreateFrom<bool>(transpose_x2)},
                                      {"enable_hf32", Ops::NN::AnyValue::CreateFrom<bool>(enable_hf32)},
-                                     {"fused_op_type", Ops::NN::AnyValue::CreateFrom<std::string>(fused_op_type)}})
+                                     {"fused_op_type", Ops::NN::AnyValue::CreateFrom<std::string>(fused_op_type)},
+                                     {"inner_precise", Ops::NN::AnyValue::CreateFrom<int64_t>(0)}})
                          .Build();
     return holder;
 }

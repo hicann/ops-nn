@@ -26,8 +26,11 @@ const int kMatmulV2MinShapeSize = 2;
 const int kMatmulV2MaxShapeSize = 3;
 const int kMatmulV2ReluMaxShapeSize = 6;
 const int kFusedMatMulX3Idx = 3;
+const int kInnerPreciseIdx = 4;
 const int kOutputIdx = 0;
 const int DIM_SIZE_TWO = 2;
+const int64_t INNER_PRECISE_HIGH_PRECISION = 0;
+const int64_t INNER_PRECISE_HIGH_PERFORMANCE = 1;
 
 const std::vector<const char*> kAllSupportedOpTypes = {"", "16cast32", "add", "mul", "gelu_erf", 
     "gelu_tanh", "relu"};
@@ -63,10 +66,15 @@ ge::graphStatus InferShapeForFusedMatMul(InferShapeContext* context)
     const bool* trans_b = attrs->GetAttrPointer<bool>(kMatMulX2Idx);
     const bool* enable_hf32 = attrs->GetAttrPointer<bool>(kMatMulX3Idx);
     const char* fused_op_type = attrs->GetAttrPointer<char>(kFusedMatMulX3Idx);
+    const int64_t* inner_precise = attrs->GetAttrPointer<int64_t>(kInnerPreciseIdx);
 
     OP_CHECK_IF(
-        trans_a == nullptr || trans_b == nullptr || enable_hf32 == nullptr  || fused_op_type == nullptr,
+        trans_a == nullptr || trans_b == nullptr || enable_hf32 == nullptr || fused_op_type == nullptr ||
+            inner_precise == nullptr,
         CUBE_INNER_ERR_REPORT(op_name, "attribute is null"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        *inner_precise != INNER_PRECISE_HIGH_PRECISION && *inner_precise != INNER_PRECISE_HIGH_PERFORMANCE,
+        CUBE_INNER_ERR_REPORT(op_name, "inner_precise only supports 0 or 1"), return ge::GRAPH_FAILED);
 
     ge::DataType dtype = tensor_a->GetDataType();
     OP_CHECK_IF(
