@@ -39,6 +39,23 @@ do
     fi
 done
 
+experimental_valid_dirs=()
+for category in "${op_categories[@]}"
+do
+    category_path="$current_dir/experimental/$category"
+    if [ -d "$category_path" ]; then
+        for dir in "$category_path"/*/
+        do
+            if [ -d "$dir/tests/ut/op_kernel" ]; then
+                dir_name=$(basename "$dir")
+                if [[ "$dir_name" != *"common"* ]]; then
+                    experimental_valid_dirs+=("$dir_name")
+                fi
+            fi
+        done
+    fi
+done
+
 cov="--cov"
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -54,6 +71,7 @@ done
 
 #搜索变更文件清单，将存在于valid_dirs清单中的算子保存到ops_name中，路径中需要出现'op_kernel'
 
+experimental_ops_name=()
 ops_name=()
 found_mirror_update=false
 mapfile -t lines < ${pr_file}
@@ -70,18 +88,33 @@ do
         continue
     fi
     # 检查该路径是否包含 valid_dirs 中的任意一个目录名
-    for dir in "${valid_dirs[@]}"
-    do
-        if [[ "$file_path" == *"/$dir/"* ]]; then
-            if [[ "$file_path" == *"op_kernel"* ]]; then
-                # 去重后添加到 ops_name 数组中
-                if [[ ! " ${ops_name[@]} " =~ " $dir " ]]; then
-                    ops_name+=("$dir")
+    if [[ "$file_path" != experimental/* ]]; then
+        for dir in "${valid_dirs[@]}"
+        do
+            if [[ "$file_path" == *"/$dir/"* ]]; then
+                if [[ "$file_path" == *"op_kernel"* ]]; then
+                    # 去重后添加到 ops_name 数组中
+                    if [[ ! " ${ops_name[@]} " =~ " $dir " ]]; then
+                        ops_name+=("$dir")
+                    fi
                 fi
+                break
             fi
-            break
-        fi
-    done
+        done
+    else 
+        for dir in "${experimental_valid_dirs[@]}"
+        do
+            if [[ "$file_path" == *"/$dir/"* ]]; then
+                if [[ "$file_path" == *"op_kernel"* ]]; then
+                    # 去重后添加到 ops_name 数组中
+                    if [[ ! " ${experimental_ops_name[@]} " =~ " $dir " ]]; then
+                        experimental_ops_name+=("$dir")
+                    fi
+                fi
+                break
+            fi
+        done
+    fi
 
     if [[ "$file_path" == "scripts/ci/mirror_update_time.txt" ]]; then 
         found_mirror_update=true;
@@ -97,6 +130,20 @@ do
     do
         echo "[EXECUTE_COMMAND] bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version"
         bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16
+        status=$?
+        if [ $status -ne 0 ]; then
+            echo "${name} kernel ut fail"
+            exit 1
+        fi
+    done
+done
+
+for name in "${experimental_ops_name[@]}"
+do
+    for soc_version in "${supportedSocVersion[@]}"
+    do
+        echo "[EXECUTE_COMMAND] bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version --experimental"
+        bash build.sh -u --opkernel --ops=$name ${cov} --soc=$soc_version --cann_3rd_lib_path=${ASCEND_3RD_LIB_PATH} -j16  --experimental
         status=$?
         if [ $status -ne 0 ]; then
             echo "${name} kernel ut fail"
