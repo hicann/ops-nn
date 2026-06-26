@@ -88,6 +88,7 @@
 #include "op_api/scatter_update.h"
 #include "level0/select.h"
 #include "pooling/common/op_api/shape_op.h"
+#include "level0/kth_value.h"
 #include "level0/sort.h"
 #include "level0/split_v.h"
 #include "level0/squeeze.h"
@@ -177,6 +178,12 @@ const aclTensor* ReViewToOut(const aclTensor* x, const aclTensor* /*y*/, aclOpEx
 const std::tuple<aclTensor*, aclTensor*> Sort(
     const aclTensor* /*self*/, int64_t /*dim*/, bool /*descending*/, bool /*stable*/, op::DataType /*indicesType*/,
     aclOpExecutor* /*executor*/)
+{
+    return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
+}
+
+const std::tuple<aclTensor*, aclTensor*> KthValue(
+    const aclTensor* /*self*/, int64_t /*k*/, int64_t /*dim*/, aclOpExecutor* /*executor*/)
 {
     return std::tuple<aclTensor*, aclTensor*>(nullptr, nullptr);
 }
