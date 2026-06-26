@@ -300,6 +300,7 @@ void RIGDavidTilingImpl::TilingStrategy()
             DoUbSplit(mBlockPara_.blockFactor, BASE_SPLIT_LENGTH, mUbPara_.mainCoreUbPara);     // main M.i.o  M.i.i
             DoUbSplit(mBlockPara_.blockTailFactor, BASE_SPLIT_LENGTH, mUbPara_.tailCoreUbPara); // M.i.o  M.i.i
             rFactor_ = basicBlockSize_ / mUbPara_.mainCoreUbPara.ubFactor / dtSize_; // 使用主核主块计算rfactor
+            rFactor_ = FloorAlign(rFactor_, static_cast<int32_t>(blockSize_ / dtSize_)); // 避免Kernel向上对齐时超BufferSize
             if (rFactor_ <= 1) {
                 OP_LOGE(context_->GetNodeName(), "RAxis in ub is too small (rFactor=%d), cannot calculate",
                         rFactor_);

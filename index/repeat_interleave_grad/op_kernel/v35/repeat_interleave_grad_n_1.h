@@ -38,9 +38,7 @@ private:
     TBuf<> tempScatterQue_;
     TBuf<> tempScatterOffsetQue_;
     TBuf<> tempBufQue_;
-    TBuf<> tempUbQue_;
     TBuf<> repeatInUbBuf_;
-    LocalTensor<PromoteDataT> tempUb_;
     LocalTensor<PromoteDataT> tempBuf_;
     LocalTensor<PromoteDataT> computeRes_;
     LocalTensor<PromoteDataT> scatterRes_; // 存放scatter后的结果
@@ -85,6 +83,7 @@ public:
             computeBufferNum = DOUBLE_BUFFER;
         }
         bufPool_.template Init<DataT, PromoteDataT>(&pipe_, DOUBLE_BUFFER, computeBufferNum, tiling_->basicBlockSize);
+
         pipe_.InitBuffer(tempResQue_, RES_BUF_SIZE);
         computeRes_ = tempResQue_.Get<PromoteDataT>(); // ub内A轴大小
 
@@ -96,9 +95,6 @@ public:
 
         pipe_.InitBuffer(tempBufQue_, CACHE_BUF_SIZE); // ub内二分需要的buf块
         tempBuf_ = tempBufQue_.template Get<PromoteDataT>();
-
-        pipe_.InitBuffer(tempUbQue_, BLOCK_SIZE_BYTE);
-        tempUb_ = tempUbQue_.template Get<PromoteDataT>();
 
         pipe_.InitBuffer(repeatInUbBuf_, tiling_->repeatBufferSize * DOUBLE_BUFFER); // 每次搬入的repeat的大小
         repeatInUb_ = repeatInUbBuf_.template Get<IndexT>();
@@ -186,7 +182,6 @@ private:
             int64_t inputDataOffset = 0;
             int64_t outputDataOffset = 0;
             r = repeatTensor.GetValue(k);
-
             if (r == 0) {
                 for (int32_t m = 0; m < mCount - 1; m++) {
                     mOffset = m * mFactor;
@@ -268,7 +263,7 @@ private:
             LocalTensor<PromoteDataT> computeRight;
             if (i + bisectionPos_ == tailIndex) {
                 // CopyInData内已经保证了MTE2_V的同步
-                if (rTailFactor < dimR - ELEMENT_ONE_BLOCK_SIZE) {
+                if (rTailFactor <= dimR - ELEMENT_ONE_BLOCK_SIZE) {
                     // 不能随路补0的时候
                     Duplicate<DataT>(tensorRight, 0, dimA * dimRAlign);
                     __RIGUtil::SetEvent<HardEvent::V_MTE2>(HardEvent::V_MTE2);
