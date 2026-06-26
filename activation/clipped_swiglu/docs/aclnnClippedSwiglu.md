@@ -134,7 +134,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入x。</td>
-      <td>不支持空指针，维度必须大于0且shape必须在入参dim对应维度上是偶数。</td>
+      <td>不支持空指针，维度必须大于0且shape必须在入参dim对应维度上是偶数。不支持空Tensor。输入不支持包含±inf或nan。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
@@ -144,7 +144,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>公式中的输入group_index，表示分组的情况。</td>
-      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过1024，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。</td>
+      <td>支持空指针。不为空指针时，维度要求为1维，长度不超过1024，且元素需大于等于0。第i个元素代表第i组需要处理x的batch数量。不支持空Tensor。输入不支持包含±inf或nan。</td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -204,7 +204,7 @@ aclnnStatus aclnnClippedSwiglu(
       <td>out（aclTensor*）</td>
       <td>输出</td>
       <td>公式中的输出y。</td>
-      <td>不支持空指针。shape在入参dim对应的维度上为x的一半，其他维度上与x一致。</td>
+      <td>不支持空指针。shape在入参dim对应的维度上为x的一半，其他维度上与x一致。不支持空Tensor。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
