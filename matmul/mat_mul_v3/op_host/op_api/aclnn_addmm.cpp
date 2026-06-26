@@ -533,7 +533,12 @@ public:
         }
         // 执行 Muls: out1 = beta * bias
         // 非inplace接口不能改变输入tensor，isMulsInplace=false
-        const aclTensor* out1 = MulsProcess(bias, beta, false, executor);
+        const aclTensor* biasCastType = bias;
+        if (enable16In32Out && bias->GetDataType() != DataType::DT_FLOAT) {
+            biasCastType = l0op::Cast(bias, op::DataType::DT_FLOAT, executor);
+            CHECK_RET(biasCastType != nullptr, ACLNN_ERR_INNER_NULLPTR);
+        }
+        const aclTensor* out1 = MulsProcess(biasCastType, beta, false, executor);
         CHECK_RET(out1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 执行 Matmul: out2 = mat1 @ mat2
         // 为了提升addmm的精度，如果输入是fp16或者bf16时，输出需要是fp32类型
