@@ -15,6 +15,13 @@
 
 #ifndef __OP_KERNEL_MAT_MUL_TILING_KEY_H__
 #define __OP_KERNEL_MAT_MUL_TILING_KEY_H__
+
+#if defined(__NPU_ARCH__)
+#include "../../inc/macro.h"
+#else
+#include "../../../../common/inc/op_kernel/macro.h"
+#endif
+
 #endif
 
 #include "ascendc/host_api/tiling/template_argument.h"
@@ -43,7 +50,7 @@ ASCENDC_TPL_ARGS_DECL(
 // 模板参数组合
 // 用于调用GET_TPL_TILING_KEY获取TilingKey时，接口内部校验TilingKey是否合法
 ASCENDC_TPL_SEL(
-#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
         ASCENDC_TPL_UINT_SEL(API_LEVEL, ASCENDC_TPL_UI_LIST, MAT_MUL_BASIC_LEVEL),

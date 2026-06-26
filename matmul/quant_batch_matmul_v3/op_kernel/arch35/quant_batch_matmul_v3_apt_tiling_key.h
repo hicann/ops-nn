@@ -14,9 +14,15 @@
  */
 #pragma once
 
+#if defined(__NPU_ARCH__)
+#include "../../inc/macro.h"
+#else
+#include "../../../../common/inc/op_kernel/macro.h"
+#endif
+
 #include "ascendc/host_api/tiling/template_argument.h"
 
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102) && \
+#if !__CUBE_S8S4_S4S4__ && \
     defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
     ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
 #define IS_A4W4I
@@ -118,7 +124,7 @@ ASCENDC_TPL_SEL(
             TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH,
             TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH)),
 #endif
-#if (!defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)))
+#if (!defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__)
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),

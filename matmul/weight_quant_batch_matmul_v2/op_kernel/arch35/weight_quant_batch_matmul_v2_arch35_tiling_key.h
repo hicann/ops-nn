@@ -15,6 +15,12 @@
 
 #pragma once
 
+#if defined(__NPU_ARCH__)
+#include "../../inc/macro.h"
+#else
+#include "../../../../common/inc/op_kernel/macro.h"
+#endif
+
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
@@ -189,7 +195,7 @@ ASCENDC_TPL_ARGS_DECL(
         IS_WEIGHT_NZ, 0, 1),
 );
 ASCENDC_TPL_SEL(
-#if !defined(__CCE_AICORE__) || (!(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)))
+#if !defined(__CCE_AICORE__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     #if !defined(__CCE_AICORE__) || (defined(MICROSCALING) && !defined(WEIGHT_ND))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
@@ -694,7 +700,7 @@ ASCENDC_TPL_SEL(
         #endif
     #endif
 #endif
-#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__CCE_AICORE__) || __CUBE_S8S4_S4S4__
     #if !defined(__CCE_AICORE__) || (defined(FORMAT_WEIGHT) && (FORMAT_WEIGHT != FORMAT_FRACTAL_NZ))
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),

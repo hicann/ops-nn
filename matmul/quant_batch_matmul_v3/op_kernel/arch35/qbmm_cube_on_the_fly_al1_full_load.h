@@ -14,6 +14,7 @@
  */
 #pragma once
 
+#include "../../inc/macro.h"
 #include "qbmm_cube_on_the_fly.h"
 #include "qbmm_asw_block.h"
 #include "../quant_batch_matmul_v3_base.h"
@@ -30,7 +31,7 @@ constexpr auto cfg_v = [] {
     auto cfg = MM_CFG_NO_PRELOAD_OPEN_UNIT_FLAG;
     if constexpr (isLut) {
         cfg = CFG_NORM;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __LUT_SUPPORT__
         if constexpr (AscendC::IsSameType<x2Type, AscendC::int2b_t>::value) {
             cfg.decompMode = DecompressionMode::DECOMP_2bitTo4bit;
         } else if constexpr (AscendC::IsSameType<x2Type, AscendC::uint1b_t>::value) {
@@ -232,12 +233,6 @@ __aicore__ inline void MatmulAswKernelAL1FullLoad<LOCAL_TEMPLATE_FUNC_PARAMS>::P
                 }
                 mm_.SetTensorA(al1Local_, aTrans);
                 uint64_t newOffsetB = this->block_.offset_.offsetB;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-                if constexpr (isLut && AscendC::IsSameType<x2Type, AscendC::uint1b_t>::value) {
-                    // 临时代码，待api支持uint1后修正
-                    newOffsetB = newOffsetB / INT1_X2_OFFSET_FACTOR_8;
-                }
-#endif
                 mm_.SetTensorB(this->bGlobal_[newOffsetB], bTrans);
                 if constexpr (isLut) {
                     mm_.SetLookupTable(this->x2TableGlobal_[this->block_.offset_.offsetX2Table]);

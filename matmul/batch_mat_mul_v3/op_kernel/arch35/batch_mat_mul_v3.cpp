@@ -12,6 +12,9 @@
  * \file batch_mat_mul_v3.cpp
  * \brief
  */
+
+#include "../../inc/macro.h"
+
 #if ASC_DEVKIT_MAJOR < 9 || (ASC_DEVKIT_MAJOR == 9 && ASC_DEVKIT_MINOR <= 0)
 #define IS_BLAZE false
 #else
@@ -22,7 +25,7 @@
 #include "batch_mat_mul_v3_tiling_key.h"
 #include "batch_mat_mul_v3_asw_kernel_advanced.h"
 
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #include "batch_mat_mul_v3_asw_al1_full_load_kernel_advanced.h"
 #include "batch_mat_mul_v3_asw_bl1_full_load_kernel_advanced.h"
 #include "batch_mat_mul_v3_mergebatch_basicapi_cmct.h"
@@ -176,7 +179,7 @@ __global__ __aicore__ void batch_mat_mul_v3(
     using bLayout = std::conditional_t<
         (format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
         std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)) && IS_BLAZE
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && IS_BLAZE
     using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
     using layoutB = AscendC::Std::conditional_t<
         bTran,
@@ -239,7 +242,7 @@ __global__ __aicore__ void batch_mat_mul_v3(
         MatMulStreamKActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor,
                                MatMulL0C2Out::ND_FIXPIPE_1_2>(aGM, bGM, biasGM, cGM, workspaceGM,
                                                               tilingData.matMulTilingData, tilingData.batchDimAll);
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     } else if constexpr (
         BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
         BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {

@@ -14,6 +14,8 @@
  */
 
 #pragma once
+
+#include "../../../inc/macro.h"
 #include "./block_mmad.h"
 #include "../utils/layout_utils.h"
 #include "../utils/tuple_utils.h"
@@ -299,7 +301,7 @@ public:
         }
     }
 
-    __aicore__ inline void CopyOutForArch5102(
+    __aicore__ inline void CopyOutForFixedPoint(
         const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
@@ -327,7 +329,7 @@ public:
         AscendC::Fixpipe<C_T, L0cType, AscendC::CFG_ROW_MAJOR>(cGlobal, l0c, fixpipeParams);
     }
 
-    __aicore__ inline void CopyOutForOtherArch(
+    __aicore__ inline void CopyOutForOther(
         const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
@@ -359,10 +361,10 @@ public:
         const AscendC::GlobalTensor<C_T>& cGlobal, const AscendC::LocalTensor<L0cType>& l0c, const uint64_t mInGM,
         const uint64_t nInGM, const uint64_t curIterBatchL0)
     {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-        CopyOutForArch5102(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+        CopyOutForFixedPoint(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
 #else
-        CopyOutForOtherArch(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
+        CopyOutForOther(cGlobal, l0c, mInGM, nInGM, curIterBatchL0);
 #endif
     }
 

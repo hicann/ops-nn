@@ -13,7 +13,9 @@
  * \brief
  */
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510 || __NPU_ARCH__ == 5102)
+#include "../inc/macro.h"
+
+#if (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3510) || __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #include "../mat_mul_v3/mat_mul_v3_common.h"                                     // 共有,BLOCK_SIZE等定义
 #include "./arch35/fused_mat_mul_tilingkey.h"                                    // 共有,tilingKey模板参数
 #include "../mat_mul_v3/arch35/mat_mul_tiling_data.h"                            // 共有,tilingData定义
@@ -32,8 +34,8 @@
 #include "./arch35/fused_mat_mul_input_k_eq_zero_copy_x3.h"       // 3510 K=0 add returns x3
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
-#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h" // 5102独有,高阶API实现,BMM,aswt模板
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+#include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_asw_kernel_advanced.h" // FIXED_POINT_ONLY_CUBE_TO_L0C 独有,高阶API实现,BMM,aswt模板
 #endif
 
 #include "../batch_mat_mul_v3/arch35/batch_mat_mul_v3_iterbatch_basicapi_cmct.h" // 共有,低阶API实现,BMM,iterbatch模板
@@ -87,7 +89,7 @@ enum class FusionOpType : uint8_t
     GELU_ERF
 };
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #define BMMV3_IMPL_CLASS_COMMON_TRNAS(transA, transB, templateClass, ...)                \
     do {                                                                                 \
         GET_TILING_DATA(tilingData, tilingGM);                                           \
@@ -681,7 +683,7 @@ __global__ __aicore__ void fused_mat_mul(
     }
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     REGISTER_TILING_DEFAULT(BatchMatMulV3TilingData);
     if constexpr (OPTYPE == F_OPTYPE_RELU && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && MODEL == MAT_MUL_BASIC) {
         if constexpr ( // high, aswt, from bmmv3

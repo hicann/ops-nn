@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include "../../inc/macro.h"
+
 #define K_MAX_SHAPE_DIM 0
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -61,7 +63,7 @@
 
 #include "quant_batch_matmul_v4_tiling_key.h"
 #include "quant_batch_matmul_v4_tiling_data_apt.h"
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 // define DTYPE_X2 should before cmct
 #if CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
 #include "../quant_batch_matmul_v4_tiling_data.h"
@@ -81,7 +83,7 @@
 using namespace AscendC;
 #endif
 
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if !CMCT_PRETILE_INT4_INT4_ASYMMETRICAL
 using namespace QuantBatchMatmulV4;
 namespace QuantBatchMatmulV4 {
@@ -124,7 +126,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(
     GM_ADDR x1, GM_ADDR x2, GM_ADDR bias, GM_ADDR x1_scale, GM_ADDR x2_scale, GM_ADDR y_scale, GM_ADDR x1_offset,
     GM_ADDR x2_offset, GM_ADDR y_offset, GM_ADDR x2_table, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if CMCT_PRETILE_INT8_INT8_BF16
     REGISTER_TILING_DEFAULT(qbmmv4_tiling::QuantBatchMatmulV3TilingDataParams);
     if constexpr (TRANS == QBMMV4_NOT_TRANS) {

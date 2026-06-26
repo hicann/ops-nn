@@ -14,6 +14,7 @@
  */
 #pragma once
 
+#include "../../../inc/macro.h"
 #include <type_traits>
 #include "../utils/common_utils.h"
 #include "../utils/integral_constant.h"
@@ -238,7 +239,7 @@ __aicore__ inline constexpr bool IsTileShapeValid()
  * @brief Get the type of L0C and Bt
  */
 struct GetL0CAndBtType {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
     using Type = int32_t;
 #else
     using Type = float;

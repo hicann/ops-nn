@@ -15,6 +15,12 @@
 
 #pragma once
 
+#if defined(__NPU_ARCH__)
+#include "../../inc/macro.h"
+#else
+#include "../../../../common/inc/op_kernel/macro.h"
+#endif
+
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "quant_batch_matmul_v4_tiling_data_apt.h"
 
@@ -55,7 +61,7 @@ ASCENDC_TPL_ARGS_DECL(
     ASCENDC_TPL_UINT_DECL(
         KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_4_BW, ASCENDC_TPL_UI_LIST, QBMMV4_BASIS, QBMMV4_LUT_ASW, QBMMV4_LUT_AL1FULL), );
 ASCENDC_TPL_SEL(
-#if !defined(__CCE_AICORE__) || (!(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)))
+#if !defined(__CCE_AICORE__) || !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
         ASCENDC_TPL_UINT_SEL(TRANS, ASCENDC_TPL_UI_LIST, QBMMV4_B_TRANS),
@@ -97,7 +103,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNEL_TEMPLATE_TYPE, ASCENDC_TPL_UI_LIST, QBMMV4_LUT_ASW), ),
 #endif
 
-#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__
     ASCENDC_TPL_ARGS_SEL(
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
         ASCENDC_TPL_UINT_SEL(TRANS, ASCENDC_TPL_UI_LIST, QBMMV4_NOT_TRANS),

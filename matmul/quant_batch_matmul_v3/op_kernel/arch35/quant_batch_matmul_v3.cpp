@@ -13,7 +13,9 @@
  * \brief
  */
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#include "../../inc/macro.h"
+
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #define IS_BLAZE false
 #elif ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
 #define IS_BLAZE true
@@ -26,7 +28,7 @@
 #include "qbmm_cube_on_the_fly_al1_full_load.h"
 #include "quant_batch_matmul_v3_apt_tiling_key.h"
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #include "qbmm_cube_on_the_fly_bl1_full_load.h"
 #include "qbmm_cube_on_the_fly_abl1_full_load.h"
 #include "qbmm_cube_on_the_fly_iterbatch.h"
@@ -84,7 +86,7 @@
 #endif
 
 // supportMmad平台ORIG_DTYPE_X1可以int8/int4, DTYPE_BIAS都是int32_t
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
 #undef DTYPE_BIAS
 #define DTYPE_BIAS int32_t
 #endif
@@ -661,12 +663,12 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 
 /*
  * 纯cube场景
- * IS_BLAZE && WEIGHT_ND  -> 3510(blaze asw/al1)       5102(none)
- * IS_BLAZE && WEIGHT_NZ  -> 3510(blaze asw/al1)       5102(none)
- * !IS_BLAZE && WEIGHT_ND -> 3510(cmct asw/al1)        5102(cmct asw/al1/bl1; highapi iterbatch)
- * !IS_BLAZE && WEIGHT_NZ -> 3510(highapi asw/al1)     5102(highapi asw/al1/bl1/abl1/iterbatch)
+ * IS_BLAZE && WEIGHT_ND  -> 3510(blaze asw/al1)       FIXED_POINT_ONLY_CUBE_TO_L0C(none)
+ * IS_BLAZE && WEIGHT_NZ  -> 3510(blaze asw/al1)       FIXED_POINT_ONLY_CUBE_TO_L0C(none)
+ * !IS_BLAZE && WEIGHT_ND -> 3510(cmct asw/al1)        FIXED_POINT_ONLY_CUBE_TO_L0C(cmct asw/al1/bl1; highapi iterbatch)
+ * !IS_BLAZE && WEIGHT_NZ -> 3510(highapi asw/al1)     FIXED_POINT_ONLY_CUBE_TO_L0C(highapi asw/al1/bl1/abl1/iterbatch)
 */
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102) 
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__ 
     // high api iterbatch
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_BMMAPI) {
         GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);

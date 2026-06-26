@@ -13,6 +13,7 @@
  * \brief
  */
 
+#include "../../inc/macro.h"
 #include "../fused_quant_mat_mul_swiglu.h"
 #include "../../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_abl1_full_load.h"
 #include "../../quant_batch_matmul_v3/arch35/qbmm_cube_on_the_fly_al1_full_load.h"
@@ -105,7 +106,7 @@ __global__ __aicore__ void fused_quant_mat_mul(
             op.Init(x1, x2, bias, x2Scale, yScale, y, user, &tilingData, &tPipe);
             op.Process();
         }
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __LUT_SUPPORT__
     } else if (TPL_OPTYPE == F_OPTYPE_SWIGLU) {
         GET_TILING_DATA_WITH_STRUCT(FusedQuantMatmulSwigluTilingData, tilingData, tiling);
         KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);

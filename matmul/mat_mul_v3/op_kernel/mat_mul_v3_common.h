@@ -14,6 +14,9 @@
  */
 #ifndef __OP_KERNEL_MATMUL_V3_COMMON_H__
 #define __OP_KERNEL_MATMUL_V3_COMMON_H__
+
+#include "../inc/macro.h"
+
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
 #include "std/algorithm.h"
@@ -190,7 +193,7 @@ __aicore__ inline void WaitFlagDevLocal(int64_t flagID)
 }
 
 //supportMmadS8S4平台无L2cacheUseInfo，用宏隔离
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 template <class A_T, class B_T, class C_T, class BiasT>
 __aicore__ inline void SetL2CacheEnable(const L2cacheUseInfo& l2EnableInfo,
     GlobalTensor<A_T> &aGlobal, GlobalTensor<B_T> &bGlobal,

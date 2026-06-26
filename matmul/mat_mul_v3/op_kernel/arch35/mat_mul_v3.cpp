@@ -12,6 +12,9 @@
  * \file mat_mul_v3.cpp
  * \brief
  */
+
+#include "../../inc/macro.h"
+
 #if ASC_DEVKIT_MAJOR < 9 || (ASC_DEVKIT_MAJOR == 9 && ASC_DEVKIT_MINOR <= 0)
 #define IS_BLAZE false
 #else
@@ -24,7 +27,7 @@
 #include "mat_mul_tiling_data.h"
 #include "mat_mul_full_load.h"
 
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #include "mat_mul_stream_k_kernel.h"
 #include "mat_mul_fixpipe_opti.h"
 #include "mat_mul_input_k_eq_zero_clear_output.h"
@@ -101,7 +104,7 @@ __global__ __aicore__ void mat_mul_v3(
     using bLayout = std::conditional_t<
         (format_x2 == CubeFormat::NZ), std::conditional_t<bTran, layout::Zn, layout::Nz>,
         std::conditional_t<bTran, layout::ColumnMajor, layout::RowMajor>>;
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)) && IS_BLAZE
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && IS_BLAZE
     using layoutA = AscendC::Std::conditional_t<aTran, AscendC::Te::DNExtLayoutPtn, AscendC::Te::NDExtLayoutPtn>;
     using layoutB = AscendC::Std::conditional_t<
         bTran,
@@ -136,7 +139,7 @@ __global__ __aicore__ void mat_mul_v3(
         MatmulV3Advanced::MatMulActKernel<
             DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor, A_FULL_LOAD_MODE>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     } else if (
         API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
         L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非全载TensorAPI

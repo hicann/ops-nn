@@ -13,6 +13,8 @@
  * \brief
  */
 
+#include "../../inc/macro.h"
+
 #define ENABLE_L2_CACHE
 #include "../weight_quant_batch_matmul_v2_constant.h"
 #if ASC_DEVKIT_MAJOR >= 9
@@ -25,7 +27,7 @@
 #include "weight_quant_batch_matmul_v2_arch35_tiling_key.h"
 #include "weight_quant_batch_matmul_v2_arch35_tiling_data.h"
 
-#if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #if defined(A16) && (defined(WQBMMV2_S4) || defined(F4) || (defined(WQBMMV2_S8) && defined(WEIGHT_ND)))
 #include "weight_quant_batch_matmul_v2_reg_base.h"
 #endif
@@ -53,7 +55,7 @@ using WeightQuantBatchMatmulV2::InvokeKernel;
 #include "n_first/weight_quant_batch_matmul_v2_basic_block_controller.h"
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __CUBE_S8S4_S4S4__
 #include "weight_quant_batch_matmul_v2_adaptive_sliding_window.h"
 #include "weight_quant_batch_matmul_v2_iterbatch.h"
 #endif
@@ -67,7 +69,7 @@ constexpr MatmulConfig MM_CFG_MULTI_BATCH = GetMMConfig<configMode>(batchParams)
 constexpr MatmulBatchParams batchParamsNoBatchOut{false, BatchMode::BATCH_LESS_THAN_L1, false, BatchOutMode::SINGLE_BATCH};
 constexpr MatmulConfig MM_CFG_MULTI_BATCH_NO_BATCH_OUT = GetMMConfig<configMode>(batchParamsNoBatchOut);
 
-#if !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIGS[] = {
     {2, 512},   // idx 0
     {4, 512},   // idx 1
@@ -92,7 +94,7 @@ static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFI
     } while (0)
 #endif
 
-#if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
 #define INVOKE_WEIGHT_QUANT_BMM_OP_REG_BASE_IMPL(DtypeBias, templateClass, ...)                                   \
     do {                                                                                                          \
         GET_TILING_DATA_WITH_STRUCT(                                                                              \
@@ -115,7 +117,7 @@ static constexpr VecAntiQuantConfig VEC_ANTIQUANT_CONFIG_5 = VEC_ANTIQUANT_CONFI
     } while (0)
 #endif
 
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __CUBE_S8S4_S4S4__
 #define INVOKE_WEIGHT_QUANT_BMM_OP_ASW_IMPL(templateClass, ...)                                                  \
     do {                                                                                                         \
         GET_TILING_DATA_WITH_STRUCT(                                                                             \
@@ -153,7 +155,7 @@ __global__ __aicore__ void weight_quant_batch_matmul_v2(
     }
     AscendC::TPipe tPipe;
 
-#if !defined(__DAV_310R6__) && !(defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__DAV_310R6__) && !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_MIX_AIC_1_2);
     REGISTER_TILING_DEFAULT(wqbmmv2_tiling::WeightQuantBatchMatmulV2ASTilingDataParams);
     using DtypeBias = AscendC::Std::conditional_t<IS_BIAS_FP32, float, DTYPE_X>;

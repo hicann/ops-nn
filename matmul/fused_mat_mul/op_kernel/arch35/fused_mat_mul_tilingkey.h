@@ -15,6 +15,12 @@
 
 #pragma once
 
+#if defined(__NPU_ARCH__)
+#include "../../inc/macro.h"
+#else
+#include "../../../../common/inc/op_kernel/macro.h"
+#endif
+
 #include "ascendc/host_api/tiling/template_argument.h"
 #include "fused_mat_mul_tiling_key_public.h"
 #if defined(__CCE_AICORE__)
@@ -225,7 +231,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(MatMulV3KEqZeroBasicTilingData)),
 
 #endif
-#if !defined(__CCE_AICORE__) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if !defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__
     /*AIC_ONLY*/
     // high, aswt, from bmmv3
     ASCENDC_TPL_ARGS_SEL(

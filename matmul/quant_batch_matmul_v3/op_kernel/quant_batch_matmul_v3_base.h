@@ -15,6 +15,7 @@
 #ifndef QUANT_BATCH_MATMUL_V3_BASE_H
 #define QUANT_BATCH_MATMUL_V3_BASE_H
 
+#include "../inc/macro.h"
 #include <cstdint>
 #if ASC_DEVKIT_MAJOR >= 9
 #include "kernel_basic_intf.h"
@@ -301,14 +302,14 @@ __aicore__ inline constexpr uint32_t GetC0Size()
     // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
     if constexpr (isLut && AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         return K0_INT8;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __LUT_SUPPORT__
     } else if constexpr (isLut && (AscendC::IsSameType<T, AscendC::int2b_t>::value ||
                                    AscendC::IsSameType<T, AscendC::uint1b_t>::value)) {
         return K0_INT4;
 #endif
     } else if constexpr (AscendC::IsSameType<T, AscendC::int4b_t>::value) {
         return K0_INT4;
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
     } else if constexpr (AscendC::IsSameType<T, fp4x2_e2m1_t>::value) {
         return K0_INT4;
 #endif
@@ -328,13 +329,13 @@ __aicore__ inline constexpr uint64_t GetSizeWithDataType(uint64_t shapeSize)
     bool is8BitInput = false;
     if constexpr (isLut) {
         // lut查表逻辑: 原始数据DT_INT2和DT_UINT1，查表后转DT_INT4; 原始数据DT_INT4, 查表后转DT_INT8
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+#if __LUT_SUPPORT__
         is4BitInput =
             (AscendC::IsSameType<T, AscendC::int2b_t>::value || AscendC::IsSameType<T, AscendC::uint1b_t>::value);
 #endif
         is8BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
     } else {
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value || AscendC::IsSameType<T, fp4x2_e2m1_t>::value);
 #else
         is4BitInput = (AscendC::IsSameType<T, AscendC::int4b_t>::value);
@@ -378,7 +379,7 @@ __aicore__ inline constexpr uint32_t GetTaskRation()
 }
 
 
-#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102))
+#if ((defined(__CCE_AICORE__) && (__CCE_AICORE__ == 310)) && !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 3113)) || __CUBE_S8S4_S4S4__
 template <typename T>
 __aicore__ inline constexpr bool IsMxType()
 {
