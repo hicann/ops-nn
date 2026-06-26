@@ -37,7 +37,7 @@ static graphStatus InferShape4SparseSoftmaxCrossEntropyWithLogits(gert::InferSha
     gert::Shape* lossShape = context->GetOutputShape(OUTPUT_LOSS_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, lossShape);
     gert::Shape* backpropShape = context->GetOutputShape(OUTPUT_BACKPROP_IDX);
-    OP_CHECK_NULL_WITH_CONTEXT(context, lossShape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, backpropShape);
 
     if (!Ops::Base::IsUnknownRank(*featuresShape) && !Ops::Base::IsUnknownRank(*labelsShape)) {
         OP_CHECK_IF(
