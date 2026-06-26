@@ -1,0 +1,9 @@
+testcase_name,api_name,tensor_view_shapes,tensor_dtypes,tensor_formats,attributes,output_tensor_indexes,input_data_ranges,precision_tolerances,absolute_precision,soc_series
+sg_fp16,aclnnSwigluGroup,"((2,256),None,None,(2,128))","('float16','float32','int64','float16')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,None,(0,0))","((0.001,0.001),)",0.001,"('Ascend950',)"
+sg_bf16,aclnnSwigluGroup,"((3,512),None,None,(3,256))","('bfloat16','float32','int64','bfloat16')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,None,(0,0))","((0.004,0.004),)",0.004,"('Ascend950',)"
+sg_weight_fp16,aclnnSwigluGroup,"((8,512),(8,1),None,(8,256))","('float16','float32','int64','float16')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),(-1,1),None,(0,0))","((0.001,0.001),)",0.001,"('Ascend950',)"
+sg_clamp_bf16,aclnnSwigluGroup,"((4,512),None,None,(4,256))","('bfloat16','float32','int64','bfloat16')","('ND',)",{'clampLimit':2.0},"(3,)","((-2,2),None,None,(0,0))","((0.004,0.004),)",0.004,"('Ascend950',)"
+sg_group_fp16,aclnnSwigluGroup,"((8,512),None,(2,),(8,256))","('float16','float32','int64','float16')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,(0,8),(0,0))","((0.001,0.001),)",0.001,"('Ascend950',)"
+sg_group_large_fp16,aclnnSwigluGroup,"((128,512),None,(128,),(128,256))","('float16','float32','int64','float16')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,(0,128),(0,0))","((0.001,0.001),)",0.001,"('Ascend950',)"
+sg_f32,aclnnSwigluGroup,"((2,256),None,None,(2,128))","('float32','float32','int64','float32')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,None,(0,0))","((0.0001,0.0001),)",0.0001,"('Ascend950',)"
+sg_f32_group,aclnnSwigluGroup,"((8,512),None,(2,),(8,256))","('float32','float32','int64','float32')","('ND',)",{'clampLimit':-1.0},"(3,)","((-2,2),None,(0,8),(0,0))","((0.0001,0.0001),)",0.0001,"('Ascend950',)"

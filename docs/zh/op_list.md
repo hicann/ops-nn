@@ -689,6 +689,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_group/README.md">swiglu_group</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行SwiGLU激活，实现输入x的SwigluGroup计算，输出与x相同数据类型的激活结果。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant_grad/README.md">swiglu_group_quant_grad</a></td>
     <td>✓</td>
     <td>✓</td>
