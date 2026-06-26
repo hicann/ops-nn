@@ -20,6 +20,7 @@
 #include "blaze/gemm/block/block_mmad_matmul_basic.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
+#include "blaze/gemm/utils/layout_utils.h"
 
 namespace MatmulV3Advanced {
 
@@ -44,13 +45,17 @@ __aicore__ inline void MatMulBasicKernel(
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
+    static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
+    static constexpr bool isNDFormat = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);
     // 定义scheduler类型
-    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE>;
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
+                                                                         isNDFormat>;
 
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockBasic>;
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
-        DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutBias>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<FULL_LOAD_MODE, FUSED_OP_TYPE,
+                                                              Blaze::Gemm::KernelMmadMultiBlockBasic>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
+                                                    BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;
@@ -58,30 +63,15 @@ __aicore__ inline void MatMulBasicKernel(
     // 定义Kernel类型
     using MatmulKernel = Blaze::Gemm::Kernel::GemmUniversal<ProblemShape, BlockMmad, BlockEpilogue, BlockScheduler>;
     using Params = typename MatmulKernel::Params;
-    Params params = {
-        {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
-        {aGM, bGM, cGM, biasGM},                           // gm addr
-        {},                                                // epilogue args
-        {tilingData.mL1,
-         tilingData.nL1,
-         tilingData.kL1,
-         tilingData.baseM,
-         tilingData.baseN,
-         tilingData.baseK,
-         tilingData.mTailCnt,
-         tilingData.nTailCnt,
-         tilingData.mBaseTailSplitCnt,
-         tilingData.nBaseTailSplitCnt,
-         tilingData.mTailMain,
-         tilingData.nTailMain,
-         tilingData.isHf32,
-         tilingData.l1BufferNum,
-         tilingData.l0cDB,
-         tilingData.ubDB,
-         tilingData.l2CacheDisable,
-         tilingData.sliceM,
-         tilingData.srcNdStride,
-         tilingData.innerBatch}}; // scheduler params
+    Params params = {{tilingData.m, tilingData.n, tilingData.k, batch}, // shape
+                     {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1,
+                      tilingData.baseM, tilingData.baseN, tilingData.baseK, tilingData.l1BufferNum, tilingData.l0cDB},
+                     {}, // epilogue args
+                     {tilingData.mL1, tilingData.nL1, tilingData.kL1, tilingData.baseM, tilingData.baseN,
+                      tilingData.baseK, tilingData.mTailCnt, tilingData.nTailCnt, tilingData.mBaseTailSplitCnt,
+                      tilingData.nBaseTailSplitCnt, tilingData.mTailMain, tilingData.nTailMain, tilingData.isHf32,
+                      static_cast<uint32_t>(tilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride,
+                      tilingData.innerBatch}}; // scheduler params
     MatmulKernel mm;
     mm(params);
 }
