@@ -2399,6 +2399,16 @@
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
   </tr>
   <tr>
+    <td>loss</td>
+    <td><a href="../../loss/sparse_softmax_cross_entropy_with_logits/README.md">sparse_softmax_cross_entropy_with_logits</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>用于计算稀疏类标签场景下的Softmax交叉熵损失，并同步输出反向传播所需的梯度。</td>
+  </tr>
+  <tr>
     <td>matmul</td>
     <td><a href="../../matmul/addmv/README.md">addmv</a></td>
     <td>✗</td>
