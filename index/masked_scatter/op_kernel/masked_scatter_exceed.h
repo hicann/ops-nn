@@ -62,9 +62,12 @@ public:
                 tempMaskTileLength = tailMaskTileLength;
             }
             CopyIn(tempMaskOffset, tempMaskTileLength);
-            Compute(updateOffset, tempMaskOffset, tempMaskTileLength);
+            PipeBarrier<PIPE_ALL>();
+            Compute(tempMaskTileLength);
+            PipeBarrier<PIPE_ALL>();
             CopyOut(updateOffset, tempMaskOffset, tempMaskTileLength);
             PipeBarrier<PIPE_ALL>();
+            tempMaskOffset += tempMaskTileLength;
         }
         inQueueMask.FreeTensor(maskLocal);
         inQueuePreMask.FreeTensor(preMaskLocal);
@@ -108,10 +111,9 @@ private:
     __aicore__ inline void CopyIn(uint32_t maskOffset, uint32_t maskTileNum)
     {
         CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskTileNum);
-        PipeBarrier<PIPE_ALL>();
     }
 
-    __aicore__ inline void Compute(uint32_t& updateOffset, uint32_t maskOffset, uint32_t maskTileNum)
+    __aicore__ inline void Compute(uint32_t maskTileNum)
     {
         aviUpdates = 0;
         for (uint32_t i = 0; i < maskTileNum; i++) {
@@ -131,7 +133,7 @@ private:
                 updateOffset += updatesLineNum;
                 usedUpdates++;
             } else {
-                CopyOneLine(xGm, maskOffset + i * updatesLineNum, maskOffset + i);
+                CopyOneLine(xGm, (maskOffset + i) * updatesLineNum, maskOffset + i);
             }
         }
     }

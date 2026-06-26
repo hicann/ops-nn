@@ -107,9 +107,7 @@ protected:
         LocalTensor<uint8_t> maskLocalUint8Tensor = maskLocalTensor.ReinterpretCast<uint8_t>();
         Cast(maskLocalHfTensor, maskLocalUint8Tensor, RoundMode::CAST_NONE, calCount);
         Cast(maskLocalFp32Tensor, maskLocalHfTensor, RoundMode::CAST_NONE, calCount);
-        PipeBarrier<PIPE_ALL>();
         ReduceSum<float>(maskFp32Temp, maskLocalFp32Tensor, reduceLocalBuf, calCount);
-        PipeBarrier<PIPE_ALL>();
         Cast(calInt32Temp, maskFp32Temp, RoundMode::CAST_RINT, calCount);
         PipeBarrier<PIPE_ALL>();
 

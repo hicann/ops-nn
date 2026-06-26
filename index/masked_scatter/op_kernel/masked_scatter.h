@@ -109,7 +109,6 @@ private:
     __aicore__ inline void CopyIn(uint32_t maskOffset, uint32_t maskCount)
     {
         CommonCopyIn<bool>(maskLocal, maskGm, maskOffset, 1, maskCount);
-        PipeBarrier<PIPE_ALL>();
         CommonCopyIn<DTYPE_X>(xLocal, xGm,  maskOffset * updatesLineNum, 1, maskCount * updatesLineNum);
     }
 
@@ -125,7 +124,6 @@ private:
         if (aviUpdates == 0) {
             return;
         }
-        PipeBarrier<PIPE_ALL>();
         uint32_t tempUpdateLength = updatesLineNum * aviUpdates;
         if (updatesLineNum == 1) {
             CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, 1, aviUpdates * updatesLineNum);
@@ -133,7 +131,6 @@ private:
             CommonCopyIn<DTYPE_X>(updatesLocal, updatesGm, updateOffset, aviUpdates, updatesLineNum);
         }
         
-        PipeBarrier<PIPE_ALL>();
         updateOffset = updateOffset + tempUpdateLength;
         updatesIndex += aviUpdates;
     }
@@ -163,7 +160,6 @@ private:
                 xOffset++;
             }
         }
-        PipeBarrier<PIPE_ALL>();
         DataCopyExtParams outCopyOutParams;
         outCopyOutParams.blockCount = 1;
         outCopyOutParams.blockLen = maskCount * sizeof(DTYPE_X);
