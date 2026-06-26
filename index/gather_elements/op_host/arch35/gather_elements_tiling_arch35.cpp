@@ -145,7 +145,7 @@ inline ge::graphStatus GatherElementsSimtTiling::GetAttrInfo()
 {
     auto const attrs = context_->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    auto *axis = attrs->GetAttrPointer<int32_t>(ATTR_DIM_IDX);
+    auto *axis = attrs->GetAttrPointer<int64_t>(ATTR_DIM_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, axis);
 
     auto axisVal = static_cast<int64_t>(*axis);
