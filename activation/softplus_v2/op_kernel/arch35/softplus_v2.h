@@ -12,7 +12,7 @@
 
 /*!
  * \file softplus_v2.h
- * \brief SoftplusV2 kernel implementation (arch32)
+ * \brief SoftplusV2 kernel implementation (arch35)
  *
  * Iteration 3: Full coverage (FP32 + FP16 + BF16 + edge cases)
  *
@@ -24,22 +24,32 @@
  *   - NaN input: propagated through GT mask -> Select (aligned with TBE)
  *
  * TilingKey_0 (FP32 direct):
- *   - 4 buffers + cmpMask
- *   - Compute chain: Muls(beta*x) -> Duplicate+Compare(>threshold) -> Duplicate(0)+Select(mask) -> Exp -> Adds(+1) -> Log -> Muls(invBeta) -> Select
+ *   - inQueue/outQueue(depth=2) + tmpBuf + workBuf + cmpMask + logMask
+ *   - Compute chain: Muls(beta*x) -> Dup+Cmp(>threshold) -> Dup(0)+Select(mask) -> Exp(e)
+ *     -> accurate log1p(e)=log(1+e): Adds(1)=u -> Dup+Cmp(==1.0,mask1) -> Adds(-1)=v -> Log=log(u)
+ *        -> Div(e/v)=ratio -> Mul(log(u)*ratio)=out -> Select(mask1:e,out) -> Adds(1)+Cmp(1+e==inf,mask2)
+ *        -> Select(mask2:inf) -> Muls(invBeta)=softplus -> Select(threshold mask: x, softplus)
  *
  * TilingKey_1 (FP16 cast to FP32) / TilingKey_2 (BF16 cast to FP32):
- *   - 4 buffers (in/out depth=2 at sizeof(T)=2) + castBuf(fp32) + tmpBuf(fp32) + cmpMask
- *   - Compute chain: Cast->Muls(beta*x)->Duplicate+Compare(>threshold)->Duplicate(0)+Select(mask)->Exp->Adds(+1)->Log->Muls(invBeta)->reCast->Select->Cast
+ *   - in/out depth=2 at sizeof(T)=2 + castBuf(fp32) + tmpBuf(fp32) + workBuf(fp32) + cmpMask + logMask
+ *   - Compute chain: Cast -> Muls(beta*x) -> Dup+Cmp(>threshold) -> Dup(0)+Select(mask) -> Exp(e)
+ *     -> accurate log1p (same as FP32; softplus left in workBuf) -> re-Cast(x into castBuf) -> Select -> Cast
  *   - Key probe findings applied:
  *     1. Compare does not support scalar; use Duplicate + two-tensor Compare
  *     2. Select<bfloat16_t> not available on dav_c220; Select performed in fp32 space
  *     3. Two-pass Cast approach: after Duplicate overwrites castBuf, re-Cast from inQueue to recover fp32 x
  *     4. UB capacity accounts for TPipe overhead (~2KB safety margin via 8KB Select reserve)
+ *
+ * Numerical stability:
+ *   - log1p(e) computed via u=1+e with mask(u==1.0)->e fallback and log(u)*e/((1+e)-1) compensation,
+ *     aligned with TBE log1p. Avoids catastrophic cancellation of naive 1+exp for large negative x
+ *     (e.g. x=-16.6619, e=5.8e-8 < half-ULP@1.0 -> naive log(1+e)=0).
  */
 
 #ifndef SOFTPLUS_V2_H
 #define SOFTPLUS_V2_H
 
+#include <limits>
 #include "kernel_operator.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "softplus_v2_tiling_data.h"
@@ -65,14 +75,12 @@ private:
     __aicore__ inline void CopyOut(int64_t progress, int64_t currentNum);
 
     // FP32 direct compute path (TilingKey_0)
-    __aicore__ inline void ComputeFp32(AscendC::LocalTensor<float>& xLocal,
-                                       AscendC::LocalTensor<float>& yLocal,
+    __aicore__ inline void ComputeFp32(AscendC::LocalTensor<float>& xLocal, AscendC::LocalTensor<float>& yLocal,
                                        int64_t currentNum);
 
     // FP16/BF16 cast-to-fp32 compute path (TilingKey_1 / TilingKey_2)
     // Uses two-pass Cast approach validated by probe results
-    __aicore__ inline void ComputeCast(AscendC::LocalTensor<T>& xLocal,
-                                       AscendC::LocalTensor<T>& yLocal,
+    __aicore__ inline void ComputeCast(AscendC::LocalTensor<T>& xLocal, AscendC::LocalTensor<T>& yLocal,
                                        int64_t currentNum);
 
 private:
@@ -81,7 +89,9 @@ private:
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueue;
     TBuf<TPosition::VECCALC> tmpBuf;
     TBuf<TPosition::VECCALC> cmpMaskBuf;
-    TBuf<TPosition::VECCALC> castBuf;  // FP16/BF16 only: fp32 workspace for Cast results
+    TBuf<TPosition::VECCALC> castBuf;    // FP16/BF16 only: fp32 workspace for Cast results
+    TBuf<TPosition::VECCALC> workBuf;    // accurate log1p working buffer: u -> log_u -> out -> softplus
+    TBuf<TPosition::VECCALC> logMaskBuf; // accurate log1p masks (==1.0 then ==inf, reused)
 
     GlobalTensor<T> xGm;
     GlobalTensor<T> yGm;
@@ -114,22 +124,28 @@ __aicore__ inline void SoftplusV2<T>::Init(GM_ADDR x, GM_ADDR y, const SoftplusV
 
     // Init buffers based on data type
     if constexpr (std::is_same_v<T, float>) {
-        // FP32 path: inQueue(2*tile*4) + outQueue(2*tile*4) + tmpBuf(tile*4) + cmpMask
-        // castBuf not used for FP32 path, allocate minimum to avoid uninitialized member
+        // FP32 path: inQueue(2*tile*4) + outQueue(2*tile*4) + tmpBuf(tile*4) + workBuf(tile*4)
+        //            + cmpMask + logMask
+        // castBuf unused on FP32 path (never Get<>-ed), left uninitialized
         pipe.InitBuffer(inQueue, BUFFER_NUM, tileLength_ * sizeof(float));
         pipe.InitBuffer(outQueue, BUFFER_NUM, tileLength_ * sizeof(float));
         pipe.InitBuffer(tmpBuf, tileLength_ * sizeof(float));
+        pipe.InitBuffer(workBuf, tileLength_ * sizeof(float));
         uint32_t cmpMaskBytes = static_cast<uint32_t>(((tileLength_ / 8 + 255) / 256) * 256);
         pipe.InitBuffer(cmpMaskBuf, cmpMaskBytes);
+        pipe.InitBuffer(logMaskBuf, cmpMaskBytes);
     } else {
-        // FP16/BF16 path: inQueue(2*tile*2) + outQueue(2*tile*2) + castBuf(tile*4) + tmpBuf(tile*4) + cmpMask
-        // Total: 4*tile + 4*tile + 4*tile + 4*tile + cmpMask = 16*tile + cmpMask
+        // FP16/BF16 path: inQueue(2*tile*2) + outQueue(2*tile*2) + castBuf(tile*4)
+        //                 + tmpBuf(tile*4) + workBuf(tile*4) + cmpMask + logMask
+        // Total: 4*tile + 4*tile + 4*tile + 4*tile + 4*tile + masks = 20*tile + masks
         pipe.InitBuffer(inQueue, BUFFER_NUM, tileLength_ * sizeof(T));
         pipe.InitBuffer(outQueue, BUFFER_NUM, tileLength_ * sizeof(T));
         pipe.InitBuffer(castBuf, tileLength_ * sizeof(float));
         pipe.InitBuffer(tmpBuf, tileLength_ * sizeof(float));
+        pipe.InitBuffer(workBuf, tileLength_ * sizeof(float));
         uint32_t cmpMaskBytes = static_cast<uint32_t>(((tileLength_ / 8 + 255) / 256) * 256);
         pipe.InitBuffer(cmpMaskBuf, cmpMaskBytes);
+        pipe.InitBuffer(logMaskBuf, cmpMaskBytes);
     }
 }
 
@@ -161,16 +177,16 @@ __aicore__ inline void SoftplusV2<T>::CopyOut(int64_t progress, int64_t currentN
 
 template <typename T>
 __aicore__ inline void SoftplusV2<T>::ComputeFp32(AscendC::LocalTensor<float>& xLocal,
-                                                   AscendC::LocalTensor<float>& yLocal,
-                                                   int64_t currentNum)
+                                                  AscendC::LocalTensor<float>& yLocal, int64_t currentNum)
 {
     AscendC::LocalTensor<float> tmp = tmpBuf.Get<float>();
     AscendC::LocalTensor<uint8_t> cmpMask = cmpMaskBuf.Get<uint8_t>();
+    AscendC::LocalTensor<float> work = workBuf.Get<float>();
+    AscendC::LocalTensor<uint8_t> logMask = logMaskBuf.Get<uint8_t>();
 
     // Align count to 64 elements for Compare 256B alignment
     int64_t alignedCount = ((currentNum + 63) / 64) * 64;
-    uint32_t computeCount = static_cast<uint32_t>(
-        (alignedCount > tileLength_) ? tileLength_ : alignedCount);
+    uint32_t computeCount = static_cast<uint32_t>((alignedCount > tileLength_) ? tileLength_ : alignedCount);
 
     // Step 1: tmp = beta * x
     AscendC::Muls<float>(tmp, xLocal, beta_, computeCount);
@@ -181,50 +197,70 @@ __aicore__ inline void SoftplusV2<T>::ComputeFp32(AscendC::LocalTensor<float>& x
 
     // Step 3: safe_bx = Select(cmpMask, 0.0, tmp)  -- overflow->0, safe->tmp, NaN->NaN
     AscendC::Duplicate<float>(yLocal, 0.0f, computeCount);
-    AscendC::Select<float>(tmp, cmpMask, yLocal, tmp,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                           computeCount);
+    AscendC::Select<float>(tmp, cmpMask, yLocal, tmp, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
 
-    // Step 4: tmp = exp(safe_bx)
+    // Step 4: tmp = e = exp(safe_bx)  (kept alive for accurate log1p)
     AscendC::Exp<float>(tmp, tmp, computeCount);
 
-    // Step 5: tmp = 1 + exp(safe_bx)
-    AscendC::Adds<float>(tmp, tmp, 1.0f, computeCount);
+    // ---- accurate log1p(e) = log(1+e), TBE-equivalent ----
+    // Avoids precision loss of naive (1+e): for e < half-ULP@1.0, 1+e rounds to 1.0
+    // then log(1.0)=0. log1p uses u=1+e, mask (u==1.0)->e, else log(u)*e/((1+e)-1).
+    // Lanes: tmp=e(preserved), work=u/log_u/out, yLocal=v/ratio/scratch
+    AscendC::Adds<float>(work, tmp, 1.0f, computeCount); // work = u = 1 + e
 
-    // Step 6: tmp = ln(1 + exp(safe_bx))
-    AscendC::Log<float>(tmp, tmp, computeCount);
+    AscendC::Duplicate<float>(yLocal, 1.0f, computeCount);
+    AscendC::Compare<float>(logMask, work, yLocal, AscendC::CMPMODE::EQ, computeCount); // mask1 = (u == 1.0)
 
-    // Step 7: tmp = (1/beta) * ln(1 + exp(safe_bx))
-    AscendC::Muls<float>(tmp, tmp, invBeta_, computeCount);
+    AscendC::Adds<float>(yLocal, work, -1.0f, computeCount); // yLocal = v = u - 1 (save before u dropped)
 
-    // Step 8: y = Select(cmpMask, x, tmp)  -- bit=1->x, bit=0->softplus
-    AscendC::Select<float>(yLocal, cmpMask, xLocal, tmp,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                           computeCount);
+    AscendC::Log<float>(work, work, computeCount); // work = log_u = log(u)
+
+    AscendC::Div<float>(yLocal, tmp, yLocal, computeCount); // yLocal = ratio = e / v
+
+    AscendC::Mul<float>(work, work, yLocal, computeCount); // work = out = log_u * ratio
+
+    AscendC::Select<float>(work, logMask, tmp, work, // work = sel(mask1: e, out)
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
+
+    // mask2 = (1+e == inf) -- strict TBE form. u was overwritten by Log above, recompute it here.
+    // e in tmp is dead after this, so tmp is reused to hold the inf literal.
+    AscendC::Adds<float>(yLocal, tmp, 1.0f, computeCount);                                // u = 1 + e
+    AscendC::Duplicate<float>(tmp, std::numeric_limits<float>::infinity(), computeCount); // tmp = inf
+    AscendC::Compare<float>(logMask, yLocal, tmp, AscendC::CMPMODE::EQ, computeCount);    // mask2 = (1+e)==inf
+
+    AscendC::Select<float>(work, logMask, tmp, work, // work = log1p = sel(mask2: inf, prev)
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
+
+    // Step: work = softplus = (1/beta) * log1p
+    AscendC::Muls<float>(work, work, invBeta_, computeCount);
+
+    // Step: y = Select(cmpMask, x, softplus)  -- bit=1->x, bit=0->softplus
+    AscendC::Select<float>(yLocal, cmpMask, xLocal, work, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
 }
 
 template <typename T>
-__aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLocal,
-                                                   AscendC::LocalTensor<T>& yLocal,
-                                                   int64_t currentNum)
+__aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLocal, AscendC::LocalTensor<T>& yLocal,
+                                                  int64_t currentNum)
 {
     // FP16/BF16 path: Cast to fp32, compute in fp32, Cast back
-    // Formula aligned with TBE: GT compare + mask before Exp + swapped Select
+    // Formula aligned with TBE: GT compare + mask before Exp, then accurate log1p(e)=log(1+e)
+    // (u=1+e, mask1 u==1.0->e, mask2 e==inf->inf, else log(u)*e/((1+e)-1)); softplus left in workBuf.
     //
     // Key probe findings applied:
     //   1. Compare requires two tensors -- use Duplicate to fill threshold into castLocal
-    //   2. Select<bfloat16_t> not available on dav_c220 -- Select in fp32 space
+    //   2. Select<bfloat16_t> not available on dav_c220 -- Select performed in fp32 space
     //   3. After Duplicate overwrites castLocal, re-Cast from xLocal to recover fp32 x
     //   4. UB capacity includes TPipe overhead via 8KB Select reserve in Tiling
 
     AscendC::LocalTensor<float> castLocal = castBuf.Get<float>();
     AscendC::LocalTensor<float> tmp = tmpBuf.Get<float>();
     AscendC::LocalTensor<uint8_t> cmpMask = cmpMaskBuf.Get<uint8_t>();
+    AscendC::LocalTensor<float> work = workBuf.Get<float>();
+    AscendC::LocalTensor<uint8_t> logMask = logMaskBuf.Get<uint8_t>();
 
     // Align count to 64 elements for Compare 256B alignment (fp32 compute)
     int64_t alignedCount = ((currentNum + 63) / 64) * 64;
-    uint32_t computeCount = static_cast<uint32_t>(
-        (alignedCount > tileLength_) ? tileLength_ : alignedCount);
+    uint32_t computeCount = static_cast<uint32_t>((alignedCount > tileLength_) ? tileLength_ : alignedCount);
 
     // Step 1: Cast T -> fp32
     AscendC::Cast<float, T>(castLocal, xLocal, AscendC::RoundMode::CAST_NONE, computeCount);
@@ -240,31 +276,49 @@ __aicore__ inline void SoftplusV2<T>::ComputeCast(AscendC::LocalTensor<T>& xLoca
 
     // Step 5: safe_bx = Select(cmpMask, 0.0, tmp)  -- overflow->0, safe->tmp, NaN->NaN
     AscendC::Duplicate<float>(castLocal, 0.0f, computeCount);
-    AscendC::Select<float>(tmp, cmpMask, castLocal, tmp,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
-                           computeCount);
+    AscendC::Select<float>(tmp, cmpMask, castLocal, tmp, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
 
-    // Step 6: Exp(safe_bx)
+    // Step 6: tmp = e = exp(safe_bx)  (kept alive for accurate log1p)
     AscendC::Exp<float>(tmp, tmp, computeCount);
 
-    // Step 7: 1 + exp(safe_bx)
-    AscendC::Adds<float>(tmp, tmp, 1.0f, computeCount);
+    // ---- accurate log1p(e), TBE-equivalent (see ComputeFp32 for rationale) ----
+    // Lanes: tmp=e(preserved), work=u/log_u/out/log1p/softplus, castLocal=v/ratio/scratch
+    AscendC::Adds<float>(work, tmp, 1.0f, computeCount); // work = u = 1 + e
 
-    // Step 8: ln(1 + exp(safe_bx))
-    AscendC::Log<float>(tmp, tmp, computeCount);
+    AscendC::Duplicate<float>(castLocal, 1.0f, computeCount);
+    AscendC::Compare<float>(logMask, work, castLocal, AscendC::CMPMODE::EQ, computeCount); // mask1 = (u == 1.0)
 
-    // Step 9: (1/beta) * ln(...)
-    AscendC::Muls<float>(tmp, tmp, invBeta_, computeCount);
+    AscendC::Adds<float>(castLocal, work, -1.0f, computeCount); // castLocal = v = u - 1
 
-    // Step 10: Re-Cast T -> fp32 to recover original x (castLocal was overwritten)
+    AscendC::Log<float>(work, work, computeCount); // work = log_u = log(u)
+
+    AscendC::Div<float>(castLocal, tmp, castLocal, computeCount); // castLocal = ratio = e / v
+
+    AscendC::Mul<float>(work, work, castLocal, computeCount); // work = out = log_u * ratio
+
+    AscendC::Select<float>(work, logMask, tmp, work, // work = sel(mask1: e, out)
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
+
+    // mask2 = (1+e == inf) -- strict TBE form. u recomputed here (overwritten by Log above).
+    // e in tmp is dead after this, so tmp is reused to hold the inf literal.
+    AscendC::Adds<float>(castLocal, tmp, 1.0f, computeCount);                             // u = 1 + e
+    AscendC::Duplicate<float>(tmp, std::numeric_limits<float>::infinity(), computeCount); // tmp = inf
+    AscendC::Compare<float>(logMask, castLocal, tmp, AscendC::CMPMODE::EQ, computeCount); // mask2 = (1+e)==inf
+
+    AscendC::Select<float>(work, logMask, tmp, work, // work = log1p = sel(mask2: inf, prev)
+                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE, computeCount);
+
+    // Step: work = softplus = (1/beta) * log1p
+    AscendC::Muls<float>(work, work, invBeta_, computeCount);
+
+    // Step: Re-Cast T -> fp32 to recover original x (castLocal was overwritten)
     AscendC::Cast<float, T>(castLocal, xLocal, AscendC::RoundMode::CAST_NONE, computeCount);
 
-    // Step 11: Select in fp32 space  -- bit=1->x, bit=0->softplus
-    AscendC::Select<float>(castLocal, cmpMask, castLocal, tmp,
-                           AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
+    // Step: Select in fp32 space  -- bit=1->x, bit=0->softplus
+    AscendC::Select<float>(castLocal, cmpMask, castLocal, work, AscendC::SELMODE::VSEL_TENSOR_TENSOR_MODE,
                            computeCount);
 
-    // Step 12: Cast fp32 -> T (output)
+    // Step: Cast fp32 -> T (output)
     AscendC::Cast<T, float>(yLocal, castLocal, AscendC::RoundMode::CAST_ROUND, computeCount);
 }
 

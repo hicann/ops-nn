@@ -26,12 +26,11 @@
 namespace optiling {
 
 using Ops::Base::CeilDiv;
-using Ops::Base::FloorDiv;
 using Ops::Base::FloorAlign;
+using Ops::Base::FloorDiv;
 
 constexpr uint32_t WS_SYS_SIZE = 0U;
 constexpr uint32_t SIZE_8 = 8;
-constexpr uint64_t UB_SIZE_BYTES = 192ULL * 1024; // 192KB
 
 static const gert::Shape g_vec_1_shape = {1};
 
@@ -74,23 +73,24 @@ static ge::graphStatus GetWorkspaceSize(gert::TilingContext* context)
 static uint32_t ComputeFp32TileLength(uint64_t ubSize)
 {
     // Compute tileLength for FP32 path:
-    //   5 main buffers (2 inQ + 2 outQ + 1 tmpBuf) * tileLength * 4
-    //   + cmpMask: ceil(tileLength/8) aligned to 256B
+    //   6 main buffers (2 inQ + 2 outQ + 1 tmpBuf + 1 workBuf) * tileLength * 4
+    //   + 2 masks (cmpMask + logMask): each ceil(tileLength/8) aligned to 256B
     //   + 8KB reserved for Select mode2 internal temp
     //   total <= ubSize
-    constexpr uint32_t TYPE_SIZE = 4;         // sizeof(float)
-    constexpr uint32_t BUFFER_NUM = 5;        // 2(in) + 2(out) + 1(tmp)
-    constexpr uint32_t CMP_ALIGN = 256;       // cmpMask 256B alignment
-    constexpr uint32_t ELEM_ALIGN = 64;       // Compare requires 256B = 64 fp32 elements
+    constexpr uint32_t TYPE_SIZE = 4;                // sizeof(float)
+    constexpr uint32_t BUFFER_NUM = 6;               // 2(in) + 2(out) + 1(tmp) + 1(work)
+    constexpr uint32_t MASK_NUM = 2;                 // cmpMask + logMask
+    constexpr uint32_t CMP_ALIGN = 256;              // cmpMask 256B alignment
+    constexpr uint32_t ELEM_ALIGN = 64;              // Compare requires 256B = 64 fp32 elements
     constexpr uint64_t SELECT_RESERVE = 8ULL * 1024; // 8KB for Select mode2
 
     if (ubSize <= SELECT_RESERVE) {
         return ELEM_ALIGN; // minimum tile size if UB is too small
     }
     uint64_t availableSize = ubSize - SELECT_RESERVE;
-    // maxTile * (BUFFER_NUM * TYPE_SIZE) + ceil(maxTile/8) aligned 256 <= availableSize
-    // Approximate: 20 * maxTile + maxTile/8 <= availableSize
-    uint32_t maxTile = static_cast<uint32_t>((availableSize * 8ULL) / (BUFFER_NUM * TYPE_SIZE * 8 + 1));
+    // maxTile * (BUFFER_NUM * TYPE_SIZE) + MASK_NUM * ceil(maxTile/8) aligned 256 <= availableSize
+    // Scaled by 8: maxTile * (BUFFER_NUM*TYPE_SIZE*8 + MASK_NUM) <= availableSize*8
+    uint32_t maxTile = static_cast<uint32_t>((availableSize * 8ULL) / (BUFFER_NUM * TYPE_SIZE * 8 + MASK_NUM));
     maxTile = (maxTile / ELEM_ALIGN) * ELEM_ALIGN;
     if (maxTile == 0) {
         return ELEM_ALIGN;
@@ -98,11 +98,13 @@ static uint32_t ComputeFp32TileLength(uint64_t ubSize)
 
     // Verify
     uint32_t cmpMaskSize = ((maxTile / 8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
-    uint64_t totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE + cmpMaskSize + SELECT_RESERVE;
+    uint64_t totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE +
+                          static_cast<uint64_t>(MASK_NUM) * cmpMaskSize + SELECT_RESERVE;
     while (totalBytes > ubSize && maxTile > ELEM_ALIGN) {
         maxTile -= ELEM_ALIGN;
         cmpMaskSize = ((maxTile / SIZE_8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
-        totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE + cmpMaskSize + SELECT_RESERVE;
+        totalBytes = static_cast<uint64_t>(BUFFER_NUM) * maxTile * TYPE_SIZE +
+                     static_cast<uint64_t>(MASK_NUM) * cmpMaskSize + SELECT_RESERVE;
     }
 
     return maxTile;
@@ -111,39 +113,42 @@ static uint32_t ComputeFp32TileLength(uint64_t ubSize)
 static uint32_t ComputeFp16TileLength(uint64_t ubSize)
 {
     // Compute tileLength for FP16/BF16 path:
-    //   4 main buffers: 2*tileLength*2(inQ) + 2*tileLength*2(outQ) + tileLength*4(castBuf) + tileLength*4(tmpBuf)
-    //   = 16 * tileLength
-    //   + cmpMask: ceil(tileLength/8) aligned 256B
+    //   main buffers: 2*tileLength*2(inQ) + 2*tileLength*2(outQ) + tileLength*4(castBuf)
+    //               + tileLength*4(tmpBuf) + tileLength*4(workBuf)
+    //   = 20 * tileLength
+    //   + 2 masks (cmpMask + logMask): each ceil(tileLength/8) aligned 256B
     //   + 8KB reserved for Select mode2 internal temp
     //   total <= ubSize
-    constexpr uint32_t BYTES_PER_ELEM = 16;   // 4*2(in) + 4*2(out) + 4(cast) + 4(tmp)
+    constexpr uint32_t BYTES_PER_ELEM = 20; // 4*2(in) + 4*2(out) + 4(cast) + 4(tmp) + 4(work)
+    constexpr uint32_t MASK_NUM = 2;        // cmpMask + logMask
     constexpr uint32_t CMP_ALIGN = 256;
-    constexpr uint32_t ELEM_ALIGN = 64;       // Compare 256B alignment (fp32 compute)
+    constexpr uint32_t ELEM_ALIGN = 64;              // Compare 256B alignment (fp32 compute)
     constexpr uint64_t SELECT_RESERVE = 8ULL * 1024; // 8KB for Select mode2
 
     if (ubSize <= SELECT_RESERVE) {
         return ELEM_ALIGN; // minimum tile size if UB is too small
     }
     uint64_t availableSize = ubSize - SELECT_RESERVE;
-    uint32_t maxTile = static_cast<uint32_t>((availableSize * 8ULL) / (BYTES_PER_ELEM * 8 + 1));
+    uint32_t maxTile = static_cast<uint32_t>((availableSize * 8ULL) / (BYTES_PER_ELEM * 8 + MASK_NUM));
     maxTile = (maxTile / ELEM_ALIGN) * ELEM_ALIGN;
     if (maxTile == 0) {
         return ELEM_ALIGN;
     }
 
     uint32_t cmpMaskSize = ((maxTile / 8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
-    uint64_t totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile + cmpMaskSize + SELECT_RESERVE;
+    uint64_t totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile +
+                          static_cast<uint64_t>(MASK_NUM) * cmpMaskSize + SELECT_RESERVE;
     while (totalBytes > ubSize && maxTile > ELEM_ALIGN) {
         maxTile -= ELEM_ALIGN;
         cmpMaskSize = ((maxTile / SIZE_8 + CMP_ALIGN - 1) / CMP_ALIGN) * CMP_ALIGN;
-        totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile + cmpMaskSize + SELECT_RESERVE;
+        totalBytes = static_cast<uint64_t>(BYTES_PER_ELEM) * maxTile + static_cast<uint64_t>(MASK_NUM) * cmpMaskSize +
+                     SELECT_RESERVE;
     }
 
     return maxTile;
 }
 
-static ge::graphStatus GetInputInfo(gert::TilingContext* context,
-                                    int64_t& totalLength, ge::DataType& dataType,
+static ge::graphStatus GetInputInfo(gert::TilingContext* context, int64_t& totalLength, ge::DataType& dataType,
                                     float& beta, float& threshold)
 {
     auto inputX = context->GetInputShape(0);
@@ -155,7 +160,7 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context,
     OP_CHECK_NULL_WITH_CONTEXT(context, inputDesc);
     dataType = inputDesc->GetDataType();
 
-    const gert::RuntimeAttrs *attrs = context->GetAttrs();
+    const gert::RuntimeAttrs* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
     beta = (attrs->GetAttrPointer<float>(0) != nullptr) ? *(attrs->GetAttrPointer<float>(0)) : 1.0f;
     threshold = (attrs->GetAttrPointer<float>(1) != nullptr) ? *(attrs->GetAttrPointer<float>(1)) : 20.0f;
@@ -164,17 +169,15 @@ static ge::graphStatus GetInputInfo(gert::TilingContext* context,
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context,
-                                         ge::DataType dataType, float beta, float threshold)
+static ge::graphStatus HandleEmptyTensor(gert::TilingContext* context, ge::DataType dataType, float beta,
+                                         float threshold)
 {
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
     SoftplusV2TilingData* tiling = context->GetTilingData<SoftplusV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
     tiling->beta = beta;
     tiling->threshold = threshold;
     tiling->invBeta = SafeInvBeta(beta);
@@ -206,16 +209,13 @@ static int64_t ComputeUsedCoreNum(int64_t totalLength, ge::DataType dataType, in
     return CeilDiv(totalLength, blockFactor);
 }
 
-static ge::graphStatus FillTilingData(gert::TilingContext* context,
-                                      int64_t totalLength, int64_t usedCoreNum,
-                                      uint32_t tileLength, ge::DataType dataType,
-                                      float beta, float threshold)
+static ge::graphStatus FillTilingData(gert::TilingContext* context, int64_t totalLength, int64_t usedCoreNum,
+                                      uint32_t tileLength, ge::DataType dataType, float beta, float threshold)
 {
     SoftplusV2TilingData* tiling = context->GetTilingData<SoftplusV2TilingData>();
     OP_CHECK_NULL_WITH_CONTEXT(context, tiling);
-    OP_CHECK_IF(
-        memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
-        OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(memset_s(tiling, sizeof(SoftplusV2TilingData), 0, sizeof(SoftplusV2TilingData)) != EOK,
+                OP_LOGE(context, "set tiling data error"), return ge::GRAPH_FAILED);
 
     int64_t effectiveCoreNum = usedCoreNum;
     if (effectiveCoreNum < 1) {
@@ -231,7 +231,8 @@ static ge::graphStatus FillTilingData(gert::TilingContext* context,
     context->SetBlockDim(usedCoreNum);
 
     OP_LOGI(context, "totalLength:%ld blockFactor:%d tileLength:%ld beta:%f threshold:%f invBeta:%f",
-        tiling->totalLength, tiling->blockFactor, tiling->tileLength, tiling->beta, tiling->threshold, tiling->invBeta);
+            tiling->totalLength, tiling->blockFactor, tiling->tileLength, tiling->beta, tiling->threshold,
+            tiling->invBeta);
 
     uint32_t dTypeX = static_cast<uint32_t>(dataType);
     ASCENDC_TPL_SEL_PARAM(context, dTypeX);
@@ -243,17 +244,15 @@ static ge::graphStatus SoftplusV2TilingFunc(gert::TilingContext* context)
     // 1. Platform info
     uint64_t ubSize;
     int64_t coreNum;
-    OP_CHECK_IF(
-        GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetPlatformInfo(context, ubSize, coreNum) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetPlatformInfo error"), return ge::GRAPH_FAILED);
 
     // 2. Input info (shape, dtype, attrs)
     int64_t totalLength;
     ge::DataType dataType;
     float beta, threshold;
-    OP_CHECK_IF(
-        GetInputInfo(context, totalLength, dataType, beta, threshold) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetInputInfo error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetInputInfo(context, totalLength, dataType, beta, threshold) != ge::GRAPH_SUCCESS,
+                OP_LOGE(context, "GetInputInfo error"), return ge::GRAPH_FAILED);
 
     // 3. Empty tensor early return
     if (totalLength == 0) {
@@ -261,9 +260,8 @@ static ge::graphStatus SoftplusV2TilingFunc(gert::TilingContext* context)
     }
 
     // 4. Workspace
-    OP_CHECK_IF(
-        GetWorkspaceSize(context) != ge::GRAPH_SUCCESS,
-        OP_LOGE(context, "GetWorkspaceSize error"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(GetWorkspaceSize(context) != ge::GRAPH_SUCCESS, OP_LOGE(context, "GetWorkspaceSize error"),
+                return ge::GRAPH_FAILED);
 
     // 5. Compute tileLength and multi-core split
     uint32_t tileLength = ComputeTileLength(dataType, ubSize);
@@ -280,8 +278,6 @@ static ge::graphStatus TilingParseForSoftplusV2([[maybe_unused]] gert::TilingPar
 
 struct SoftplusV2CompileInfo {};
 
-IMPL_OP_OPTILING(SoftplusV2)
-    .Tiling(SoftplusV2TilingFunc)
-    .TilingParse<SoftplusV2CompileInfo>(TilingParseForSoftplusV2);
+IMPL_OP_OPTILING(SoftplusV2).Tiling(SoftplusV2TilingFunc).TilingParse<SoftplusV2CompileInfo>(TilingParseForSoftplusV2);
 
 } // namespace optiling
