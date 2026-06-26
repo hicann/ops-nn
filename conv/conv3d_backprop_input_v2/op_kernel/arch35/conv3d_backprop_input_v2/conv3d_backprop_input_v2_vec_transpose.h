@@ -242,12 +242,16 @@ public:
             return;
         }
 
+        uint64_t blockCntOffset = 0;
         if (GetBlockIdx() < tailBlockCnt_) {
             ++calBlockRound_;
+            blockCntOffset = calBlockRound_ * GetBlockIdx();
+        } else {
+            blockCntOffset = tailBlockCnt_ + calBlockRound_ * GetBlockIdx();
         }
+
         for (uint64_t i = 0; i < calBlockRound_; i++) { // 一次只处理一个Cin0*Dk*Hk*Wk
-            uint64_t curCin0DHWCnt = static_cast<uint64_t>(i) * static_cast<uint64_t>(usedCoreNum_ * MULTIPLE_AIV_TO_AIC) +
-                GetBlockIdx();
+            uint64_t curCin0DHWCnt = i + blockCntOffset;
             curCoutCnt_ = curCin0DHWCnt / cin1_;
             curCin1Cnt_ = curCin0DHWCnt % cin1_;
             VecTransposeProcess(); // 指令的实施
