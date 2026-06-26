@@ -177,7 +177,7 @@ static ge::graphStatus CheckInputShape(const gert::TilingContext* context)
     auto qmapMShape = qmapMShapePtr->GetStorageShape();
     auto qmapMSize = qmapMShapePtr->GetStorageShape().GetShapeSize();
 
-    auto qmapVShapePtr = context->GetInputShape(INDEX_IN_QMAP_M);
+    auto qmapVShapePtr = context->GetInputShape(INDEX_IN_QMAP_V);
     OP_CHECK_NULL_WITH_CONTEXT(context, qmapVShapePtr);
     auto qmapVShape = qmapVShapePtr->GetStorageShape();
 
