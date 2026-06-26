@@ -260,7 +260,7 @@ ge::graphStatus IsValidDtype(const gert::TilingContext& context, const MatMulV3A
     return ge::GRAPH_FAILED;
 }
 
-ge::graphStatus IsValidFormat(const gert::TilingContext& context, const MatMulV3Args& args, bool isMXFP8)
+ge::graphStatus IsValidFormat(const MatMulV3Args& args, bool isMXFP8)
 {
     if (args.aFormat == ge::FORMAT_FRACTAL_NZ || args.outFormat == ge::FORMAT_FRACTAL_NZ) {
         OP_LOGE_FOR_INVALID_FORMAT_WITH_REASON(
@@ -292,7 +292,7 @@ ge::graphStatus TransposeQuantBatchMatMulTiling::GetArgs()
     if (TQBMMGetShape(*context_, args_, isMXFP8_, isHIFP8_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
-    if (IsValidFormat(*context_, args_, isMXFP8_) != ge::GRAPH_SUCCESS) {
+    if (IsValidFormat(args_, isMXFP8_) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     return IsValidDtype(*context_, args_, isHIFP8_);

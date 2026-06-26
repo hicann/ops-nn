@@ -1954,7 +1954,7 @@ bool IsSupportNzNzNd(const aclTensor* self, const aclTensor* mat2)
 {
     op::Shape selfShape = self->GetViewShape();
     op::Shape mat2Shape = mat2->GetViewShape();
-    int64_t dimNum = selfShape.GetDimNum();
+    int64_t dimNum = static_cast<int64_t>(selfShape.GetDimNum());
     if (dimNum < NUM_TWO) {
         return false;
     }
@@ -2057,7 +2057,6 @@ aclnnStatus SetMmSupportDType(MmOpInfo& mmOpInfo, int8_t cubeMathType)
         mmOpInfo.ori_info.self_dtype == DataType::DT_FLOAT || mmOpInfo.ori_info.mat2_dtype == DataType::DT_FLOAT;
     bool tensorBfloat16 =
         mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 || mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16;
-    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
 
     bool lowPrecisionInput =
         (mmOpInfo.ori_info.self_dtype == DataType::DT_BF16 && mmOpInfo.ori_info.mat2_dtype == DataType::DT_BF16) ||
