@@ -165,7 +165,7 @@
       cannsim record ./test_aclnn_add_example -s Ascend950 --gen-report
       ```
 
-      仿真结果在本项目`examples/add_example/examples/build/bin/cannsim_*`目录，流水相关文件为：
+      仿真结果在本项目`examples/add_example/examples/build/bin/cannsim_*/report/results/kernel_*/core_*`目录，流水相关文件为：
 
       ```bash
       trace_core0.json

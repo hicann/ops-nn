@@ -68,7 +68,7 @@ add_example first input[6] is: 1.000000, second input[6] is: 1.000000, result[6]
 
 ## 查看性能流水
 
-仿真性能流水文件在本项目`examples/add_example/examples/build/bin/cannsim_*/report`目录，流水相关文件为：
+仿真性能流水文件在本项目`examples/add_example/examples/build/bin/cannsim_*/report/results/kernel_*/core_*`目录，流水相关文件为：
 
 ```bash
 trace_core0.json
