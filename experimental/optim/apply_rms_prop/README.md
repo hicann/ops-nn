@@ -81,7 +81,7 @@
 
 | 调用方式 | 调用样例 |
 |----------|----------|
-| aclnn 调用 | [examples/test_aclnn_apply_rms_prop.cpp](./examples/test_aclnn_apply_rms_prop.cpp) |
+| aclnn 调用 | [examples/test_aclnn_apply_rms_prop.cpp](./examples/arch35/test_aclnn_apply_rms_prop.cpp) |
 
 ## 目录结构
 

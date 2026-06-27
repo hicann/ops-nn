@@ -77,7 +77,7 @@ $$
 ## 调用说明
 | 调用方式 | 调用样例                                                                   | 说明                                                           |
 |--------------|------------------------------------------------------------------------|--------------------------------------------------------------|
-| aclnn调用 | [test_aclnn_l1_loss_grad.cpp](./examples/test_aclnn_l1_loss_grad.cpp) | 通过[aclnnL1LossBackward](./docs/aclnnL1LossBackward.md)接口方式调用L1LossGrad算子。 |
+| aclnn调用 | [test_aclnn_l1_loss_grad.cpp](./examples/test_aclnn_l1_loss_grad.cpp) | 通过[aclnnL1LossGrad](./docs/aclnnL1LossGrad.md)接口方式调用L1LossGrad算子。 |
 
 ## 贡献说明
 | 贡献者 | 贡献方 | 贡献算子 | 贡献时间 | 贡献内容 |

@@ -10,7 +10,7 @@
 
 ## 功能说明
 
-计算[aclnnL1LossBackward](../../../../loss/l1_loss/docs/aclnnL1Loss.md)平均绝对误差损失函数的反向传播梯度。reduction指定损失函数的计算方式，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
+计算[aclnnL1LossBackward](../../../../loss/lp_loss/docs/aclnnL1Loss.md)平均绝对误差损失函数的反向传播梯度。reduction指定损失函数的计算方式，支持 'none'、'mean'、'sum'。'none' 表示不应用reduction，'mean' 表示输出的总和将除以输出中的元素数，'sum' 表示输出将被求和。
 
 ## 函数原型
 
