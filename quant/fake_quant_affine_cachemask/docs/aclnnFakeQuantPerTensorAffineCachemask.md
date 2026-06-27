@@ -383,7 +383,7 @@ int main() {
   // 3. 调用CANN算子库API，需要修改为具体的Api名称
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
-  // 调用aclnnEye第一段接口
+  // 调用aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize第一段接口
   ret = aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(self, scale, zeroPoint, fakeQuantEnabled, quantMin, quantMax, out, mask, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
