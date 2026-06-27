@@ -342,6 +342,7 @@ def conv3d_backprop_input_v2_golden(input_size, filter, out_backprop,
     # Dynamic format conversion based on input_formats
     filter_format = input_formats[1] if len(input_formats) > 1 else "FRACTAL_Z_3D"
     out_backprop_format = input_formats[2] if len(input_formats) > 2 else "NDC1HWC0"
+    out_backprop_was_6d = out_backprop.ndim == 6
 
     if input_ori_shapes is not None:
         filter_ori_shape = input_ori_shapes[1]
@@ -354,7 +355,11 @@ def conv3d_backprop_input_v2_golden(input_size, filter, out_backprop,
     if filter_format == "FRACTAL_Z_3D":
         filter_ncdhw = to_NCDHW_from_FRACTAL_Z_3D(filter, filter_ori_shape, groups) if filter_ori_shape is not None else filter
     elif filter_format == "NCDHW":
-        filter_ncdhw = filter
+        if filter.ndim == 4 and filter_ori_shape is not None:
+            # FRACTAL_Z_3D (4D physical) -> NCDHW (5D logical)
+            filter_ncdhw = to_NCDHW_from_FRACTAL_Z_3D(filter, filter_ori_shape, groups)
+        else:
+            filter_ncdhw = filter
     elif filter_format == "NDHWC":
         filter_ncdhw = to_NCDHW_from_NDHWC(filter)
     elif filter_format == "DHWCN":
@@ -366,7 +371,11 @@ def conv3d_backprop_input_v2_golden(input_size, filter, out_backprop,
     if out_backprop_format == "NDC1HWC0":
         out_backprop_ncdhw = to_NCDHW_from_NDC1HWC0(out_backprop, out_backprop_ori_shape) if out_backprop_ori_shape is not None else out_backprop
     elif out_backprop_format == "NCDHW":
-        out_backprop_ncdhw = out_backprop
+        if out_backprop.ndim == 6 and out_backprop_ori_shape is not None:
+            # NDC1HWC0 (6D physical) -> NCDHW (5D logical)
+            out_backprop_ncdhw = to_NCDHW_from_NDC1HWC0(out_backprop, out_backprop_ori_shape)
+        else:
+            out_backprop_ncdhw = out_backprop
     elif out_backprop_format == "NDHWC":
         out_backprop_ncdhw = to_NCDHW_from_NDHWC(out_backprop)
     else:
@@ -469,6 +478,10 @@ def conv3d_backprop_input_v2_golden(input_size, filter, out_backprop,
     output_format = output_formats[0] if output_formats else "NDC1HWC0"
     if output_format == "NDC1HWC0" and output_ori_shapes is not None:
         result = to_NDC1HWC0_from_NCDHW(result, output_ori_shapes[0])
+    elif output_format == "NCDHW":
+        if out_backprop_was_6d and output_ori_shapes is not None:
+            # NCDHW (5D logical) -> NDC1HWC0 (6D physical) to match kernel output
+            result = to_NDC1HWC0_from_NCDHW(result, output_ori_shapes[0])
     elif output_format == "NDHWC":
         result = to_NDHWC_from_NCDHW(result)
 

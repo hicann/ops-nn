@@ -13,6 +13,7 @@
 from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 __golden__ = {
     "aclnn": {
@@ -50,6 +51,8 @@ def to_float32(t):
     """Convert torch tensor or numpy array to float32."""
     if t is None:
         return None
+    if isinstance(t, (int, float)):
+        return np.float32(t)
     if isinstance(t, torch.Tensor):
         dtype_str = str(t.dtype)
         if any(s in dtype_str for s in ['hifloat8', 'float8', 'float4', 'int4', 'bfloat16']):
@@ -154,39 +157,34 @@ def convert_output_dtype(out, output_dtype):
 
 
 def decode_scale_tensor(scale_tensor):
-    """
-    Decode scale tensor from uint32 storage to float32 values.
-    
-    Scale tensors are stored as uint32/int64 to preserve float32 binary representation.
-    
-    Args:
-        scale_tensor: Scale value(s) as numpy array, torch tensor, or scalar
-    
-    Returns:
-        numpy float32 array of scale values
-    """
     if scale_tensor is None:
         return None
+    if isinstance(scale_tensor, (int, float)):
+        return np.array([float(scale_tensor)], dtype=np.float32)
 
     if isinstance(scale_tensor, np.ndarray):
-        return scale_tensor.astype(np.uint32).view(np.float32)
+        if scale_tensor.dtype == np.int64 or scale_tensor.dtype == np.uint64:
+            return scale_tensor.astype(np.uint32).view(np.float32)
+        return scale_tensor.astype(np.float32)
     
     if isinstance(scale_tensor, torch.Tensor):
-        return scale_tensor.cpu().numpy().astype(np.uint32).view(np.float32)
+        np_arr = scale_tensor.cpu().numpy()
+        if np_arr.dtype == np.int64 or np_arr.dtype == np.uint64:
+            return np_arr.astype(np.uint32).view(np.float32)
+        return np_arr.astype(np.float32)
     
-    return np.array(scale_tensor).astype(np.uint32).view(np.float32)
+    return np.array(scale_tensor, dtype=np.float32)
 
 
 def _compute_conv_forward(input, weight, bias, stride, padding, 
                           dilation, groups, conv_dim, transposed=False, 
                           outputPadding=0, cubeMathType=0, short_soc_version=None):
     stride = ensure_list(stride, conv_dim)
-    padding = ensure_list(padding, conv_dim)
     dilation = ensure_list(dilation, conv_dim)
     outputPadding = ensure_list(outputPadding, conv_dim)
 
-    input_dtype_str = str(input.dtype).split('.')[-1] if isinstance(input, torch.Tensor) else input.dtype.name
-    weight_dtype_str = str(weight.dtype).split('.')[-1] if isinstance(weight, torch.Tensor) else weight.dtype.name
+    input_dtype_str = str(input.dtype).split('.')[-1] if isinstance(input, torch.Tensor) else (str(input.dtype) if hasattr(input, 'dtype') else '')
+    weight_dtype_str = str(weight.dtype).split('.')[-1] if isinstance(weight, torch.Tensor) else (str(weight.dtype) if hasattr(weight, 'dtype') else '')
 
     need_upcast = False
     if 'hifloat8' in input_dtype_str or 'hifloat8' in weight_dtype_str:
@@ -197,7 +195,7 @@ def _compute_conv_forward(input, weight, bias, stride, padding,
     if need_upcast:
         input = to_float32(input)
         weight = to_float32(weight)
-        if bias is not None:
+        if bias is not None and not isinstance(bias, (int, float)):
             bias = to_float32(bias)
 
     if isinstance(input, np.ndarray):
@@ -206,6 +204,19 @@ def _compute_conv_forward(input, weight, bias, stride, padding,
         weight = torch.from_numpy(weight)
     if bias is not None and isinstance(bias, np.ndarray):
         bias = torch.from_numpy(bias)
+
+    if isinstance(padding, (list, tuple)) and len(padding) > conv_dim:
+        if conv_dim == 1 and len(padding) == 2:
+            input = F.pad(input, (padding[0], padding[1]))
+            padding = [0]
+        elif conv_dim == 2 and len(padding) == 4:
+            input = F.pad(input, (padding[2], padding[3], padding[0], padding[1]))
+            padding = [0, 0]
+        elif conv_dim == 3 and len(padding) == 6:
+            input = F.pad(input, (padding[4], padding[5], padding[2], padding[3], padding[0], padding[1]))
+            padding = [0, 0, 0]
+    else:
+        padding = ensure_list(padding, conv_dim)
 
     if input_dtype_str == 'float32':
         if cubeMathType in [1, 3]:
@@ -222,10 +233,16 @@ def _compute_conv_forward(input, weight, bias, stride, padding,
             if bias is not None:
                 bias = bias.to(torch.float16).to(torch.float32)
 
-    return torch.ops.aten.convolution(
+    out = torch.ops.aten.convolution(
         input, weight, bias,
         stride, padding, dilation, transposed, outputPadding, groups
     )
+
+    if 'hifloat8' in input_dtype_str or 'hifloat8' in weight_dtype_str:
+        from ttk.utilities import numpy_hifloat8
+        out = torch.from_numpy(out.numpy().astype(numpy_hifloat8()).astype(np.float32))
+
+    return out
 
 
 def aclnn_convolution_golden(
@@ -396,82 +413,64 @@ def aclnn_conv_depthwise2d_golden(
     out = torch.ops.aten.convolution(
         self, weight, bias, stride, padding, dilation, False, [0, 0], groups
     )
-    
+
+    output_tensor_index = kwargs.get("output_tensor_indexes", [-1])[0]
+    output_dtype = kwargs.get('tensor_dtypes')[output_tensor_index]
+    if output_dtype == 'hifloat8':
+        from ttk.utilities import numpy_hifloat8
+        out = out.numpy().astype(numpy_hifloat8(), copy=False)
+    else:
+        dtype_map = {
+            "bfloat16": torch.bfloat16,
+            "float16": torch.float16,
+            "float32": torch.float32,
+        }
+        target_dtype = dtype_map.get(output_dtype, torch.bfloat16)
+        out = out.to(target_dtype)
+
     return out
 
 
 def aclnn_quant_conv_golden(
     x,
     weight,
-    scale,
-    strides=1,
-    pads=0,
-    dilations=1,
-    groups=1,
-    offset_x=0,
-    round_mode="rint",
-    output_dtype=None,
     bias=None,
+    scale=None,
     offset=None,
-    input_dtype=None,
-    weight_dtype=None,
+    stride=1,
+    padding=0,
+    dilation=1,
+    transposed=False,
+    outputPadding=0,
+    groups=1,
+    offsetx=0,
+    roundMode='',
+    output=None,
+    output_dtype=None,
     **kwargs
 ):
-    """
-    ACLNN API golden for aclnnQuantConvolution (quantized convolution).
-    Supports 2D and 3D convolution.
-
-    Compute formula: output = [input * weight] * scale + bias
-
-    Args:
-        x: Input feature map (N, C, H, W) or (N, C, D, H, W)
-        weight: Weight tensor (OutC, InC/groups, kH, kW) or (OutC, InC/groups, kD, kH, kW)
-        scale: Per-channel scale (OutC) - stored as int64/uint64 (float32 binary)
-        strides: Convolution stride list
-        pads: Padding list
-        dilations: Dilation list
-        groups: Number of groups
-        offset_x: Padding offset value
-        round_mode: Rounding mode
-        output_dtype: Output dtype (str/int/torch.dtype)
-        bias: Bias tensor (OutC) or None
-        offset: Offset tensor (reserved)
-        input_dtype: Input dtype (for reference)
-        weight_dtype: Weight dtype (for reference)
-        **kwargs: Additional parameters
-
-    Returns:
-        numpy array: Quantized convolution output
-    """
     import torch.nn.functional as F
 
     x_shape = x.shape if isinstance(x, torch.Tensor) or hasattr(x, 'shape') else None
     w_shape = weight.shape if isinstance(weight, torch.Tensor) or hasattr(weight, 'shape') else None
     conv_dim = get_conv_dim(x_shape, w_shape)
 
-    x_dtype = str(x.dtype).split('.')[-1] if isinstance(x, torch.Tensor) else x.dtype.name
-    w_dtype = str(weight.dtype).split('.')[-1] if isinstance(weight, torch.Tensor) else weight.dtype.name
-    is_int8 = ('int8' in x_dtype or 'int8' in w_dtype)
+    x_np = to_float32(x)
+    w_np = to_float32(weight)
+    x_calc = x_np.numpy() if isinstance(x_np, torch.Tensor) else x_np
+    w_calc = w_np.numpy() if isinstance(w_np, torch.Tensor) else w_np
 
-    if is_int8:
-        x_calc = x.numpy().astype(np.int32) if isinstance(x, torch.Tensor) else x.astype(np.int32)
-        w_calc = weight.numpy().astype(np.int32) if isinstance(weight, torch.Tensor) else weight.astype(np.int32)
-    else:
-        x_np = to_float32(x)
-        w_np = to_float32(weight)
-        x_calc = x_np.numpy() if isinstance(x_np, torch.Tensor) else x_np
-        w_calc = w_np.numpy() if isinstance(w_np, torch.Tensor) else w_np
-
-    scale_np = decode_scale_tensor(scale)
+    scale_np = decode_scale_tensor(scale) if scale is not None else np.ones(w_calc.shape[0], dtype=np.float32)
 
     bias_np = None
-    if bias is not None:
+    if bias is not None and not isinstance(bias, (int, float)):
         bias_np = to_float32(bias)
     if bias_np is not None and isinstance(bias_np, torch.Tensor):
         bias_np = bias_np.numpy()
 
-    strides = ensure_list(strides, conv_dim)
-    dilations = ensure_list(dilations, conv_dim)
+    strides = ensure_list(stride, conv_dim)
+    dilations_list = ensure_list(dilation, conv_dim)
+    pads = padding
 
     if conv_dim == 3:
         if isinstance(pads, (list, tuple)):
@@ -504,12 +503,8 @@ def aclnn_quant_conv_golden(
             pad_val = int(pads)
             pad_top = pad_bottom = pad_left = pad_right = pad_val
 
-    if is_int8:
-        x_torch = torch.from_numpy(x_calc)
-        w_torch = torch.from_numpy(w_calc)
-    else:
-        x_torch = torch.from_numpy(x_calc.astype(np.float32)) if x_calc.dtype != np.float32 else torch.from_numpy(x_calc)
-        w_torch = torch.from_numpy(w_calc.astype(np.float32)) if w_calc.dtype != np.float32 else torch.from_numpy(w_calc)
+    x_torch = torch.from_numpy(x_calc.astype(np.float32)) if x_calc.dtype != np.float32 else torch.from_numpy(x_calc)
+    w_torch = torch.from_numpy(w_calc.astype(np.float32)) if w_calc.dtype != np.float32 else torch.from_numpy(w_calc)
 
     if conv_dim == 3:
         pad_needed = any(p > 0 for p in (pad_front, pad_back, pad_top, pad_bottom, pad_left, pad_right))
@@ -517,7 +512,7 @@ def aclnn_quant_conv_golden(
         pad_needed = any(p > 0 for p in (pad_top, pad_bottom, pad_left, pad_right))
 
     if pad_needed:
-        pad_value = float(offset_x) if offset_x != 0 else 0.0
+        pad_value = float(offsetx) if offsetx != 0 else 0.0
         if conv_dim == 3:
             x_torch = F.pad(x_torch, (pad_left, pad_right, pad_top, pad_bottom, pad_front, pad_back),
                            "constant", pad_value)
@@ -525,33 +520,42 @@ def aclnn_quant_conv_golden(
             x_torch = F.pad(x_torch, (pad_left, pad_right, pad_top, pad_bottom),
                            "constant", pad_value)
 
+    bias_torch = torch.from_numpy(bias_np) if bias_np is not None else None
+
     out = torch.ops.aten.convolution(
-        x_torch, w_torch, None,
-        strides, [0] * conv_dim, dilations,
+        x_torch, w_torch, bias_torch,
+        strides, [0] * conv_dim, dilations_list,
         False, [0] * conv_dim, groups
     )
 
-    if scale_np is not None:
-        scale_shape = (1, scale_np.shape[0]) + (1,) * conv_dim
-        scale_tensor = torch.from_numpy(scale_np.reshape(scale_shape)).to(out.dtype)
-        out = torch.multiply(out, scale_tensor)
-
     out_np = out.numpy()
 
-    if bias_np is not None:
-        bias_shape = (1, bias_np.shape[0]) + (1,) * conv_dim
-        out_np = out_np + bias_np.reshape(bias_shape)
+    if scale_np is not None:
+        scale_shape = (1, scale_np.shape[0]) + (1,) * conv_dim
+        out_np = out_np * scale_np.reshape(scale_shape)
 
-    if round_mode in ["rint", "round"]:
-        out_np = np.rint(out_np)
-    elif round_mode == "floor":
-        out_np = np.floor(out_np)
-    elif round_mode == "ceil":
-        out_np = np.ceil(out_np)
-    elif round_mode == "case":
-        pass
+    resolved_dtype = output_dtype
+    if resolved_dtype is None:
+        tensor_dtypes = kwargs.get('tensor_dtypes', None)
+        if tensor_dtypes is not None and not isinstance(tensor_dtypes, str):
+            output_tensor_index = kwargs.get("output_tensor_indexes", [-1])[0]
+            resolved_dtype = tensor_dtypes[output_tensor_index]
+        else:
+            resolved_dtype = tensor_dtypes
 
-    return convert_output_dtype(out_np, output_dtype)
+    pre_round_dtypes = {"float16", "bfloat16"}
+    dtype_name = resolved_dtype if isinstance(resolved_dtype, str) else str(resolved_dtype).split('.')[-1] if isinstance(resolved_dtype, torch.dtype) else None
+    if dtype_name in pre_round_dtypes:
+        out_np = convert_output_dtype(out_np, resolved_dtype)
+        if roundMode in ["rint", "round"]:
+            out_np = np.rint(out_np).astype(out_np.dtype)
+        elif roundMode == "floor":
+            out_np = np.floor(out_np).astype(out_np.dtype)
+        elif roundMode == "ceil":
+            out_np = np.ceil(out_np).astype(out_np.dtype)
+        return out_np
+
+    return convert_output_dtype(out_np, resolved_dtype)
 
 
 def torch_npu_quant_conv2d_golden(
@@ -578,18 +582,19 @@ def torch_npu_quant_conv2d_golden(
     return aclnn_quant_conv_golden(
         x=x,
         weight=weight,
-        scale=scale,
-        strides=strides,
-        pads=pads,
-        dilations=dilations,
-        groups=groups,
-        offset_x=offset_x,
-        round_mode=round_mode,
-        output_dtype=output_dtype,
         bias=bias,
+        scale=scale,
         offset=offset,
-        input_dtype=input_dtype,
-        weight_dtype=weight_dtype,
+        stride=strides,
+        padding=pads,
+        dilation=dilations,
+        transposed=False,
+        outputPadding=[0, 0],
+        groups=groups,
+        offsetx=offset_x,
+        roundMode=round_mode,
+        output=None,
+        output_dtype=output_dtype,
         **kwargs
     )
 

@@ -184,8 +184,8 @@ def process_format_to_ncdhw(data, data_format, ori_shape=None):
     Supported conversions:
     - NDHWC: (N, D, H, W, C) -> NCDHW: (N, C, D, H, W)  transpose(0,4,1,2,3)
     - DHWCN: (D, H, W, C, N) -> NCDHW: (N, C, D, H, W)  transpose(4,3,0,1,2)
-    - NDC1HWC0 -> NCDHW (6D special format for Ascend910B)
-    - NCDHW: no conversion needed
+    - NDC1HWC0 -> NCDHW (6D special format for Ascend910B/950)
+    - NCDHW: no conversion needed (unless 6D physical -> convert from NDC1HWC0)
     """
     if data_format == NDHWC_FORMAT:
         data = data.transpose(0, 4, 1, 2, 3)
@@ -194,7 +194,9 @@ def process_format_to_ncdhw(data, data_format, ori_shape=None):
     elif data_format == "NDC1HWC0" and ori_shape is not None:
         data = to_NCDHW_from_NDC1HWC0(data, ori_shape)
     elif data_format == NCDHW_FORMAT:
-        pass
+        if data.ndim == 6 and ori_shape is not None:
+            # NDC1HWC0 (6D physical) -> NCDHW (5D logical)
+            data = to_NCDHW_from_NDC1HWC0(data, ori_shape)
     else:
         raise ValueError(f"Unsupported input format: {data_format}, expected NCDHW/NDHWC/DHWCN/NDC1HWC0")
     return data

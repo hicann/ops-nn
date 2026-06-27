@@ -125,7 +125,7 @@ def _lcm(a, b):
     return abs(a * b) // math.gcd(a, b) if a and b else 0
 
 
-def determine_c0(dtype, target_shape):
+def determine_c0(dtype):
     if dtype in ["float16", "bfloat16"]:
         return 16
     elif dtype in [
@@ -149,7 +149,7 @@ def to_NCDHW_from_NDC1HWC0(data, ori_shape):
     """Convert from NDC1HWC0 to NCDHW format"""
     # ori_shape is in NCDHW format: (n, c, d, h, w)
     n, c, d, h, w = ori_shape
-    c0 = determine_c0(data.dtype.name, None)
+    c0 = determine_c0(data.dtype.name)
     c1 = ceil_div(c, c0)
 
     # NDC1HWC0 shape: (n, d, c1, h, w, c0)
@@ -204,7 +204,7 @@ def to_NCDHW_from_FRACTAL_Z_3D(data, ori_shape, groups=1):
 def to_NDC1HWC0_from_NCDHW(data, ori_shape):
     """Convert from NCDHW to NDC1HWC0 format"""
     n, c, d, h, w = ori_shape
-    c0 = determine_c0(data.dtype.name, None)
+    c0 = determine_c0(data.dtype.name)
     c1 = ceil_div(c, c0)
 
     # NCDHW -> (n, c1, c0, d, h, w) -> (n, d, c1, h, w, c0)
@@ -261,33 +261,44 @@ def process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups):
     Supported formats:
     - x: NDC1HWC0
     - filter: FRACTAL_Z_3D
+
+    Note: input_formats follows the operator's input order (input_size, x, filter, ...),
+    so x format is at index 1 and filter format is at index 2.
     """
-    input_data_format, input_filter_format = input_formats[0], input_formats[1]
+    input_data_format = input_formats[1] if len(input_formats) > 1 else NCDHW_FORMAT
+    input_filter_format = input_formats[2] if len(input_formats) > 2 else NCDHW_FORMAT
 
     if input_data_format == "NDC1HWC0":
-        if input_ori_shapes is not None:
-            x = to_NCDHW_from_NDC1HWC0(x, input_ori_shapes[0])
+        if input_ori_shapes is not None and len(input_ori_shapes) > 1:
+            x = to_NCDHW_from_NDC1HWC0(x, input_ori_shapes[1])
 
     if input_filter_format == "FRACTAL_Z_3D":
-        if input_ori_shapes is not None:
-            filter = to_NCDHW_from_FRACTAL_Z_3D(filter, input_ori_shapes[1], groups)
+        if input_ori_shapes is not None and len(input_ori_shapes) > 2:
+            filter = to_NCDHW_from_FRACTAL_Z_3D(filter, input_ori_shapes[2], groups)
 
     return x, filter
 
 
-def process_formats_a5(x, filter, input_formats):
+def process_formats_a5(x, filter, input_formats, input_ori_shapes=None, groups=1):
     """
     Process format conversion for Ascend 950PR/950DT (A5).
 
     Supported formats:
-    - x: NCDHW, NDHWC
-    - filter: NCDHW, NDHWC, DHWCN
+    - x: NCDHW, NDHWC, NDC1HWC0 (6D physical)
+    - filter: NCDHW, NDHWC, DHWCN, FRACTAL_Z_3D (4D physical)
+
+    Note: input_formats follows the operator's input order (input_size, x, filter, ...),
+    so x format is at index 1 and filter format is at index 2.
     """
-    input_data_format, input_filter_format = input_formats[0], input_formats[1]
+    input_data_format = input_formats[1] if len(input_formats) > 1 else NCDHW_FORMAT
+    input_filter_format = input_formats[2] if len(input_formats) > 2 else NCDHW_FORMAT
 
     if input_data_format == NDHWC_FORMAT:
         # NDHWC -> NCDHW: (N, D, H, W, C) -> (N, C, D, H, W)
         x = x.transpose(0, 4, 1, 2, 3)
+    elif input_data_format == NCDHW_FORMAT and x.ndim == 6 and input_ori_shapes and len(input_ori_shapes) > 1:
+        # NDC1HWC0 (6D physical) -> NCDHW (5D logical)
+        x = to_NCDHW_from_NDC1HWC0(x, input_ori_shapes[1])
 
     if input_filter_format == "DHWCN":
         # DHWCN -> NCDHW: (D, H, W, C, N) -> (N, C, D, H, W)
@@ -295,6 +306,9 @@ def process_formats_a5(x, filter, input_formats):
     elif input_filter_format == NDHWC_FORMAT:
         # NDHWC -> NCDHW: (N, D, H, W, C) -> (N, C, D, H, W)
         filter = filter.transpose(0, 4, 1, 2, 3)
+    elif input_filter_format == NCDHW_FORMAT and filter.ndim == 4 and input_ori_shapes and len(input_ori_shapes) > 2:
+        # FRACTAL_Z_3D (4D physical) -> NCDHW (5D logical)
+        filter = to_NCDHW_from_FRACTAL_Z_3D(filter, input_ori_shapes[2], groups)
 
     return x, filter
 
@@ -314,19 +328,21 @@ def process_output_format_a2_a3(out, output_format, output_ori_shapes):
     return out
 
 
-def process_output_format_a5(out, output_format, input_format):
+def process_output_format_a5(out, output_format, output_ori_shapes=None, input_was_6d=False):
     """
     Process output format conversion for Ascend 950PR/950DT (A5).
 
-    Supported formats:
-    - y: NCDHW, NDHWC
+    PyTorch conv_transpose3d always outputs NCDHW; convert to the kernel's
+    physical output_format. Conversion direction depends only on output_format.
+    Supported:
+    - y: NCDHW, NDHWC, NDC1HWC0 (6D physical)
     """
-    if output_format == NDHWC_FORMAT and input_format == NCDHW_FORMAT:
+    if output_format == NDHWC_FORMAT:
         # NCDHW -> NDHWC: (N, C, D, H, W) -> (N, D, H, W, C)
         out = out.transpose((0, 2, 3, 4, 1))
-    elif output_format == NCDHW_FORMAT and input_format == NDHWC_FORMAT:
-        # NDHWC -> NCDHW: (N, D, H, W, C) -> (N, C, D, H, W)
-        out = out.transpose((0, 4, 1, 2, 3))
+    elif output_format == NCDHW_FORMAT and input_was_6d and output_ori_shapes and len(output_ori_shapes) > 0:
+        # NCDHW (5D logical) -> NDC1HWC0 (6D physical) to match kernel output
+        out = to_NDC1HWC0_from_NCDHW(out, output_ori_shapes[0])
 
     return out
 
@@ -406,17 +422,17 @@ def conv3d_transpose_v2_golden(input_size, x, filter, bias=None, offset_w=None,
     import torch.nn.functional as F
 
     input_formats = kwargs.get("input_formats", [NCDHW_FORMAT, NCDHW_FORMAT])
-    input_format = input_formats[0]
     short_soc_version = kwargs.get("short_soc_version", "")
     input_ori_shapes = kwargs.get("input_ori_shapes", None)
     is_950 = is_ascend950(short_soc_version)
 
     x_dtype_str = x.dtype.name
+    x_was_6d = x.ndim == 6
 
     # Process format conversion based on SoC version
     if is_950:
-        # ascend950/ascend910_55: support NCDHW, NDHWC, DHWCN
-        x_np, filter_np = process_formats_a5(x, filter, input_formats)
+        # ascend950/ascend910_55: support NCDHW, NDHWC, DHWCN, NDC1HWC0, FRACTAL_Z_3D
+        x_np, filter_np = process_formats_a5(x, filter, input_formats, input_ori_shapes, groups)
     else:
         # ascend910b/ascend910_93: support NDC1HWC0, FRACTAL_Z_3D
         x_np, filter_np = process_formats_a2_a3(x, filter, input_formats, input_ori_shapes, groups)
@@ -526,7 +542,7 @@ def conv3d_transpose_v2_golden(input_size, x, filter, bias=None, offset_w=None,
 
     # Process output format conversion based on SoC version
     if is_950:
-        out = process_output_format_a5(out, output_format, input_format)
+        out = process_output_format_a5(out, output_format, output_ori_shapes, x_was_6d)
     else:
         out = process_output_format_a2_a3(out, output_format, output_ori_shapes)
 
