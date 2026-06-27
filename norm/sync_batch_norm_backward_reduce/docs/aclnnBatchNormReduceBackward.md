@@ -263,7 +263,7 @@ aclnnStatus aclnnBatchNormReduceBackward(
     <tr>
       <td rowspan="4">ACLNN_ERR_PARAM_NULLPTR</td>
       <td rowspan="4">161001</td>
-      <td>input、meanAll、invstdAll、mean、invstd、runningMean、runningVar或counts的数据类型不在支持的范围之内。</td>
+      <td>传入的gradOut、input、mean、invstd是空指针。</td>
     </tr>
     <tr>
       <td>当inputG为true时，sumDy或sumDyXmu是空指针。</td>

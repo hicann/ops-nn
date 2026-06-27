@@ -204,7 +204,7 @@ aclnnStatus aclnnDynamicBlockQuantV2(
     - 参数`dstType`仅支持取值2，代表ACL_INT8。
     - 参数`rowBlockSize`仅支持取值1。
     - 参数`colBlockSize`仅支持取值1或128。
-    - 参数`dstTpeMax`仅支持取值0。
+    - 参数`dstTypeMax`仅支持取值0。
     - 参数`yOut`的数据类型仅支持INT8。
   - <term>Ascend 950PR/Ascend 950DT</term>：
     - 参数`x`、`yOut`、`scaleOut`的shape仅支持2维或3维。
