@@ -368,7 +368,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::ComputeTilingParams()
     int64_t y1Ub = inHalfSize * DB;
     int64_t y2Ub = y1Ub;
     int64_t scale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE * DB;
-    int64_t scale2Ub = tilingParams_.blockW * DIGIT_TWO * DB;
+    int64_t scale2Ub = tilingParams_.blockW * DIGIT_HTREE * DB;
     int64_t tmpScale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE;
     int64_t tmpScale2Ub = tilingParams_.blockW * DIGIT_TWO * tilingParams_.dtypeSize;
     int64_t allNeedUb = xUb + swigluUb + y1Ub + y2Ub + scale1Ub + scale2Ub + tmpScale1Ub + tmpScale2Ub;
