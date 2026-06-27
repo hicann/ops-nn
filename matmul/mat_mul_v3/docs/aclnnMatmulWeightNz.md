@@ -75,7 +75,7 @@ aclnnStatus aclnnMatmulWeightNz(
         <td>数据类型需要与mat2满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。<br>
         - 在self不转置的情况下各个维度表示:（m，k）<br>
         - 在self转置的情况下各个维度表示:（k，m）<br></td>
-        <td>BFLOAT16、FLOAT16</td>
+        <td>BFLOAT16、FLOAT16、FLOAT32</td>
         <td>ND</td>
         <td>2</td>
         <td>√</td>
