@@ -119,9 +119,9 @@ aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
     CHECK_RET(dxCompute != nullptr && dgammaCompute != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     // ViewCopy results to output tensors
-    auto viewCopyDx = l0op::ViewCopy(dxCompute, const_cast<aclTensor*>(dxOut), uniqueExecutor.get());
+    auto viewCopyDx = l0op::ViewCopy(dxCompute, dxOut, uniqueExecutor.get());
     CHECK_RET(viewCopyDx != nullptr, ACLNN_ERR_INNER_NULLPTR);
-    auto viewCopyDgamma = l0op::ViewCopy(dgammaCompute, const_cast<aclTensor*>(dgammaOut), uniqueExecutor.get());
+    auto viewCopyDgamma = l0op::ViewCopy(dgammaCompute, dgammaOut, uniqueExecutor.get());
     CHECK_RET(viewCopyDgamma != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
     *workspaceSize = uniqueExecutor->GetWorkspaceSize();
