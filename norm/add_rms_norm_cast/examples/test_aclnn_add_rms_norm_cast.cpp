@@ -176,13 +176,13 @@ int main()
         LOG_PRINT("y1 result[%ld] is: %f\n", i, resultData[i]);
     }
 
-    std::vector<int8_t> resultData1(size, 0);
+    std::vector<uint16_t> resultData1(size, 0);
     ret = aclrtMemcpy(
         resultData1.data(), resultData1.size() * sizeof(resultData1[0]), y2DeviceAddr, size * sizeof(resultData1[0]),
         ACL_MEMCPY_DEVICE_TO_HOST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("copy result from device to host failed. ERROR: %d\n", ret); return ret);
     for (int64_t i = 0; i < size; i++) {
-        LOG_PRINT("y2 result[%ld] is: %d\n", i, resultData1[i]);
+        LOG_PRINT("y2 result[%ld] is: 0x%04x\n", i, resultData1[i]);
     }
 
     // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改

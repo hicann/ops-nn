@@ -165,7 +165,7 @@ int main()
     // 创建outScale1 aclTensor
     ret = CreateAclTensor(scale1HostData, reduceShape, &scale1DeviceAddr, aclDataType::ACL_FLOAT, &scale1);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
-    // 创建outScale1 aclTensor
+    // 创建outScale2 aclTensor
     ret = CreateAclTensor(scale2HostData, reduceShape, &scale2DeviceAddr, aclDataType::ACL_FLOAT, &scale2);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
