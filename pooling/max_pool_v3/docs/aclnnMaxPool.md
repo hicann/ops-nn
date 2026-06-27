@@ -91,7 +91,7 @@ aclnnStatus aclnnMaxPool(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（const aclTensor*）</td>
       <td>输入</td>
       <td>待计算张量。</td>
       <td>-</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnMaxPool(
       <td>√</td>
     </tr>
     <tr>
-      <td>kernelShape</td>
+      <td>kernelShape（const aclIntArray*）</td>
       <td>输入</td>
       <td>最大池化的窗口大小。</td>
       <td>长度为1或2，且数组元素必须都大于0。</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>strides</td>
+      <td>strides（const aclIntArray*）</td>
       <td>输入</td>
       <td>窗口移动的步长。</td>
       <td>数组长度为0、1或2，且数组元素必须都大于0。当数组长度为0时，strides取默认值为1。</td>
@@ -121,7 +121,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>autoPad</td>
+      <td>autoPad（const int64_t）</td>
       <td>输入</td>
       <td>指定padding的方式。</td>
       <td>其中0代表"NOTSET"，并且只支持数值0。</td>
@@ -131,7 +131,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>pads</td>
+      <td>pads（const aclIntArray*）</td>
       <td>输入</td>
       <td>沿着空间轴方向开始和结束的位置填充，对应公式中的padding_size。</td>
       <td>长度为0、1、2或4。当长度为2时， padding = {上(下),左(右)}，长度为4时，padding = {上,左,下，右}</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>dilations</td>
+      <td>dilations（const aclIntArray*）</td>
       <td>输入</td>
       <td>沿着核空间轴方向的膨胀值，对应公式中的dilation_size。</td>
       <td>只支持数值为1的输入场景，长度为0、1、2或4。</td>
@@ -151,7 +151,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>ceilMode</td>
+      <td>ceilMode（const int64_t）</td>
       <td>输入</td>
       <td>计算输出形状的取整模式。</td>
       <td>为0时，代表False，向下取整；非0值时，代表True，向上取整。</td>
@@ -161,7 +161,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>out</td>
+      <td>out（const aclTensor*）</td>
       <td>输出</td>
       <td>输出的tensor。</td>
       <td>数据类型和self一致。shape由上述公式推导出。数据格式和维度与输入self一致。</td>
@@ -171,7 +171,7 @@ aclnnStatus aclnnMaxPool(
       <td>√</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -181,7 +181,7 @@ aclnnStatus aclnnMaxPool(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
