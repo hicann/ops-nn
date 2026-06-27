@@ -98,11 +98,11 @@ __aicore__ inline void Nz2NdMulsAndGatherMask(LocalTensor<C_T> tensorND, LocalTe
         mulsRepeatParams.dstBlkStride = alignedN / c0Size;
         mulsRepeatParams.dstRepStride = alignedN / NUM_TWO;
         mulsRepeatParams.srcRepStride = 8;
-        LocalTensor<half> tensorNDInterpretCast = tensorND.template ReinterpretCast<half>();
-        LocalTensor<half> tensorNZInterpretCast = tensorNZ.template ReinterpretCast<half>();
+        LocalTensor<int16_t> tensorNDInterpretCast = tensorND.template ReinterpretCast<int16_t>();
+        LocalTensor<int16_t> tensorNZInterpretCast = tensorNZ.template ReinterpretCast<int16_t>();
         for (size_t inLoop = 0; inLoop < NfractalNum; inLoop++) {
             Muls(tensorNDInterpretCast[inLoop * BLOCK_SIZE], tensorNZInterpretCast[inLoop * ubProcessM * BLOCK_SIZE],
-                static_cast<half>(1.0), mask, repeatTimes, mulsRepeatParams);
+                static_cast<int16_t>(1), mask, repeatTimes, mulsRepeatParams);
         }
     }
 
