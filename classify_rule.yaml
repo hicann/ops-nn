@@ -2323,6 +2323,8 @@ VC3@ops-nn:
         - ops/ops-nn/quant/quant_max/
         # reverse_sequence
         - ops/ops-nn/index/reverse_sequence/
+        # soft_margin_loss_grad
+        - ops/ops-nn/loss/soft_margin_loss_grad/
         # glu
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.cpp
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.h

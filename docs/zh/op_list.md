@@ -2401,12 +2401,12 @@
   <tr>
     <td>loss</td>
     <td><a href="../../loss/soft_margin_loss_grad/README.md">soft_margin_loss_grad</a></td>
-    <td>✗</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>求soft_margin_loss反向传播的梯度值。</td>
   </tr>
   <tr>
     <td>loss</td>

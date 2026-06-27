@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ extern "C" {
  * @brief aclnnSoftMarginLossBackward的第一段接口，根据具体的计算流程，计算workspace大小。
  * @domain aclnn_ops_train
  *
- * 算子功能：均方误差函数的反向传播。
+ * 算子功能：软间隔损失(SoftMarginLoss)的反向传播。
  *
  * @param [in] gradOutput：npu
  * device侧的aclTensor，数据类型支持FLOAT、FLOAT16，shape需要与self、
@@ -49,7 +49,7 @@ ACLNN_API aclnnStatus aclnnSoftMarginLossBackwardGetWorkspaceSize(const aclTenso
 /**
  * @brief aclnnSoftMarginLossBackward的第二段接口，用于执行计算。
  *
- * 算子功能：均方误差函数的反向传播。
+ * 算子功能：软间隔损失(SoftMarginLoss)的反向传播。
  *
  * @param [in] workspace: 在npu device侧申请的workspace内存起址。
  * @param [in] workspace_size: 在npu device侧申请的workspace大小，由第一段接口
