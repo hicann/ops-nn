@@ -88,7 +88,7 @@ aclnnStatus aclnnGeluBackwardV2(
       <td>gradOutput （aclTensor*）</td>
       <td>输入</td>
       <td>求梯度时的权重，即为了将正向输出的tensor变为标量所相乘的权重tensor，公式中的gradOutput。</td>
-      <td><ul><li>shape需要和正向self的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与self的dtype满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape需要和正向self的shape满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与self的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -98,7 +98,7 @@ aclnnStatus aclnnGeluBackwardV2(
       <td>self （aclTensor*）</td>
       <td>输入</td>
       <td>Gelu的正向输入值，公式中的x。</td>
-      <td><ul><li>shape需要和gradOutput的shape满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与gradOutput的dtype满足数据类型推导规则（参见<a href="../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
+      <td><ul><li>shape需要和gradOutput的shape满足<a href="../../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。</li><li>dtype与gradOutput的dtype满足数据类型推导规则（参见<a href="../../../../docs/zh/context/互推导关系.md" target="_blank">互推导关系</a>）。</li><li>支持空Tensor。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
@@ -149,7 +149,7 @@ aclnnStatus aclnnGeluBackwardV2(
   
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
   
   第一段接口会完成入参校验，出现以下场景时报错：
 

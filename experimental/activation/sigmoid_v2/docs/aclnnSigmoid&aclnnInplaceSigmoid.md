@@ -25,7 +25,7 @@ $$
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用 `aclnnSigmoidGetWorkspaceSize` 或 `aclnnInplaceSigmoidGetWorkspaceSize` 获取执行器和 workspace 大小，再调用第二段接口执行计算。
+每个算子分为[两段式接口](../../../../docs/zh/context/两段式接口.md)，必须先调用 `aclnnSigmoidGetWorkspaceSize` 或 `aclnnInplaceSigmoidGetWorkspaceSize` 获取执行器和 workspace 大小，再调用第二段接口执行计算。
 
 ```cpp
 aclnnStatus aclnnSigmoidGetWorkspaceSize(
@@ -130,7 +130,7 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -210,7 +210,7 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## aclnnInplaceSigmoidGetWorkspaceSize
 
@@ -274,7 +274,7 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
   第一段接口会完成入参校验，出现以下场景时报错：
 
@@ -348,7 +348,7 @@ aclnnStatus aclnnInplaceSigmoid(
 
 - **返回值：**
 
-  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
