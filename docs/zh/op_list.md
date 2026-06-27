@@ -3771,6 +3771,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/acts_ulq/README.md">acts_ulq</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入数据进行均匀线性量化（ULQ），支持broadcast和固定下界，输出量化结果及上下界掩码和量化损失。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/anti_mx_quant/README.md">anti_mx_quant</a></td>
     <td>✓</td>
     <td>✓</td>
