@@ -24,8 +24,6 @@
 using namespace AscendC;
 using namespace RmsNormGradQuant;
 
-#define DTYPE_OFFSET_X int32_t
-
 template <int8_t COMPUTE_DX_MODE, int8_t COMPUTE_DGAMMA_MODE, int8_t COMPUTE_OFFSET_X_MODE, int8_t COMPUTE_DIV_MODE>
 __global__ __aicore__ void rms_norm_grad_quant(
     GM_ADDR dy, GM_ADDR x, GM_ADDR rstd, GM_ADDR gamma, GM_ADDR scales_x, GM_ADDR offset_x, GM_ADDR dx, GM_ADDR dgamma, GM_ADDR workspace, GM_ADDR tiling)
@@ -49,13 +47,13 @@ __global__ __aicore__ void rms_norm_grad_quant(
         GET_TILING_DATA_WITH_STRUCT(RmsNormGradQuantRegbaseBigMTilingData, tilingData, tiling);
         const RmsNormGradQuantRegbaseDxTilingData* __restrict tilingDataDx = &tilingData.dxTilingData;
         if constexpr (COMPUTE_DX_MODE == COMPUTE_MODE_DX_FULL_LOAD) {
-            RmsNormGradQuant::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, DTYPE_OFFSET_X,
+            RmsNormGradQuant::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, int32_t,
                 COMPUTE_OFFSET_X_MODE == COMPUTE_MODE_WITH_OFFSET_X,
                 COMPUTE_DIV_MODE == COMPUTE_MODE_DIV_MODE> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma);
             opDX.Process();
         } else if constexpr (COMPUTE_DX_MODE == COMPUTE_MODE_DX_SPLIT_D) {
-            RmsNormGradQuant::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, DTYPE_OFFSET_X,
+            RmsNormGradQuant::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, int32_t,
                 COMPUTE_OFFSET_X_MODE == COMPUTE_MODE_WITH_OFFSET_X,
                 COMPUTE_DIV_MODE == COMPUTE_MODE_DIV_MODE> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma);
@@ -70,13 +68,13 @@ __global__ __aicore__ void rms_norm_grad_quant(
         GET_TILING_DATA_WITH_STRUCT(RmsNormGradQuantRegbaseTilingData, tilingData, tiling);
         const RmsNormGradQuantRegbaseDxTilingData* __restrict tilingDataDx = &tilingData.dxTilingData;
         if constexpr (COMPUTE_DX_MODE == COMPUTE_MODE_DX_FULL_LOAD) {
-            RmsNormGradQuant::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, DTYPE_OFFSET_X,
+            RmsNormGradQuant::RegbaseDxFullLoad<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, int32_t,
                 COMPUTE_OFFSET_X_MODE == COMPUTE_MODE_WITH_OFFSET_X,
                 COMPUTE_DIV_MODE == COMPUTE_MODE_DIV_MODE> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma);
             opDX.Process();
         } else if constexpr (COMPUTE_DX_MODE == COMPUTE_MODE_DX_SPLIT_D) {
-            RmsNormGradQuant::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, DTYPE_OFFSET_X,
+            RmsNormGradQuant::RegbaseDxSplitD<DTYPE_DY, DTYPE_X, DTYPE_GAMMA, DTYPE_DX, DTYPE_DGAMMA, DTYPE_SCALES_X, int32_t,
                 COMPUTE_OFFSET_X_MODE == COMPUTE_MODE_WITH_OFFSET_X,
                 COMPUTE_DIV_MODE == COMPUTE_MODE_DIV_MODE> opDX(&pipe, tilingDataDx);
             opDX.Init(dy, x, rstd, gamma, scales_x, offset_x, dx, dgamma);

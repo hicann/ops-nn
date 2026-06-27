@@ -272,9 +272,8 @@ int main()
         CHECK_RET(ret == ACL_SUCCESS,
                   LOG_PRINT("copy dx from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
-
-        LOG_PRINT("Output dx (first 10 values):\n");
-        for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
+        LOG_PRINT("Output dx:\n");
+        for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("  dx[%ld] = %d\n", i, dx_result[i]);
         }
 
@@ -287,8 +286,8 @@ int main()
                   LOG_PRINT("copy dgamma from device to host failed. ERROR: %d\n", ret);
                   Finalize(deviceId, stream); return ret);
 
-        LOG_PRINT("Output dgamma (first 10 values):\n");
-        for (int64_t i = 0; i < std::min(size, (int64_t)10); i++) {
+        LOG_PRINT("Output dgamma:\n");
+        for (int64_t i = 0; i < size; i++) {
             LOG_PRINT("  dgamma[%ld] = %f\n", i, dgamma_result[i]);
         }
     }
