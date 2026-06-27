@@ -337,7 +337,7 @@ int main() {
   std::vector<float> other2HostData = {5, 2, 1};
   std::vector<float> out1HostData(6, 0);
   std::vector<float> out2HostData(3, 0);
-  float weightValue = 1.2f;
+  float weightValue = 0.5f;
   // 创建input1 aclTensor
   ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_FLOAT, &input1);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
