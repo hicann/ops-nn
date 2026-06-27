@@ -124,7 +124,7 @@
     <tr>
       <td>axis</td>
       <td>可选属性</td>
-      <td><ul><li>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入x的维度数。当前仅支持-1，传其他值均不生效。</li><li>默认值为-1。</li></ul></td>
+      <td><ul><li>表示需要进行量化的element-wise轴，其他的轴做broadcast，指定的轴不能超过输入x的维度数。当前仅支持-1，传其他值均不生效。</li><li>默认值为-1。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>

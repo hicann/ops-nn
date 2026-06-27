@@ -29,8 +29,8 @@
 
 - 示例
 
-  1. 输入`x`为: [-1, -2]，dtype为`FLOAT32`；
-  2. 调用`aclnnForeachSin`算子后；
+  1. 输入`x`为：[-1, -2]，dtype为`FLOAT32`；
+  2. 调用`ForeachSin`算子后；
   3. 输出`out`为[-0.8415, -0.9093]，dtype为`FLOAT32`。
 
 ## 参数说明

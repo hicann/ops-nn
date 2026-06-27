@@ -133,22 +133,22 @@
     <tr>
       <td>dst_type_max</td>
       <td>可选属性</td>
-      <td><ul><li>表示maxType的取值，对应公式中的Amax。支持取值0.0和6.0-12.0。</li><li>取值为0.0代表不使用该参数。</li><li>取值为6.0-12.0代表目标数据类型的最大值。</li><li>仅支持在FP4E2M1数据类型时设置该值。</li><li>默认值为0.0。</li></ul></td>
+      <td><ul><li>表示maxType的取值，对应公式中的Amax。支持取值0.0和6.0-12.0。</li><li>取值为0.0代表不使用该参数。</li><li>取值为6.0-12.0代表目标数据类型的最大值。</li><li>仅支持在FLOAT4_E2M1数据类型时设置该值。</li><li>默认值为0.0。</li></ul></td>
       <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
       <td>out</td>
       <td>输出</td>
-      <td>输出张量，对应公式中的`out`。数据类型为INT4时，shape与入参`x`一致。数据类型为INT32时，shape为[K,M,N/8]。数据类型为FLOAT_E2M1时，shape为[K,M*N]。</td>
-      <td>INT4,INT32,FLOAT4_E2M1</td>
+      <td>输出张量，对应公式中的`out`。数据类型为INT4时，shape与入参`x`一致。数据类型为INT32时，shape为[K,M,N/8]。数据类型为FLOAT4_E2M1时，shape为[K,M*N]。</td>
+      <td>INT4、INT32、FLOAT4_E2M1</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>quant_scale</td>
       <td>输出</td>
       <td>输出的量化因子，对应公式中的`quantScale`。当输出类型为FLOAT时，shape为[K]，K与`x`中K维一致。当输出类型为FLOAT8_E8M0时，shape为[K,ceilDiv(M*N,64),2]。</td>
-      <td>FLOAT32,FLOAT8_E8M0</td>
+      <td>FLOAT32、FLOAT8_E8M0</td>
       <td>ND</td>
     </tr>
   </tbody></table>

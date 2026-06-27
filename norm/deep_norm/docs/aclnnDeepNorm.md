@@ -19,7 +19,7 @@
 - 计算公式：
   
   $$
-  DeepNorm(x_i^{\prime}) = ({x_i^{\prime} - \bar{x^{\prime}}})*{rstd} * gamma + beta,
+  DeepNorm(x_i^{\prime}) = ({x_i^{\prime} - \bar{x^{\prime}}})* rstd * gamma + beta,
   $$
 
   $$

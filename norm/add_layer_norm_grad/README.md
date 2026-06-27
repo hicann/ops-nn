@@ -24,15 +24,15 @@
     $$
 
     $$
-    \operatorname{LayerNorm}(x)=\frac{x_i−\operatorname{E}(x)}{\sqrt{\operatorname{Var}(x)+ eps}}*\gamma + \beta
+    \operatorname{LayerNorm}(x_i)=\frac{x_i−\operatorname{E}(x)}{\sqrt{\operatorname{Var}(x)+ eps}}*\gamma + \beta
     $$
 
     $$
-    其中\operatorname{E}(x_i)=\frac{1}{D}\sum_{1}^{D}{x_i}
+    其中\operatorname{E}(x)=\frac{1}{D}\sum_{i=1}^{D}{x_i}
     $$
 
     $$
-    \operatorname{Var}(x_i)=\frac{1}{D}\sum_{1}^{D}{(x_i-\operatorname{E}(x))^2}
+    \operatorname{Var}(x)=\frac{1}{D}\sum_{i=1}^{D}{(x_i-\operatorname{E}(x))^2}
     $$
 
   - 反向公式：
@@ -69,7 +69,7 @@
     - $\frac{{\rm d}\hat{x_j}}{{\rm d}x_i}$：
 
       $$
-      \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x_i)}}-\frac{1}{\operatorname{Var}(x_i)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}
+      \frac{{\rm d}\hat{x_j}}{{\rm d}x_i}=(\delta_{ij} - \frac{{\rm d}\operatorname{E}(x)}{{\rm d}  x_i}) * \frac{1}{\sqrt{\operatorname{Var}(x)}}-\frac{1}{\operatorname{Var}(x)}  (x_j-\operatorname{E}(x))\frac{\rm d \operatorname{Var}(x)}{\rm dx}
       $$
 
       其中，当i=j时，$\delta_{ij}$=1；当i!=j时，$\delta_{ij}$=0。
@@ -82,16 +82,16 @@
 
       其中，D为x中参加均值计算的数量。
 
-    - $\frac{\rm d \operatorname{Var}(x_i)}{\rm dx}$：
+    - $\frac{\rm d \operatorname{Var}(x)}{\rm dx}$：
 
       $$
-      \frac{\rm d \operatorname{Var}(x_i)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}  (x_i)}}(x_i-\operatorname{E}(x))
+      \frac{\rm d \operatorname{Var}(x)}{\rm dx}=\frac{1}{D}\frac{1}{\sqrt{\operatorname{Var}(x)}}(x_i-\operatorname{E}(x))
       $$
 
     - 化简后的$dxOut$：
 
       $$
-      dxOut = rstd * ({inputdy_i * \gamma_j} - \frac{1}{D} * (\sum_{j}{inputdy_i * \gamma_j} + \hat      {x_j} * \sum_{j}{inputdy_i * \gamma_j * \hat{x_j}})) + dsumOptional
+      dxOut = rstd * ({inputdy_i * \gamma_j} - \frac{1}{D} * (\sum_{j}{inputdy_i * \gamma_j} + \hat {x_j} * \sum_{j}{inputdy_i * \gamma_j * \hat{x_j}})) + dsumOptional
       $$
 
 ## 参数说明

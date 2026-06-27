@@ -34,7 +34,7 @@
   $$
   
   $$
-      runningVar=runningVar*(1-momentum) + E[x]*momentum
+      runningVar=runningVar*(1-momentum) + Var(x)*momentum
   $$
   
 ## 函数原型

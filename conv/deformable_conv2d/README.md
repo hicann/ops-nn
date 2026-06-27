@@ -17,7 +17,7 @@
 
 - 计算公式：
   
-  假定输入（input）的shape是[N, inH, inW, inC]，输出的（out）的shape为[N, outH, outC, outW]，根据已有参数计算outH、outW:
+  假定输入（input）的shape是[N, inH, inW, inC]，输出的（out）的shape为[N, outH, outC, outW]，根据已有参数计算outH、outW：
   
   $$
   outH = (inH + padding[0] + padding[1] - ((K_H - 1) * dilation[2] + 1)) // stride[2] + 1
@@ -138,7 +138,7 @@
       <td>dilation</td>
       <td>属性</td>
       <td><ul><li>表示输入每个维度的膨胀系数，对应公式中的`dilation`。size为4，各元素均大于零，维度顺序根据x的数据格式解释。N维和C维必须设置为1。</li><li>默认值为{1, 1, 1, 1}。</li></ul></td>
-      <td>LISTINT</td>
+      <td>ListInt</td>
       <td>-</td>
     </tr>
     <tr>
