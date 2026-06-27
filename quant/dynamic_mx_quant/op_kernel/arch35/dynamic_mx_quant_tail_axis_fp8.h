@@ -115,6 +115,7 @@ private:
 
     uint16_t f8Emax_ = 0;
     uint32_t dtypeMax_ = 0;
+    float maxLowBound_ = 0.0f;
 };
 
 template <typename T, typename U, int64_t SCALE_ALG>
@@ -230,6 +231,7 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ParseTilingDa
     rowNormalBlockNum_ = tilingData->rowNormalBlockNum;
     rowTailLen_ = tilingData->rowTailLen;
     maxUbBlockNum_ = tilingData->maxUbBlockNum;
+    maxLowBound_ = tilingData->maxLowBound;
 }
 
 template <typename T, typename U, int64_t SCALE_ALG>
@@ -738,6 +740,8 @@ __aicore__ inline void DynamicMxQuantTailAxisFP8<T, U, SCALE_ALG>::ComputeScaleC
             }
             Reg::Compare<uint32_t, CMPMODE::LT>(cmpResult, max32, expMask, maskFloat);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, max32, zeroU32, maskFloat);
+
+            Reg::Maxs((Reg::RegTensor<float>&)max32, (Reg::RegTensor<float>&)max32, maxLowBound_, maskFloat);
 
             Reg::Mul(
                 (Reg::RegTensor<float>&)max32, (Reg::RegTensor<float>&)max32, (Reg::RegTensor<float>&)invMax,

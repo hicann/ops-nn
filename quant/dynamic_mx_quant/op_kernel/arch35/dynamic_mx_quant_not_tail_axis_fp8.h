@@ -563,6 +563,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::CompareScalar<uint32_t, CMPMODE::LT>(
                 infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
+            Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
             Reg::Muls(
                 (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
                 (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);
@@ -654,6 +656,8 @@ __aicore__ inline void DynamicMxQuantNotTailAxisFP8<T, U, isTail>::ComputecuBLAS
             Reg::CompareScalar<uint32_t, CMPMODE::LT>(
                 infMask, expMaxAndAddOneFP32RegTensor, FP32_MX_MAX_EXP, preMaskScale);
             Reg::Compare<uint32_t, CMPMODE::NE>(zeroMask, expMaxAndAddOneFP32RegTensor, zeroRegTensor32, preMaskScale);
+            Reg::Maxs((Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
+                (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, this->maxLowBound_, preMaskScale);
             Reg::Muls(
                 (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor,
                 (Reg::RegTensor<float>&)expMaxAndAddOneFP32RegTensor, inv_dtype_max, preMaskScale);

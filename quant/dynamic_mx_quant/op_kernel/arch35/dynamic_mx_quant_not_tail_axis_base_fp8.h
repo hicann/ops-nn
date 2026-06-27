@@ -75,6 +75,7 @@ protected:
     int64_t mxScaleSize_ = 0;
     bool isPad_ = false;
     bool isTailBlock_ = false;
+    float maxLowBound_ = 0.0f;
 };
 
 template <typename T, typename U, const bool isTail>
@@ -110,6 +111,7 @@ __aicore__ inline void DynamicMxQuantBaseFP8<T, U, isTail>::ParseTilingData(cons
     postAxisSize_ = tilingData->postAxisSize;
     isPad_ = tilingData->isPad == 1;
     mxScaleSize_ = tilingData->mxScaleSize;
+    maxLowBound_ = tilingData->maxLowBound;
 }
 
 __aicore__ inline int64_t min(int64_t a, int64_t b) { return a > b ? b : a; }

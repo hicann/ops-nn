@@ -1,4 +1,4 @@
-# aclnnDynamicMxQuant
+# aclnnDynamicMxQuantV3
 
 [📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/quant/dynamic_mx_quant)
 
@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。
+- 接口功能：目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。相较于aclnnDynamicMxQuantV2，本接口新增maxLowBound参数，可以通过maxLowBound设置每个block计算出的最大绝对值的下界钳位值。
 
 - 计算公式：
   - 场景1，当scaleAlg为0时：
@@ -27,7 +27,7 @@
     P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
     $$
 
-    - ​量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+    - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
     - emax: 对应数据类型的最大正则数的指数位。
 
@@ -44,6 +44,10 @@
       $$
       Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
       $$
+    - 当maxLowBound > 0时，对最大绝对值进行下界钳位：
+      $$
+      Amax(D_{fp32}^b)=max(Amax(D_{fp32}^b), maxLowBound)
+      $$
     - 将FP32映射到目标数据类型FP8可表示的范围内，其中$Amax(DType)$是目标精度能表示的最大值
       $$
       S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
@@ -57,19 +61,51 @@
     - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
     - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
     - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+  - 场景3，当scaleAlg为2时，只涉及FP4_E2M1类型：
+    - 当dstTypeMax = 0.0/6.0/7.0时：
+      - 将输入x在axis维度上按k = blocksize个数分组，一组k个数  $\{\{V_i\}_{i=1}^{k}\}$ 动态量化为 $\{mxscale1, \{P_i\}_{i=1}^{k}\}$, k = blocksize：
+      $$
+      shared\_exp = \begin{cases} ceil(log_2(max_i(|V_i|))) - emax, & \text{如果} 尾数位的高比特前一/两位 \text{为1，且尾数不全为0} \\ floor(log_2(max_i(|V_i|))) - emax, & \text{其它} \end{cases} \\
+      $$
+      $$
+      P_i = cast\_to\_dst\_type(V_i/mxscale, round\_mode), \space i\space from\space 1\space to\space blocksize\\
+      $$
+      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
+    - 当dstTypeMax != 0.0/6.0/7.0时：
+      - 将长向量按块分，每块长度为k，对每块单独计算一个块缩放因子$S_{fp32}^b$，再把块内所有元素用同一个$S_{fp32}^b$映射到目标低精度类型。如果最后一块不足k个元素，把缺失值视为0，按照完整块处理。
+      - 找到该块中数值的最大绝对值:
+      $$
+      Amax(D_{fp32}^b)=max(\{|d_{i}|\}_{i=1}^{k})
+      $$
+      - 将FP32映射到目标数据类型可表示的范围内，其中当dst_max_value=0时，$Amax(DType)$是目标精度能表示的最大值；当dst_max_value!=0时，$Amax(DType)$是dst_max_value传入值。
+      $$
+      S_{fp32}^b = \frac{Amax(D_{fp32}^b)}{Amax(DType)}
+      $$
+      - 将块缩放因子$S_{fp32}^b$转换为FP8格式下可表示的缩放值$S_{ue8m0}^b$。
+      - 从块的浮点缩放因子$S_{fp32}^b$中提取无偏指数$E_{int}^b$和尾数$M_{fixp}^b$。
+      - 为保证量化时不溢出，对指数进行向上取整，且在FP8可表示的范围内：
+        $$
+        E_{int}^b = \begin{cases} E_{int}^b + 1, & \text{如果} S_{fp32}^b \text{为正规数，且} E_{int}^b < 254 \text{且} M_{fixp}^b > 0 \\ E_{int}^b, & \text{否则} \end{cases}
+        $$
+      - 计算块缩放因子：$S_{ue8m0}^b=2^{E_{int}^b}$
+      - 计算块转换因子：$R_{fp32}^b=\frac{1}{fp32(S_{ue8m0}^b)}$
+      - 应用到量化的最终步骤，对于每个块内元素，$d^i = DType(d_{fp32}^i \cdot R_{fp32}^n)$，最终输出的量化结果是$\left(S^b, [d^i]_{i=1}^k\right)$，其中$S^b$代表块的缩放因子，这里指$S_{ue8m0}^b$，$[d^i]_{i=1}^k$代表块内量化后的数据。
+      - 量化后的 $P_{i}$ 按对应的 $V_{i}$ 的位置组成输出yOut，mxscale按对应的axis维度上的分组组成输出mxscaleOut。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用“aclnnDynamicMxQuantGetWorkspaceSize”接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用“aclnnDynamicMxQuant”接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnDynamicMxQuantV3GetWorkspaceSize"接口获取计算所需workspace大小以及包含了算子计算流程的执行器，再调用"aclnnDynamicMxQuantV3"接口执行计算。
 
 ```cpp
-aclnnStatus aclnnDynamicMxQuantGetWorkspaceSize(
+aclnnStatus aclnnDynamicMxQuantV3GetWorkspaceSize(
   const aclTensor *x,
   int64_t          axis,
   char            *roundModeOptional,
   int64_t          dstType,
   int64_t          blocksize,
   int64_t          scaleAlg,
+  double           dstTypeMax,
+  double           maxLowBound,
   const aclTensor *yOut,
   const aclTensor *mxscaleOut,
   uint64_t        *workspaceSize,
@@ -77,14 +113,14 @@ aclnnStatus aclnnDynamicMxQuantGetWorkspaceSize(
 ```
 
 ```cpp
-aclnnStatus aclnnDynamicMxQuant(
+aclnnStatus aclnnDynamicMxQuantV3(
   void          *workspace,
   uint64_t       workspaceSize,
   aclOpExecutor *executor,
   aclrtStream    stream)
 ```
 
-## aclnnDynamicMxQuantGetWorkspaceSize
+## aclnnDynamicMxQuantV3GetWorkspaceSize
 
 - **参数说明**
 
@@ -164,8 +200,28 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>scaleAlg（int64_t）</td>
       <td>输入</td>
       <td>表示mxscaleOut的计算方法，对应公式中的scaleAlg。</td>
-      <td><ul><li>支持取值0和1，取值为0代表场景1，为1代表场景2。</li><li>当dstType为FLOAT4_E2M1/FLOAT4_E1M2时仅支持取值为0。</li></ul></td>
+      <td><ul><li>支持取值0、1和2，取值为0代表场景1，为1代表场景2，为2代表场景3。</li><li>当dstType为FLOAT4_E1M2时仅支持取值为0；当dstType为FLOAT4_E2M1时仅支持取值为0和2；当dstType为FLOAT8时仅支持取值为0和1。</li></ul></td>
       <td>INT64</td>
+      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>dstTypeMax（double）</td>
+      <td>输入</td>
+      <td>表示maxType的取值，对应公式中的Amax(DType)。</td>
+      <td><ul><li>支持取值0.0和6.0-12.0，取值为0.0代表Amax(DType)为量化结果数据类型的最大值；取值为6.0-12.0代表Amax(DType)为传入值。仅支持在FP4E2M1和blocksize取32时设置该值</li></ul></td>
+      <td>DOUBLE</td>
+      <td>ND</td>
+      <td>-</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td>maxLowBound（double）</td>
+      <td>输入</td>
+      <td>表示每个block计算出的最大绝对值的下界钳位值，对应公式中的maxLowBound。</td>
+      <td><ul><li>仅当scaleAlg=1时生效，scaleAlg不为1时必须为0.0。</li><li>取值为非负数。当maxLowBound > 0时，每个block的最大绝对值将与maxLowBound取较大值，即$Amax = max(Amax, maxLowBound)$。</li></ul></td>
+      <td>DOUBLE</td>
       <td>ND</td>
       <td>-</td>
       <td>-</td>
@@ -238,15 +294,18 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>x存在空指针。</td>
     </tr>
     <tr>
-      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="3">161002</td>
-      <td> x、axis、roundModeOptional、dstType、blocksize、scaleAlg、yOut、mxscaleOut的数据类型和数据格式不在支持的范围之内。</td>
+      <td rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="4">161002</td>
+      <td> x、axis、roundModeOptional、dstType、blocksize、scaleAlg、dstTypeMax、maxLowBound、yOut、mxscaleOut的数据类型和数据格式不在支持的范围之内。</td>
     </tr>
     <tr>
       <td>x、yOut或mxscaleOut的shape不满足校验条件。</td>
     </tr>
     <tr>
-      <td>axis、roundModeOptional、dstType、blocksize、scaleAlg不符合当前支持的值。</td>
+      <td>axis、roundModeOptional、dstType、blocksize、scaleAlg、dstTypeMax不符合当前支持的值。</td>
+    </tr>
+    <tr>
+      <td>maxLowBound不为0.0但scaleAlg不为1，或maxLowBound为负数。</td>
     </tr>
     <tr>
       <td>ACLNN_ERR_RUNTIME_ERROR</td>
@@ -255,7 +314,7 @@ aclnnStatus aclnnDynamicMxQuant(
     </tr>
   </tbody></table>
 
-## aclnnDynamicMxQuant
+## aclnnDynamicMxQuantV3
 
 - **参数说明**
 
@@ -279,7 +338,7 @@ aclnnStatus aclnnDynamicMxQuant(
     <tr>
       <td>workspaceSize</td>
       <td>输入</td>
-      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicMxQuantGetWorkspaceSize获取。</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnDynamicMxQuantV3GetWorkspaceSize获取。</td>
     </tr>
     <tr>
       <td>executor</td>
@@ -301,13 +360,20 @@ aclnnStatus aclnnDynamicMxQuant(
 ## 约束说明
 
 - 确定性计算：
-  - aclnnDynamicMxQuant默认确定性实现。
+  - aclnnDynamicMxQuantV3默认确定性实现。
 - 关于x、mxscaleOut的shape约束说明如下：
   - rank(mxscaleOut) = rank(x) + 1。
   - axis_change = axis if axis >= 0 else axis + rank(x)。
   - mxscaleOut.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x一致。
+- 当x的数据类型为FLOAT时：
+  - blocksize必须为32。
+  - 量化轴的维度不能小于32。
+- maxLowBound约束说明如下：
+  - 仅当scaleAlg=1时生效，scaleAlg不为1时maxLowBound必须为0.0。
+  - maxLowBound必须为非负数。
+  - 当maxLowBound > 0时，每个block计算出的最大绝对值将与maxLowBound取较大值后再用于scale计算。
 
 ## 调用示例
 
@@ -319,7 +385,7 @@ aclnnStatus aclnnDynamicMxQuant(
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnnop/aclnn_dynamic_mx_quant.h"
+#include "aclnnop/aclnn_dynamic_mx_quant_v3.h"
 
 #define CHECK_RET(cond, return_expr) \
     do {                             \
@@ -394,7 +460,7 @@ void Finalize(int32_t deviceId, aclrtStream stream)
     aclFinalize();
 }
 
-int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
+int aclnnDynamicMxQuantV3Test(int32_t deviceId, aclrtStream& stream)
 {
     auto ret = Init(deviceId, &stream);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("Init acl failed. ERROR: %d\n", ret); return ret);
@@ -419,7 +485,9 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     char* roundModeOptional = const_cast<char*>("rint");
     int64_t dstType = 36;
     int64_t blocksize = 32;
-    int64_t scaleAlg = 0;
+    int64_t scaleAlg = 1;
+    double dstTypeMax = 0.0;
+    double maxLowBound = 0.5;
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_BF16, &x);
     std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> xTensorPtr(x, aclDestroyTensor);
@@ -440,9 +508,9 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
 
-    // 调用aclnnDynamicMxQuant第一段接口
-    ret = aclnnDynamicMxQuantGetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, yOut, mxscaleOut, &workspaceSize, &executor);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantGetWorkspaceSize failed. ERROR: %d\n", ret);
+    // 调用aclnnDynamicMxQuantV3第一段接口
+    ret = aclnnDynamicMxQuantV3GetWorkspaceSize(x, axis, roundModeOptional, dstType, blocksize, scaleAlg, dstTypeMax, maxLowBound, yOut, mxscaleOut, &workspaceSize, &executor);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantV3GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
     // 根据第一段接口计算出的workspaceSize申请device内存
     void* workspaceAddr = nullptr;
@@ -452,9 +520,9 @@ int aclnnDynamicMxQuantTest(int32_t deviceId, aclrtStream& stream)
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
         workspaceAddrPtr.reset(workspaceAddr);
     }
-    // 调用aclnnDynamicMxQuant第二段接口
-    ret = aclnnDynamicMxQuant(workspaceAddr, workspaceSize, executor, stream);
-    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuant failed. ERROR: %d\n", ret); return ret);
+    // 调用aclnnDynamicMxQuantV3第二段接口
+    ret = aclnnDynamicMxQuantV3(workspaceAddr, workspaceSize, executor, stream);
+    CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantV3 failed. ERROR: %d\n", ret); return ret);
 
     //（固定写法）同步等待任务执行结束
     ret = aclrtSynchronizeStream(stream);
@@ -490,8 +558,8 @@ int main()
     // 根据自己的实际device填写deviceId
     int32_t deviceId = 0;
     aclrtStream stream;
-    auto ret = aclnnDynamicMxQuantTest(deviceId, stream);
-    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantTest failed. ERROR: %d\n", ret); return ret);
+    auto ret = aclnnDynamicMxQuantV3Test(deviceId, stream);
+    CHECK_FREE_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnDynamicMxQuantV3Test failed. ERROR: %d\n", ret); return ret);
 
     Finalize(deviceId, stream);
     return 0;

@@ -28,6 +28,7 @@ constexpr int64_t INDEX_ATTR_DST_DTYPE = 2;
 constexpr int64_t INDEX_ATTR_BLOCK_SIZE = 3;
 constexpr int64_t INDEX_ATTR_SCALE_ALG = 4;
 constexpr int64_t INDEX_ATTR_DST_DTYPE_MAX = 5;
+constexpr int64_t INDEX_ATTR_MAX_LOW_BOUND = 6;
 constexpr int64_t NUM_ZERO = 0;
 constexpr int64_t NUM_ONE = 1;
 constexpr int64_t NUM_TWO = 2;
@@ -132,12 +133,12 @@ inline static void PrintTilingData(const gert::TilingContext* context, DynamicMx
         context->GetNodeName(), "tilingData is totalCoreNum:%ld, usedCoreNum:%ld,  ubFactor:%ld, \
         tailUbFactor:%ld, blockFactor:%ld, tailBlockFactor:%ld, uo:%ld, ubDim:%ld, dstType:%ld, blockSize:%ld, scaleAlg:%ld, \
         blockSizeNumInAxis:%ld, tailBlockSize:%ld, isPad:%ld, postAxisSize:%ld, tilingKey:%ld, calcMode: %ld, \
-        subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f.",
+        subNumForScale: %d, subNumForFP16Scale: %d,dstTypeMax:%f, invDstTypeMax:%f, maxLowBound:%f.",
         tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.ubFactor, tilingData.tailUbFactor,
         tilingData.blockFactor, tilingData.tailBlockFactor, tilingData.uo, tilingData.ubDim, tilingData.dstType,
         tilingData.blockSize, tilingData.scaleAlg, tilingData.blockSizeNumInAxis, tilingData.tailBlockSize,
         tilingData.isPad, tilingData.postAxisSize, tilingData.tilingKey, tilingData.calcMode, tilingData.subNumForScale,
-        tilingData.subNumForFP16Scale, tilingData.dstTypeMax, tilingData.invDstTypeMax);
+        tilingData.subNumForFP16Scale, tilingData.dstTypeMax, tilingData.invDstTypeMax, tilingData.maxLowBound);
 }
 
 static RoundModeList GetRoundMode(const std::string& roundMode)
@@ -273,6 +274,25 @@ static ge::graphStatus GetAttr(const gert::TilingContext* context, DynamicMxQuan
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             context->GetNodeName(), "dst_type_max", std::to_string(tilingParam.dstTypeMax),
             "The value of dst_type_max must be within the range [6, 12] or equal to 0"),
+        return ge::GRAPH_FAILED);
+
+    auto* attrMaxLowBound = attrs->GetAttrPointer<float>(INDEX_ATTR_MAX_LOW_BOUND);
+    if (attrMaxLowBound != nullptr) {
+        tilingParam.maxLowBound = static_cast<float>(*attrMaxLowBound);
+    }
+
+    OP_CHECK_IF(
+        tilingParam.scaleAlg != 1 && !Ops::Base::IsFloatEqual(tilingParam.maxLowBound, 0.0f),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "max_low_bound", std::to_string(tilingParam.maxLowBound),
+            "max_low_bound must be 0 when scale_alg != 1"),
+        return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        tilingParam.maxLowBound < 0,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "max_low_bound", std::to_string(tilingParam.maxLowBound),
+            "max_low_bound must be non-negative"),
         return ge::GRAPH_FAILED);
 
     return ge::GRAPH_SUCCESS;
@@ -464,6 +484,12 @@ static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQua
         tilingParam.preAxisSize *= xShape.GetDim(i);
     }
     tilingParam.quantAxisSize = dimSize;
+    OP_CHECK_IF(
+        tilingParam.isFp32Input && dimSize < ATTR_BLOCK_SIZE,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "x", std::to_string(dimSize),
+            "FP32 input with quantization axis size less than 32 is not supported"),
+        return ge::GRAPH_FAILED);
     for (size_t i = tilingParam.axis + 1; i < xShape.GetDimNum(); i++) {
         tilingParam.postAxisSize *= xShape.GetDim(i);
     }
@@ -687,6 +713,7 @@ inline static void SetTilingData(DynamicMxQuantTilingData& tilingData, const Dyn
     tilingData.subNumForFP16Scale = tilingParam.subNumForFP16Scale;
     tilingData.dstTypeMax = tilingParam.dstTypeMax;
     tilingData.invDstTypeMax = tilingParam.invDstTypeMax;
+    tilingData.maxLowBound = tilingParam.maxLowBound;
 }
 
 ge::graphStatus Tiling4DynamicMxQuant(gert::TilingContext* context)

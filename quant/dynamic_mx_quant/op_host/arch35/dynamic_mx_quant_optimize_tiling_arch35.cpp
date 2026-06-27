@@ -209,6 +209,7 @@ ge::graphStatus DynamicMxQuantOptimzieTiling::SetTilingData()
     tilingData.scaleRowCountPerBatch = tilingParam_.scaleRowCountPerBatch;
     tilingData.needPadPostAxis = tilingParam_.needPadPostAxis ? 1 : 0;
     tilingData.invDstTypeMax = tilingParam_.invDstTypeMax;
+    tilingData.maxLowBound = tilingParam_.maxLowBound;
 
     uint64_t tilingDataSize = sizeof(tilingData);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
@@ -235,7 +236,7 @@ void DynamicMxQuantOptimzieTiling::PrintTilingData()
         "totalBlockNum: %ld, blockNumPerTask: %ld, totalTaskNum: %ld, loopNumPerHeadCore: %ld, "
         "loopNumPerTailCore: %ld, ubRowLen: %ld, ubRowLenTail: %ld, ubRowCount: %ld, "
         "ubRowCountTail: %ld, subNumForScale: %ld, blockCountPerBatch: %ld,scaleRowCountPerBatch: %ld, "
-        "needPadPostAxis: %ld, invDstTypeMax:%f.",
+        "needPadPostAxis: %ld, invDstTypeMax:%f, maxLowBound:%f.",
         tilingData.totalCoreNum, tilingData.usedCoreNum, tilingData.blockSize, tilingData.isPad,
         tilingData.tailBlockSize, tilingData.tilingKey, tilingData.quantAxisSize, tilingData.postAxisSize,
         tilingData.nAlignSize, tilingData.mAlignBlockCount, tilingData.nAlignBlockCount, tilingData.mAlignGroupCount,
@@ -243,7 +244,7 @@ void DynamicMxQuantOptimzieTiling::PrintTilingData()
         tilingData.blockNumPerTask, tilingData.totalTaskNum, tilingData.loopNumPerHeadCore,
         tilingData.loopNumPerTailCore, tilingData.ubRowLen, tilingData.ubRowLenTail, tilingData.ubRowCount,
         tilingData.ubRowCountTail, tilingData.subNumForScale, tilingData.blockCountPerBatch,
-        tilingData.scaleRowCountPerBatch, tilingData.needPadPostAxis, tilingData.invDstTypeMax);
+        tilingData.scaleRowCountPerBatch, tilingData.needPadPostAxis, tilingData.invDstTypeMax, tilingData.maxLowBound);
 }
 
 } // namespace optiling

@@ -43,6 +43,7 @@ struct DynamicMxQuantTilingData {
     uint32_t subNumForFP16Scale{0};
     float dstTypeMax{0.0f};
     float invDstTypeMax{0.0f};
+    float maxLowBound{0.0f};
 };
 
 struct DynamicMxQuant4OptimizeTilingData {
@@ -75,6 +76,7 @@ struct DynamicMxQuant4OptimizeTilingData {
     int64_t scaleRowCountPerBatch{0};
     uint32_t subNumForScale{0};
     float invDstTypeMax{0.0f};
+    float maxLowBound{0.0f};
 };
 
 struct DynamicMxQuantTailAxisTilingData {
@@ -95,6 +97,7 @@ struct DynamicMxQuantTailAxisTilingData {
     int64_t maxUbBlockNum{0};     // UB最大能放下的处理块数 (1 x 32) (8 的倍数)
     float dstTypeMax{0.0f};
     float invDstTypeMax{0.0f};
+    float maxLowBound{0.0f};
 };
 
 #endif // OPS_NN_DYNAMIC_MX_QUANT_WITH_DUAL_AXIS_H

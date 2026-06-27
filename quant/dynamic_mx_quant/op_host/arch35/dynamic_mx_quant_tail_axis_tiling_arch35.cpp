@@ -54,6 +54,7 @@ ge::graphStatus DynamicMxQuantTailAxisTiling::SetTilingDataForTailAxis()
     tilingData_.maxUbBlockNum = tilingParam_.maxUbBlockNum;
     tilingData_.dstTypeMax = tilingParam_.dstTypeMax;
     tilingData_.invDstTypeMax = tilingParam_.invDstTypeMax;
+    tilingData_.maxLowBound = tilingParam_.maxLowBound;
 
     uint64_t tilingDataSize = sizeof(tilingData_);
     OP_CHECK_NULL_WITH_CONTEXT(context_, context_->GetRawTilingData());
@@ -74,12 +75,12 @@ void DynamicMxQuantTailAxisTiling::PrintTilingDataForTailAxis()
         context_->GetNodeName(), "tilingData is tilingKey:%ld, ubSize:%ld, roundMode:%ld, blockSize:%ld, \
         totalCoreNum:%ld, usedCoreNum:%ld, rowTileNum:%ld, colTileNum:%ld, \
         rowNum:%ld, colNum:%ld, colNormalBlockNum:%ld, colTailLen:%ld, \
-        rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld, dstTypeMax:%f, invDstTypeMax:%f.",
+        rowNormalBlockNum:%ld, rowTailLen:%ld, maxUbBlockNum:%ld, dstTypeMax:%f, invDstTypeMax:%f, maxLowBound:%f.",
         tilingData_.tilingKey, tilingData_.ubSize, tilingData_.roundMode, tilingData_.blockSize,
         tilingData_.totalCoreNum, tilingData_.usedCoreNum, tilingData_.rowTileNum, tilingData_.colTileNum,
         tilingData_.rowNum, tilingData_.colNum, tilingData_.colNormalBlockNum, tilingData_.colTailLen,
         tilingData_.rowNormalBlockNum, tilingData_.rowTailLen, tilingData_.maxUbBlockNum, tilingData_.dstTypeMax,
-        tilingData_.invDstTypeMax);
+        tilingData_.invDstTypeMax, tilingData_.maxLowBound);
 }
 
 std::set<int64_t> DynamicMxQuantTailAxisTiling::FindSplitCombo(int64_t usedCoreNum) const

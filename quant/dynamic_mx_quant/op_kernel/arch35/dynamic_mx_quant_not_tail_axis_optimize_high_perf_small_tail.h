@@ -38,7 +38,7 @@ private:
     __aicore__ inline void CopyIn(int64_t offset, int64_t blockCount);
     template <const bool needPadBlock, const bool needPadAxis, const bool canInterleave>
     __aicore__ inline void SplitPreAxisCompute(int64_t offset, int64_t blockCount);
-    template <const bool canInterleave>
+    template <const bool canInterleave, const bool canMaxLowBound>
     __aicore__ inline void Compute(
         __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr,
         __ubuf__ uint8_t* lhsYAddr, __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1);
@@ -49,8 +49,6 @@ private:
         Reg::RegTensor<DTYPE_X> x;
         Reg::RegTensor<float> x0FP32;
         Reg::RegTensor<float> x1FP32;
-        // Reg::RegTensor<uint32_t> x0TmpU32;
-        // Reg::RegTensor<uint32_t> x1TmpU32;
         Reg::RegTensor<DTYPE_Y> y;
         Reg::RegTensor<uint16_t> yU16;
         Reg::RegTensor<uint16_t> expU16;
@@ -85,8 +83,6 @@ private:
         Reg::RegTensor<uint32_t> absForXFP32;
         Reg::RegTensor<uint32_t> manForFP32;
         Reg::RegTensor<uint32_t> oneU32;
-        // Reg::RegTensor<uint32_t> fp32Last16ManMask;      // bits 15-0 of FP32 (sub-BF16 bits)
-        // Reg::RegTensor<uint32_t> fp32OddModeMask;      // fp32 to bf16 odd mode
         Reg::RegTensor<int32_t> negZeroI32;
         Reg::RegTensor<uint16_t> bf16NegInfU16;
         Reg::RegTensor<uint16_t> tgtMaxExpU16;
@@ -106,7 +102,7 @@ private:
         Reg::MaskReg p4;
         Reg::MaskReg p5;
         Reg::MaskReg p6;
-        // Reg::MaskReg fp32ManOddMask;
+        Reg::MaskReg maxLowBoundMask;
 
         Reg::RegTensor<uint32_t> invMax;
     };
@@ -129,14 +125,18 @@ private:
     __aicore__ inline void ComputeMaxFP32(ComputeRegisters& reg, AuxRegisters& auxRegs);
     __aicore__ inline void ComputeMaxNonFP32(ComputeRegisters& reg, AuxRegisters& auxRegs);
 
+    template <const bool canMaxLowBound>
     __aicore__ inline void ComputeScalesAndSharedExp(ComputeRegisters& regs, AuxRegisters& auxRegs);
+    template <const bool canMaxLowBound>
     __aicore__ inline void ComputeScalesAndSharedExpFP32(ComputeRegisters& regs, AuxRegisters& auxRegs);
+    template <const bool canMaxLowBound>
     __aicore__ inline void ComputeScalesAndSharedExpNonFP32(ComputeRegisters& regs, AuxRegisters& auxRegs);
 
+    template <const bool isEven, const bool canMaxLowBound>
     __aicore__ inline void ComputeScaleFromAbsMaxFP32(
         AuxRegisters& auxRegs, Reg::RegTensor<uint32_t>& absMaxU32, Reg::RegTensor<uint32_t>& mxScaleU32,
         Reg::RegTensor<uint32_t>& mxScaleAdd1U32, Reg::RegTensor<uint16_t>& mxScale);
-    template <const bool isEven>
+    template <const bool isEven, const bool canMaxLowBound>
     __aicore__ inline void ComputeScaleFromAbsMaxNonFP32(
         AuxRegisters& auxRegs, Reg::RegTensor<uint16_t>& absMaxU16, Reg::RegTensor<uint32_t>& absMaxU32,
         Reg::RegTensor<uint32_t>& mxScaleU32, Reg::RegTensor<uint32_t>& mxScaleAdd1U32,
@@ -214,6 +214,7 @@ private:
     uint16_t subNumForScale_{0};
     uint32_t invDtypeMax_{0};
     float invDstTypeMax_{0};
+    float maxLowBound_{0.0f};
 };
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
@@ -280,6 +281,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
     nextOutRowOffset_ = nextInRowOffset_;
     // Determine target data type maximum exponent
     invDstTypeMax_ = tilingData->invDstTypeMax;
+    maxLowBound_ = tilingData->maxLowBound;
 
     if constexpr (IsSame<DTYPE_Y, fp8_e4m3fn_t>::value) {
         dtypeYMaxExp_ = FP8_E4M3_MAX_EXP;
@@ -433,9 +435,15 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
                 }
             }
         }
-        Compute<canInterleave>(
-            xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
-            yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        if (loop0 == 0 && loop1 != 0) {
+            Compute<canInterleave, false>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        } else {
+            Compute<canInterleave, true>(
+                xAddr, xAddr + (loop0 + loop1) * alignedPostAxisSize_, mxScaleAddr, yAddr,
+                yAddr + (loop0 + loop1) * alignedOutputPostAxisSize_, loop0, loop1);
+        }
 
         xAddr += (2 * loop0 + loop1) * alignedPostAxisSize_;
         yAddr += (2 * loop0 + loop1) * alignedOutputPostAxisSize_;
@@ -448,7 +456,7 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
-template <const bool canInterleave>
+template <const bool canInterleave, const bool canMaxLowBound>
 __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::Compute(
     __ubuf__ DTYPE_X* lhsXAddr, __ubuf__ DTYPE_X* rhsXAddr, __ubuf__ uint8_t* mxScaleAddr, __ubuf__ uint8_t* lhsYAddr,
     __ubuf__ uint8_t* rhsYAddr, uint16_t loop0, uint16_t loop1)
@@ -466,12 +474,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
 
         if constexpr (!IsSame<DTYPE_X, float>::value) {
             // Compute MX scales and shared exponents
-            ComputeScalesAndSharedExp(lhsRegs, auxRegs);
+            ComputeScalesAndSharedExp<canMaxLowBound>(lhsRegs, auxRegs);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
                 (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, lhsRegs.mxScale);
 
             if constexpr (!canInterleave) {
-                ComputeScalesAndSharedExp(rhsRegs, auxRegs);
+                ComputeScalesAndSharedExp<canMaxLowBound>(rhsRegs, auxRegs);
                 Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::HIGHEST>(
                     (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale, rhsRegs.mxScale);
                 Reg::Or(lhsRegs.mxScale, lhsRegs.mxScale, rhsRegs.mxScale, auxRegs.p0);
@@ -479,12 +487,12 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype
             Reg::DataCopy(mxScaleAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, auxRegs.p2);
         } else {
             // Compute MX scales and shared exponents
-            ComputeScalesAndSharedExp(lhsRegs, auxRegs);
+            ComputeScalesAndSharedExp<canMaxLowBound>(lhsRegs, auxRegs);
             Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
                 (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, lhsRegs.mxScale);
             Reg::DataCopy(mxScaleAddr, (Reg::RegTensor<uint8_t>&)lhsRegs.mxScale, auxRegs.p2);
             if constexpr (!canInterleave) {
-                ComputeScalesAndSharedExp(rhsRegs, auxRegs);
+                ComputeScalesAndSharedExp<canMaxLowBound>(rhsRegs, auxRegs);
                 Reg::Pack<uint8_t, uint16_t, Reg::HighLowPart::LOWEST>(
                     (Reg::RegTensor<uint8_t>&)rhsRegs.mxScale, rhsRegs.mxScale);
                 Reg::DataCopy(
@@ -539,8 +547,6 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
     Reg::Duplicate(regs.manForFP32, FP32_MX_MAN_MASK);
     Reg::Duplicate(regs.dstTypeMaxReg, invDstTypeMax_);
     Reg::Duplicate(regs.oneU32, 1);
-    // Reg::Duplicate(regs.fp32Last16ManMask, FP32_LAST_16_MAN_MASK);
-    // Reg::Duplicate(regs.fp32OddModeMask, FP32_MAN_ODD_MASK);
 
     if constexpr (IsSame<DTYPE_X, half>::value) {
         if constexpr (IsSame<DTYPE_Y, fp4x2_e2m1_t>::value) {
@@ -672,14 +678,15 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
+template <const bool canMaxLowBound>
 __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeScalesAndSharedExp(
     ComputeRegisters& regs, AuxRegisters& auxRegs)
 {
     if constexpr (IsSame<DTYPE_X, float>::value) {
-        ComputeScalesAndSharedExpFP32(regs, auxRegs);
+        ComputeScalesAndSharedExpFP32<canMaxLowBound>(regs, auxRegs);
     } else {
-        ComputeScalesAndSharedExpNonFP32(regs, auxRegs);
+        ComputeScalesAndSharedExpNonFP32<canMaxLowBound>(regs, auxRegs);
     }
 }
 
@@ -703,12 +710,13 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
+template <const bool canMaxLowBound>
 __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeScalesAndSharedExpFP32(
     ComputeRegisters& regs, AuxRegisters& auxRegs)
 {
     if constexpr (calcMode == MODE_ONE || calcMode == MODE_THREE) {
-        ComputeScaleFromAbsMaxFP32(auxRegs, regs.absMaxU32, regs.mxScale0U32, regs.mxScale0Add1U32, regs.mxScale);
+        ComputeScaleFromAbsMaxFP32<false, canMaxLowBound>(auxRegs, regs.absMaxU32, regs.mxScale0U32, regs.mxScale0Add1U32, regs.mxScale);
         Reg::ShiftLefts(regs.expMaxU16, regs.mxScale, BF16_SHR_NUM, auxRegs.p0);
         ComputeReciprocalScale(regs, auxRegs, true);
     } else {
@@ -748,15 +756,16 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
+template <const bool canMaxLowBound>
 __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeScalesAndSharedExpNonFP32(
     ComputeRegisters& regs, AuxRegisters& auxRegs)
 {
     if constexpr (calcMode == MODE_ONE || calcMode == MODE_THREE) {
-        ComputeScaleFromAbsMaxNonFP32<false>(
+        ComputeScaleFromAbsMaxNonFP32<false, canMaxLowBound>(
             auxRegs, regs.absMaxU16, (Reg::RegTensor<uint32_t>&)regs.max0FP32, regs.mxScale0U32, regs.mxScale0Add1U32,
             regs.mxScale);
-        ComputeScaleFromAbsMaxNonFP32<true>(
+        ComputeScaleFromAbsMaxNonFP32<true, canMaxLowBound>(
             auxRegs, regs.absMaxU16, (Reg::RegTensor<uint32_t>&)regs.max1FP32, regs.mxScale1U32, regs.mxScale1Add1U32,
             regs.mxScale1);
 
@@ -787,12 +796,30 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
+template <const bool isEven, const bool canMaxLowBound>
 __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleFromAbsMaxFP32(
     AuxRegisters& auxRegs, Reg::RegTensor<uint32_t>& absMaxU32, Reg::RegTensor<uint32_t>& mxScaleU32,
     Reg::RegTensor<uint32_t>& mxScaleAdd1U32, Reg::RegTensor<uint16_t>& mxScale)
 {
     if constexpr (calcMode == MODE_ONE) {
+        if constexpr (IsSame<xDtype, float>::value) {
+            if constexpr (canMaxLowBound) {
+                Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+                Reg::Maxs((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, maxLowBound_, maskAll);
+            } else {
+                // padding scale do not handle maxs(absMax， maxLowBound_)
+                Reg::MaskReg maskOdd = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+                Reg::MaskReg maskEven = Reg::CreateMask<float, Reg::MaskPattern::ALLF>();
+                Reg::Interleave<float>(maskOdd, maskEven, maskOdd, maskEven);
+                Reg::Maxs((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, maxLowBound_, maskOdd);
+            }
+        } else {
+            if constexpr (canMaxLowBound || !isEven) {
+                Reg::MaskReg maskAll = Reg::CreateMask<float, Reg::MaskPattern::ALL>();
+                Reg::Maxs((Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32, maxLowBound_, maskAll);
+            }
+        }
         Reg::Mul(
             (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<float>&)absMaxU32,
             (Reg::RegTensor<float>&)auxRegs.invMax, auxRegs.p1);
@@ -824,7 +851,7 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>
-template <const bool isEven>
+template <const bool isEven, const bool canMaxLowBound>
 __aicore__ inline void
 DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>::ComputeScaleFromAbsMaxNonFP32(
     AuxRegisters& auxRegs, Reg::RegTensor<uint16_t>& absMaxU16, Reg::RegTensor<uint32_t>& absMaxU32,
@@ -839,7 +866,7 @@ DynamicMxQuantNotTailAxisOptimizeSmallTail<xDtype, yDtype, roundMode, calcMode>:
         Reg::Cast<float, DTYPE_X, castTraitZero>(
             (Reg::RegTensor<float>&)absMaxU32, (Reg::RegTensor<DTYPE_X>&)absMaxU16, auxRegs.p0);
     }
-    ComputeScaleFromAbsMaxFP32(auxRegs, absMaxU32, mxScaleU32, mxScaleAdd1U32, mxScale);
+    ComputeScaleFromAbsMaxFP32<isEven, canMaxLowBound>(auxRegs, absMaxU32, mxScaleU32, mxScaleAdd1U32, mxScale);
 }
 
 template <typename xDtype, typename yDtype, RoundMode roundMode, const int64_t calcMode>

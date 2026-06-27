@@ -41,6 +41,7 @@ namespace ge {
 * Support MxFP8/MxFP4(OCP Microscaling Formats (Mx) Specification , count 0) or MxFP8(nvidia-cuBLAS , count 1) or MxFP4(Dynamic Dtype Range , count 2).
 * @li dst_type_max: An optional Float.Max_dtype takes the maximum value of the quant_data_type, or the provided value.Defaults to 0.
 * Only support in FP4_E2M1 mode, with a valid range of 6.0 to 12.0. 
+* @li max_low_bound: An optional Float, indicates the maximum value limit for scale calculation. Defaults to 0. Only support when scale_alg=1. Must be non-negative.
 
 * @par Outputs:
 * @li y: Quantized output tensor. It has the same shape and rank as input x.
@@ -62,6 +63,7 @@ namespace ge {
 * The default value 0.0 means that maxType corresponds to the maximum value of the target data type.
 * If other values are provided, mxscale is calculated based on the provided value.
 * @li When x's data type is float, blocksize must be 32.
+* @li When x's data type is float, the size of the quantization axis must not be less than 32.
 
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
@@ -76,6 +78,7 @@ REG_OP(DynamicMxQuant)
     .ATTR(blocksize, Int, 32)
     .ATTR(scale_alg, Int, 0)
     .ATTR(dst_type_max, Float, 0.0)
+    .ATTR(max_low_bound, Float, 0.0)
     .OP_END_FACTORY_REG(DynamicMxQuant)
 } // namespace ge
 

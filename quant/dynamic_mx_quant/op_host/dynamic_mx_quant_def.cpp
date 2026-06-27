@@ -21,7 +21,9 @@ static constexpr int32_t DEFAULT_BLOCK_SIZE = 32;
 static constexpr int32_t DEFAULT_DST_TYPE = 40;
 static constexpr int32_t DEFAULT_SCALE_ALG = 0;
 static constexpr float DEFAULT_DST_TYPE_MAX = 0.0;
+static constexpr float DEFAULT_MAX_LOW_BOUND = 0.0;
 static constexpr uint32_t ATTR_VERSION = 2;
+static constexpr uint32_t ATTR_VERSION_V3 = 3;
 class DynamicMxQuant : public OpDef {
 public:
     explicit DynamicMxQuant(const char* name) : OpDef(name)
@@ -69,6 +71,7 @@ public:
         this->Attr("blocksize").AttrType(OPTIONAL).Int(DEFAULT_BLOCK_SIZE);
         this->Attr("scale_alg").AttrType(OPTIONAL).Int(DEFAULT_SCALE_ALG);
         this->Attr("dst_type_max").AttrType(OPTIONAL).Version(ATTR_VERSION).Float(DEFAULT_DST_TYPE_MAX);
+        this->Attr("max_low_bound").AttrType(OPTIONAL).Version(ATTR_VERSION_V3).Float(DEFAULT_MAX_LOW_BOUND);
 
         OpAICoreConfig aicoreConfig;
         aicoreConfig.DynamicCompileStaticFlag(true)

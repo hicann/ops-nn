@@ -105,6 +105,7 @@ struct DynamicMxQuantTilingParam {
 
     float dstTypeMax{0.0};
     float invDstTypeMax{0.0};
+    float maxLowBound{0.0};
     // 输入 dtype 字节数：bf16/fp16=2, fp32=4。
     int64_t inputDtypeSize{2};
     bool isFp32Input{false};

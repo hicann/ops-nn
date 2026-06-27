@@ -95,6 +95,7 @@ private:
     uint16_t subNumForScale_ = 0;
     int64_t blockSize_ = 0;
     float invDstTypeMax_ = 0;
+    float maxLowBound_ = 0.0f;
 
     // runtime varible
     int64_t calcRow_ = 0;
@@ -153,6 +154,7 @@ __aicore__ inline void DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype
     postAxisSize_ = tilingData_->postAxisSize;
     quantAxisSize_ = tilingData_->quantAxisSize;
     invDstTypeMax_ = tilingData_->invDstTypeMax;
+    maxLowBound_ = tilingData_->maxLowBound;
 
     nAlignBlockCountMinus1_ = nAlignBlockCount_ - 1;
     mAlignBlockCountMinus1_ = mAlignBlockCount_ - 1;
@@ -442,6 +444,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
         }
 
         if constexpr (calcMode == MODE_ONE) {
+            Reg::Maxs((Reg::RegTensor<float>&)manAbs0FP32, (Reg::RegTensor<float>&)manAbs0FP32, maxLowBound_, pregAll32);
             Reg::Mul(
                 (Reg::RegTensor<float>&)manAbs0FP32, (Reg::RegTensor<float>&)manAbs0FP32,
                 (Reg::RegTensor<float>&)invMax, pregAll32);
@@ -470,6 +473,7 @@ DynamicMxQuantNotTailAxisOptimizeLargeTail<xDtype, yDtype, roundMode, calcMode>:
 
         if constexpr (!IsSame<xDtype, float>::value) {
             if constexpr (calcMode == MODE_ONE) {
+                Reg::Maxs((Reg::RegTensor<float>&)manAbs1FP32, (Reg::RegTensor<float>&)manAbs1FP32, maxLowBound_, pregAll32);
                 Reg::Mul(
                     (Reg::RegTensor<float>&)manAbs1FP32, (Reg::RegTensor<float>&)manAbs1FP32,
                     (Reg::RegTensor<float>&)invMax, pregAll32);
