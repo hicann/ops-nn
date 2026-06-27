@@ -22,7 +22,7 @@
 using namespace AscendC;
 using namespace ThresholdOp;
 
-template <uint64_t schMode, uint8_t valueMode, uint64_t dType>
+template <uint64_t schMode, uint8_t valueMode>
 __global__ __aicore__ void threshold_v2(
     GM_ADDR x, GM_ADDR threshold, GM_ADDR value, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -30,33 +30,24 @@ __global__ __aicore__ void threshold_v2(
     GET_TILING_DATA_WITH_STRUCT(EleBaseTilingDataV2, tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
 
-    using T = std::conditional_t<dType == TPL_BF16, bfloat16_t,
-            std::conditional_t<dType == TPL_FP16, half,
-            std::conditional_t<dType == TPL_FP32, float,
-            std::conditional_t<dType == TPL_UINT8, uint8_t,
-            std::conditional_t<dType == TPL_INT8, int8_t,
-            std::conditional_t<dType == TPL_INT16, int16_t,
-            std::conditional_t<dType == TPL_INT32, int32_t,
-            std::conditional_t<dType == TPL_INT64, int64_t, void>>>>>>>>;
-
     TPipe pipe;
-    if constexpr (dType == TPL_BF16) {
+    if constexpr (std::is_same_v<DTYPE_X, bfloat16_t>) {
         if constexpr (valueMode == TPL_HAS_VALUE) {
-            ElementwiseSch<schMode, typename ThresholdCastDag<T, float>::OpDag> sch(&tilingData, &pipe);
+            ElementwiseSch<schMode, typename ThresholdCastDag<DTYPE_X, float>::OpDag> sch(&tilingData, &pipe);
             sch.Init(x, threshold, value, y);
             sch.Process();
         } else {
-            ElementwiseSch<schMode, typename ThresholdCastDagNoValue<T, float>::OpDag> sch(&tilingData, &pipe);
+            ElementwiseSch<schMode, typename ThresholdCastDagNoValue<DTYPE_X, float>::OpDag> sch(&tilingData, &pipe);
             sch.Init(x, threshold, y);
             sch.Process();
         }
     } else {
         if constexpr (valueMode == TPL_HAS_VALUE) {
-            ElementwiseSch<schMode, typename ThresholdDag<T>::OpDag> sch(&tilingData, &pipe);
+            ElementwiseSch<schMode, typename ThresholdDag<DTYPE_X>::OpDag> sch(&tilingData, &pipe);
             sch.Init(x, threshold, value, y);
             sch.Process();
         } else {
-            ElementwiseSch<schMode, typename ThresholdDagNoValue<T>::OpDag> sch(&tilingData, &pipe);
+            ElementwiseSch<schMode, typename ThresholdDagNoValue<DTYPE_X>::OpDag> sch(&tilingData, &pipe);
             sch.Init(x, threshold, y);
             sch.Process();
         }
