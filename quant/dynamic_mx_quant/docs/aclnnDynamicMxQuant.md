@@ -114,7 +114,7 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入x，对应公式中Vi和di。</td>
-      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li><li>x的类型为FLOAT时，仅支持blocksize=32。</li></ul></td>
+      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li><li>x的类型为FLOAT时，仅支持blocksize=32，且量化轴的维度不能小于32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
@@ -154,7 +154,7 @@ aclnnStatus aclnnDynamicMxQuant(
       <td>blocksize（int64_t）</td>
       <td>输入</td>
       <td>表示指定每次量化的元素个数，对应公式中的blocksize。</td>
-      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li></ul></td>
+      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li><li>当x的类型为FLOAT时，blocksize必须为32。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>-</td>
@@ -308,6 +308,9 @@ aclnnStatus aclnnDynamicMxQuant(
   - mxscaleOut.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x一致。
+- 当x的数据类型为FLOAT时：
+  - blocksize必须为32。
+  - 量化轴的维度不能小于32。
 
 ## 调用示例
 

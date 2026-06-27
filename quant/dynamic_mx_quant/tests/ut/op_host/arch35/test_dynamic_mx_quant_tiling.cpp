@@ -436,6 +436,18 @@ TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float32_fp4e2m1_not_t
     ExecuteTestCase(ge::DT_FLOAT, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData);
 }
 
+TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float32_quant_axis_less_than_32)
+{
+    gert::StorageShape shape = {{60, 14, 16, 128}, {60, 14, 16, 128}};
+    gert::StorageShape scaleShape = {{60, 14, 1, 128, 2}, {60, 14, 1, 128, 2}};
+    int64_t axis = 2;
+    int64_t blockSize = 32;
+    string expectTilingData = "";
+
+    ExecuteTestCase(
+        ge::DT_FLOAT, ge::DT_FLOAT4_E2M1, shape, scaleShape, axis, blockSize, expectTilingData, ge::GRAPH_FAILED);
+}
+
 TEST_F(DynamicMxQuantTiling, DynamicMxQuant_tiling_ascendc_float32_fp8e4m3fn_optimize)
 {
     // 小尾轴 + blockSize=32 → 进入 not_tail_axis_optimize 路径

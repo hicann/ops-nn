@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 接口功能：目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。
+- 接口功能：目的数据类型为FLOAT4类、FLOAT8类的MX量化。在给定的轴axis上，根据每blocksize个数，计算出这组数对应的量化尺度mxscale作为输出mxscaleOut的对应部分，然后对这组数每一个除以mxscale，根据round_mode转换到对应的dstType，得到量化结果y作为输出yOut的对应部分。在dstType为FLOAT8_E4M3FN、FLOAT8_E5M2时，根据scaleAlg的取值来指定计算mxscale的不同算法。相较于aclnnDynamicMxQuant，本接口新增dstTypeMax参数，可以根据dstTypeMax设置目标数据类型的最大值。
 
 - 计算公式：
   - 场景1，当scaleAlg为0时：
@@ -145,7 +145,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>x（aclTensor*）</td>
       <td>输入</td>
       <td>表示输入x，对应公式中Vi和di。</td>
-      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li><li>x的类型为FLOAT时，仅支持blocksize=32。</li></ul></td>
+      <td><ul><li>目的类型为FLOAT4_E2M1、FLOAT4_E1M2时，x的最后一维必须是偶数。</li><li>x的类型为FLOAT时，仅支持blocksize=32，且量化轴的维度不能小于32。</li></ul></td>
       <td>FLOAT16、BFLOAT16、FLOAT</td>
       <td>ND</td>
       <td>1-7</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnDynamicMxQuantV2(
       <td>blocksize（int64_t）</td>
       <td>输入</td>
       <td>表示指定每次量化的元素个数，对应公式中的blocksize。</td>
-      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li></ul></td>
+      <td><ul><li>仅支持32的倍数，不能为0，且不能超过1024。</li><li>当x的类型为FLOAT时，blocksize必须为32。</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>-</td>
@@ -349,6 +349,9 @@ aclnnStatus aclnnDynamicMxQuantV2(
   - mxscaleOut.shape[axis_change] = (ceil(x.shape[axis] / blocksize) + 2 - 1) / 2。
   - mxscaleOut.shape[-1] = 2。
   - 其他维度与输入x一致。
+- 当x的数据类型为FLOAT时：
+  - blocksize必须为32。
+  - 量化轴的维度不能小于32。
 
 ## 调用示例
 

@@ -464,6 +464,12 @@ static ge::graphStatus BaseCalc(const gert::TilingContext* context, DynamicMxQua
         tilingParam.preAxisSize *= xShape.GetDim(i);
     }
     tilingParam.quantAxisSize = dimSize;
+    OP_CHECK_IF(
+        tilingParam.isFp32Input && dimSize < ATTR_BLOCK_SIZE,
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+            context->GetNodeName(), "x", std::to_string(dimSize),
+            "FP32 input with quantization axis size less than 32 is not supported"),
+        return ge::GRAPH_FAILED);
     for (size_t i = tilingParam.axis + 1; i < xShape.GetDimNum(); i++) {
         tilingParam.postAxisSize *= xShape.GetDim(i);
     }
