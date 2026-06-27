@@ -40,6 +40,7 @@ function(add_opbase_modules)
     ${OPBASE_SOURCE_PATH}/src/op_common/atvoss/elewise/*.cpp
     ${OPBASE_SOURCE_PATH}/src/op_common/atvoss/broadcast/*.cpp
     ${OPBASE_SOURCE_PATH}/src/op_common/atvoss/reduce/*.cpp
+    ${OPBASE_SOURCE_PATH}/src/op_common/op_host/tiling_util.cpp
   )
 
   file(GLOB_RECURSE OPS_BASE_UTIL_SRC
