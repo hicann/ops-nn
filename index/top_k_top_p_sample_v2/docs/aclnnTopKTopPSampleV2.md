@@ -494,7 +494,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
   第一段接口完成入参校验，出现以下场景时报错：
 
   <table style="undefined;table-layout: fixed;width: 1155px"><colgroup>
-  <col style="width: 253px">
+  <col style="width: 300px">
   <col style="width: 140px">
   <col style="width: 762px">
   </colgroup>
@@ -516,14 +516,18 @@ aclnnStatus aclnnTopKTopPSampleV2(
       <td rowspan="4">161002</td>
       <td>logits、topK、topP、q、minPs的数据类型不在支持的范围之内。</td>
     </tr>
-    <tr>
-      <td>logits与q维度或尺寸不一致。</td>
+      <td>logits与q尺寸不一致。</td>
     </tr>
     <tr>
       <td>topK、topP、minPs的维度与logits的前n-1维不一致。</td>
     </tr>
     <tr>
       <td>logits、topP、minPs的数据类型不一致。</td>
+    </tr>
+    <tr>
+      <td>ACLNN_ERR_INNER_TILING_ERROR</td>
+      <td>561002</td>
+      <td>logits与q维度不一致。</td>
     </tr>
   </tbody></table>
   
