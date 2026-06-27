@@ -520,12 +520,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/selu_grad/README.md">selu_grad</a></td>
-    <td>✗</td>
-    <td>✗</td>
     <td>✓</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>完成SELU激活函数的反向梯度计算。给定上游梯度gradients和前向输出outputs，按元素计算输出梯度。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -629,7 +629,7 @@
   </tr>
   <tr>
     <td>activation</td>
-    <td><a href="../../activation/softsign_grad/README.md">softshrink</a></td>
+    <td><a href="../../activation/softshrink/README.md">softshrink</a></td>
     <td>✓</td>
     <td>✓</td>
     <td>✗</td>
@@ -646,6 +646,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
+    <td><a href="../../activation/softsign/README.md">softsign</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对输入张量应用Softsign激活函数：y = x / (1 + |x|)，输出值域为(-1, 1)。</td>
   </tr>
   <tr>
     <td>activation</td>
