@@ -1,6 +1,6 @@
 # aclnnLogSoftmaxBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/logsoftmax_grad)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/log_softmax_grad)
 
 ## 产品支持情况
 

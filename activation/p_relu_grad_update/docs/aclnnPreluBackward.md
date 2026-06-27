@@ -1,6 +1,6 @@
 # aclnnPreluBackward
 
-[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/prelu_grad_update)
+[📄 查看源码](https://gitcode.com/cann/ops-nn/tree/master/activation/p_relu_grad_update)
 
 ## 产品支持情况
 
