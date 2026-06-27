@@ -158,11 +158,11 @@ int main() {
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
 
-  // aclnnBatchNormBackward接口调用示例
+  // aclnnFastBatchNormBackward接口调用示例
   // 3. 调用CANN算子库API，需要修改为具体的API名称
   // 调用aclnnFastBatchNormBackward第一段接口
   ret = aclnnFastBatchNormBackwardGetWorkspaceSize(gradOut, self, weight, rMean, rVar, sMean, sVar, training, eps, outMask, 0, gradIn, gradWeight, gradBias, &workspaceSize, &executor);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBatchNormBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFastBatchNormBackwardGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
   // 根据第一段接口计算出的workspaceSize申请device内存
   void* workspaceAddr = nullptr;
   if (workspaceSize > 0) {
@@ -171,7 +171,7 @@ int main() {
   }
   // 调用aclnnFastBatchNormBackward第二段接口
   ret = aclnnFastBatchNormBackward(workspaceAddr, workspaceSize, executor, stream);
-  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnBatchNormBackward failed. ERROR: %d\n", ret); return ret);
+  CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnFastBatchNormBackward failed. ERROR: %d\n", ret); return ret);
 
   // 4. （固定写法）同步等待任务执行结束
   ret = aclrtSynchronizeStream(stream);
