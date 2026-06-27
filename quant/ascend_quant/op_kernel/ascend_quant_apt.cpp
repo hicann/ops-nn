@@ -20,7 +20,7 @@
 
 using namespace AscendC;
 using namespace AscendQuantOp;
-template <uint64_t RoundMode, uint64_t ExtraBit>
+template <uint64_t RoundMode, uint64_t ExtraBit, uint64_t OffsetZero>
 __global__ __aicore__ void ascend_quant(GM_ADDR x, GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
     #if (__NPU_ARCH__ == 3510)
@@ -29,7 +29,7 @@ __global__ __aicore__ void ascend_quant(GM_ADDR x, GM_ADDR y, GM_ADDR workspace,
     REGISTER_TILING_DEFAULT(AscendQuantTilingData);
     GET_TILING_DATA(tilingData, tiling);
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    AscendQuantPerTensorRegbase<DTYPE_X, DTYPE_Y, RoundMode> op;
+    AscendQuantPerTensorRegbase<DTYPE_X, DTYPE_Y, RoundMode, OffsetZero> op;
     TPipe pipe;
     op.Init(x, y, &tilingData, &pipe);
     op.Process();

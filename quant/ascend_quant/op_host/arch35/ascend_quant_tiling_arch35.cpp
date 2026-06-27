@@ -339,7 +339,8 @@ void AscendQuantRegbase::CalcTiling()
 void AscendQuantRegbase::CalcTilingKey()
 {
     uint32_t roundModeKey = static_cast<uint32_t>(roundMode_) + 1;
-    tilingKey_ = GET_TPL_TILING_KEY(roundModeKey, TPL_EXTRA_BIT_ONE);
+    uint32_t offsetZeroKey = (offset_ == 0.0f) ? TPL_OFFSET_ZERO : TPL_OFFSET_NON_ZERO;
+    tilingKey_ = GET_TPL_TILING_KEY(roundModeKey, TPL_EXTRA_BIT_ONE, offsetZeroKey);
 }
 
 void AscendQuantRegbase::WriteTilingData()

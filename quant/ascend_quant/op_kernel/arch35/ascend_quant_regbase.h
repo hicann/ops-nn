@@ -22,7 +22,7 @@
 
 namespace AscendQuantOp {
 using namespace AscendC;
-template <typename T, typename U, uint64_t RoundMode>
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
 class AscendQuantPerTensorRegbase : public AscendQuantBase<T, U, RoundMode> {
 public:
     __aicore__ inline AscendQuantPerTensorRegbase(){};
@@ -62,8 +62,8 @@ __aicore__ inline void SetFloatOverflowModeForRegbase()
   #endif
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Init(
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::Init(
     GM_ADDR x, GM_ADDR y, const AscendQuantTilingData* tilingData, TPipe* pipe)
 {
     SetFloatOverflowModeForRegbase<U>();
@@ -80,8 +80,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Init(
     pipe_->InitBuffer(outQueueY_, bufferNum_, tilingData_->baseLen * sizeof(U));
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Process()
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::Process()
 {
     if (blockIdx_ >= tilingData_->numCore) {
         return;
@@ -100,16 +100,16 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Process()
     }
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::CopyXAndCompute(int64_t dataCount, int64_t xOffset)
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyXAndCompute(int64_t dataCount, int64_t xOffset)
 {
     CopyInX(dataCount, xOffset);
     Compute(dataCount);
     CopyOutY(dataCount, xOffset);
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::CopyInX(int64_t xLen, int64_t xInOffset)
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyInX(int64_t xLen, int64_t xInOffset)
 {
     LocalTensor<T> xLocal = inQueueX_.AllocTensor<T>();
     DataCopyExtParams copyParams;
@@ -119,8 +119,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::CopyInX(int
     inQueueX_.EnQue(xLocal);
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Compute(int64_t dataCount)
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::Compute(int64_t dataCount)
 {
     LocalTensor<T> xLocal = inQueueX_.DeQue<T>();
     LocalTensor<yCopyDtype> outLocal = outQueueY_.AllocTensor<yCopyDtype>();
@@ -167,8 +167,12 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Compute(int
                     vregFloatX, vregX, mask);
             }
 
-            AscendC::MicroAPI::Muls(vregTmp1, vregFloatX, ATTR_SCALE, mask);
-            AscendC::MicroAPI::Adds(vregFloatY, vregTmp1, ATTR_OFFSET, mask);
+            if constexpr (OffsetZero != TPL_OFFSET_ZERO) {
+                AscendC::MicroAPI::Muls(vregTmp1, vregFloatX, ATTR_SCALE, mask);
+                AscendC::MicroAPI::Adds(vregFloatY, vregTmp1, ATTR_OFFSET, mask);
+            } else {
+                AscendC::MicroAPI::Muls(vregFloatY, vregFloatX, ATTR_SCALE, mask);
+            }
 
             // cast and sd for y
             if constexpr (IsSameType<U, hifloat8_t>::value) {
@@ -221,8 +225,8 @@ __aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::Compute(int
     outQueueY_.EnQue(outLocal);
 }
 
-template <typename T, typename U, uint64_t RoundMode>
-__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode>::CopyOutY(int64_t yLen, int64_t yOutOffset)
+template <typename T, typename U, uint64_t RoundMode, uint64_t OffsetZero>
+__aicore__ inline void AscendQuantPerTensorRegbase<T, U, RoundMode, OffsetZero>::CopyOutY(int64_t yLen, int64_t yOutOffset)
 {
     if constexpr (IsSameType<U, int4b_t>::value) {
         yOutOffset = yOutOffset >> 1;

@@ -71,7 +71,7 @@ TEST_F(ascend_quant_test, test_case_fp16_to_int8)
     ICPU_SET_TILING_KEY(0);
 
     auto ascend_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::ascend_quant<TPL_ROUND_MODE_ROUND, 0>(x, y, workSpace, tiling);
+        ::ascend_quant<TPL_ROUND_MODE_ROUND, 0, TPL_OFFSET_ZERO>(x, y, workSpace, tiling);
     };
     ICPU_RUN_KF(ascend_quant_kernel, blockDim, x, y, workSpace, tiling);
 
@@ -113,7 +113,7 @@ TEST_F(ascend_quant_test, test_case_fp32_to_int8)
     ICPU_SET_TILING_KEY(0);
 
     auto ascend_quant_kernel = [](GM_ADDR x, GM_ADDR y, GM_ADDR workSpace, GM_ADDR tiling) {
-        ::ascend_quant<TPL_ROUND_MODE_ROUND, 0>(x, y, workSpace, tiling);
+        ::ascend_quant<TPL_ROUND_MODE_ROUND, 0, TPL_OFFSET_NON_ZERO>(x, y, workSpace, tiling);
     };
     ICPU_RUN_KF(ascend_quant_kernel, blockDim, x, y, workSpace, tiling);
 
