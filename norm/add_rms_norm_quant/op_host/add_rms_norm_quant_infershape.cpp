@@ -20,6 +20,7 @@ static constexpr int INPUT_SCALE2_IDX = 4;
 static constexpr int OUTPUT_Y1_IDX = 0;
 static constexpr int OUTPUT_Y2_IDX = 1;
 static constexpr int OUTPUT_X_IDX = 2;
+static constexpr int OUTPUT_RESOUT_IDX = 3;
 static constexpr int ATTR_INDEX_OF_DST_TYPE = 3;
 
 using namespace ge;
@@ -81,4 +82,63 @@ static graphStatus InferDataType4AddRmsNormQuant(gert::InferDataTypeContext* con
 }
 
 IMPL_OP_INFERSHAPE(AddRmsNormQuant).InferShape(InferShape4AddRmsNormQuant).InferDataType(InferDataType4AddRmsNormQuant);
+
+static ge::graphStatus InferShape4AddRmsNormQuantV2(gert::InferShapeContext* context)
+{
+    OP_LOGD(context, "Begin to do InferShape4AddRmsNormQuantV2");
+
+    const gert::Shape* x1Shape = context->GetInputShape(INPUT_X1_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, x1Shape);
+
+    gert::Shape* y1Shape = context->GetOutputShape(OUTPUT_Y1_IDX);
+    gert::Shape* y2Shape = context->GetOutputShape(OUTPUT_Y2_IDX);
+    gert::Shape* xShape = context->GetOutputShape(OUTPUT_X_IDX);
+    gert::Shape* resOutShape = context->GetOutputShape(OUTPUT_RESOUT_IDX);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y1Shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, y2Shape);
+    OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
+    *y1Shape = *x1Shape;
+    *xShape = *x1Shape;
+
+    if (resOutShape != nullptr) {
+        *resOutShape = *x1Shape;
+    }
+
+    const gert::Shape* scale2Shape = context->GetOptionalInputShape(INPUT_SCALE2_IDX);
+    if (nullptr != scale2Shape && (scale2Shape->GetDimNum() != 0)) {
+        *y2Shape = *x1Shape;
+    } else {
+        *y2Shape = gert::Shape({1});
+    }
+
+    OP_LOGD(context, "End to do InferShape4AddRmsNormQuantV2");
+    return GRAPH_SUCCESS;
+}
+
+static graphStatus InferDataType4AddRmsNormQuantV2(gert::InferDataTypeContext* context)
+{
+    OP_LOGD(context, "Begin to do InferDataType4AddRmsNormQuantV2");
+    ge::DataType yDtype = ge::DT_INT8;
+    auto* attrs = context->GetAttrs();
+    if (attrs != nullptr) {
+        const int32_t* pDstDtype = attrs->GetAttrPointer<int32_t>(ATTR_INDEX_OF_DST_TYPE);
+        if (pDstDtype != nullptr) {
+            int32_t dstDtype = *pDstDtype;
+            yDtype = static_cast<ge::DataType>(dstDtype);
+            OP_CHECK_IF(
+                std::find(OUT_TYPE_LIST.begin(), OUT_TYPE_LIST.end(), yDtype) == OUT_TYPE_LIST.end(),
+                OP_LOGE(context,
+                    "attr dst_type only support 2(int8), 34(hifloat8), 35(float8_e5m2), 36(float8_e4m3fn)"),
+                return ge::GRAPH_FAILED);
+        }
+    }
+    context->SetOutputDataType(OUTPUT_Y1_IDX, yDtype);
+    context->SetOutputDataType(OUTPUT_Y2_IDX, yDtype);
+    context->SetOutputDataType(OUTPUT_X_IDX, context->GetInputDataType(INPUT_X1_IDX));
+    context->SetOutputDataType(OUTPUT_RESOUT_IDX, context->GetInputDataType(INPUT_X1_IDX));
+    OP_LOGD(context, "End to do InferDataType4AddRmsNormQuantV2");
+    return GRAPH_SUCCESS;
+}
+
+IMPL_OP_INFERSHAPE(AddRmsNormQuantV2).InferShape(InferShape4AddRmsNormQuantV2).InferDataType(InferDataType4AddRmsNormQuantV2);
 } // namespace ops

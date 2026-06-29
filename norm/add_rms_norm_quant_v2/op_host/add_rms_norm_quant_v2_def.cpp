@@ -116,6 +116,8 @@ public:
         this->Attr("axis").AttrType(OPTIONAL).Int(-1);
         this->Attr("epsilon").AttrType(OPTIONAL).Float(1e-6);
         this->Attr("div_mode").AttrType(OPTIONAL).Bool(true);
+        this->Attr("dst_type").AttrType(OPTIONAL).Int(ge::DT_INT8);
+        this->Attr("output_res").AttrType(OPTIONAL).Bool(false);
 
         this->AICore().AddConfig("ascend910b");
         this->AICore().AddConfig("ascend910_93");
@@ -195,6 +197,101 @@ public:
             .AutoContiguous();
         config310P.DynamicCompileStaticFlag(true).DynamicRankSupportFlag(true).DynamicShapeSupportFlag(true);
         this->AICore().AddConfig("ascend310p", config310P);
+
+        static const std::vector<ge::DataType> xDtypeRegbase = {
+        ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,
+        ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,
+        ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16,
+        ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT16,  ge::DT_BF16
+        };
+        static const std::vector<ge::DataType> scalesDtypeRegbase = {
+        ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT
+        };
+        static const std::vector<ge::DataType> zpDtypeRegbase = {
+        ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT,
+        ge::DT_INT32,    ge::DT_INT32,    ge::DT_FLOAT,    ge::DT_FLOAT16,  ge::DT_BF16,     ge::DT_FLOAT,    ge::DT_FLOAT
+        };
+        static const std::vector<ge::DataType> yDtypeRegbase = {
+        ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,     ge::DT_INT8,
+        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+        ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN, ge::DT_FLOAT8_E4M3FN,
+        ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
+        ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,   ge::DT_FLOAT8_E5M2,
+        ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8, ge::DT_HIFLOAT8
+        };
+        static const std::vector<ge::Format> fmtRegbase(28, ge::FORMAT_ND);
+
+        OpAICoreConfig config950;
+        config950.Input("x1")
+            .ParamType(REQUIRED)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("x2")
+            .ParamType(REQUIRED)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("gamma")
+            .ParamType(REQUIRED)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("scales1")
+            .ParamType(REQUIRED)
+            .DataType(scalesDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("scales2")
+            .ParamType(OPTIONAL)
+            .DataType(scalesDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("zero_points1")
+            .ParamType(OPTIONAL)
+            .DataType(zpDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("zero_points2")
+            .ParamType(OPTIONAL)
+            .DataType(zpDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Input("bias")
+            .ParamType(OPTIONAL)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Output("y1")
+            .ParamType(REQUIRED)
+            .DataType(yDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Output("y2")
+            .ParamType(REQUIRED)
+            .DataType(yDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Output("x")
+            .ParamType(REQUIRED)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.Output("resOut")
+            .ParamType(REQUIRED)
+            .DataType(xDtypeRegbase)
+            .Format(fmtRegbase)
+            .UnknownShapeFormat(fmtRegbase);
+        config950.DynamicCompileStaticFlag(true)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .ExtendCfgInfo("opFile.value", "add_rms_norm_quant_v2_apt");
+        this->AICore().AddConfig("ascend950", config950);
     }
 };
 OP_ADD(AddRmsNormQuantV2);

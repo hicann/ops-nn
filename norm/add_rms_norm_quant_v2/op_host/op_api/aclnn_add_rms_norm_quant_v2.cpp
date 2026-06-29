@@ -82,6 +82,35 @@ static const std::initializer_list<op::DataType> ASCEND910BC_AND_310P_DTYPE_SUPP
 static const std::initializer_list<op::DataType> ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_SCALE = {
     op::DataType::DT_FLOAT, op::DataType::DT_BF16};
 
+static const std::initializer_list<op::DataType> ASCEND950_DTYPE_SUPPORT_LIST_Y = {
+    op::DataType::DT_INT8, op::DataType::DT_HIFLOAT8, op::DataType::DT_FLOAT8_E5M2, op::DataType::DT_FLOAT8_E4M3FN};
+
+static bool IsSocVersion310P()
+{
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND310P) {
+        return true;
+    }
+    return false;
+}
+
+static bool IsSocVersion910BC_310P()
+{
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B ||
+        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_93 ||
+        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND310P) {
+        return true;
+    }
+    return false;
+}
+
+static bool IsSocVersion950()
+{
+    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND950) {
+        return true;
+    }
+    return false;
+}
+
 static bool CheckInputNotNull(
     const aclTensor* x1, const aclTensor* x2, const aclTensor* gamma, const aclTensor* scales1)
 {
@@ -171,8 +200,13 @@ static bool CheckOptionalParamDtypeValid(
 static bool CheckOutputDtypeValid(const aclTensor* y1Out, const aclTensor* y2Out, const aclTensor* xOut)
 {
     OP_CHECK_DTYPE_NOT_SUPPORT(xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(y2Out, op::DataType::DT_INT8, return false); // Mandatory output
-    OP_CHECK_DTYPE_NOT_MATCH(y1Out, op::DataType::DT_INT8, return false);
+    if (IsSocVersion950()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+    } else {
+        OP_CHECK_DTYPE_NOT_MATCH(y2Out, op::DataType::DT_INT8, return false);
+        OP_CHECK_DTYPE_NOT_MATCH(y1Out, op::DataType::DT_INT8, return false);
+    }
     return true;
 }
 
@@ -274,24 +308,6 @@ static bool CheckShapeSameWithGamma(
     return true;
 }
 
-static bool IsSocVersion310P()
-{
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND310P) {
-        return true;
-    }
-    return false;
-}
-
-static bool IsSocVersion910BC_310P()
-{
-    if (op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910B ||
-        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND910_93 ||
-        op::GetCurrentPlatformInfo().GetSocVersion() == op::SocVersion::ASCEND310P) {
-        return true;
-    }
-    return false;
-}
-
 static inline bool CheckShapeGammaX(const aclTensor* x1, const aclTensor* gamma) {
     const auto& xShape = x1->GetViewShape();
     const auto& gammaShape = gamma->GetViewShape();
@@ -363,6 +379,16 @@ static aclnnStatus CheckParams(
         ACLNN_ERR_PARAM_INVALID);
         CHECK_RET(CheckOutputDtypeValid(outputTensor.y1Out, outputTensor.y2Out, outputTensor.xOut),
         ACLNN_ERR_PARAM_INVALID);
+
+        // 950: shape consistency checks
+        CHECK_RET(CheckShapeSameWithX(inputTensor.x1, inputTensor.x2, outputTensor.y1Out, outputTensor.y2Out, outputTensor.xOut), ACLNN_ERR_PARAM_INVALID);
+        CHECK_RET(CheckShapeGammaX(inputTensor.x1, inputTensor.gamma), ACLNN_ERR_PARAM_INVALID);
+        if(nullptr != inputTensor.betaOptional) {
+            OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.gamma, inputTensor.betaOptional, return ACLNN_ERR_PARAM_INVALID);
+        }
+        if (nullptr != outputTensor.resOut) {
+            OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.resOut, return ACLNN_ERR_PARAM_INVALID);
+        }
     }
     return ACLNN_SUCCESS;
 }
@@ -389,9 +415,14 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor, 
     aclTensor* y2KernelOut = nullptr;
     aclTensor* y1KernelOut = nullptr;
     bool hasY2 = (nullptr != inputTensor.scales2Optional);
+
+    int dstType = IsSocVersion950()
+                      ? static_cast<int>(outputTensor.y1Out->GetDataType())
+                      : static_cast<int>(op::DataType::DT_INT8);
+
     auto addRmsNormQuantRes = l0op::AddRmsNormQuant(inputTensor.x1, inputTensor.x2, inputTensor.gamma, inputTensor.scales1, inputTensor.scales2Optional,
                                                     inputTensor.zeroPoints1Optional, inputTensor.zeroPoints2Optional,inputTensor.betaOptional,
-                                                    paramStruct.axis, paramStruct.epsilon, paramStruct.divMode, executor);
+                                                    paramStruct.axis, paramStruct.epsilon, paramStruct.divMode, dstType, executor);
 
     y2KernelOut = std::get<AddRmsNormQuantV2ACLNN::IDX_1>(addRmsNormQuantRes);
     y1KernelOut = std::get<AddRmsNormQuantV2ACLNN::IDX_0>(addRmsNormQuantRes);
@@ -419,27 +450,56 @@ aclnnStatus ComputeAddRmsNormQuantV1(AddRmsNormQuantV2InputTensor& inputTensor, 
 
 static bool CheckDtypeValidV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor)
 {
-    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-    OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_SCALE, return false);
-    if (nullptr != inputTensor.betaOptional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-    }
-    if (nullptr != inputTensor.zeroPoints1Optional) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
-    }
+    if (IsSocVersion950()) {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        if (nullptr != inputTensor.betaOptional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        }
+        if (nullptr != inputTensor.zeroPoints1Optional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
+        }
+        if (nullptr != inputTensor.scales2Optional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales2Optional, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        }
+        if (nullptr != inputTensor.zeroPoints2Optional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints2Optional, ASCEND950_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
+        }
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y1Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.y2Out, ASCEND950_DTYPE_SUPPORT_LIST_Y, return false);
+        if (nullptr != outputTensor.resOut) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        }
+        if (nullptr != outputTensor.xOut) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND950_DTYPE_SUPPORT_LIST_X_SCALE, return false);
+        }
+    } else {
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.x2, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.gamma, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.scales1, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_SCALE, return false);
+        if (nullptr != inputTensor.betaOptional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.betaOptional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        }
+        if (nullptr != inputTensor.zeroPoints1Optional) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(inputTensor.zeroPoints1Optional, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_ZEROPOINT, return false);
+        }
 
-    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
-    OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.x2, return false);
+        OP_CHECK_DTYPE_NOT_SAME(inputTensor.x1, inputTensor.gamma, return false);
 
-    OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y1Out, op::DataType::DT_INT8, return false);
-    OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y2Out, op::DataType::DT_INT8, return false);  // Mandatory output
-    if (nullptr != outputTensor.resOut) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
-    }
-    if (nullptr != outputTensor.xOut) {
-        OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y1Out, op::DataType::DT_INT8, return false);
+        OP_CHECK_DTYPE_NOT_MATCH(outputTensor.y2Out, op::DataType::DT_INT8, return false);  // Mandatory output
+        if (nullptr != outputTensor.resOut) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.resOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        }
+        if (nullptr != outputTensor.xOut) {
+            OP_CHECK_DTYPE_NOT_SUPPORT(outputTensor.xOut, ASCEND910BC_AND_310P_DTYPE_SUPPORT_LIST_X, return false);
+        }
     }
     return true;
 }
@@ -458,23 +518,38 @@ static bool CheckShapeDimV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNor
     }
     OP_CHECK_MAX_DIM(outputTensor.y1Out, MAX_SUPPORT_DIMS_NUMS, return false);
     OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.y1Out, return false);
+    if (nullptr != outputTensor.y2Out) {
+        OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.y2Out, return false);
+    }
     if (nullptr != outputTensor.resOut) {
         OP_CHECK_MAX_DIM(outputTensor.resOut, MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.resOut, return false);
     }
     if (nullptr != outputTensor.xOut) {
         OP_CHECK_MAX_DIM(outputTensor.xOut, MAX_SUPPORT_DIMS_NUMS, return false);
+        OP_CHECK_SHAPE_NOT_EQUAL(inputTensor.x1, outputTensor.xOut, return false);
     }
     return true;
 }
 
 static aclnnStatus CheckParamsV2(AddRmsNormQuantV2InputTensor& inputTensor, AddRmsNormQuantV2OutputTensor& outputTensor, int64_t& mode)
 {
-    if(inputTensor.betaOptional != nullptr && outputTensor.xOut != nullptr && outputTensor.resOut == nullptr) {
-        mode = 1;
-    } else if(outputTensor.xOut == nullptr && outputTensor.resOut != nullptr && inputTensor.betaOptional == nullptr) {
-        mode = 0;
+    if (IsSocVersion950()) {
+        // 950: beta and resOut are independent, mode only depends on beta
+        if (inputTensor.betaOptional != nullptr) {
+            mode = 1;
+        } else {
+            mode = 0;
+        }
     } else {
-        CHECK_RET(false, ACLNN_ERR_PARAM_NULLPTR);
+        // 910B/910_93/310P: beta and resOut are mutually exclusive
+        if(inputTensor.betaOptional != nullptr && outputTensor.xOut != nullptr && outputTensor.resOut == nullptr) {
+            mode = 1;
+        } else if(outputTensor.xOut == nullptr && outputTensor.resOut != nullptr && inputTensor.betaOptional == nullptr) {
+            mode = 0;
+        } else {
+            CHECK_RET(false, ACLNN_ERR_PARAM_NULLPTR);
+        }
     }
 
     // 1. 检查必选输入/输出是否为空指针
@@ -519,16 +594,28 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor, 
     aclTensor* resComputeOut = nullptr;
     aclTensor* xComputeOut = nullptr;
 
+    int dstType = IsSocVersion950()
+                      ? static_cast<int>(outputTensor.y1Out->GetDataType())
+                      : static_cast<int>(op::DataType::DT_INT8);
+
     auto AddRmsNormQuantV2Outs = l0op::AddRmsNormQuantV2(inputTensor.x1, inputTensor.x2, inputTensor.gamma, inputTensor.betaOptional, inputTensor.scales1, inputTensor.scales2Optional,
                                                     inputTensor.zeroPoints1Optional, inputTensor.zeroPoints2Optional, outputTensor.xOut, outputTensor.resOut,
-                                                    mode, paramStruct.epsilon, paramStruct.divMode, executor);
+                                                    mode, paramStruct.epsilon, paramStruct.divMode, dstType, executor);
     y1ComputeOut = std::get<IDX_0>(AddRmsNormQuantV2Outs);
+    auto y2ComputeOut = std::get<IDX_1>(AddRmsNormQuantV2Outs);
     xComputeOut = std::get<IDX_2>(AddRmsNormQuantV2Outs);
     resComputeOut = std::get<IDX_3>(AddRmsNormQuantV2Outs);
 
     // 将 y1ComputeOut 结果拷贝到 y1 上
     auto viewCopyY1Result = l0op::ViewCopy(y1ComputeOut, outputTensor.y1Out, executor);
     CHECK_RET(viewCopyY1Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+
+    // 将 y2ComputeOut 结果拷贝到 y2 上（仅当 y2 是真正计算结果而非 dummy 时）
+    if (outputTensor.y2Out != nullptr && y2ComputeOut != nullptr &&
+        y2ComputeOut->GetViewShape() == outputTensor.y2Out->GetViewShape()) {
+        auto viewCopyY2Result = l0op::ViewCopy(y2ComputeOut, outputTensor.y2Out, executor);
+        CHECK_RET(viewCopyY2Result != nullptr, ACLNN_ERR_INNER_NULLPTR);
+    }
 
     if (outputTensor.xOut != nullptr) {
         // 将 xComputeOut 结果拷贝到 x 上
@@ -537,7 +624,7 @@ aclnnStatus ComputeAddRmsNormQuantV2(AddRmsNormQuantV2InputTensor& inputTensor, 
     }
 
     if (outputTensor.resOut != nullptr) {
-        // 将 xComputeOut 结果拷贝到 x 上
+        // 将 resComputeOut 结果拷贝到 resOut 上
         auto viewCopyResResult = l0op::ViewCopy(resComputeOut, outputTensor.resOut, executor);
         CHECK_RET(viewCopyResResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
     }
@@ -556,21 +643,27 @@ bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRm
 {
     if ((GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910B) &&
         (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND910_93) &&
-        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P)) {
+        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND310P) &&
+        (GetCurrentPlatformInfo().GetSocVersion() != SocVersion::ASCEND950)) {
         return false;
     }
 
-    // V2不支持传入s2和z2，不支持divMode为false
+    // 950: V2 kernel与V1共用regbase kernel，完整支持所有输入组合，无需回退V1
+    if (IsSocVersion950()) {
+        return true;
+    }
+
+    // Legacy platforms (910B/910_93/310P): V2 kernel有功能限制
     if (inputTensor.zeroPoints2Optional != nullptr || inputTensor.scales2Optional != nullptr || paramStruct.divMode == false) {
         OP_LOGD("Go addRmsNormQuantV1 because z2/s2/divMode are not supported.");
         return false;
     }
-
     if (inputTensor.gamma->GetViewShape().GetDimNum() == 1 && inputTensor.gamma->GetViewShape().GetDim(0) == 1 && inputTensor.betaOptional == nullptr &&
             outputTensor.resOut == nullptr) {
         OP_LOGD("Go addRmsNormQuantV1 because gamma/beta/rmsNormOut are not supported.");
         return false;
     }
+
     bool isGammaOk = ((
         inputTensor.gamma->GetViewShape().GetDimNum() == DIM_TWO && 
         inputTensor.gamma->GetViewShape().GetDim(0) == 1 && 
@@ -589,8 +682,7 @@ bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRm
                      outputTensor.xOut == nullptr) || 
                     (inputTensor.betaOptional != nullptr && 
                      outputTensor.resOut == nullptr && 
-                     outputTensor.xOut != nullptr
-                    );
+                     outputTensor.xOut != nullptr);
     if (isGammaOk && isScales1OK && iszeroPoints1OK && isBetaOk) {
         return true;
     }
@@ -598,6 +690,9 @@ bool CheckSupportV2(const AddRmsNormQuantV2InputTensor& inputTensor, const AddRm
 }
 
 void SpecialTransform(AddRmsNormQuantV2InputTensor& inputTensor, aclOpExecutor* executor) {
+    if (IsSocVersion950()) {
+        return;
+    }
     if(inputTensor.scales1 != nullptr && inputTensor.scales1->GetDataType() == op::DataType::DT_FLOAT16) {
         auto scales1Cast = l0op::Cast(inputTensor.scales1, op::DataType::DT_FLOAT, executor);
         inputTensor.scales1 = scales1Cast;

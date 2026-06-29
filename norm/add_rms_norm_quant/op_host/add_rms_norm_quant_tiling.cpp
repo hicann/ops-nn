@@ -288,6 +288,10 @@ ge::graphStatus Tiling4AddRmsNormQuant(gert::TilingContext* context)
 
 ge::graphStatus Tiling4AddRmsNormQuantV2(gert::TilingContext* context)
 {
+    if (IsRegbaseSocVersion(context)) {
+        AddRmsNormQuantRegbaseTiling regbaseTiling(context);
+        return regbaseTiling.DoTiling();
+    }
     OP_CHECK_IF(
         Tiling4AddRmsNormQuantNotRegbase(context) != ge::GRAPH_SUCCESS,
         OP_LOGE(context, "Tiling4AddRmsNormQuantNotRegbase failed."), return ge::GRAPH_FAILED);
@@ -338,18 +342,18 @@ inline ge::graphStatus GenSimplifiedKey4AddRmsNormQuant(gert::TilingContext* con
     int32_t y1Dtype = static_cast<int32_t>(context->GetOutputDesc(Y1_INDEX)->GetDataType());
 
     OP_CHECK_IF(
-        context->GetOptionalInputDesc(SCALES2_INDEX) != nullptr, OP_LOGW(context, "Optional input scale2 exist"),
+        context->GetOptionalInputShape(SCALES2_INDEX) != nullptr, OP_LOGW(context, "Optional input scale2 exist"),
         scales2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(SCALES2_INDEX)->GetDataType()));
     OP_CHECK_IF(
-        context->GetOptionalInputDesc(ZERO_POINTS1_INDEX) != nullptr,
+        context->GetOptionalInputShape(ZERO_POINTS1_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints1 exist"),
         zeroPoints1Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS1_INDEX)->GetDataType()));
     OP_CHECK_IF(
-        context->GetOptionalInputDesc(ZERO_POINTS2_INDEX) != nullptr,
+        context->GetOptionalInputShape(ZERO_POINTS2_INDEX) != nullptr,
         OP_LOGW(context, "Optional input zeroPoints2 exist"),
         zeroPoints2Dtype = static_cast<int32_t>(context->GetOptionalInputDesc(ZERO_POINTS2_INDEX)->GetDataType()));
     OP_CHECK_IF(
-        context->GetOptionalInputDesc(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
+        context->GetOptionalInputShape(BETA_INDEX) != nullptr, OP_LOGW(context, "Optional input beta exist"),
         betaDtype = static_cast<int32_t>(context->GetOptionalInputDesc(BETA_INDEX)->GetDataType()));
 
     std::string simpleKeyTemp = "";
@@ -391,5 +395,6 @@ IMPL_OP_OPTILING(AddRmsNormQuant)
 
 IMPL_OP_OPTILING(AddRmsNormQuantV2)
     .Tiling(Tiling4AddRmsNormQuantV2)
-    .TilingParse<AddRmsNormQuantCompileInfo>(TilingPrepare4AddRmsNormQuant);
+    .TilingParse<AddRmsNormQuantCompileInfo>(TilingPrepare4AddRmsNormQuant)
+    .GenSimplifiedKey(GenSimplifiedKey4AddRmsNormQuant);
 } // namespace optiling

@@ -57,7 +57,7 @@
 | [aclnnAddRmsNormDynamicQuantV2](../../norm/add_rms_norm_dynamic_quant/docs/aclnnAddRmsNormDynamicQuantV2.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNorm](../../norm/add_rms_norm/docs/aclnnAddRmsNorm.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRmsNormQuant](../../norm/add_rms_norm_quant/docs/aclnnAddRmsNormQuant.md) | 将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。 | 默认确定性实现 | 默认确定性实现 |
-| [aclnnAddRmsNormQuantV2](../../norm/add_rms_norm_quant_v2/docs/aclnnAddRmsNormQuantV2.md) | RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。 | 默认确定性实现 | - |
+| [aclnnAddRmsNormQuantV2](../../norm/add_rms_norm_quant_v2/docs/aclnnAddRmsNormQuantV2.md) | RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnAddRelu&aclnnInplaceAddRelu](../../activation/relu/docs/aclnnAddRelu&aclnnInplaceAddRelu.md) | 完成加法计算后得到结果再进行激活。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnRmsNormDynamicMxQuant](../../norm/rms_norm_dynamic_mx_quant/docs/aclnnRmsNormDynamicMxQuant.md) | RmsNorm算子是大模型常用的归一化操作。DynamicMxQuant算子则是在尾轴上按blocksize分组进行动态MX量化的算子。RmsNormDynamicMxQuant算子将RmsNorm归一化输出给到的DynamicMxQuant算子融合起来，减少搬入搬出操作。 | - | 默认确定性实现 |
 | [aclnnRmsNormDynamicQuant](../../norm/rms_norm_dynamic_quant/docs/aclnnRmsNormDynamicQuant.md) | RmsNorm算子是大模型常用的归一化操作，相比LayerNorm算子，其去掉了减去均值的部分。DynamicQuant算子则是为输入张量进行对称动态量化的算子。RmsNormDynamicQuant算子将RmsNorm归一化和DynamicQuant动态量化融合起来，减少搬入搬出操作。 | - | 默认确定性实现 |

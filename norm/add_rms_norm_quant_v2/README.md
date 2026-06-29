@@ -4,7 +4,7 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
@@ -13,7 +13,7 @@
 
 ## 功能描述
 
-- 算子功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项bias参数，即计算公式中的`bias`。
+- 算子功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项bias参数，即计算公式中的`bias`，同时新增可选输出`resOut`，表示量化前的RmsNorm归一化结果（不含bias）。
 
 - 计算公式：
 
@@ -26,7 +26,7 @@
   $$
 
   $$
-  resOut_i=\frac{1}{\operatorname{Rms}(x_i)} * x_i * gamma_i
+  resOut_i=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * gamma_i
   $$
 
   - div_mode为True时：
@@ -71,56 +71,56 @@
       <td>x1</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量，对应公式中的`x1`。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x2</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量，对应公式中的`x2`。shape与`x1`保持一致。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>gamma</td>
       <td>输入</td>
       <td>表示标准化过程中的权重张量。对应公式中的`gamma`。shape需要与`x1`需要Norm的维度保持一致。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales1</td>
       <td>输入</td>
       <td>表示量化过程中得到y1的scales张量，对应公式中的`scales1`。当参数`div_mode`的值为True时，该参数的值不能为0。</td>
-      <td>FLOAT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>scales2</td>
       <td>可选输入</td>
       <td>表示量化过程中得到y2的scales张量，对应公式中的`scales2`。当参数`div_mode`的值为True时，该参数的值不能为0。shape与`scales1`保持一致。</td>
-      <td>FLOAT32、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>zero_points1</td>
       <td>可选输入</td>
       <td>表示量化过程中得到y1的offset张量，对应公式中的`zero_points1`。shape需要与`gamma`保持一致。</td>
-      <td>BFLOAT16、INT32</td>
+      <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>zero_points2</td>
       <td>可选输入</td>
       <td>表示量化过程中得到y2的offset张量，对应公式中的`zero_points2`。shape需要与`gamma`保持一致。</td>
-      <td>BFLOAT16、INT32</td>
+      <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>bias</td>
       <td>可选输入</td>
       <td>表示标准化过程中的偏置项，公式中的`bias`。shape需要与`gamma`保持一致。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -148,33 +148,33 @@
       <td>y1</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1`。shape需要与输入`x1`/`x2`一致。</td>
-      <td>INT8</td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y2</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2`。shape需要与输入`x1`/`x2`一致。当`scales2`为空时，该输出的值无效。</td>
-      <td>INT8</td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>x</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。shape与输入`x1`/`x2`一致。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>resOut</td>
       <td>输出</td>
-      <td>表示进行RmsNorm之后的结果，对应公式中的`resOut`。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>表示进行RmsNorm之后的结果（不含bias），对应公式中的`resOut`。可选输出，shape与输入`x1`/`x2`一致。</td>
+      <td>FLOAT16、BFLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
   </tbody></table>
 
-  - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`x`、`resOut`的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`bias`、`scales1`、`scales2`、`zero_points1`、`zero_points2`、`x`的数据类型不支持BFLOAT16和FLOAT32。`resOut`不支持，需传入空指针。
 
 ## 约束说明
 

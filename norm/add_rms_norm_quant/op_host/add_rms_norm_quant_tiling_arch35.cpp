@@ -110,6 +110,17 @@ void AddRmsNormQuantRegbaseTiling::CheckOptionalInput()
         tilingParams.hasBeta = true;
     }
     tilingParams.hasY2 = tilingParams.hasScales2 || tilingParams.hasZeroPoints2;
+
+    // V2: Check for resOut output via output_res attr (set by l0op from rmsNormOut != nullptr)
+    // V1 has 3 outputs (y1=0, y2=1, x=2), V2 has 4 outputs (+ resOut=3)
+    auto resOutAttrs = context_->GetAttrs();
+    if (resOutAttrs != nullptr) {
+        const bool* outputResPtr = resOutAttrs->GetBool(OUTPUT_RES_ATTR_INDEX);
+        tilingParams.hasResOut = (outputResPtr != nullptr) && *outputResPtr;
+    } else {
+        tilingParams.hasResOut = false;
+    }
+    OP_LOGD(nodeName.c_str(), "CheckOptionalInput: hasResOut=%u", tilingParams.hasResOut);
 }
 
 bool AddRmsNormQuantRegbaseTiling::CheckInputShapeDim()
@@ -555,8 +566,14 @@ uint64_t AddRmsNormQuantRegbaseTiling::CalUBTotalSize(
     if (tilingParams.hasY2) {
         totalSize += 1 * baseNB8Align * sizeof(int8_t); // y2
     }
+    if (tilingParams.hasResOut) {
+        totalSize += 1 * baseNReduceAlign * tilingParams.xDtypeSize; // resOut (same dtype as x)
+    }
     if (TILING_TYPE_NORMAL == tilingType) {
         totalSize += 1 * baseMB32Align * sizeof(float); // rstd
+        if (tilingParams.hasResOut) {
+            totalSize += 1 * baseNReduceAlign * sizeof(float); // xOutFp32Buf (normal kernel + hasResOut only)
+        }
     } else {
         totalSize += 1 * B32_BLOCK_NUM * sizeof(float);                   // rstd
         totalSize += LEVEL_BUFFER_CNT * ONCE_VECTOR_SIZE * sizeof(float); // levelbuf
@@ -586,9 +603,11 @@ int64_t AddRmsNormQuantRegbaseTiling::CalFullLoadBaseM(uint64_t baseN, int64_t& 
         zeroPointsNum * baseNDtypeAlign * tilingParams.zeroPointDtypeSize -    // zeropoints
         ALIGN_SPACE;                                                           // align space
 
+    int64_t resOutNum = tilingParams.hasResOut ? CONST_ONE : CONST_ZERO;
     int64_t mutilBaseM = DOUBLE_BUFFER * 3 * baseNDtypeAlign * tilingParams.xDtypeSize +       // x1/x2/xout
                          baseNDtypeAlign * sizeof(float) +                                     // xoutTmp
                          DOUBLE_BUFFER * yNum * baseNB8Align * yDtypeSize +                    // y
+                         DOUBLE_BUFFER * resOutNum * baseNDtypeAlign * tilingParams.xDtypeSize + // resOut
                          sizeof(float) +                                                       // rstd
                          firstVcaddLength * sizeof(float);                                     // binaryAddTmp
 
@@ -644,7 +663,8 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
     tmpUBSize = CalUBTotalSize(1, tilingParams.xReduceAlignNum, TILING_TYPE_SPILT);
     if (tmpUBSize <= tilingParams.maxUbSize) {
         uint64_t tmpPowerSize = tilingParams.xReduceAlignNum;
-        while (CalUBTotalSize(1, tmpPowerSize * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
+        while (tmpPowerSize * MULTI_FACTOR_2 <= tilingParams.numN &&
+               CalUBTotalSize(1, tmpPowerSize * MULTI_FACTOR_2, TILING_TYPE_SPILT) <= tilingParams.maxUbSize) {
             tmpPowerSize *= MULTI_FACTOR_2;
         }
         tilingParams.powerSplit = tmpPowerSize;
@@ -656,6 +676,10 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetTilingParams()
         }
         tilingParams.powerLoop = tmpLoop;
         tilingParams.tilingType = TILING_TYPE_SPILT;
+        OP_LOGI(nodeName.c_str(), "[V2-FIX-SPLIT] numN=%lu, powerSplit=%lu, powerLoop=%lu, powerMain=%lu, powerTail=%ld",
+                tilingParams.numN, tilingParams.powerSplit, tilingParams.powerLoop,
+                tilingParams.powerSplit * tilingParams.powerLoop,
+                (int64_t)tilingParams.numN - (int64_t)(tilingParams.powerSplit * tilingParams.powerLoop));
         return ge::GRAPH_SUCCESS;
     }
 
@@ -712,6 +736,7 @@ void AddRmsNormQuantRegbaseTiling::SetTilingData()
     tilingData.set_mPerCore(tilingParams.mPerCore);
     tilingData.set_mLastCore(tilingParams.mLastCore);
     tilingData.set_divMode(tilingParams.divMode ? 1 : 0);
+    tilingData.set_hasResOut(tilingParams.hasResOut ? 1 : 0);
 }
 
 void AddRmsNormQuantRegbaseTiling::PrintTilingData()
@@ -721,11 +746,12 @@ void AddRmsNormQuantRegbaseTiling::PrintTilingData()
         "TilingData numM: %lu, numN: %lu, baseM: %lu, baseN: %lu, "
         "baseNDtypeAlign: %lu, baseNReduceAlign: %lu, powerSplit: %lu, powerLoop: %lu, "
         "mPerCore: %lu, mLastCore: %lu, "
-        "epsilon: %f, avgFactor: %f, divMode: %u.",
+        "epsilon: %f, avgFactor: %f, divMode: %u, hasResOut: %u.",
         tilingData.get_numM(), tilingData.get_numN(), tilingData.get_baseM(), tilingData.get_baseN(),
         tilingData.get_baseNDtypeAlign(), tilingData.get_baseNReduceAlign(), tilingData.get_powerSplit(),
         tilingData.get_powerLoop(), tilingData.get_mPerCore(), tilingData.get_mLastCore(), tilingData.get_epsilon(),
-        tilingData.get_avgFactor(), tilingData.get_divMode());
+        tilingData.get_avgFactor(), tilingData.get_divMode(), tilingData.get_hasResOut());
+    OP_LOGI(nodeName.c_str(), "PrintTilingData: hasResOut=%u", tilingData.get_hasResOut());
 }
 
 ge::graphStatus AddRmsNormQuantRegbaseTiling::DoLibApiTiling()
@@ -756,7 +782,7 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::PostTiling()
 
 uint64_t AddRmsNormQuantRegbaseTiling::GetTilingKey() const
 {
-    uint64_t tilingKey = TILING_OFFSET_REGBASE;
+    uint64_t tilingKey = tilingParams.hasResOut ? TILING_OFFSET_HAS_RESOUT : TILING_OFFSET_REGBASE;
     tilingKey += tilingParams.tilingType;
     tilingKey +=
         TILING_OFFSET_HAS_QUANT * ((tilingParams.hasZeroPoints1 << ZERO_POINTS1_BIN_OFFSET) |
@@ -764,7 +790,8 @@ uint64_t AddRmsNormQuantRegbaseTiling::GetTilingKey() const
     if (tilingParams.hasBeta) {
         tilingKey += TILING_OFFSET_HAS_BETA;
     }
-    OP_LOGI(nodeName.c_str(), "TilingKey is %lu.", tilingKey);
+    OP_LOGD(nodeName.c_str(), "GetTilingKey: hasResOut=%u hasBeta=%u tilingType=%u tilingKey=%lu",
+            tilingParams.hasResOut, tilingParams.hasBeta, tilingParams.tilingType, tilingKey);
     return tilingKey;
 }
 

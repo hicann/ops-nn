@@ -6,16 +6,16 @@
 
 |产品             |  是否支持  |
 |:-------------------------|:----------:|
-|  <term>Ascend 950PR/Ascend 950DT</term>   |     ×    |
+|  <term>Ascend 950PR/Ascend 950DT</term>   |     √    |
 |  <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>   |     √    |
 |  <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>     |     √    |
 |  <term>Atlas 200I/500 A2 推理产品</term>    |     ×    |
 |  <term>Atlas 推理系列产品</term>    |     √    |
 |  <term>Atlas 训练系列产品</term>    |     ×    |
 
-## 功能描述
+## 功能说明
 
-- 接口功能：RmsNorm是大模型常用的标准化操作，相比LayerNorm，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm归一化的输出给到1个或2个Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant在RmsNorm计算过程中增加了偏置项betaOptional参数，即计算公式中的`beta`。
+- 接口功能：RmsNorm算子是大模型常用的标准化操作，相比LayerNorm算子，其去掉了减去均值的部分。AddRmsNormQuant算子将RmsNorm前的Add算子以及RmsNorm后的Quantize算子融合起来，减少搬入搬出操作。AddRmsNormQuantV2算子相较于AddRmsNormQuant，增加了偏置项`betaOptional`参数和RmsNorm归一化结果输出`rmsNormOut`。
 
 - 计算公式：
 
@@ -24,36 +24,38 @@
   $$
 
   $$
-  y_i=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * gamma_i + beta, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+epsilon}
+  y_i=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * g_i + beta_i, \quad \text { where } \operatorname{Rms}(\mathbf{x})=\sqrt{\frac{1}{n} \sum_{i=1}^n x_i^2+eps}
   $$
 
   $$
-  rmsNormOut_i=\frac{1}{\operatorname{Rms}(x_i)} * x_i * gamma_i
+  rmsNormOut_i=\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * g_i
   $$
 
   - divMode为True时：
 
     $$
-    y1Out=round((y/scales1)+zeroPoints1Optional)
+    y1Out=round((y/scales1)+zero\_points1)
     $$
 
     $$
-    y2Out=round((y/scales2)+zeroPoints2Optional)
+    y2Out=round((y/scales2)+zero\_points2)
     $$
 
   - divMode为False时：
 
     $$
-    y1Out=round((y*scales1)+zeroPoints1Optional)
+    y1Out=round((y*scales1)+zero\_points1)
     $$
 
     $$
-    y2Out=round((y*scales2)+zeroPoints2Optional)
+    y2Out=round((y*scales2)+zero\_points2)
     $$
+
+  > **说明**：`rmsNormOut`为RmsNorm归一化结果（不含beta），`betaOptional`与`rmsNormOut`相互独立，可任意组合使用。
 
 ## 函数原型
 
-每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用`aclnnAddRmsNormQuantV2GetWorkspaceSize`接口获取入参并根据计算流程所需workspace大小，再调用`aclnnAddRmsNormQuantV2`接口执行计算。
+每个算子分为[两段式接口](../../../docs/zh/context/两段式接口.md)，必须先调用"aclnnAddRmsNormQuantV2GetWorkspaceSize"接口获取入参并根据计算流程所需workspace大小，再调用"aclnnAddRmsNormQuantV2"接口执行计算。
 
 ```Cpp
 aclnnStatus aclnnAddRmsNormQuantV2GetWorkspaceSize(
@@ -115,7 +117,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x1`。</td>
       <td>支持空Tensor。</td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -124,8 +126,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>x2（aclTensor*）</td>
       <td>输入</td>
       <td>表示标准化过程中的源数据张量。对应公式中的`x2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与`x1`保持一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>shape和数据类型与`x1`保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -133,9 +135,9 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>gamma（aclTensor*）</td>
       <td>输入</td>
-      <td>表示标准化过程中的权重张量。对应公式中的`gamma`。</td>
-      <td><ul><li>支持空Tensor。</li><li>数据类型需要与`x1`保持一致。</li><li>shape需要与`x1`需要norm的维度保持一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>表示标准化过程中的权重张量。对应公式中的`g`。</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x1`需要norm（层归一化）的维度保持一致，数据类型与`x1`保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -144,8 +146,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>scales1（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与`gamma`保持一致。</li><li>当参数divMode的值为True时，该参数的值不能为0。</li></ul></td>
-      <td>FLOAT32、BFLOAT16、FLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -154,8 +156,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>scales2Optional（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y2Out进行的scales张量。对应公式中的`scales2`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>数据类型需要与`scales1`保持如下对应关系：<ul><li>当scales1数据类型为FLOAT16时，scales2Optional的数据类型必须为FLOAT32。</li><li>当scales1数据类型为FLOAT32、BFLOAT16时，scales2Optional的数据类型与`scales1`保持一致。</li></ul></li><li>shape需要与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
-      <td>FLOAT32、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape、数据类型与`scales1`保持一致。</li><li>当参数`divMode`的值为True时，该参数的值不能为0。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -163,9 +165,9 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>zeroPoints1Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zeroPoints1Optional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape需要与`gamma`保持一致。</li></ul></td>
-      <td>INT32、BFLOAT16</td>
+      <td>表示量化过程中得到y1Out进行的offset张量。对应公式中的`zero_points1`。</td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致。</li></ul></td>
+      <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -173,9 +175,9 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>zeroPoints2Optional（aclTensor*）</td>
       <td>输入</td>
-      <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zeroPoints2Optional`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>数据类型需要与`zeroPoints1Optional`保持一致。</li><li>shape需要与`gamma`保持一致。</li></ul></td>
-      <td>INT32、BFLOAT16</td>
+      <td>表示量化过程中得到y2Out进行的offset张量。对应公式中的`zero_points2`。</td>
+      <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。shape与`scales1`保持一致，数据类型与`zeroPoints1Optional`保持一致。</li></ul></td>
+      <td>INT32、FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -185,16 +187,16 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>输入</td>
       <td>表示标准化过程中的偏置项。对应公式中的`beta`。</td>
       <td><ul><li>支持空Tensor。</li><li>可选参数，支持传入空指针。</li><li>shape和数据类型需要与`gamma`保持一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
-      <td>-</td>
-      <td>-</td>
-      <td>-</td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
+      <td>ND</td>
+      <td>1-8</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>axis（int64_t）</td>
       <td>输入</td>
-      <td>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。</td>
-      <td>当前仅支持-1，传其他值均不生效。</td>
+      <td>表示需要进行量化的elewise轴，其他的轴做broadcast，指定的轴不能超过输入`x1`的维度数。当前仅支持-1，传其他值均不生效。</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -203,8 +205,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>epsilon（double）</td>
       <td>输入</td>
-      <td>表示用于防止除0错误，对应公式中的`epsilon`。</td>
-      <td>建议传较小的正数。</td>
+      <td>公式中的输入eps，用于防止除0错误，数据类型为double。建议传较小的正数。</td>
+      <td>-</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -213,8 +215,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>divMode（bool）</td>
       <td>输入</td>
-      <td>表示决定量化公式是否使用除法的参数，对应公式中的`divMode`。</td>
-      <td>-</td>
+      <td>公式中决定量化公式是否使用除法的参数，数据类型为bool。</td>
+      <td>支持True和False。</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -224,8 +226,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>y1Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y1Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape需要与输入`x1`/`x2`一致。</li></ul></td>
-      <td>INT8</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与输入`x1`/`x2`一致。</li></ul></td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -234,8 +236,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>y2Out（aclTensor*）</td>
       <td>输出</td>
       <td>表示量化输出Tensor，对应公式中的`y2Out`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选输出。</li><li>shape需要与输入`x1`/`x2`一致。</li><li>当`scales2Optional`为空时，该输出的值无效。</li></ul></td>
-      <td>INT8</td>
+      <td><ul><li>支持空Tensor。</li><li>shape、数据类型与`y1Out`保持一致。</li></ul></td>
+      <td>INT8、HIFLOAT8、FLOAT8_E5M2、FLOAT8_E4M3FN</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -244,8 +246,8 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>xOut（aclTensor*）</td>
       <td>输出</td>
       <td>表示x1和x2的和，对应公式中的`x`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`x1`保持一致，数据类型与`x1`保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -253,9 +255,9 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>rmsNormOut（aclTensor*）</td>
       <td>输出</td>
-      <td>表示进行RmsNorm之后的结果，对应公式中的`rmsNormOut`。</td>
-      <td><ul><li>支持空Tensor。</li><li>可选输出。</li><li>shape和数据类型需要与输入`x1`/`x2`一致。</li></ul></td>
-      <td>FLOAT16、BFLOAT16</td>
+      <td>表示进行RmsNorm之后的结果（不含beta），对应公式中的`rmsNormOut`。</td>
+      <td><ul><li>支持空Tensor。</li><li>可选输出，支持传入空指针。当传入空指针时，不输出rmsNormOut。</li><li>shape和数据类型与`x1`保持一致。</li></ul></td>
+      <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
       <td>√</td>
@@ -283,7 +285,23 @@ aclnnStatus aclnnAddRmsNormQuantV2(
   </tbody>
   </table>
   
-  - <term>Atlas 推理系列产品</term>：参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`xOut`、`rmsNormOut`的数据类型不支持BFLOAT16。
+  - <term>Atlas 推理系列产品</term>：
+    - 数据类型：
+      - 入参`x1`、`x2`、`gamma`和出参`xOut`、`rmsNormOut`仅支持FLOAT16。
+      - 入参`scales1`、`scales2Optional`仅支持FLOAT32。
+      - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32。
+      - 可选参数`betaOptional`仅支持FLOAT16。
+      - 出参`y1Out`、`y2Out`仅支持INT8。
+    - 入参`divMode`仅支持True。
+  
+  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
+    - 数据类型：
+      - 入参`x1`、`x2`、`gamma`和出参`xOut`、`rmsNormOut`仅支持FLOAT16、BFLOAT16。
+      - 入参`scales1`、`scales2Optional`仅支持FLOAT32、BFLOAT16。
+      - 可选参数`zeroPoints1Optional`、`zeroPoints2Optional`仅支持INT32、BFLOAT16。
+      - 可选参数`betaOptional`仅支持FLOAT16、BFLOAT16。
+      - 出参`y1Out`、`y2Out`仅支持INT8。
+    - 入参`divMode`仅支持True。
 
 - **返回值**
 
@@ -307,12 +325,18 @@ aclnnStatus aclnnAddRmsNormQuantV2(
     <tr>
       <td>ACLNN_ERR_PARAM_NULLPTR</td>
       <td>161001</td>
-      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针，则返回161001。</td>
+      <td>如果传入参数是必选输入，输出或者必选属性，且是空指针。</td>
     </tr>
     <tr>
-      <td rowspan="1">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="1">161002</td>
-      <td>输入或输出的数据类型不在支持的范围之内。</td>
+      <td rowspan="3">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="3">161002</td>
+    </tr>
+    <tr>
+    </tr>
+    <tr>
+      <td>
+      输入或输出的数据类型不在支持的范围之内。
+      </td>
     </tr>
   </tbody></table>
 
@@ -357,56 +381,70 @@ aclnnStatus aclnnAddRmsNormQuantV2(
 
 - **返回值**
 
-  aclnnStatus：返回状态码。（具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)）
+  aclnnStatus：返回状态码，具体参见[aclnn返回码](../../../docs/zh/context/aclnn返回码.md)。
 
 ## 约束说明
 
-- 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`的shape中每一维大小都不大于INT32的最大值2147483647。
+- 参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
 
-- <term>Atlas 推理系列产品</term>：`x1`、`x2`需要norm的维度数据个数不能小于32。`gamma`、`betaOptional`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`的数据个数不能小于32。
+- <term>Atlas 推理系列产品</term>：`x1`、`x2`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的norm轴长度，以及`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`的长度必须大于等于32Bytes。
 
-- 输入gamma、scales1、scales2Optional、zeroPoints1Optional、zeroPoints2Optional、betaOptional、divMode、y1Out、y2Out、xOut、rmsNormOut支持的场景和组合如下所示：
+- `betaOptional`与`rmsNormOut`相互独立：
+  - `rmsNormOut`输出时，`betaOptional`可以有，也可以没有。
+  - `rmsNormOut`不输出（传入空指针）时，`betaOptional`也可以有，可以没有。
+  - `rmsNormOut`的计算结果为$\frac{1}{\operatorname{Rms}(\mathbf{x})} * x_i * g_i$，不包含beta计算。
 
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
-    | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
-    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
-    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 必传且shape与gamma保持一致 |True | 必传 | 输出无效 | 必传 | 空指针 |
-    | shape为[x1的最后一维]或[1, x1的最后一维] | shape为[1] | 空指针 | 必传，shape为[1] | 空指针 | 空指针 |True | 必传 | 输出无效 | 空指针 | 必传 |
-    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
-
-  - <term>Atlas 推理系列产品</term>：
-
-    | gamma | scales1 | scales2Optional | zeroPoints1Optional | zeroPoints2Optional | betaOptional | divMode | y1Out | y2Out | xOut | rmsNormOut |
-    | --------| --------| --------| --------| --------| --------| --------| --------| --------| --------| :------ |
-    | shape与x1需要norm的维度一致 | shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 | 可选，shape与gamma保持一致 |True/False | 必传 | 当scales2Optional为空时，该输出无效；当scales2Optional非空时，该输出有效 | 必传 | 空指针 |
-
-- 边界值场景说明：
-
-  - <term>Atlas 推理系列产品</term>：输入不支持包含inf和NaN。
-  - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：当输入是inf时，输出为inf。当输入是NaN时，输出为NaN。
-
-- 维度的边界说明：
-
-  参数`x1`、`x2`、`gamma`、`scales1`、`scales2Optional`、`zeroPoints1Optional`、`zeroPoints2Optional`、`betaOptional`、`y1Out`、`y2Out`、`xOut`、`rmsNormOut`的shape中每一维大小都不大于INT32的最大值2147483647。
-  
 - 数据格式说明：
-
-    所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
+  
+  所有输入输出Tensor的数据格式推荐使用ND格式，其他数据格式会由框架默认转换成ND格式进行处理。
 
 - 各产品型号支持数据类型说明：
+
   - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
-
-     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
-     | - | - | - | - | - | - | - | - | - | - | - | - |
-     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
-     | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
-
-  - <term>Atlas 推理系列产品</term>：
-
+    
     | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
     | - | - | - | - | - | - | - | - | - | - | - | - |
     | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
+
+  - <term>Atlas 推理系列产品</term>：
+    
+    | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
+    | - | - | - | - | - | - | - | - | - | - | - | - |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+
+  - <term>Ascend 950PR/Ascend 950DT</term>：
+    
+    | x1数据类型 | x2数据类型 | gamma数据类型 | scales1数据类型 | scales2Optional数据类型 | zeroPoints1Optional数据类型 | zeroPoints2Optional数据类型 | betaOptional数据类型 | y1Out数据类型 | y2Out数据类型 | xOut数据类型 | rmsNormOut数据类型 |
+    | - | - | - | - | - | - | - | - | - | - | - | - |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | INT8 | INT8 | FLOAT32 | FLOAT32 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | INT8 | INT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | INT8 | INT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | HIFLOAT8 | HIFLOAT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | BFLOAT16 | HIFLOAT8 | HIFLOAT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | HIFLOAT8 | HIFLOAT8 | FLOAT32 | FLOAT32 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | HIFLOAT8 | HIFLOAT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | HIFLOAT8 | HIFLOAT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | HIFLOAT8 | HIFLOAT8 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | HIFLOAT8 | HIFLOAT8 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | FLOAT8_E5M2 | FLOAT8_E5M2 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | BFLOAT16 | FLOAT8_E5M2 | FLOAT8_E5M2 | BFLOAT16 | BFLOAT16 |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E5M2 | FLOAT8_E5M2 | FLOAT32 | FLOAT32 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT8_E5M2 | FLOAT8_E5M2 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT8_E5M2 | FLOAT8_E5M2 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E5M2 | FLOAT8_E5M2 | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E5M2 | FLOAT8_E5M2 | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | FLOAT16 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | INT32 | INT32 | BFLOAT16 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | BFLOAT16 | BFLOAT16 |
+    | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT32 | FLOAT32 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | BFLOAT16 | BFLOAT16 |
+    | FLOAT16 | FLOAT16 | FLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | FLOAT16 | FLOAT16 |
+    | BFLOAT16 | BFLOAT16 | BFLOAT16 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT32 | FLOAT8_E4M3FN | FLOAT8_E4M3FN | BFLOAT16 | BFLOAT16 |
 
 - 确定性计算：
   - aclnnAddRmsNormQuantV2默认确定性实现。
@@ -506,6 +544,7 @@ int main()
     void* y1DeviceAddr = nullptr;
     void* y2DeviceAddr = nullptr;
     void* xDeviceAddr = nullptr;
+    void* rmsNormOutDeviceAddr = nullptr;
     aclTensor* x1 = nullptr;
     aclTensor* x2 = nullptr;
     aclTensor* gamma = nullptr;
@@ -515,6 +554,7 @@ int main()
     aclTensor* y1 = nullptr;
     aclTensor* y2 = nullptr;
     aclTensor* x = nullptr;
+    aclTensor* rmsNormOut = nullptr;
     std::vector<int16_t> x1HostData(xShapeSize, 0);
     std::vector<int16_t> x2HostData(xShapeSize, 0);
     std::vector<int16_t> gammaHostData(gammaShapeSize, 0);
@@ -524,6 +564,7 @@ int main()
     std::vector<int8_t> y1HostData(xShapeSize, 0);
     std::vector<int8_t> y2HostData(xShapeSize, 0);
     std::vector<int16_t> xHostData(xShapeSize, 0);
+    std::vector<int16_t> rmsNormOutHostData(xShapeSize, 0);
     float epsilon = 1e-6;
     int64_t axis = -1;
     bool divMode = true;
@@ -555,12 +596,15 @@ int main()
     // 创建x aclTensor
     ret = CreateAclTensor(xHostData, xShape, &xDeviceAddr, aclDataType::ACL_FLOAT16, &x);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
+    // 创建rmsNormOut aclTensor
+    ret = CreateAclTensor(rmsNormOutHostData, xShape, &rmsNormOutDeviceAddr, aclDataType::ACL_FLOAT16, &rmsNormOut);
+    CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 3. 调用CANN算子库API，需要修改为具体的API
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
     // 调用aclnnAddRmsNormQuantV2第一段接口
     ret = aclnnAddRmsNormQuantV2GetWorkspaceSize(
-        x1, x2, gamma, scales1, nullptr, zeroPoints1, nullptr, beta, axis, epsilon, divMode, y1, y2, x, nullptr,
+        x1, x2, gamma, scales1, nullptr, zeroPoints1, nullptr, beta, axis, epsilon, divMode, y1, y2, x, rmsNormOut,
         &workspaceSize, &executor);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnAddRmsNormQuantV2GetWorkspaceSize failed. ERROR: %d\n", ret);
               return ret);
@@ -597,6 +641,7 @@ int main()
     aclDestroyTensor(y1);
     aclDestroyTensor(y2);
     aclDestroyTensor(x);
+    aclDestroyTensor(rmsNormOut);
 
     // 7. 释放device资源，需要根据具体API的接口定义修改
     aclrtFree(x1DeviceAddr);
@@ -608,6 +653,7 @@ int main()
     aclrtFree(y1DeviceAddr);
     aclrtFree(y2DeviceAddr);
     aclrtFree(xDeviceAddr);
+    aclrtFree(rmsNormOutDeviceAddr);
 
     if (workspaceSize > 0) {
         aclrtFree(workspaceAddr);

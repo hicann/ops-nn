@@ -29,7 +29,7 @@ using namespace AscendC;
 
 #define INIT_AND_PROCESS                                                                             \
     do {                                                                                             \
-        op.Init(x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x, tilingData); \
+        op.Init(x1, x2, gamma, scales1, scales2, zero_points1, zero_points2, beta, y1, y2, x, nullptr, tilingData); \
         op.Process();                                                                                \
     } while (0)
 

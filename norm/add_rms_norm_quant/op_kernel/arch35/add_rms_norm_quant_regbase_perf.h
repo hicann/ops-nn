@@ -24,6 +24,7 @@ namespace AddRmsNormQuant {
 template <typename T_X, typename T_Y, typename T_SCALES, typename T_ZEROPOINTS, uint64_t TILING_KEY>
 class KernelAddRmsNormQuantRegbasePerf {
 #define HAS_BETA (((TILING_KEY % 1000)/100) == 1)
+#define HAS_RESOUT ((TILING_KEY / 1000) == 2)
 #define INPUT_KEY ((TILING_KEY % 100) / 10)
 #define HAS_ZEROPOINTS1 ((INPUT_KEY >> 2) % 2 == 1)
 #define HAS_SCALE2 ((INPUT_KEY >> 1) % 2 == 1)
@@ -37,7 +38,8 @@ public:
 
     __aicore__ inline void Init(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, const AddRmsNormQuantRegbaseTilingData* tilingData)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out,
+        const AddRmsNormQuantRegbaseTilingData* tilingData)
     {
         numM = tilingData->numM;
         numN = tilingData->numN;
@@ -69,7 +71,7 @@ public:
         oriOverflowMode = GetOverflowMode<T_Y>();
 
         CalBlockTail();
-        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x);
+        InitBuffer(x1, x2, gamma, scales1, scales2, zeroPoints1, zeroPoints2, beta, y1, y2, x, res_out);
     }
 
     __aicore__ inline void CalBlockTail()
@@ -81,7 +83,7 @@ public:
 
     __aicore__ inline void InitBuffer(
         GM_ADDR x1, GM_ADDR x2, GM_ADDR gamma, GM_ADDR scales1, GM_ADDR scales2, GM_ADDR zeroPoints1,
-        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x)
+        GM_ADDR zeroPoints2, GM_ADDR beta, GM_ADDR y1, GM_ADDR y2, GM_ADDR x, GM_ADDR res_out)
     {
         uint64_t gmOffset = blockIdx * mPerCore * numN;
         uint64_t gmLen = mCore * numN;
@@ -89,6 +91,9 @@ public:
         x2Gm.SetGlobalBuffer((__gm__ T_X*)x2 + gmOffset, gmLen);
         y1Gm.SetGlobalBuffer((__gm__ T_Y*)y1 + gmOffset, gmLen);
         xGm.SetGlobalBuffer((__gm__ T_X*)x + gmOffset, gmLen);
+        if constexpr (HAS_RESOUT) {
+            resOutGm.SetGlobalBuffer((__gm__ T_X*)res_out + gmOffset, gmLen);
+        }
         // gamma + scales1
         gammaGm.SetGlobalBuffer((__gm__ T_X*)gamma, numN);
         scales1Gm.SetGlobalBuffer((__gm__ T_SCALES*)scales1, numN);
@@ -126,6 +131,9 @@ public:
         pipe_->InitBuffer(xOutTmpBuf, baseM * xGammaAlign * sizeof(float));
         int64_t XQueueSize = baseM * xGammaAlign * sizeof(T_X);
         pipe_->InitBuffer(outQueueX, DOUBLE_BUFFER_NUM, XQueueSize);
+        if constexpr (HAS_RESOUT) {
+            pipe_->InitBuffer(outQueueResOut, DOUBLE_BUFFER_NUM, XQueueSize);
+        }
         pipe_->InitBuffer(rstdBuf, rstdAlign * sizeof(float));
         // reduceTmpBuffer
         int64_t reduceTmpBufferSize = baseM * CeilDiv(CeilDiv(powerSplit, static_cast<int64_t>(vectorLenB32)), static_cast<int64_t>(blockSizeB32)) * blockSizeB32;
@@ -173,16 +181,29 @@ public:
                 y2Local = outQueueY2.AllocTensor<T_Y>();
             }
 
+            LocalTensor<T_X> resOutLocal;
+            __local_mem__ T_X* resOutAddr = nullptr;
+            if constexpr (HAS_RESOUT) {
+                resOutLocal = outQueueResOut.AllocTensor<T_X>();
+                resOutAddr = (__ubuf__ T_X*)resOutLocal.GetPhyAddr();
+            }
+
             // 3. Quant
             SetOverflowMode<T_Y>(0);
-            CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign);
+            CalculateQuant(xOutTmpLocal,rstdLocal,gammaLocal,betaLocal,scales1Local,scales2Local,zeroPoints1Local,zeroPoints2Local,y1Local,y2Local,realM,baseN,xGammaAlign,scalesAlign,zeroPointsAlign,yAlign,resOutAddr);
             SetOverflowMode<T_Y>(oriOverflowMode);
 
+            if constexpr (HAS_RESOUT) {
+                outQueueResOut.EnQue<T_X>(resOutLocal);
+            }
             outQueueY1.EnQue<T_Y>(y1Local);
             if constexpr (HAS_Y2) {
                 outQueueY2.EnQue<T_Y>(y2Local);
             }
             CopyOutY(gmOffset, realM);
+            if constexpr (HAS_RESOUT) {
+                CopyOutResOut(gmOffset, realM);
+            }
         }
         inQueueOther.FreeTensor(otherLocal);
     }
@@ -365,6 +386,20 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         }
     }
 
+    __aicore__ inline void CopyOutResOut(uint64_t offset, uint32_t realM)
+    {
+        LocalTensor<T_X> resOutLocal = outQueueResOut.DeQue<T_X>();
+        DataCopyExtParams copyParams{
+            static_cast<uint16_t>(realM),                // blockCount
+            static_cast<uint32_t>(baseN * sizeof(T_X)), // blockLen
+            static_cast<uint32_t>(0),                    // srcStride
+            static_cast<uint32_t>(0),                    // dstStride
+            0                                            // rsv
+        };
+        DataCopyPad(resOutGm[offset], resOutLocal, copyParams);
+        outQueueResOut.FreeTensor(resOutLocal);
+    }
+
     __aicore__ inline void CalculateXAdd(
         LocalTensor<T_X>& xLocal1, LocalTensor<T_X>& xLocal2, LocalTensor<T_X>& xLocal, LocalTensor<float>& xOutTmpLocal, uint32_t realM)
     {
@@ -400,7 +435,8 @@ __aicore__ inline void StoreTensorForDtypeTOut(
         LocalTensor<T_ZEROPOINTS> zeroPoints1Local, LocalTensor<T_ZEROPOINTS> zeroPoints2Local,
         LocalTensor<T_Y> y1Local, LocalTensor<T_Y> y2Local,
         int64_t realM, int64_t baseN, int64_t xGammaAlign, int64_t scalesAlign,
-        int64_t zeroPointsAlign, int64_t yAlign)
+        int64_t zeroPointsAlign, int64_t yAlign,
+        __local_mem__ T_X* resOutAddr = nullptr)
     {
         uint16_t loopsA = static_cast<uint16_t>(realM);
         uint16_t loopsR = static_cast<uint16_t>(CeilDiv(static_cast<uint32_t>(baseN), vectorLenB32));
@@ -451,6 +487,9 @@ __aicore__ inline void StoreTensorForDtypeTOut(
                     Mul(mul1Reg, xReg, rstdReg, pregCurLoop);
                     LoadTensorForDtypeTIn(gammaAddr, gammaReg, pregCurLoop, j * vectorLenB32);
                     Mul(mul2Reg, gammaReg, mul1Reg, pregCurLoop);
+                    if constexpr (HAS_RESOUT) {
+                        StoreTensorForDtypeTOut<T_X>(resOutAddr, mul2Reg, pregCurLoop, (i * sregxGammaAlign + j * vectorLenB32));
+                    }
                     if constexpr (HAS_BETA) {
                         LoadTensorForDtypeTIn(betaAddr, betaReg, pregCurLoop, j * vectorLenB32);
                         Add(mul2Reg, mul2Reg, betaReg, pregCurLoop);
@@ -503,6 +542,7 @@ private:
     GlobalTensor<T_ZEROPOINTS> zeroPoints1Gm, zeroPoints2Gm;
     GlobalTensor<T_Y> y1Gm;
     GlobalTensor<T_Y> y2Gm;
+    GlobalTensor<T_X> resOutGm;
 
     // UB Buffer
     TQue<QuePosition::VECIN, 1> inQueueX1;
@@ -512,6 +552,7 @@ private:
     TQue<QuePosition::VECOUT, 1> outQueueY1;
     TQue<QuePosition::VECOUT, 1> outQueueY2;
     TQue<QuePosition::VECOUT, 1> outQueueX;
+    TQue<QuePosition::VECOUT, 1> outQueueResOut;
     TBuf<TPosition::VECCALC> rstdBuf;
     TBuf<TPosition::VECCALC> reduceTmpBuf;
     TBuf<TPosition::VECCALC> xOutTmpBuf;

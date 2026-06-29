@@ -40,6 +40,7 @@ const std::array<aclTensor*, ADD_RMS_NORM_QUANT_OUT_NUM_V2> AddRmsNormQuantV2(
     int64_t axis,
     double epsilon,
     bool divMode,
+    int dstType,
     aclOpExecutor *executor);
 } // namespace l0op
 
