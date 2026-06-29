@@ -158,7 +158,7 @@ const aclTensor* selectLevelZeroOperation(
         }
     }
 
-    if (useMaxPool3DGradWithArgmax) {
+    if (useMaxPool3DGradWithArgmax && !Ops::NN::AclnnUtil::IsRegbase()) {
         aclIntArray* calculatedKernelSize = executor->AllocIntArray(kernelSize.data(), KERNEL_SIZE_DIM_NUM);
         CHECK_RET(calculatedKernelSize != nullptr, nullptr);
         aclIntArray* calculatedStride = executor->AllocIntArray(stride.data(), STRIDE_DIM_NUM);
