@@ -2040,6 +2040,16 @@
   </tr>
   <tr>
     <td>index</td>
+    <td><a href="../../index/sparse_segment_sum_grad/README.md">sparse_segment_sum_grad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>SparseSegmentSumGrad 是 SparseSegmentSum 的反向传播算子，用于计算稀疏分段求和操作的梯度。</td>
+  </tr>
+  <tr>
+    <td>index</td>
     <td><a href="../../index/sparse_to_dense/README.md">sparse_to_dense</a></td>
     <td>✓</td>
     <td>✓</td>
