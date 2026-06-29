@@ -80,7 +80,6 @@ static ge::graphStatus GetPadInfo(
                             inputData.inputShape[H_DIM]);
         int64_t topPad = hPadNeed / TWO;
         int64_t bottomPad = hPadNeed - topPad;
-
         int64_t wPadNeed = std::max(
             int64_t{0}, (inputData.gradShape[W_DIM] - 1) * inputData.stride[W_DIM] + inputData.kernelSize[W_DIM] -
                             inputData.inputShape[W_DIM]);
@@ -92,7 +91,6 @@ static ge::graphStatus GetPadInfo(
         auto padding = runtimeAttrs->GetListInt(PADS_POS);
         OPS_CHECK_NULL_WITH_CONTEXT(context, padding);
         auto paddingDim = padding->GetSize();
-
         if (paddingDim != ONE_DIMS && paddingDim != HW_DIMS && paddingDim != NCHW_DIMS) {
             OP_LOGE_FOR_INVALID_LISTSIZE(
                 context->GetNodeName(), "pad", std::to_string(paddingDim).c_str(), "1, 2 or 4");

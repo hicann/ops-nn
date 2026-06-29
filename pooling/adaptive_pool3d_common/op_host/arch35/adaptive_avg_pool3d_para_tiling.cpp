@@ -70,7 +70,7 @@ bool AdaptiveAvgPool3dParaPoolTiling::IsCapable()
     ubUseEnough = ubUseEnough ? occupyUbSize >= UB_UTIL_RATE : true;
 
     auto wiDataLen = avgComptuteInfo_.woFactor * avgComptuteInfo_.kernelWMax;
-    ubUseEnough = ubUseEnough && (wiDataLen % avgComptuteInfo_.alignNum) > (avgComptuteInfo_.alignNum / 2);
+    ubUseEnough = ubUseEnough && (wiDataLen % avgComptuteInfo_.alignNum) > (avgComptuteInfo_.alignNum / DOUBLE);
 
     bool isCapable = isKernelSizeMeet && isNcLenEnough && isUbSizeEnough && ubUseEnough;
     OP_LOGD(

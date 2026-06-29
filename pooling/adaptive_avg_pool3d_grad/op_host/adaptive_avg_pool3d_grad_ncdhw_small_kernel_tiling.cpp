@@ -39,7 +39,6 @@ static inline int64_t ShrinkInnerStrict(int64_t total, int64_t curInner)
 
     const int64_t curOuter = Ops::Base::CeilDiv(total, curInner);
     int64_t nextInner = Ops::Base::CeilDiv(total, curOuter + 1);
-
     // 反推结果如果没有变小，就强制减 1，保证循环一定前进
     if (nextInner >= curInner) {
         nextInner = curInner - 1;
@@ -136,7 +135,6 @@ bool AdaptiveAvgPool3dGradTilingSmallKernel::IsCapable()
     kernelD = Ops::Base::CeilDiv(gradOutputD, gradInputD);
     kernelH = Ops::Base::CeilDiv(gradOutputH, gradInputH);
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
-
     if (kernelD * kernelH * kernelW >= KERNEL_SIZE_MAX ||
         baseData.inputNCSize < HIGH_THRESHOLD ||
         gradInputW * gradInputH * gradInputD < WINSIZE_THRESHOLD) {

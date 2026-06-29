@@ -182,7 +182,7 @@ ge::graphStatus AdaptivePool2dBaseTiling::GetPlatformInfo()
     const char* opName_ = "AdaptiveAvgPool2d";
     auto platformPtr = context_->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const AdaptivePool2dCompileInfo*>(context_->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const AdaptivePool2dCompileInfo*>(context_->GetCompileInfo());
         if (compileInfoPtr == nullptr) {
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(opName_, "compileInfo", "null", "compile info is null");
             return ge::GRAPH_FAILED;

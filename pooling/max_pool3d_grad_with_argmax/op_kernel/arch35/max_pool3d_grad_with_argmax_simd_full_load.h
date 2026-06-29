@@ -227,7 +227,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
     dProBatchSize_ = tilingData.dProBatchSize;
     hProBatchSize_ = tilingData.hProBatchSize;
     wProBatchSize_ = tilingData.wProBatchSize;
-
 }
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
@@ -340,8 +339,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
     DataCopyPad(yGm_[outputGmOffset], yLocal, copyParam);
     outputQue_.FreeTensor(yLocal);
 }
-
-
 
 template <typename T1, typename T2, const uint32_t IS_CHECK_RANGE>
 __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHECK_RANGE>::Process()
@@ -468,9 +465,6 @@ __aicore__ inline void DoMulNCNcdhwFullLoad(__local_mem__ computeType* yAddr, __
     AscendC::MicroAPI::MaskReg pregArgmax = AscendC::MicroAPI::UpdateMask<int32_t>(argmaxMask);
     GradientAcc<int32_t>(yAddr, gradReg, argmaxReg, pregArgmax);
 }
-
-
-
 
 template <typename T1, typename T2>
 __aicore__ inline void DoSingleNchwFullLoad(__local_mem__ computeType* yAddr, __local_mem__ T1* gradAddr,
@@ -1153,7 +1147,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
                     T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned + dProBatchIdx * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                     __VEC_SCOPE__
                     {
-
                         AscendC::MicroAPI::RegTensor<uint32_t> initial4DRegIndex;
                         AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
                         AscendC::MicroAPI::MaskReg allMaskU32 =
@@ -1300,8 +1293,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
         }
     }
 
-
-
     uint32_t highArgmaxOffset = highBlockConcurrentCount * highConcurrentCount * dArgmaxActual * hArgmaxActual * wArgmaxAligned;
     uint32_t highOutputOffset= highBlockConcurrentCount * highConcurrentCount * dOutputActual * hOutputActual * wOutputActual;
     for (uint16_t dProBatchIdx = 0; dProBatchIdx < dProBatchSize; dProBatchIdx++) {
@@ -1379,7 +1370,6 @@ __aicore__ inline void MaxPool3DGradWithArgmaxNCDHWFullLoadKernel<T1, T2, IS_CHE
                 T2 offset = (wBatchIdx + hProBatchIdx * wArgmaxAligned + (dFullBatchCount * dProBatchSize + dTailIdx) * hArgmaxActual * wArgmaxAligned + highArgmaxOffset);
                 __VEC_SCOPE__
                 {
-
                     AscendC::MicroAPI::RegTensor<uint32_t> initial3DRegIndex;
                     AscendC::MicroAPI::RegTensor<uint32_t> parallelRegIndex;
                     AscendC::MicroAPI::MaskReg allMaskU32 =

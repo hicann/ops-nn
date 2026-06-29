@@ -71,7 +71,6 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     auto inputX = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
-
     if (!(inputShape.GetDimNum() == NCHW_DIMS || inputShape.GetDimNum() == CHW_DIMS)) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(
             context_->GetNodeName(), "x", std::to_string(inputShape.GetDimNum()).c_str(), "3 or 4");
@@ -201,7 +200,7 @@ ge::graphStatus MaxPoolWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     hValue = *(padding->GetData());
     wValue = *(padding->GetData() + 1);
     inputData.pad = array<uint64_t, HW_DIMS>{uint64_t(hValue), uint64_t(wValue)};
-    if (hValue > khValue / 2 || wValue > kwValue / 2) {
+    if (hValue > khValue / MAX_DIV || wValue > kwValue / MAX_DIV) {
         std::string padMsg = "pad [" + std::to_string(hValue) + ", " + std::to_string(wValue) +
                              "], kernel [" + std::to_string(khValue) + ", " + std::to_string(kwValue) + "]";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(

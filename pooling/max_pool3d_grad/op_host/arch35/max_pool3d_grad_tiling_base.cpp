@@ -136,7 +136,6 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckInputDtype()
     auto xDataType = context_->GetInputDesc(ORIG_X_INDEX)->GetDataType();
     auto origYDataType = context_->GetInputDesc(ORIG_Y_INDEX)->GetDataType();
     auto gradsDataType = context_->GetInputDesc(GRADS_INDEX)->GetDataType();
-
     if (!(xDataType == origYDataType && origYDataType == gradsDataType)) {
         std::string xDtypeStr = std::to_string(static_cast<int32_t>(xDataType));
         std::string origYDtypeStr = std::to_string(static_cast<int32_t>(origYDataType));
@@ -369,15 +368,15 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckInputValid()
     const uint64_t dilationH = inputData.hDilation;
     const uint64_t dilationW = inputData.wDilation;
 
-    if ((pDTop > (kd / 2)) || (pHTop > (kh / 2)) || (pWTop > (kw / 2))) {
+    if ((pDTop > (kd / NUM_TWO)) || (pHTop > (kh / NUM_TWO)) || (pWTop > (kw / NUM_TWO))) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "dPad, hPad, wPad",
             (std::to_string(pDTop) + ", " + std::to_string(pHTop) + ", " + std::to_string(pWTop)).c_str(),
             "padSize should be smaller than kernelSize / 2");
         return ge::GRAPH_FAILED;
     }
-    if ((pDTop > ((kd - 1) * dilationD + 1) / 2) || (pHTop > ((kh - 1) * dilationH + 1) / 2) ||
-        (pWTop > ((kw - 1) * dilationW + 1) / 2)) {
+    if ((pDTop > ((kd - 1) * dilationD + 1) / NUM_TWO) || (pHTop > ((kh - 1) * dilationH + 1) / NUM_TWO) ||
+        (pWTop > ((kw - 1) * dilationW + 1) / NUM_TWO)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "dPad, hPad, wPad",
             (std::to_string(pDTop) + ", " + std::to_string(pHTop) + ", " + std::to_string(pWTop)).c_str(),
@@ -400,13 +399,13 @@ ge::graphStatus MaxPool3DGradTilingBase::CheckInputValid()
         hoExpected = (inputData.hX + inputData.hStride - 1) / inputData.hStride;
         woExpected = (inputData.wX + inputData.wStride - 1) / inputData.wStride;
     } else if (padModeStr == "CALCULATED") {
-        doExpected = (inputData.dX + inputData.dPad * 2 - inputData.dDilation * (inputData.dKernel - 1) - 1) /
+        doExpected = (inputData.dX + inputData.dPad * NUM_TWO - inputData.dDilation * (inputData.dKernel - 1) - 1) /
                          inputData.dStride +
                      1;
-        hoExpected = (inputData.hX + inputData.hPad * 2 - inputData.hDilation * (inputData.hKernel - 1) - 1) /
+        hoExpected = (inputData.hX + inputData.hPad * NUM_TWO - inputData.hDilation * (inputData.hKernel - 1) - 1) /
                          inputData.hStride +
                      1;
-        woExpected = (inputData.wX + inputData.wPad * 2 - inputData.wDilation * (inputData.wKernel - 1) - 1) /
+        woExpected = (inputData.wX + inputData.wPad * NUM_TWO - inputData.wDilation * (inputData.wKernel - 1) - 1) /
                          inputData.wStride +
                      1;
     }

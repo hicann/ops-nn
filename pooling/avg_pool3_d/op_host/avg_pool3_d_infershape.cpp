@@ -191,7 +191,7 @@ static bool GetConv3DPads(
             int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
             int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
             int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
-            SetPads(attrs, pad_d / 2, pad_d - pad_d / 2, pad_h / 2, pad_h - pad_h / 2, pad_w / 2, pad_w - pad_w / 2);
+            SetPads(attrs, pad_d / DIM_2, pad_d - pad_d / DIM_2, pad_h / DIM_2, pad_h - pad_h / DIM_2, pad_w / DIM_2, pad_w - pad_w / DIM_2);
             return true;
         }
     }

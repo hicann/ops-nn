@@ -24,11 +24,9 @@
 #include "../op_kernel/arch35/adaptive_avg_pool2d_struct.h"
 #include "adaptive_avg_pool2d_base_tiling.h"
 
+namespace optiling {
 using namespace std;
 using namespace AdaptiveAvgPool2dOp;
-
-namespace optiling {
-
 struct AdaptiveAvgPool2dBigKernelInfo {
     int64_t blockFactor {0};
     int64_t blockTail {0};

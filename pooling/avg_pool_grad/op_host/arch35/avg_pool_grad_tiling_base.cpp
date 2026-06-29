@@ -418,7 +418,7 @@ ge::graphStatus GetAvgPoolGradPlatformInfo(gert::TilingContext* context, uint64_
 {
     auto platformPtr = context->GetPlatformInfo();
     if (platformPtr == nullptr) {
-        auto compileInfoPtr = reinterpret_cast<const AvgPoolGradCompileInfo*>(context->GetCompileInfo());
+        auto compileInfoPtr = static_cast<const AvgPoolGradCompileInfo*>(context->GetCompileInfo());
         OP_TILING_CHECK(
             compileInfoPtr == nullptr, CUBE_INNER_ERR_REPORT(context, "compile info is null"), return ge::GRAPH_FAILED);
         coreNum = compileInfoPtr->coreNum;

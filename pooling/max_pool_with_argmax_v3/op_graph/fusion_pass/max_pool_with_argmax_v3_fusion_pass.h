@@ -21,9 +21,9 @@ class __attribute__((visibility("default"))) MaxPoolWithArgmaxV3FusionPass : pub
 protected:
     std::vector<PatternUniqPtr> Patterns() override;
 
-    bool MeetRequirements(const std::unique_ptr<MatchResult>& match_result) override;
+    bool MeetRequirements(const std::unique_ptr<MatchResult>& matchResult) override;
 
-    GraphUniqPtr Replacement(const std::unique_ptr<MatchResult>& match_result) override;
+    GraphUniqPtr Replacement(const std::unique_ptr<MatchResult>& matchResult) override;
 };
 } // namespace ops
 

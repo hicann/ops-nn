@@ -60,6 +60,7 @@ const std::array<const char*, 3> kSourceOpTypes = {"MaxPoolWithArgmax", "MaxPool
 const int64_t kInputIdx = 0L;
 const int64_t kPoolIdx = 1L;
 const size_t kAttrVecSize = 4U;
+const int64_t TWO = 2;
 
 inline static bool IsRegbaseArch()
 {
@@ -101,7 +102,7 @@ bool CalcSamePadding(
     }
     const int64_t outputSize = (inputSize + stride - 1) / stride;
     const int64_t totalPad = std::max(static_cast<int64_t>(0), (outputSize - 1) * stride + ksize - inputSize);
-    padBegin = totalPad / 2;
+    padBegin = totalPad / TWO;
     padEnd = totalPad - padBegin;
     return true;
 }

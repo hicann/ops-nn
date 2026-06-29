@@ -88,7 +88,6 @@ struct AdaptiveAvgPool3dGradNCDHWSplitInfo {
     int64_t totalBufferSize{0};
     int64_t computeSrcBufferSize{0};
     int64_t computeAccumBufferSize{0};
-
 };
 
 class AdaptiveAvgPool3dGradTilingSmallKernel : public AdaptiveAvgPool3dGradTilingBaseV35 {

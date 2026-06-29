@@ -335,7 +335,6 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_DIM) inline void MaxPool3DGradWithArg
 template <typename VALUE_T, typename INDICES_T, int64_t Format_T, bool useINT64Index, typename OFFSET_T>
 __aicore__ inline void MaxPool3DGradSimtKernel<VALUE_T, INDICES_T, Format_T, useINT64Index, OFFSET_T>::ComputePos() const
 {
-
     auto inputData = (__gm__ VALUE_T*)origx_.GetPhyAddr();
     auto outputData = (__gm__ VALUE_T*)y_.GetPhyAddr();
     auto indicesData = (__gm__ INDICES_T*)argmax_.GetPhyAddr();

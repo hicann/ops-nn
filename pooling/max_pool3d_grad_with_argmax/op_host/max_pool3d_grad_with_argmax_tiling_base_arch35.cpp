@@ -318,15 +318,15 @@ ge::graphStatus MaxPool3DGradWithArgmaxTilingBaseV35::CheckInputValid()
     const uint64_t dilationH = inputData.hDilation;
     const uint64_t dilationW = inputData.wDilation;
 
-    if ((pDTop > (kd / 2)) || (pHTop > (kh / 2)) || (pWTop > (kw / 2))) {
+    if ((pDTop > (kd / MAX_DIV)) || (pHTop > (kh / MAX_DIV)) || (pWTop > (kw / MAX_DIV))) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "pD, pH, pW",
             (std::to_string(pDTop) + ", " + std::to_string(pHTop) + ", " + std::to_string(pWTop)).c_str(),
             "padSize should smaller than kernelSize div 2");
         return ge::GRAPH_FAILED;
     }
-    if ((pDTop > ((kd - 1) * dilationD + 1) / 2) || (pHTop > ((kh - 1) * dilationH + 1) / 2) ||
-        (pWTop > ((kw - 1) * dilationW + 1) / 2)) {
+    if ((pDTop > ((kd - 1) * dilationD + 1) / MAX_DIV) || (pHTop > ((kh - 1) * dilationH + 1) / MAX_DIV) ||
+        (pWTop > ((kw - 1) * dilationW + 1) / MAX_DIV)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "pD, pH, pW",
             (std::to_string(pDTop) + ", " + std::to_string(pHTop) + ", " + std::to_string(pWTop)).c_str(),

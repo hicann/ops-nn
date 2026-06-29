@@ -374,7 +374,6 @@ __aicore__ inline void AdaptiveAvgPool2dSmallKernel<T, ID_T, NC_FACTOR>::CalKern
                 MicroAPI::DataCopy(startIdxAddr + i * vfLen, startIdxReg, calMask);
                 MicroAPI::DataCopy(kernelSizeAddr + i * vfLen, kerSizeReg, calMask);
             }
-            
         }
     }
 }

@@ -47,7 +47,6 @@ static constexpr int64_t INPUT_ARGMAX = 2;
      auto inputX = context_->GetInputShape(INPUT_X);
      OPS_CHECK_NULL_WITH_CONTEXT(context_, inputX);
      auto xShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
- 
      if (xShape.GetDimNum() != DIMS_FOUR) {
          OP_LOGE_FOR_INVALID_SHAPEDIM(opName_, "x",
              std::to_string(xShape.GetDimNum()).c_str(), "4");
@@ -73,7 +72,6 @@ static constexpr int64_t INPUT_ARGMAX = 2;
    auto inputGrad = context_->GetInputShape(INPUT_GRAD);
    OPS_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
    auto gradShape = Ops::Base::EnsureNotScalar(inputGrad->GetStorageShape());
-
    if (gradShape.GetShapeSize() <= 0) {
          OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(opName_, "grad",
              std::to_string(gradShape.GetShapeSize()).c_str(),
@@ -230,7 +228,7 @@ static constexpr int64_t INPUT_ARGMAX = 2;
         inputData.wPad = wPadNeed / DIGIT_TWO;
     }
 
-   if (inputData.hPad > inputData.hKernel / 2 || inputData.wPad > inputData.wKernel / 2) {
+   if (inputData.hPad > inputData.hKernel / DIGIT_TWO || inputData.wPad > inputData.wKernel / DIGIT_TWO) {
        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(opName_, "hPad, wPad",
            (std::string("hPad=") + std::to_string(inputData.hPad) + ", wPad=" + std::to_string(inputData.wPad)).c_str(),
            "hPad must <= hKernel/2, wPad must <= wKernel/2");

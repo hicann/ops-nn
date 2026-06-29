@@ -71,10 +71,9 @@ public:
         : MaxPool3DGradTilingBase(context),
         base(new Pool3DGradNCDHWSmallKernelCommonTiling(&inputData))
     {
-
     }
 
-    ~MaxPool3DGradNCDHWSmallKernelTiling()
+    ~MaxPool3DGradNCDHWSmallKernelTiling() override
     {
         delete base;
     }

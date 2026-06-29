@@ -306,7 +306,6 @@ ge::graphStatus MaskedScatterWithPositionTiling::CheckDataType()
     auto inputUpdatesPtr = context_->GetRequiredInputDesc(INPUT_UPDATES_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputUpdatesPtr);
     auto updatesDtype = inputUpdatesPtr->GetDataType();
-
     if (dType_ != updatesDtype) {
         std::string dtypeMsg = Ops::Base::ToString(dType_) + " and " + Ops::Base::ToString(updatesDtype);
         OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(

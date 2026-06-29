@@ -24,10 +24,9 @@
 #include "adaptive_pool3d_tiling.h"
 #include "../op_kernel/arch35/adaptive_pool3d_tiling_struct.h"
 
+namespace optiling {
 using namespace std;
 using namespace AdaptivePool3DTiling;
-
-namespace optiling {
 using Ops::NN::Optiling::TilingBaseClass;
 
 struct ComputeInfo {

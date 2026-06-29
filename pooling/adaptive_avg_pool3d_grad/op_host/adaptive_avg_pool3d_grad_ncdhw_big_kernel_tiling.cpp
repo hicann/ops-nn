@@ -78,7 +78,7 @@ bool AdaptiveAvgPool3dGradTilingBigKernel::IsCapable()
     kernelD = Ops::Base::CeilDiv(gradOutputD, gradInputD);
     kernelH = Ops::Base::CeilDiv(gradOutputH, gradInputH);
     kernelW = Ops::Base::CeilDiv(gradOutputW, gradInputW);
-    if ((kernelD * kernelH * kernelW < ADAPTIVE_BIG_KERNEL_SIZE) || (kernelW <= (baseData.vRegSize / baseData.inputBytes / 2))) {
+    if ((kernelD * kernelH * kernelW < ADAPTIVE_BIG_KERNEL_SIZE) || (kernelW <= (baseData.vRegSize / baseData.inputBytes / DOUBLE_BUFFER))) {
         return false;
     }
 

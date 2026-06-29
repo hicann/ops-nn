@@ -64,7 +64,7 @@ inline ge::graphStatus SetAllUnknownDim(const int64_t rank, gert::Shape* output_
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus CheckKernelAndStrides(gert::InferShapeContext* context, const std::string& dataFormatStr)
+ge::graphStatus CheckKernelAndStrides(const gert::InferShapeContext* context, const std::string& dataFormatStr)
 {
     auto attrs = context->GetAttrs();
     auto ksize = attrs->GetAttrPointer<gert::ContinuousVector>(ATTR_KERNEL_POS);
@@ -74,7 +74,7 @@ ge::graphStatus CheckKernelAndStrides(gert::InferShapeContext* context, const st
             std::to_string(ksize->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
-    auto ksize_data = reinterpret_cast<const int64_t*>(ksize->GetData());
+    auto ksize_data = static_cast<const int64_t*>(ksize->GetData());
 
     if (dataFormatStr == "NCHW") {
         if (ksize_data[IDX_ZERO] != ONE) {
@@ -107,7 +107,7 @@ ge::graphStatus CheckKernelAndStrides(gert::InferShapeContext* context, const st
             std::to_string(strides->GetSize()).c_str(), std::to_string(ATTR_LIST_SHAPE_SIZE).c_str());
         return GRAPH_FAILED;
     }
-    auto strides_data = reinterpret_cast<const int64_t*>(strides->GetData());
+    auto strides_data = static_cast<const int64_t*>(strides->GetData());
 
     if (dataFormatStr == "NCHW") {
         if (strides_data[IDX_ZERO] != ONE) {
@@ -145,7 +145,6 @@ ge::graphStatus InferShape4AvgPoolGrad(gert::InferShapeContext* context)
     auto gradDesc = context->GetInputDesc(IDX_GRAD_INPUT);
     OP_CHECK_NULL_WITH_CONTEXT(context, gradDesc);
     auto gradOriFormat = gradDesc->GetOriginFormat();
-
     if (gradOriFormat != FORMAT_ND && gradOriFormat != FORMAT_NCHW && gradOriFormat != FORMAT_NHWC) {
         OP_LOGE_FOR_INVALID_FORMAT(context->GetNodeName(), "input_grad",
             Ops::Base::ToString(gradOriFormat).c_str(), "ND, NCHW or NHWC");

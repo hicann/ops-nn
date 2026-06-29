@@ -24,8 +24,8 @@
 #include "max_pool_grad_tiling.h"
 #include "../../pool_grad_common/op_kernel/arch35/max_pool_grad_with_argmax_struct_common.h"
 
-using namespace MaxPoolGradWithArgmaxNHWCNameSpace;
 namespace optiling {
+using namespace MaxPoolGradWithArgmaxNHWCNameSpace;
 constexpr int64_t MAX_THREAD_NUM = 256;
 constexpr int64_t INT32_SIZE = 4;
 constexpr int64_t INT64_SIZE = 8;

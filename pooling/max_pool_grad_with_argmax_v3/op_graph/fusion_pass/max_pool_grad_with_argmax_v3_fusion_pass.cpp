@@ -62,6 +62,8 @@ const int64_t kIdxInput = 0L;
 const int64_t kIdxGrad = 1L;
 const int64_t kIdxPool = 2L;
 const size_t kListSize4 = 4U;
+const int64_t TWO = 2;
+const int64_t THREE = 3;
 
 inline static bool IsRegbaseSoc()
 {
@@ -103,7 +105,7 @@ bool CalcPaddingSame(
     }
     const int64_t outputSize = (inputSize + stride - 1) / stride;
     const int64_t totalPad = std::max(static_cast<int64_t>(0), (outputSize - 1) * stride + ksize - inputSize);
-    padBegin = totalPad / 2;
+    padBegin = totalPad / TWO;
     padEnd = totalPad - padBegin;
     return true;
 }
@@ -241,7 +243,7 @@ es::EsTensorHolder CreatePatternPoolGrad(
         es::AddEdgeAndUpdatePeerDesc(*graph, *grad.GetProducer(), grad.GetProducerOutIndex(), pool, 1) != GRAPH_SUCCESS,
         es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc for grad failed.");
     OP_LOGE_IF(
-        es::AddEdgeAndUpdatePeerDesc(*graph, *argmax.GetProducer(), argmax.GetProducerOutIndex(), pool, 2) !=
+        es::AddEdgeAndUpdatePeerDesc(*graph, *argmax.GetProducer(), argmax.GetProducerOutIndex(), pool, TWO) !=
             GRAPH_SUCCESS,
         es::EsTensorHolder(), kPassName.c_str(), "AddEdgeAndUpdatePeerDesc for argmax failed.");
 
@@ -358,9 +360,9 @@ GraphUniqPtr MaxPoolGradWithArgmaxV3FusionPass::Replacement(const std::unique_pt
 
     bool ceilMode = false;
     (void)sourceNode.GetAttr("ceil_mode", ceilMode);
-    int32_t dtypeI32 = 3;
+    int32_t dtypeI32 = THREE;
     if (sourceNode.GetAttr("dtype", dtypeI32) != SUCCESS) {
-        dtypeI32 = 3;
+        dtypeI32 = THREE;
     }
     int64_t dtype = static_cast<int64_t>(dtypeI32);
 
@@ -378,7 +380,7 @@ GraphUniqPtr MaxPoolGradWithArgmaxV3FusionPass::Replacement(const std::unique_pt
     outNode->UpdateOutputDesc(0, outputDesc);
     outNode->UpdateInputDesc(0, inputDesc);
     outNode->UpdateInputDesc(1, gradDesc);
-    outNode->UpdateInputDesc(2, argmaxInputDesc);
+    outNode->UpdateInputDesc(TWO, argmaxInputDesc);
 
     auto replaceGraph = graphBuilder.BuildAndReset({repY});
     return replaceGraph;

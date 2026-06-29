@@ -40,7 +40,6 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     auto inputX = context_->GetInputShape(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto inputShape = EnsureNotScalar(inputX->GetStorageShape());
-
     if (inputShape.GetDimNum() != NCDHW_DIMS) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "x",
             std::to_string(inputShape.GetDimNum()).c_str(), std::to_string(NCDHW_DIMS).c_str());
@@ -151,7 +150,7 @@ ge::graphStatus MaxPool3DWithArgmaxV2BigKernelRegbaseTiling::GetShapeAttrsInfo()
     hValue = *(padding->GetData() + 1);
     wValue = *(padding->GetData() + MP_MAX_3D_DIM_TWO);
     inputData.pad = array<uint64_t, DHW_DIMS>{uint64_t(dValue), uint64_t(hValue), uint64_t(wValue)};
-    if (dValue > kdValue / 2 || hValue > khValue / 2 || wValue > kwValue / 2) {
+    if (dValue > kdValue / MAX_DIV || hValue > khValue / MAX_DIV || wValue > kwValue / MAX_DIV) {
         std::string attrMsg = "pad {" + std::to_string(dValue) + ", " + std::to_string(hValue) + ", " +
                               std::to_string(wValue) + "}, kernel_size {" + std::to_string(kdValue) + ", " +
                               std::to_string(khValue) + ", " + std::to_string(kwValue) + "}";

@@ -323,7 +323,6 @@ static bool InferShapeForEmbeddingBagSupport(gert::InferShapeContext* context)
     bool is_unknown_weight = CheckIsUnknown(weight_shape);
     bool is_unknown_indices = CheckIsUnknown(indices_shape);
     bool is_unknown_offsets = CheckIsUnknown(offsets_shape);
-
     if (InferShape4OutputSupport(context, batch, embedding_dim, dimension, is_unknown_weight, is_unknown_indices, is_unknown_offsets) !=
         ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
@@ -389,7 +388,6 @@ static ge::graphStatus InferShapeForEmbeddingBag(gert::InferShapeContext* contex
     int64_t weight_dim_num = weight_shape->GetDimNum();
     bool is_unknown_rank = Ops::Base::IsUnknownRank(*weight_shape);
     bool is_unknown_shape = Ops::Base::IsUnknownShape(*weight_shape);
-
     if (InferShape4Output(context, batch, embedding_dim, weight_dim_num, is_unknown_rank, is_unknown_shape) !=
         ge::GRAPH_SUCCESS) {
         OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(

@@ -218,14 +218,14 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     const char* data_format = attrs->GetAttrPointer<char>(ATTR_INDEX_DATA_FORMAT);
     OP_CHECK_NULL_WITH_CONTEXT(context, data_format);
 
-    if ((pD > (kD / 2)) || (pH > (kH / 2)) || (pW > (kW / 2))) {
+    if ((pD > (kD / NUMBER_TWO)) || (pH > (kH / NUMBER_TWO)) || (pW > (kW / NUMBER_TWO))) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "pD, pH, pW", (std::to_string(pD) + ", " + std::to_string(pH) + ", " + std::to_string(pW)).c_str(),
             "padSize should smaller than kernelSize div 2");
         return ge::GRAPH_FAILED;
     }
 
-    if ((pD > ((kD - 1) * dD + 1) / 2) || (pH > ((kH - 1) * dH + 1) / 2) || (pW > ((kW - 1) * dW + 1) / 2)) {
+    if ((pD > ((kD - 1) * dD + 1) / NUMBER_TWO) || (pH > ((kH - 1) * dH + 1) / NUMBER_TWO) || (pW > ((kW - 1) * dW + 1) / NUMBER_TWO)) {
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             opName_, "pD, pH, pW", (std::to_string(pD) + ", " + std::to_string(pH) + ", " + std::to_string(pW)).c_str(),
             "padSize should smaller than ((kernelSize - 1) * dilation + 1) / 2");
@@ -268,7 +268,6 @@ ge::graphStatus InferShapeForMaxPool3DGradWithArgmax(gert::InferShapeContext* co
     int64_t doExpected = CalcOutDim(xShape->GetDim(input_d_dim), kD, sD, pD, dD, *ceil_mode);
     int64_t hoExpected = CalcOutDim(xShape->GetDim(input_h_dim), kH, sH, pH, dH, *ceil_mode);
     int64_t woExpected = CalcOutDim(xShape->GetDim(input_w_dim), kW, sW, pW, dW, *ceil_mode);
-
     if ((!Ops::Base::IsUnknownRank(*gradShape) && !Ops::Base::IsUnknownShape(*gradShape)) &&
         ((doExpected <= 0) || (doExpected != static_cast<int64_t>(gradShape->GetDim(input_d_dim))) ||
          (hoExpected <= 0) || (hoExpected != static_cast<int64_t>(gradShape->GetDim(input_h_dim))) ||

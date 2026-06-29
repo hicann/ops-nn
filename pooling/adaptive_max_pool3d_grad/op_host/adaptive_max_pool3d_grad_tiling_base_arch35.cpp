@@ -25,6 +25,11 @@ constexpr uint64_t X_INDEX_V35 = 0;
 constexpr uint64_t GRAD_INDEX_V35 = 1;
 constexpr uint64_t ARGMAX_INDEX_V35 = 2;
 constexpr int64_t WS_SYS_SIZE = 16 * 1024 * 1024;
+constexpr int64_t nPos = 0;
+constexpr int64_t cPos = 1;
+constexpr int64_t dPos = 2;
+constexpr int64_t hPos = 3;
+constexpr int64_t wPos = 4;
 
 bool AdaptiveMaxPool3dGradTilingBaseV35::CheckInputShape()
 {
@@ -91,16 +96,16 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingBaseV35::SetInputParams()
     const gert::Shape xShape = context_->GetInputShape(X_INDEX_V35)->GetStorageShape();
     const gert::Shape gradShape = context_->GetInputShape(GRAD_INDEX_V35)->GetStorageShape();
 
-    inputData.nX = xShape.GetDim(0);
-    inputData.cX = xShape.GetDim(1);
-    inputData.dX = xShape.GetDim(2);
-    inputData.hX = xShape.GetDim(3);
-    inputData.wX = xShape.GetDim(4);
-    inputData.nGrad = gradShape.GetDim(0);
-    inputData.cGrad = gradShape.GetDim(1);
-    inputData.dGrad = gradShape.GetDim(2);
-    inputData.hGrad = gradShape.GetDim(3);
-    inputData.wGrad = gradShape.GetDim(4);
+    inputData.nX = xShape.GetDim(nPos);
+    inputData.cX = xShape.GetDim(cPos);
+    inputData.dX = xShape.GetDim(dPos);
+    inputData.hX = xShape.GetDim(hPos);
+    inputData.wX = xShape.GetDim(wPos);
+    inputData.nGrad = gradShape.GetDim(nPos);
+    inputData.cGrad = gradShape.GetDim(cPos);
+    inputData.dGrad = gradShape.GetDim(dPos);
+    inputData.hGrad = gradShape.GetDim(hPos);
+    inputData.wGrad = gradShape.GetDim(wPos);
     inputData.inputFormat = ge::Format::FORMAT_NCDHW;
     inputData.gradShapeSize = gradShape.GetShapeSize();
     return ge::GRAPH_SUCCESS;

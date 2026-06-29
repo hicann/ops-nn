@@ -368,10 +368,10 @@ void MaxPoolGradNCHWTilingCommon::PrintSplitData() const
     OP_LOGI("MaxPoolGradNCHW", "%s", info.str().c_str());
 }
 
-void MaxPoolGradNCHWTilingCommon::SetTilingData(gert::TilingContext* context_, uint64_t key)
+void MaxPoolGradNCHWTilingCommon::SetTilingData(gert::TilingContext* context, uint64_t key)
 {
     MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData* tilingData =
-        context_->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
+        context->GetTilingData<MaxPoolGradWithArgmaxNHWCNameSpace::MaxPoolGradWithArgmaxNCHWTilingCommonData>();
     tilingData->hArgmax = inputData->hGrad;
     tilingData->wArgmax = inputData->wGrad;
     tilingData->hOutput = inputData->hX;

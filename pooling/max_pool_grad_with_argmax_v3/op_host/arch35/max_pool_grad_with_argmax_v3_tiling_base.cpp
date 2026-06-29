@@ -108,7 +108,6 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     auto inputX = context_->GetInputShape(INPUT_X);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputX);
     auto xShape = Ops::Base::EnsureNotScalar(inputX->GetStorageShape());
-
     if (xShape.GetDimNum() != DIMS_FOUR) {
         OP_LOGE_FOR_INVALID_SHAPEDIM(
             context_->GetNodeName(), "input shape", std::to_string(xShape.GetDimNum()),
@@ -136,7 +135,6 @@ ge::graphStatus MaxPoolGradWithArgmaxV3BaseTiling::GetShapeAttrsInfo()
     auto inputGrad = context_->GetInputShape(INPUT_GRAD);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputGrad);
     auto gradShape = Ops::Base::EnsureNotScalar(inputGrad->GetStorageShape());
-
     if (gradShape.GetShapeSize() <= 0) {
         OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(
             context_->GetNodeName(), "grad shape size", std::to_string(gradShape.GetShapeSize()),
