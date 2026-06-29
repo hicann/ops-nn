@@ -41,7 +41,7 @@ constexpr int64_t INDEX_OUTPUT_MX_SCALE2 = 3;
 
 // Numeric constants
 constexpr int64_t DIGIT_TWO = 2;
-constexpr int64_t DIGIT_HTREE = 3;
+constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t DB = 2; // 开db
 constexpr int64_t DIGIT_FOUR = 4;
 constexpr int64_t DIGIT_256 = 256;
@@ -178,7 +178,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::CheckScaleShape(const gert::Sha
 {
     // 开始校验mxScale1和mxScale2的shape是否正确
     std::string dimMsg = std::to_string(mxScale1Shape.GetDimNum()) + " and " + std::to_string(mxScale2Shape.GetDimNum());
-    OP_CHECK_IF(mxScale1Shape.GetDimNum() != DIGIT_HTREE || mxScale2Shape.GetDimNum() != DIGIT_HTREE,
+    OP_CHECK_IF(mxScale1Shape.GetDimNum() != DIGIT_THREE || mxScale2Shape.GetDimNum() != DIGIT_THREE,
         OP_LOGE_FOR_INVALID_SHAPEDIMS_WITH_REASON(context_->GetNodeName(), "mx_scale1 and mx_scale2", dimMsg.c_str(),
         "mx_scale1 and mx_scale2 shape dims must be three"),
         return ge::GRAPH_FAILED);
@@ -368,7 +368,7 @@ ge::graphStatus SwigluMxQuantWithDualAxisTiling::ComputeTilingParams()
     int64_t y1Ub = inHalfSize * DB;
     int64_t y2Ub = y1Ub;
     int64_t scale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE * DB;
-    int64_t scale2Ub = tilingParams_.blockW * DIGIT_TWO * DB;
+    int64_t scale2Ub = tilingParams_.blockW * DIGIT_THREE * DB;
     int64_t tmpScale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE;
     int64_t tmpScale2Ub = tilingParams_.blockW * DIGIT_TWO * tilingParams_.dtypeSize;
     int64_t allNeedUb = xUb + swigluUb + y1Ub + y2Ub + scale1Ub + scale2Ub + tmpScale1Ub + tmpScale2Ub;

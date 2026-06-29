@@ -36,6 +36,7 @@ using namespace AscendC;
 
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 
@@ -72,6 +73,7 @@ constexpr uint32_t VF_LEN_FP32 = platform::GetVRegSize() / sizeof(float);
 constexpr uint32_t VF_LEN_B16 = platform::GetVRegSize() / sizeof(half);
 constexpr int64_t BLOCK_SIZE = 32;
 constexpr int64_t DOUBLE_BLOCK_SIZE = 64;
+constexpr int64_t ONCE_ROW_LEN = 256;
 constexpr int64_t UB_BLOCK_SIZE = platform::GetUbBlockSize();
 
 static constexpr MicroAPI::CastTrait CAST_X_TO_FP32_ZERO = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::UNKNOWN,
@@ -127,6 +129,8 @@ private:
     __aicore__ inline void ComputeFP4FromHalf(MicroAPI::RegTensor<float> &Reg);
     __aicore__ inline void CopyOut(int64_t yOffset, int64_t scale1OutOffset, int64_t scale2OutOffset,
         int64_t blockCount, int64_t blockCountAlign, int64_t dataLen, int64_t dataLenAlign);
+    __aicore__ inline void ComputeInterleave(__ubuf__ uint8_t *dstAddr, __ubuf__ uint8_t *src0Addr,
+        __ubuf__ uint8_t *src1Addr);
 
 protected:
     static constexpr MicroAPI::CastTrait castTraitBF16toFp4 = { MicroAPI::RegLayout::ZERO, MicroAPI::SatMode::SAT,
@@ -142,12 +146,12 @@ private:
 
     // pipe & queue & buf
     TPipe *pipe_;
-    TQue<QuePosition::VECIN, DB_BUFFER> inQueue_;
+    TQue<QuePosition::VECIN, 1> inQueue_;
     TBuf<TPosition::VECCALC> swigluBuf_;
-    TQue<QuePosition::VECOUT, DB_BUFFER> outQueue1_;
-    TQue<QuePosition::VECOUT, DB_BUFFER> outQueue2_;
-    TQue<QuePosition::VECOUT, DB_BUFFER> mxScaleQueue1_;
-    TQue<QuePosition::VECOUT, DB_BUFFER> mxScaleQueue2_;
+    TQue<QuePosition::VECOUT, 1> outQueue1_;
+    TQue<QuePosition::VECOUT, 1> outQueue2_;
+    TQue<QuePosition::VECOUT, 1> mxScaleQueue1_;
+    TQue<QuePosition::VECOUT, 1> mxScaleQueue2_;
     TBuf<TPosition::VECCALC> mxScale1ReciprocalBuf_;
     TBuf<TPosition::VECCALC> mxScale2ReciprocalBuf_;
 
@@ -185,9 +189,9 @@ __aicore__ inline void
 SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::InitParams()
 {
     blockIdx_ = GetBlockIdx();
-    ubRowLen_ = tilingData_->blockW; // 固定256
+    ubRowLen_ = ONCE_ROW_LEN; // 固定256
     ubRowLenTail_ = tilingData_->dimNTail;
-    ubRowCount_ = tilingData_->splitBlockH; // 固定64
+    ubRowCount_ = DOUBLE_BLOCK_SIZE; // 固定64
     activateLeft_ = tilingData_->activateLeft;
     dimN_ = tilingData_->dimN;
 
@@ -233,14 +237,14 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
     int64_t inBufferSize = inHalfSize_ * static_cast<int64_t>(sizeof(xDtype));
 
     // axis=-2 scale buffer (aligned to 2*blockSize rows, interleaved)
-    int64_t mxScale2BufferSize = ubRowLen_ * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO);
+    int64_t mxScale2BufferSize = ubRowLen_ * DIGIT_THREE;
 
     // axis=-1 scale buffer
     int64_t mxScale1BufferSize = ubRowCount_ * UB_BLOCK_SIZE;
 
     // axis=-2 1/scale (xDtype sized for bf16 reciprocal storage)
     int64_t tmpScale2BufferSize =
-        ubRowLen_ * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO) * static_cast<int64_t>(sizeof(xDtype));
+        ubRowLen_ * DIGIT_TWO * static_cast<int64_t>(sizeof(xDtype));
 
     // Allocate buffers with double buffering (DB_BUFFER=2)
     // inQueue_ holds left + right halves in a single buffer (2 * inBufferSize_)
@@ -441,10 +445,11 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
             }
             // Scale2 interleave
             for (int64_t blk = 1; blk < calcBlockLoop; blk += 2) {
-                Interleave(mxScale2[(blk - 1) * ubRowLen_], mxScale2[blk * ubRowLen_], mxScale2[(blk - 1) * ubRowLen_],
-                    mxScale2[blk * ubRowLen_], ubRowLen_);
+                auto src0Addr = (__ubuf__ uint8_t *)mxScale2[(blk - 1) * ubRowLen_].GetPhyAddr();
+                auto src1Addr = (__ubuf__ uint8_t *)mxScale2[blk * ubRowLen_].GetPhyAddr();
+                auto dstAddr = (__ubuf__ uint8_t *)mxScale2[(blk - 1) * ubRowLen_].GetPhyAddr();
+                ComputeInterleave(dstAddr, src0Addr, src1Addr);
             }
-
             mxScaleQueue1_.template EnQue(mxScale1);
             outQueue1_.template EnQue(y1);
             mxScaleQueue2_.template EnQue(mxScale2);
@@ -461,6 +466,23 @@ __aicore__ inline void SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roun
     }
 }
 
+template <typename xDtype, typename y1Dtype, uint64_t mode, AscendC::RoundMode roundMode, uint64_t scaleAlg,
+    uint64_t isGroupIdx>
+__aicore__ inline void
+SwigluMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg, isGroupIdx>::ComputeInterleave(__ubuf__ uint8_t *dstAddr,
+    __ubuf__ uint8_t *src0Addr, __ubuf__ uint8_t *src1Addr)
+{
+    __VEC_SCOPE__
+    {
+        MicroAPI::RegTensor<uint8_t> src0Reg;
+        MicroAPI::RegTensor<uint8_t> src1Reg;
+        MicroAPI::MaskReg maskB8 = MicroAPI::CreateMask<uint8_t, MicroAPI::MaskPattern::ALL>();
+        MicroAPI::DataCopy(src0Reg, src0Addr);
+        MicroAPI::DataCopy(src1Reg, src1Addr);
+        MicroAPI::DataCopy<uint8_t, MicroAPI::StoreDist::DIST_INTLV_B8>(dstAddr, src0Reg, src1Reg,
+            maskB8);
+    }
+}
 // ============================================================================
 // CopyInSwiglu — load left and right halves of x into a single inQueue_ buffer
 // x layout: [M, 2N] where left = x[row, 0..N-1], right = x[row, N..2N-1]
