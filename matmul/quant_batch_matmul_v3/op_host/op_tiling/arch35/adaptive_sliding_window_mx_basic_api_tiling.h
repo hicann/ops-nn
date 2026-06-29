@@ -39,6 +39,7 @@ protected:
     bool IsCapable() override;
     uint64_t GetBatchCoreCnt() const override;
     const void* GetTilingData() const override;
+    uint64_t GetApiLevel(NpuArch npuArch) const override;
     bool CalcBasicBlock() override;
     void AnalyseFullLoadInfo() override;
     void CalcTailRoundBasicBlockSplit() override;

@@ -54,6 +54,12 @@ enum class BiasMode : uint32_t {
     CUBE_BIAS_FP16_TEMPLATE = 2
 };
 
+enum class QMMApiLevel : uint32_t {
+    HIGH_LEVEL = 0,
+    BASIC_LEVEL = 1,
+    BLAZE_LEVEL = 2
+};
+
 inline bool IsTensorapiCapable()
 {
     char pkgName[] = "asc-devkit";
@@ -63,10 +69,58 @@ inline bool IsTensorapiCapable()
     return aclsysGetVersionNum(pkgName, &versionNum) == ACL_SUCCESS && versionNum >= MinTensorApiRuntimeVersion;
 }
 
-// WeightNz + Blaze: use low-order BasicAPITilingData; otherwise fall back to Cube ASW high-order tiling.
-inline bool IsWeightNzCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+inline bool IsCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
 {
-    return inputParams.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable();
+    const auto aDtype = (inputParams.aDtype == ge::DT_INT4 && inputParams.bDtype == ge::DT_INT4) ?
+        ge::DT_INT8 : inputParams.aDtype;
+    bool isCubePerTensor =
+        inputParams.isPerTensor &&
+        ((aDtype == ge::DT_INT8 && inputParams.biasDtype == ge::DT_INT32 && !inputParams.isPertoken) ||
+         ((aDtype == ge::DT_FLOAT8_E4M3FN || aDtype == ge::DT_FLOAT8_E5M2 || aDtype == ge::DT_HIFLOAT8) &&
+          inputParams.scaleDtype == ge::DT_UINT64));
+    bool isCubePerChannel =
+        inputParams.isPerChannel && (inputParams.scaleDtype == ge::DT_UINT64 ||
+                                     inputParams.scaleDtype == ge::DT_INT64 || inputParams.cDtype == ge::DT_INT32);
+    return (inputParams.isDoubleScale && !inputParams.isPerChannel) || isCubePerTensor || isCubePerChannel;
+}
+
+inline bool IsMxBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+{
+    bool isMxfp8 = (inputParams.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams.aDtype == ge::DT_FLOAT8_E5M2) &&
+                   (inputParams.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams.bDtype == ge::DT_FLOAT8_E5M2) &&
+                   inputParams.isMxPerGroup;
+    bool isMxfp4 = inputParams.isMxPerGroup && inputParams.aDtype == ge::DT_FLOAT4_E2M1 &&
+                   inputParams.bDtype == ge::DT_FLOAT4_E2M1;
+    return isMxfp8 || isMxfp4;
+}
+
+inline bool IsPerblockBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.isPerBlock && inputParams.bFormat == ge::FORMAT_ND;
+}
+
+inline bool IsFp8OrHif8TTFloatBiasMix(const QuantBatchMatmulInfo& inputParams)
+{
+    bool isFp8OrHif8Input = inputParams.aDtype == ge::DT_FLOAT8_E4M3FN ||
+                            inputParams.aDtype == ge::DT_FLOAT8_E5M2 ||
+                            inputParams.aDtype == ge::DT_HIFLOAT8;
+    bool isPertensorDoubleScale = inputParams.isDoubleScale && inputParams.isPerTensor && !inputParams.isPerChannel;
+    bool isFp32Scale = inputParams.scaleDtype == ge::DT_FLOAT && inputParams.perTokenScaleDtype == ge::DT_FLOAT;
+    bool hasFp32Bias = inputParams.hasBias && inputParams.biasDtype == ge::DT_FLOAT;
+    return isFp8OrHif8Input && isPertensorDoubleScale && isFp32Scale && hasFp32Bias;
+}
+
+inline bool IsNonMxCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+{
+    return IsCubeBasicApiCapable(inputParams) && !IsMxBasicApiCapable(inputParams) &&
+           !IsFp8OrHif8TTFloatBiasMix(inputParams);
+}
+
+// WeightNz + Blaze: use low-order BasicAPITilingData with Blaze API-level tiling key.
+inline bool IsWeightNzNonMxCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
+{
+    return inputParams.bFormat == ge::FORMAT_FRACTAL_NZ && IsTensorapiCapable() &&
+           IsNonMxCubeBasicApiCapable(inputParams);
 }
 
 enum class QMMKernelType : uint32_t {

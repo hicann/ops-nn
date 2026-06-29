@@ -22,6 +22,14 @@
 
 #include "ascendc/host_api/tiling/template_argument.h"
 
+#if defined(__CCE_AICORE__)
+#if ASC_DEVKIT_MAJOR >= 9
+#include "kernel_basic_intf.h"
+#else
+#include "kernel_operator.h"
+#endif
+#endif
+
 #if !__CUBE_S8S4_S4S4__ && \
     defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
     ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
@@ -46,16 +54,57 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define SUPPORT_PERBLOCK false
 #endif
 
-#if !(defined(__NPU_ARCH__) && __NPU_ARCH__ == 5102) && \
-    defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) && ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0 && \
-    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && \
+#if defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && \
     defined(DT_FLOAT8_E4M3FN) && defined(DT_FLOAT8_E5M2) && defined(DT_FLOAT4_E2M1) && defined(DT_FLOAT8_E8M0)
-#define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY                                                                        \
+#define QBMMV3_IS_MX_DTYPE_TPL                                                                                     \
     ((ORIG_DTYPE_X1 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X1 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X1 == DT_FLOAT4_E2M1) && \
      (ORIG_DTYPE_X2 == DT_FLOAT8_E4M3FN || ORIG_DTYPE_X2 == DT_FLOAT8_E5M2 || ORIG_DTYPE_X2 == DT_FLOAT4_E2M1) && \
      ORIG_DTYPE_SCALE == DT_FLOAT8_E8M0)
 #else
+#define QBMMV3_IS_MX_DTYPE_TPL false
+#endif
+
+#if !__FIXED_POINT_ONLY_CUBE_TO_L0C__ && defined(ASC_DEVKIT_MAJOR) && defined(ASC_DEVKIT_MINOR) && \
+    ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
+#define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY QBMMV3_IS_MX_DTYPE_TPL
+#else
 #define SUPPORT_MX_WITHOUT_BATCH_TILING_KEY false
+#endif
+
+#if defined(__CCE_AICORE__) && defined(FORMAT_X2)
+#define QBMMV3_IS_MX_TPL QBMMV3_IS_MX_DTYPE_TPL
+#else
+#define QBMMV3_IS_MX_TPL 0
+#endif
+
+#if defined(__CCE_AICORE__) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && defined(FORMAT_ND) && \
+    defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16)
+#define QBMMV3_IS_NON_MX_CUBE_ND_TPL                                                                     \
+    (!QBMMV3_IS_MX_TPL &&                                                                                 \
+     (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT ||    \
+      ORIG_DTYPE_SCALE == DT_BF16) &&                                                                     \
+     FORMAT_X2 == FORMAT_ND)
+#else
+#define QBMMV3_IS_NON_MX_CUBE_ND_TPL false
+#endif
+
+#if defined(__CCE_AICORE__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__ && \
+    defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(ORIG_DTYPE_SCALE) && defined(FORMAT_X2) && \
+    defined(DT_INT8) && defined(DT_UINT64) && defined(DT_INT64) && defined(DT_FLOAT) && defined(DT_BF16) && \
+    defined(FORMAT_ND)
+#define QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL                                                         \
+    ((ORIG_DTYPE_X1 == DT_INT8) && (ORIG_DTYPE_X2 == DT_INT8) &&                                       \
+     (ORIG_DTYPE_SCALE == DT_UINT64 || ORIG_DTYPE_SCALE == DT_INT64 || ORIG_DTYPE_SCALE == DT_FLOAT || \
+      ORIG_DTYPE_SCALE == DT_BF16) &&                                                                  \
+     (FORMAT_X2 == FORMAT_ND))
+#else
+#define QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL false
+#endif
+
+#if defined(__CCE_AICORE__) && defined(FORMAT_X2) && defined(FORMAT_FRACTAL_NZ)
+#define QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL (!QBMMV3_IS_MX_TPL && FORMAT_X2 == FORMAT_FRACTAL_NZ)
+#else
+#define QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL false
 #endif
 
 // Bias Mode
@@ -76,6 +125,11 @@ namespace QuantBatchMatmulV3Arch35TilingKey {
 #define TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH 9
 #define TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH 10
 
+// API Level
+#define TPL_API_LEVEL_HIGH 0
+#define TPL_API_LEVEL_BASIC 1
+#define TPL_API_LEVEL_BLAZE 2
+
 ASCENDC_TPL_ARGS_DECL(
     QuantBatchMatmulV3, ASCENDC_TPL_UINT_DECL(ATRANS, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, 0, 1),
     ASCENDC_TPL_UINT_DECL(BTRANS, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, 0, 1),
@@ -89,7 +143,10 @@ ASCENDC_TPL_ARGS_DECL(
         TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI, TPL_NO_VEC_EPILOGUE_WITH_BMMAPI,
         TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT, TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI,
         TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH,
-        TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH));
+        TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH),
+    ASCENDC_TPL_UINT_DECL(
+        APILEVEL, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH, TPL_API_LEVEL_BASIC,
+        TPL_API_LEVEL_BLAZE));
 
 ASCENDC_TPL_SEL(
 #if ((!defined(__CCE_AICORE__)) || (defined(ORIG_DTYPE_SCALE) && defined(DT_FLOAT) && defined(DT_BF16) && (ORIG_DTYPE_SCALE == DT_FLOAT || ORIG_DTYPE_SCALE == DT_BF16)))
@@ -101,7 +158,8 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
             TPL_VEC_EPILOGUE_WITH_MMAPI,
-            TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI)),
+            TPL_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
 #if ((!defined(__CCE_AICORE__)) || (SUPPORT_PERBLOCK))
     ASCENDC_TPL_ARGS_SEL(       // kernel type {4} * ATRANS {0, 1} * BTRANS {0, 1}
@@ -111,7 +169,8 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
         ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
-            TPL_VEC_EPILOGUE_WITH_CUSTOM_MM)),
+            TPL_VEC_EPILOGUE_WITH_CUSTOM_MM),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
 #endif
 #if ((!defined(__CCE_AICORE__)) || (SUPPORT_MX_WITHOUT_BATCH_TILING_KEY))
     ASCENDC_TPL_ARGS_SEL(       // kernel type {9, 10} * ATRANS {0, 1} * BTRANS {0, 1}
@@ -122,22 +181,54 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
             TPL_NO_VEC_EPILOGUE_WITH_MMAPI_WITHOUT_BATCH,
-            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH)),
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI_WITHOUT_BATCH),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
 #endif
 #if (!defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__)
-    ASCENDC_TPL_ARGS_SEL(
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {6, 7} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
         ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
         ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
         ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
-            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI,
             TPL_NO_VEC_EPILOGUE_WITH_BMMAPI,
-            TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT,
-            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI)),
+            TPL_NO_VEC_EPILOGUE_WITH_BMMAPI_NO_BATCH_OUT),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
 #endif
-    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1} * ATRANS {0, 1} * BTRANS {0, 1}
+#if (!defined(__CCE_AICORE__) || \
+     (__FIXED_POINT_ONLY_CUBE_TO_L0C__ && !QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1, 5, 8} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+        ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
+            TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
+#endif
+#if (!defined(__CCE_AICORE__) || \
+     (__FIXED_POINT_ONLY_CUBE_TO_L0C__ && QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL))
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1, 8} * api level {1} * ATRANS {0, 1} * BTRANS {0, 1}
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+        ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE), // Bias Mode 只有0
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
+            TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
+#endif
+#if ((!defined(__CCE_AICORE__)) ||                                                                           \
+     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && IS_BLAZE &&                                         \
+      (QBMMV3_IS_MX_TPL || QBMMV3_IS_NON_MX_CUBE_ND_TPL || QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL)))
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1} * api level {2} * ATRANS {0, 1} * BTRANS {0, 1}
 #ifdef IS_A4W4I
         ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
 #else
@@ -149,6 +240,43 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_UINT_SEL(KERNELTYPE,
             ASCENDC_TPL_UI_LIST,
             TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
-            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI))
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BLAZE)),
+#endif
+#if ((!defined(__CCE_AICORE__)) ||                                                                           \
+     (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && !IS_BLAZE &&                                        \
+      (QBMMV3_IS_MX_TPL || QBMMV3_IS_NON_MX_CUBE_ND_TPL)))
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1} * api level {1} * ATRANS {0, 1} * BTRANS {0, 1}
+#ifdef IS_A4W4I
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),
+#else
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+#endif
+        ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE),
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
+            TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_BASIC)),
+#endif
+#if (defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) && !QBMMV3_IS_MX_TPL && !QBMMV3_IS_NON_MX_CUBE_ND_TPL)
+    ASCENDC_TPL_ARGS_SEL(       // kernel type {0, 1} * api level {0} * ATRANS {0, 1} * BTRANS {0, 1}
+        ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),
+        ASCENDC_TPL_UINT_SEL(ATRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BTRANS, ASCENDC_TPL_UI_LIST, 0, 1),
+        ASCENDC_TPL_UINT_SEL(BIASMODE, ASCENDC_TPL_UI_LIST, TPL_EXCLUDE_FROM_TEMPLATE),
+        ASCENDC_TPL_UINT_SEL(KERNELTYPE,
+            ASCENDC_TPL_UI_LIST,
+            TPL_NO_VEC_EPILOGUE_WITH_MMAPI,
+            TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI),
+        ASCENDC_TPL_UINT_SEL(APILEVEL, ASCENDC_TPL_UI_LIST, TPL_API_LEVEL_HIGH)),
+#endif
 );
+#undef QBMMV3_IS_NON_MX_WEIGHT_NZ_TPL
+#undef QBMMV3_IS_FIXED_POINT_CUBE_ND_INT8_TPL
+#undef QBMMV3_IS_NON_MX_CUBE_ND_TPL
+#undef QBMMV3_IS_MX_TPL
+#undef QBMMV3_IS_MX_DTYPE_TPL
 } // namespace QuantBatchMatmulV3_Arch35_TilingKey

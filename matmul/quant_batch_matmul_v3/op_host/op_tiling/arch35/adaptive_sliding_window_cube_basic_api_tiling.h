@@ -39,6 +39,7 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     uint64_t GetBatchCoreCnt() const override;
     const void* GetTilingData() const override;
+    uint64_t GetApiLevel(NpuArch npuArch) const override;
     void AnalyseFullLoadInfo() override;
     bool CalL1Tiling() override;
     void SetTilingData() override;

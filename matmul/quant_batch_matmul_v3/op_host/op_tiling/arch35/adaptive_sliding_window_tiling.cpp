@@ -259,11 +259,17 @@ uint64_t AdaptiveSlidingWindowTiling::GetKernelType() const
         inputParams_, basicTiling_, isBf16Mix_, isAFullLoad_, isBFullLoad_, isABFullLoad_);
 }
 
+uint64_t AdaptiveSlidingWindowTiling::GetApiLevel(NpuArch) const
+{
+    return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
+}
+
 uint64_t AdaptiveSlidingWindowTiling::GetTilingKey() const
 {
+    uint64_t kernelType = GetKernelType();
     return GET_TPL_TILING_KEY(
         static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
-        GetKernelType());
+        kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus AdaptiveSlidingWindowTiling::GetWorkspaceSize()
@@ -352,7 +358,7 @@ void AdaptiveSlidingWindowTiling::SetBf16Compat()
                      inputParams_.scaleDtype != ge::DT_FLOAT8_E8M0) &&
                     inputParams_.isPerTensor && inputParams_.aDtype == ge::DT_INT8 && inputParams_.hasBias &&
                     (inputParams_.biasDtype == ge::DT_FLOAT || inputParams_.biasDtype == ge::DT_BF16);
-    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix();
+    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
     isBf16Mix_ = (isMix || isCompat || isFp8OrHif8TTBiasMix) && (inputParams_.cDtype != ge::DT_INT32);
 }
 
@@ -365,18 +371,6 @@ bool AdaptiveSlidingWindowTiling::IsMxKOdd() const
 bool AdaptiveSlidingWindowTiling::IsMxBackwardTrans() const
 {
     return inputParams_.scaleDtype == ge::DT_FLOAT8_E8M0 && (inputParams_.transA || !inputParams_.transB);
-}
-
-bool AdaptiveSlidingWindowTiling::IsFp8OrHif8TTFloatBiasMix() const
-{
-    bool isFp8OrHif8Input = inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN ||
-                            inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
-                            inputParams_.aDtype == ge::DT_HIFLOAT8;
-    bool isPertensorDoubleScale =
-        inputParams_.isDoubleScale && inputParams_.isPerTensor && !inputParams_.isPerChannel;
-    bool isFp32Scale = inputParams_.scaleDtype == ge::DT_FLOAT && inputParams_.perTokenScaleDtype == ge::DT_FLOAT;
-    bool hasFp32Bias = inputParams_.hasBias && inputParams_.biasDtype == ge::DT_FLOAT;
-    return isFp8OrHif8Input && isPertensorDoubleScale && isFp32Scale && hasFp32Bias;
 }
 
 bool AdaptiveSlidingWindowTiling::CheckBiasAndScale(uint64_t baseN, uint64_t dbL0c) const

@@ -179,4 +179,5 @@ uint64_t QuantBatchMatMulV3TilingUtil::GetKernelType(const QuantBatchMatmulInfo&
     }
     return kernelType;
 }
+
 }

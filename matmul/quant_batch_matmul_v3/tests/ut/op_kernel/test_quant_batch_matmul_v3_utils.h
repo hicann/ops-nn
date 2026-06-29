@@ -36,7 +36,7 @@
 using QuantBatchMatmulAptFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);
 
 static std::unordered_map<uint64_t, QuantBatchMatmulAptFunc> s_funcMapApt =
-    {{260UL, quant_batch_matmul_v3<0, 1, 0, 1>}};
+    {{260UL, quant_batch_matmul_v3<0, 1, 0, 1, 0>}};
 #else
 #include "quant_batch_matmul_v3.cpp"
 using QuantBatchMatmulFunc = void (*)(GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR, GM_ADDR);

@@ -52,6 +52,7 @@ protected:
     void SetTilingData();
     uint64_t GetBiasMode() const;
     uint64_t GetKernelType() const;
+    uint64_t GetApiLevel(NpuArch npuArch) const;
     DequantBmm::QuantBatchMatmulV3TilingDataParams tilingDataSelf_;
     DequantBmm::QuantBatchMatmulV3TilingDataParams& tilingData_;
 

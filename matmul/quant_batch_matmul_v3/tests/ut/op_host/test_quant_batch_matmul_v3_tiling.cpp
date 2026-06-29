@@ -711,7 +711,7 @@ void QuantBatchMatmulV3TilingTestParam::InvokeTilingFunc(QuantBatchMatmulV3Compi
 
         size_t actualTilingDataSize = tilingContext->GetRawTilingData()->GetDataSize();
         bool isMxWithoutBatchTilingData = tensorApiCapable && (isMxfp8 || isMxfp4) &&
-            ((tilingKey >> 8U) == 9U || (tilingKey >> 8U) == 10U) &&
+            (batchC == 0 || batchC == 1) &&
             actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3TensorAPIWithoutBatchTilingData);
         bool isUseBasicApiTilingData =
             actualTilingDataSize == sizeof(DequantBmm::QuantBatchMatmulV3BasicAPITilingData);
