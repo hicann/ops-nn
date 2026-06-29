@@ -3,7 +3,7 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
  * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
@@ -33,15 +33,30 @@ bool FusedMatMulStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    // Only relu and "" and 16cast32 support streamK
+    // Only relu and "" and 16cast32 support streamK unconditionally
     if (FusedOpTypeSupportStreamK.find(opType) == FusedOpTypeSupportStreamK.end()) {
         return false;
     }
+
+    // mul and add only supports pure SK scenario (no DP tiles with fixpipe)
+    if (opType == "add" || opType == "mul") {
+        constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
+        constexpr uint64_t NUM_TWO = 2UL;
+        uint64_t mCnt = (args_.mValue + BASIC_BLOCK_SIZE_256 - 1) / BASIC_BLOCK_SIZE_256;
+        uint64_t nCnt = (args_.nValue + BASIC_BLOCK_SIZE_256 - 1) / BASIC_BLOCK_SIZE_256;
+        uint64_t totalMNCnt = mCnt * nCnt;
+        // Pure SK requires totalMNCnt <= aicNum / 2
+        // If totalMNCnt > aicNum / 2, will generate DP tiles that cannot do mul and add fusion
+        if (totalMNCnt > compileInfo_.aicNum / NUM_TWO) {
+            return false;
+        }
+    }
+
     return MatMulV3BasicStreamKTiling::IsCapable();
 }
 
 bool FusedMatMulBatchStreamKTiling::IsCapable()
-{   
+{
     if (!IsFusedMatMulBmmShape(context_)) {
         return false;
     }
