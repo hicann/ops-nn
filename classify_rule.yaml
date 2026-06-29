@@ -774,7 +774,7 @@ activation-c@ops-nn:
         - ops/ops-nn/activation/relu/op_api/
         - ops/ops-nn/activation/relu_grad/op_api/
         - ops/ops-nn/activation/selu/op_api/
-        - ops/ops-nn/activation/selu_grad/
+        - ops/ops-nn/activation/selu_grad/op_api/
         - ops/ops-nn/activation/shrink/op_api/
         - ops/ops-nn/activation/sigmoid/op_api/
         - ops/ops-nn/activation/sigmoid_grad/op_api/
