@@ -107,7 +107,7 @@ private:
     ge::graphStatus CheckOpInputShape(const gert::TilingContext* context);
     ge::graphStatus CheckSmoothShape(const gert::TilingContext* context, int64_t xDimLast);
     ge::graphStatus CheckOpOutputShape(const gert::TilingContext* context);
-    ge::graphStatus CheckAttrs(const gert::TilingContext* context);
+    ge::graphStatus CheckAttrs(const gert::TilingContext* context) const;
     ge::graphStatus CheckOpShape(const gert::TilingContext* context);
     ge::graphStatus CheckOpDim(
         const gert::StorageShape* shape1, const gert::StorageShape* shape2, uint32_t shape1Dim, uint32_t shape2Dim);
@@ -380,7 +380,7 @@ ge::graphStatus DynamicQuantTiling::CheckInputDtype(const gert::TilingContext* c
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus DynamicQuantTiling::CheckAttrs(const gert::TilingContext* context)
+ge::graphStatus DynamicQuantTiling::CheckAttrs(const gert::TilingContext* context) const
 {
     auto* attrs = context->GetAttrs();
     if (attrs != nullptr) {
