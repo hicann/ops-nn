@@ -33,7 +33,7 @@
 #include <vector>
 
 #include "acl/acl.h"
-#include "aclnn_data_format_dim_map.h"
+#include "aclnnop/aclnn_data_format_dim_map.h"
 
 #define ACL_CHECK(expr)                                                    \
     do {                                                                   \

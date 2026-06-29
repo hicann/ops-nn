@@ -27,7 +27,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnn_apply_adamax.h"
+#include "aclnnop/aclnn_apply_adamax.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

@@ -28,7 +28,7 @@
 #include <iostream>
 #include <vector>
 #include "acl/acl.h"
-#include "aclnn_apply_adadelta.h"
+#include "aclnnop/aclnn_apply_adadelta.h"
 
 #define CHECK_RET(cond, return_expr) \
   do {                               \

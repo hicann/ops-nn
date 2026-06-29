@@ -22,7 +22,7 @@
 #include <algorithm>
 
 #include "acl/acl.h"
-#include "aclnn_fast_gelu_v2.h"
+#include "aclnnop/aclnn_fast_gelu_v2.h"
 
 // ============================================================================
 // Macros

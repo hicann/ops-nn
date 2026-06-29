@@ -32,7 +32,7 @@
 
 #include "acl/acl.h"
 #include "aclnn/acl_meta.h"
-#include "aclnn_apply_centered_rms_prop.h"
+#include "aclnnop/aclnn_apply_centered_rms_prop.h"
 
 namespace {
 
