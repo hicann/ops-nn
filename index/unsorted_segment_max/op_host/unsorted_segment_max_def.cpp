@@ -9,8 +9,8 @@
  */
 
 /* !
- * \file unsorted_segment_min_def.cpp
- * \brief unsorted_segment_min op host config
+ * \file unsorted_segment_max_def.cpp
+ * \brief unsorted_segment_max op host config
  */
 
 #include "register/op_def_registry.h"
@@ -40,9 +40,9 @@ static const std::vector<ge::DataType> NUMSEG_DATA_TYPE = {
     ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32,
     ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64, ge::DT_INT32, ge::DT_INT64
 };
-class UnsortedSegmentMin : public OpDef {
+class UnsortedSegmentMax : public OpDef {
 public:
-    explicit UnsortedSegmentMin(const char *name) : OpDef(name)
+    explicit UnsortedSegmentMax(const char *name) : OpDef(name)
     {
         this->Input("x")
             .ParamType(REQUIRED)
@@ -76,5 +76,5 @@ public:
     }
 };
 
-OP_ADD(UnsortedSegmentMin);
+OP_ADD(UnsortedSegmentMax);
 } // namespace ops

@@ -20,7 +20,7 @@ namespace UnsortedSegment {
 using namespace AscendC;
 constexpr uint32_t NON_SORT_DB_BUF = 2;
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
+template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>
 class KernelSimdNonSort
 {
 public:
@@ -39,10 +39,10 @@ private:
     const UnsortedSegmentSimdNonSortTilingData* td_;
 };
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
-__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, Mode>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>
+__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, GmInitFunc, SetAtomicModeFunc>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
 {
-    InitGm<X_T, Mode>(output, td_->outputOuterDim * td_->innerDim);
+    InitGm<X_T, GmInitFunc>(output, td_->outputOuterDim * td_->innerDim);
 
     xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
     idsGm_.SetGlobalBuffer((__gm__ IDS_T*)(segmentIds));
@@ -53,8 +53,8 @@ __aicore__ inline void KernelSimdNonSort<X_T, IDS_T, Mode>::Init(GM_ADDR x, GM_A
         idsQue_, NON_SORT_DB_BUF, Aligned(static_cast<uint64_t>(td_->baseS * sizeof(IDS_T)), ONE_BLOCK_SIZE));
 }
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
-__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, Mode>::Process()
+template <typename X_T, typename IDS_T, typename GmInitFunc, typename SetAtomicModeFunc>
+__aicore__ inline void KernelSimdNonSort<X_T, IDS_T, GmInitFunc, SetAtomicModeFunc>::Process()
 {
     if (GetBlockIdx() >= td_->usedCoreNum) {
         return;
@@ -92,9 +92,7 @@ __aicore__ inline void KernelSimdNonSort<X_T, IDS_T, Mode>::Process()
             event_t eventIDMTE2ToS = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE2_S));
             SetFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
             WaitFlag<HardEvent::MTE2_S>(eventIDMTE2ToS);
-            if constexpr (Mode == 0) {
-                SetAtomicMin<X_T>();
-            }
+            SetAtomicModeFunc()();
             for (uint64_t i = 0; i < rows; i++) {
                 uint64_t dstIdx = idsLocal.GetValue(i);
                 if (dstIdx < 0 || dstIdx >= td_->outputOuterDim) {

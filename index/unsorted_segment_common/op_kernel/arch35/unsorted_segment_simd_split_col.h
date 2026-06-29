@@ -20,7 +20,7 @@ namespace UnsortedSegment {
 using namespace AscendC;
 constexpr uint32_t SPLIT_COL_DB_BUF = 2;
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
+template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
 class KernelSimdSplitCol
 {
 public:
@@ -40,8 +40,8 @@ private:
     const UnsortedSegmentSimdSplitColTilingData* td_;
 };
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
-__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, Mode>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
+template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
+__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorComputeFunc>::Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
 {
     xGm_.SetGlobalBuffer((__gm__ X_T*)(x));
     idsGm_.SetGlobalBuffer((__gm__ IDS_T*)(segmentIds));
@@ -53,8 +53,8 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, Mode>::Init(GM_ADDR x, GM_
     pipe_->InitBuffer(yQue_, 1, td_->outputOuterDim * td_->baseA * sizeof(X_T));
 }
 
-template <typename X_T, typename IDS_T, uint8_t Mode>
-__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, Mode>::Process()
+template <typename X_T, typename IDS_T, typename InitValueType, typename VectorComputeFunc>
+__aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, InitValueType, VectorComputeFunc>::Process()
 {
     if (GetBlockIdx() >= GetBlockNum()) {
         return;
@@ -70,9 +70,7 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, Mode>::Process()
         uint64_t colsAlign = Aligned(static_cast<uint64_t>(cols * sizeof(X_T)), ONE_BLOCK_SIZE) / sizeof(X_T);
 
         LocalTensor<X_T> yLocal = yQue_.AllocTensor<X_T>();
-        if constexpr (Mode == 0) {
-            Duplicate(yLocal, GetDtypeMax<X_T>(), td_->outputOuterDim * colsAlign);
-        }
+        Duplicate(yLocal, InitValueType::Get(), td_->outputOuterDim * colsAlign);
         yQue_.EnQue<X_T>(yLocal);
         yLocal = yQue_.DeQue<X_T>();
         for (uint64_t sLoop = 0; sLoop < sLoopNum; sLoop++) {
@@ -98,9 +96,7 @@ __aicore__ inline void KernelSimdSplitCol<X_T, IDS_T, Mode>::Process()
                     continue;
                 }
                 uint64_t dstOffset = dstIdx * colsAlign;
-                if constexpr (Mode ==0) {
-                    AscendC::Min(yLocal[dstOffset], yLocal[dstOffset], xLocal[i * colsAlign], cols);
-                }
+                VectorComputeFunc()(yLocal, xLocal, dstOffset, i * colsAlign, cols);
             }
             xQue_.FreeTensor(xLocal);
             idsQue_.FreeTensor(idsLocal);

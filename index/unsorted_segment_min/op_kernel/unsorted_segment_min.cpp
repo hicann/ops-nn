@@ -9,7 +9,7 @@
  */
 
 /* !
- * \file unsorted_segment_min_apt.cpp
+ * \file unsorted_segment_min.cpp
  * \brief unsorted_segment_min kernel
  */
 
@@ -20,6 +20,7 @@
 #include "../unsorted_segment_common/arch35/unsorted_segment_out_full_load.h"
 #include "../unsorted_segment_common/arch35/unsorted_segment_sort_simt.h"
 #include "../unsorted_segment_common/arch35/unsorted_segment_struct.h"
+#include "./unsorted_segment_min.h"
 
 using namespace AscendC;
 using namespace UnsortedSegment;
@@ -30,37 +31,37 @@ using namespace UnsortedSegment;
 #define TEMPLATE_SIMD_NON_SORT  6000
 #define TEMPLATE_SIMD_DYN_SORT  7000
 #define TEMPLATE_SORT_SIMT 4100
-constexpr uint8_t MODE_FLAGE = 0; // 0:unsorted_segment_min;
 
-template <typename X_T, typename SEGMENT_IDS_T, uint8_t MODE>
- __aicore__ inline void KernelSimdDynSortWithCast(
-    GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling, TPipe &pipe)
+template <typename X_T, typename SEGMENT_IDS_T>
+__aicore__ inline void KernelSimdDynSortWithCast(
+    GM_ADDR x, GM_ADDR segment_ids, GM_ADDR num_segments, GM_ADDR output, GM_ADDR workspace, GM_ADDR tiling,
+    TPipe &pipe)
 {
     REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 7000", UnsortedSegmentSimdDynSortTilingData);
     GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimdDynSortTilingData, tilingData, tiling);
     uint32_t cast_mode = tilingData.idCastMode;
-    if (cast_mode == CAST_1) {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_1> op(&tilingData, &pipe);
+    if (cast_mode == CAST_INT32_TO_INT16) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_INT32_TO_INT16> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (cast_mode == CAST_2) {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_2> op(&tilingData, &pipe);
+    } else if (cast_mode == CAST_INT64_TO_INT32) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_INT64_TO_INT32> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (cast_mode == CAST_3) {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_3> op(&tilingData, &pipe);
+    } else if (cast_mode == CAST_INT64_TO_INT16) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_INT64_TO_INT16> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (cast_mode == CAST_4) {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_4> op(&tilingData, &pipe);
+    } else if (cast_mode == CAST_INT32_TO_UINT8) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_INT32_TO_UINT8> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
-    } else if (cast_mode == CAST_5) {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_5> op(&tilingData, &pipe);
+    } else if (cast_mode == CAST_INT64_TO_UINT8) {
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_INT64_TO_UINT8> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
     } else {
-        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, MODE, CAST_0> op(&tilingData, &pipe);
+        UnsortedSegment::KernelSimdDynSort<X_T, SEGMENT_IDS_T, GetInitMaxValue<X_T>, InitGmMaxValue<X_T>, ComputeMin<X_T, uint32_t>, SetAtomicMinOp<X_T>, CAST_NONE> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
     }
@@ -76,13 +77,13 @@ extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR se
     if (TILING_KEY_IS(TEMPLATE_SIMT_TILING_KEY)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 1000", UnsortedSegmentSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimtTilingData, tilingData, tiling);
-        UnsortedSegment::KernelUnsortedSegment<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&tilingData, &pipe);
+        UnsortedSegment::KernelUnsortedSegment<DTYPE_X, DTYPE_SEGMENT_IDS, SimtComputeSegmentMin<DTYPE_X>, InitGmMaxValue<DTYPE_X>> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
     } else if (TILING_KEY_IS(TEMPLATE_SIMD_SPLIT_COL)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 5000", UnsortedSegmentSimdSplitColTilingData);
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimdSplitColTilingData, tilingData, tiling);
-        UnsortedSegment::KernelSimdSplitCol<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&tilingData, &pipe);
+        UnsortedSegment::KernelSimdSplitCol<DTYPE_X, DTYPE_SEGMENT_IDS, GetInitMaxValue<DTYPE_X>, ComputeMin<DTYPE_X, uint64_t>> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
     } else if (TILING_KEY_IS(TEMPLATE_SIMD_NON_SORT)) {
@@ -93,7 +94,7 @@ extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR se
         } else {
             REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 6000", UnsortedSegmentSimdNonSortTilingData);
             GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSimdNonSortTilingData, tilingData, tiling);
-            UnsortedSegment::KernelSimdNonSort<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&tilingData, &pipe);
+            UnsortedSegment::KernelSimdNonSort<DTYPE_X, DTYPE_SEGMENT_IDS, InitGmMaxValue<DTYPE_X>, SetAtomicMinOp<DTYPE_X>> op(&tilingData, &pipe);
             op.Init(x, segment_ids, output);
             op.Process();
         }
@@ -103,25 +104,25 @@ extern "C" __global__ __aicore__ void unsorted_segment_min(GM_ADDR x, GM_ADDR se
             std::is_same<int64_t, DTYPE_X>::value) {
             return;
         } else {
-            KernelSimdDynSortWithCast<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE>(x, segment_ids, num_segments, output, workspace, tiling, pipe);
+            KernelSimdDynSortWithCast<DTYPE_X, DTYPE_SEGMENT_IDS>(x, segment_ids, num_segments, output, workspace, tiling, pipe);
         }
     } else if (TILING_KEY_IS(TEMPLATE_ADD_TILING_KEY)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 4000", UnsortedSegmentOutFlTilingData);
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentOutFlTilingData, tilingData, tiling);
         if constexpr (
             std::is_same<uint32_t, DTYPE_X>::value || std::is_same<uint64_t, DTYPE_X>::value ||
-            std::is_same<int64_t, DTYPE_X>::value) { // 空tensor处理
-            UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&pipe);
+            std::is_same<int64_t, DTYPE_X>::value) {
+            UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, SimtGatherMinValue<DTYPE_X>, GetInitMaxValue<DTYPE_X>, InitGmMaxValue<DTYPE_X>, ComputeMin<DTYPE_X, int32_t>, SetAtomicMinOp<DTYPE_X>> op(&pipe);
             op.Init(x, segment_ids, output, &tilingData);
         } else {
-            UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&pipe);
+            UnsortedSegment::KernelUnsortedSegmentFL<DTYPE_X, DTYPE_SEGMENT_IDS, SimtGatherMinValue<DTYPE_X>, GetInitMaxValue<DTYPE_X>, InitGmMaxValue<DTYPE_X>, ComputeMin<DTYPE_X, int32_t>, SetAtomicMinOp<DTYPE_X>> op(&pipe);
             op.Init(x, segment_ids, output, &tilingData);
             op.Process();
         }
     } else if (TILING_KEY_IS(TEMPLATE_SORT_SIMT)) {
         REGISTER_TILING_FOR_TILINGKEY("TILING_KEY_VAR == 4100", UnsortedSegmentSortSimtTilingData);
         GET_TILING_DATA_WITH_STRUCT(UnsortedSegmentSortSimtTilingData, tilingData, tiling);
-        UnsortedSegment::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, MODE_FLAGE> op(&tilingData, &pipe);
+        UnsortedSegment::KernelUnsortedSegmentSortSimt<DTYPE_X, DTYPE_SEGMENT_IDS, SimtGatherMinValue<DTYPE_X>, SimtComputeSegmentMin<DTYPE_X>, GetInitMaxValue<DTYPE_X>, InitGmMaxValue<DTYPE_X>> op(&tilingData, &pipe);
         op.Init(x, segment_ids, output);
         op.Process();
     }

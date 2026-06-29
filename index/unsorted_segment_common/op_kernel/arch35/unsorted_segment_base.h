@@ -55,12 +55,12 @@ constexpr float FLOAT32_MAX = 3.4028235e+38f;
 constexpr half FLOAT16_MAX = 65504.0f;
 constexpr bfloat16_t BFLOAT16_MAX = 3.3895314e+38f;
 
-constexpr uint32_t CAST_0 = 0;
-constexpr uint32_t CAST_1 = 1;
-constexpr uint32_t CAST_2 = 2;
-constexpr uint32_t CAST_3 = 3;
-constexpr uint32_t CAST_4 = 4;
-constexpr uint32_t CAST_5 = 5;
+constexpr uint32_t CAST_NONE = 0;
+constexpr uint32_t CAST_INT32_TO_INT16 = 1;
+constexpr uint32_t CAST_INT64_TO_INT32 = 2;
+constexpr uint32_t CAST_INT64_TO_INT16 = 3;
+constexpr uint32_t CAST_INT32_TO_UINT8 = 4;
+constexpr uint32_t CAST_INT64_TO_UINT8 = 5;
 constexpr uint32_t MASK_UINT8 = 255;
 constexpr int64_t VFLEN_INT64 = platform::GetVRegSize() / sizeof(int64_t);
 constexpr int64_t VFLEN_INT32 = platform::GetVRegSize() / sizeof(int32_t);
@@ -72,9 +72,11 @@ constexpr int64_t VFLEN_UINT8HALFHALF = platform::GetVRegSize() / sizeof(uint8_t
 template <typename T, uint32_t CAST_MODE>  
 struct CastType {                                                         
     using type = typename std::conditional<
-        CAST_MODE == CAST_1, int16_t, typename std::conditional<CAST_MODE == CAST_2, int32_t, 
-            typename std::conditional<CAST_MODE == CAST_3, int16_t, typename std::conditional<CAST_MODE == CAST_4, uint8_t,
-                typename std::conditional<CAST_MODE == CAST_5, uint8_t, T>::type>::type>::type>::type>::type;
+        CAST_MODE == CAST_INT32_TO_INT16, int16_t,
+        typename std::conditional<CAST_MODE == CAST_INT64_TO_INT32, int32_t,
+        typename std::conditional<CAST_MODE == CAST_INT64_TO_INT16, int16_t,
+        typename std::conditional<CAST_MODE == CAST_INT32_TO_UINT8, uint8_t,
+        typename std::conditional<CAST_MODE == CAST_INT64_TO_UINT8, uint8_t, T>::type>::type>::type>::type>::type;
 };
 
 typedef struct {
@@ -130,7 +132,7 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Co
     }
 }
 
-template <typename TX, typename Index, uint8_t Mode>
+template <typename TX, typename Index, typename SimtGatherFunc>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void SimtGatherValue(
     __ubuf__ TX* midResPtr, __ubuf__ TX* xUbLocalPtr, __ubuf__ Index* indexUb, const uint32_t outputOuterDimSize,
     const uint32_t innerDimSize, const uint32_t needIndexOneUb, const uint32_t outputOffset)
@@ -142,16 +144,14 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void Si
         if (indexVal >= 0 && indexVal < outputOuterDimSize) {
             Index midResOffSet = indexVal * innerDimSize;
             Index xUbLocalOffSet = offset * innerDimSize;
-            if constexpr (Mode == 0) {
-                TX midResP = midResPtr[midBaseOffset + midResOffSet + threadIdx.x];
-                TX xUbLocalRes = xUbLocalPtr[xUbLocalOffSet + threadIdx.x];
-                midResPtr[midBaseOffset + midResOffSet + threadIdx.x] = midResP < xUbLocalRes ? midResP : xUbLocalRes;
-            }
+            TX midResP = midResPtr[midBaseOffset + midResOffSet + threadIdx.x];
+            TX xUbLocalRes = xUbLocalPtr[xUbLocalOffSet + threadIdx.x];
+            midResPtr[midBaseOffset + midResOffSet + threadIdx.x] = SimtGatherFunc()(midResP, xUbLocalRes);
         }
     }
 }
 
-template <typename TX, typename Index, typename COM_T, uint8_t Mode>
+template <typename TX, typename Index, typename COM_T, typename SimtAtomicFunc>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void SimtComputeSegment(
     __gm__ TX* xGm, __gm__ Index* segmentIdsGm, __gm__ TX* outputGm, const uint32_t blockNums, const COM_T inputLength,
     const COM_T innerDimSize, const uint64_t outputOuterDimSize, const COM_T magic, const COM_T shift)
@@ -165,13 +165,11 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_THREAD_DIM_LAUNCH_BOUND) inline void Si
             continue;
         }
         const uint64_t outputIndex = outputSegmentIndex * innerDimSize + segmentOffset;
-        if constexpr (Mode == 0) {
-            asc_atomic_min(outputGm + outputIndex, xGm[inputIndex]);
-        }
+        SimtAtomicFunc()(outputGm, outputIndex, xGm[inputIndex]);
     }
 }
 
-template <typename TX, typename Index, uint8_t Mode>
+template <typename TX, typename Index, typename SimtGatherFunc, typename SimtAtomicFunc, typename InitValueType>
 __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void SegmentReduceSortSimt(
     __ubuf__ TX* inputAddr, __ubuf__ uint32_t* sortedOriginIndexAddr, __ubuf__ Index* sortedAddr,
     __ubuf__ uint32_t* cumSumAddr, __gm__ TX* outputAddr, int32_t uniqueIndexNum, uint32_t lastDim,
@@ -184,21 +182,19 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(SORT_THREAD_DIM_LAUNCH_BOUND) inline void Se
         if (sortedAddr[cumSumAddr[i]] < 0 || sortedAddr[cumSumAddr[i]] >= outputOuterDimSize) {
             continue;
         }
-        if constexpr (Mode == 0) {
-            TX result = GetDtypeMax<TX>();
-            for (int32_t tid = 0; tid < cumSumAddr[i + 1] - cumSumAddr[i]; tid++) {
-                int32_t srcOffset = sortedOriginIndexAddr[cumSumAddr[i] + tid] * lastDim + innerOffset;
-                TX inputRes = inputAddr[srcOffset];
-                result = result < inputRes ? result : inputRes;
-            }
-            int64_t gmDstOffset = sortedAddr[cumSumAddr[i]] * lastDim + innerOffset;
-            asc_atomic_min(outputAddr + gmDstOffset, result);
+        TX result = InitValueType::Get();
+        for (int32_t tid = 0; tid < cumSumAddr[i + 1] - cumSumAddr[i]; tid++) {
+            int32_t srcOffset = sortedOriginIndexAddr[cumSumAddr[i] + tid] * lastDim + innerOffset;
+            TX inputRes = inputAddr[srcOffset];
+            result = SimtGatherFunc()(result, inputRes);
         }
+        int64_t gmDstOffset = sortedAddr[cumSumAddr[i]] * lastDim + innerOffset;
+        SimtAtomicFunc()(outputAddr, gmDstOffset, result);
     }
     return;
 }
 
-template <typename T, uint8_t Mode>
+template <typename T, typename GmInitFunc>
 __aicore__ inline void InitGm(GM_ADDR output, uint64_t totalNum)
 {
     uint64_t initPerCore = (totalNum + GetBlockNum() - 1) / GetBlockNum();
@@ -212,9 +208,7 @@ __aicore__ inline void InitGm(GM_ADDR output, uint64_t totalNum)
     AscendC::GlobalTensor<T> yGmInit;
     yGmInit.SetGlobalBuffer((__gm__ T*)output + GetBlockIdx() * initPerCore);
     if (GetBlockIdx() < coreNum) {
-        if constexpr (Mode == 0) {
-            InitGlobalMemory(yGmInit, initCoreReal, GetDtypeMax<T>());
-        }
+        GmInitFunc()(yGmInit, initCoreReal);
     }
     SyncAll();
 }
@@ -255,19 +249,19 @@ template <typename IDX_T, typename CAST_T, uint32_t castType>
 __aicore__ inline void IndicesSortCast(LocalTensor<IDX_T> indicesLocal, LocalTensor<CAST_T> indicesCastLocal,
                                                 LocalTensor<int32_t> indicesCastTmpLocal, uint32_t indicesCount)
 {
-    if constexpr (castType == CAST_4) {  // int32 Cast uint8
+    if constexpr (castType == CAST_INT32_TO_UINT8) {  // int32 Cast uint8
         CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
         Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
         Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
-    } else if constexpr (castType == CAST_3) {  // int64 Cast int16
+    } else if constexpr (castType == CAST_INT64_TO_INT16) {  // int64 Cast int16
         Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
         Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
-    } else if constexpr (castType == CAST_5) {  // int64 Cast uint8
+    } else if constexpr (castType == CAST_INT64_TO_UINT8) {  // int64 Cast uint8
         CompareScalar(indicesCastLocal, indicesLocal, static_cast<IDX_T>(0), CMPMODE::GE, indicesCount);
         Select(indicesLocal, indicesCastLocal, indicesLocal, static_cast<IDX_T>(MASK_UINT8), SELMODE::VSEL_TENSOR_SCALAR_MODE, indicesCount);
         Cast<int32_t, IDX_T>(indicesCastTmpLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
         Cast<CAST_T, int32_t>(indicesCastLocal, indicesCastTmpLocal, RoundMode::CAST_NONE, indicesCount);
-    } else {    // CAST_1 + CAST_2, int32 Cast int16 + int64 Cast int32
+    } else {    // CAST_INT32_TO_INT16 + CAST_INT64_TO_INT32, int32 Cast int16 + int64 Cast int32
         Cast<CAST_T, IDX_T>(indicesCastLocal, indicesLocal, RoundMode::CAST_NONE, indicesCount);
     }
 }
@@ -404,8 +398,8 @@ template <typename IDX_T>
 __aicore__ inline int64_t UniqueGetElm(
     const LocalTensor<IDX_T>& sortedIndice, LocalTensor<int32_t>& noDupRes, int64_t dataLen)
 {
-    __local_mem__ IDX_T* indicesAddr = (__local_mem__ IDX_T*)sortedIndice[(ONE_BLOCK_SIZE / sizeof(IDX_T))].GetPhyAddr();
-    __local_mem__ int32_t* uniqueIdCountsAddr = (__local_mem__ int32_t*)noDupRes.GetPhyAddr();
+    __ubuf__ IDX_T* indicesAddr = (__ubuf__ IDX_T*)sortedIndice[(ONE_BLOCK_SIZE / sizeof(IDX_T))].GetPhyAddr();
+    __ubuf__ int32_t* uniqueIdCountsAddr = (__ubuf__ int32_t*)noDupRes.GetPhyAddr();
 
     constexpr int64_t vfLen = platform::GetVRegSize() / sizeof(IDX_T);
     uint16_t loopCnt = ops::CeilDiv(dataLen + 1, vfLen);
@@ -435,7 +429,7 @@ __simd_vf__ inline void UniqueStatVf(__ubuf__ int32_t* noDupResAddr, uint16_t lo
 
 __aicore__ inline void UniqueStat(LocalTensor<int32_t>& noDupRes, int64_t& arNum)
 {
-    __local_mem__ int32_t* noDupResAddr = (__local_mem__ int32_t*)noDupRes.GetPhyAddr();
+    __ubuf__ int32_t* noDupResAddr = (__ubuf__ int32_t*)noDupRes.GetPhyAddr();
 
     uint16_t loopCntStatFre = (arNum + VF_B32 - 1) / VF_B32;
     uint32_t counterStatFre = static_cast<uint32_t>(arNum);

@@ -17,7 +17,7 @@ namespace UnsortedSegment
 {
 using namespace AscendC;
 
-template <typename TX, typename Index, uint8_t Mode>
+template <typename TX, typename Index, typename SimtGatherFunc, typename InitValueType, typename GmInitFunc, typename VectorComputeFunc, typename SetAtomicModeFunc>
 class KernelUnsortedSegmentFL
 {
 public:
@@ -42,11 +42,11 @@ public:
         this->innerDimSizeAlign = RoundUpOneBlock(innerDimSize * sizeof(TX)) / sizeof(TX);
 
         if (inputOuterDimSize * innerDimSize == 0) {
-            InitGm<TX, Mode>(output, outputOuterDimSize * innerDimSize);
+            InitGm<TX, GmInitFunc>(output, outputOuterDimSize * innerDimSize);
             return;
         }
 
-        InitGm<TX, Mode>(output, outputOuterDimSize * innerDimSize);
+        InitGm<TX, GmInitFunc>(output, outputOuterDimSize * innerDimSize);
 
         uint32_t currUbRowNum = (rowNumOneUb < maxIndexNum) ? rowNumOneUb : maxIndexNum;
         pipe_->InitBuffer(inQueueX, BUFFER_ADD_NUM, RoundUpOneBlock(innerDimSize * sizeof(TX) * currUbRowNum));
@@ -105,9 +105,7 @@ public:
         uint32_t oneRowOutNumAlign = RoundUpOneBlock(oneRowOutNum * sizeof(TX)) / sizeof(TX);
         uint32_t bufAlign32 = oneRowOutNumAlign * ROW_NUM;
         LocalTensor<TX> midRes = tmpBuf.Get<TX>();
-        if constexpr (Mode == 0) {
-            Duplicate(midRes, GetDtypeMax<TX>(), bufAlign32);
-        }
+        Duplicate(midRes, InitValueType::Get(), bufAlign32);
         PipeBarrier<PIPE_V>();
         for (uint32_t loop = 0; loop < oneCoreUbLoop; ++loop) {
             int64_t startIndex = block_idx * maxIndexNum + loop * rowNumOneUb;
@@ -131,7 +129,7 @@ public:
             __local_mem__ TX* xUbLocalPtr = (__local_mem__ TX*)xUbLocal.GetPhyAddr();
             __local_mem__ TX* midResPtr = (__local_mem__ TX*)midRes.GetPhyAddr();
             DataSyncBarrier<MemDsbT::UB>();
-            asc_vf_call<SimtGatherValue<TX, Index, Mode>>(
+            asc_vf_call<SimtGatherValue<TX, Index, SimtGatherFunc>>(
                 dim3{static_cast<uint32_t>(innerDimSize), static_cast<uint32_t>(ROW_NUM)},
                 midResPtr, xUbLocalPtr, (__ubuf__ Index*)indexUb.GetPhyAddr(), outputOuterDimSize, innerDimSize,
                 needIndexOneUb, oneRowOutNumAlign);
@@ -144,18 +142,14 @@ public:
             for (int32_t first = 0; first < stepStride; ++first) {
                 int32_t OneOffset = first * oneRowOutNumAlign;
                 int32_t TwoOffset = (first + stepStride) * oneRowOutNumAlign;
-                if constexpr (Mode == 0) {
-                    AscendC::Min(midRes[OneOffset], midRes[OneOffset], midRes[TwoOffset], oneRowOutNumAlign);
-                }
+                VectorComputeFunc()(midRes, midRes, OneOffset, TwoOffset, oneRowOutNumAlign);
             }
             stepStride /= TWO;
         }
         event_t eventId = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
         SetFlag<HardEvent::V_MTE3>(eventId);
         WaitFlag<HardEvent::V_MTE3>(eventId);
-        if constexpr (Mode == 0) {
-            SetAtomicMin<TX>();
-        }
+        SetAtomicModeFunc()();
         DataCopyExtParams extParams{
             static_cast<uint16_t>(1),         // blockCount
             static_cast<uint32_t>(oneRowOutNum * sizeof(TX)),  // blockLen

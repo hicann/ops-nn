@@ -23,7 +23,7 @@ namespace UnsortedSegment
 using namespace AscendC;
 constexpr uint64_t MAX_INT32_NUM = 2147483647;
 
-template <typename T, typename Index, uint8_t Mode>
+template <typename T, typename Index, typename SimtAtomicFunc, typename GmInitFunc>
 class KernelUnsortedSegment
 {
 public:
@@ -33,7 +33,7 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR segmentIds, GM_ADDR output)
                                 
     {
-        InitGm<T, Mode>(output, td_->outputOuterDim * td_->innerDim);
+        InitGm<T, GmInitFunc>(output, td_->outputOuterDim * td_->innerDim);
 
         xGm.SetGlobalBuffer((__gm__ T*)(x));
         segmentIdsGm.SetGlobalBuffer((__gm__ Index*)(segmentIds));
@@ -53,7 +53,7 @@ public:
         COM_T magic = 1;
         COM_T shift = 1;
         GetUintDivMagicAndShift(magic, shift, static_cast<COM_T>(innerDimSizeTmp));
-        asc_vf_call<SimtComputeSegment<T, Index, COM_T, Mode>>(
+        asc_vf_call<SimtComputeSegment<T, Index, COM_T, SimtAtomicFunc>>(
             dim3(static_cast<uint32_t>(td_->maxThread)), input, segmentIds, output, blockNums, inputLength,
             innerDimSizeTmp, outputOuterDimSizeTmp, magic, shift);
     }
