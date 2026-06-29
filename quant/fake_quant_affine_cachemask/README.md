@@ -15,7 +15,7 @@
 
 ## 功能说明
 
-- 算子功能：对于输入数据x，使用scale和zeroPoint对输入x在指定轴axis上进行伪量化处理，并根据quantMin和quantMax对伪量化输出进行值域更新，最终返回结果y及对应位置掩码mask。
+- 算子功能：对于输入数据x，使用scale和zero_point对输入x在指定轴axis上进行伪量化处理，并根据quant_min和quant_max对伪量化输出进行值域更新，最终返回结果y及对应位置掩码mask。
 - 计算公式：根据算子功能先计算临时变量qval，再计算得出out和mask。
 
   $$
