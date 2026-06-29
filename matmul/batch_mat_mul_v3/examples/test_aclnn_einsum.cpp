@@ -9,6 +9,7 @@
  */
 
 #include <iostream>
+#include <memory>
 #include <vector>
 #include "acl/acl.h"
 #include "aclnnop/aclnn_einsum.h"
@@ -25,14 +26,14 @@
     printf(message, ##__VA_ARGS__); \
   } while (0)
 
-template <typename T>
-int64_t GetShapeSize(const std::vector<T>& shape) {
+int64_t GetShapeSize(const std::vector<int64_t>& shape) {
   int64_t shape_size = 1;
   for (auto i : shape) {
     shape_size *= i;
   }
   return shape_size;
 }
+
 int Init(int32_t deviceId, aclrtStream* stream) {
   // 固定写法, 资源初始化
   auto ret = aclInit(nullptr);
@@ -88,22 +89,28 @@ int main() {
   aclTensor* out = nullptr;
   std::vector<int32_t> input1HostData = {0, 1, 2, 6, 5, 1, 6, 4, 4, 8, 0, 3, 5, 2, 2, 6, 9, 9, 9, 2, 0, 8, 0, 9};
   std::vector<int32_t> input2HostData = {4, 7, 1, 6, 9, 6, 6, 1, 3, 7, 1, 3, 5, 0, 0, 7, 6, 3, 3, 7, 2, 0, 5, 0,
-                                       0, 7, 9, 3, 7, 2, 3, 3, 5, 1, 9, 0, 0, 9, 8, 9, 4, 3, 1, 2, 8, 3, 0, 5,
-                                       5, 0, 1, 5, 4, 6, 6, 0, 5, 5, 2, 6, 4, 8, 2, 1, 7, 7, 9, 8, 9, 3, 9, 9,
-                                       5, 5, 8, 1, 5, 8, 9, 1, 8, 6, 6, 9, 9, 6, 7, 9, 1, 8, 5, 2, 0, 2, 3, 1,
-                                       5, 3, 7, 9, 6, 2, 5, 3, 6, 6, 4, 9, 8, 7, 6, 5, 0, 0, 9, 2, 6, 1, 0, 6};
+                                        0, 7, 9, 3, 7, 2, 3, 3, 5, 1, 9, 0, 0, 9, 8, 9, 4, 3, 1, 2, 8, 3, 0, 5,
+                                        5, 0, 1, 5, 4, 6, 6, 0, 5, 5, 2, 6, 4, 8, 2, 1, 7, 7, 9, 8, 9, 3, 9, 9,
+                                        5, 5, 8, 1, 5, 8, 9, 1, 8, 6, 6, 9, 9, 6, 7, 9, 1, 8, 5, 2, 0, 2, 3, 1,
+                                        5, 3, 7, 9, 6, 2, 5, 3, 6, 6, 4, 9, 8, 7, 6, 5, 0, 0, 9, 2, 6, 1, 0, 6};
   std::vector<int32_t> outHostData(30, 0);
 
   // 创建input1 aclTensor
   ret = CreateAclTensor(input1HostData, selfShape1, &input1DeviceAddr, aclDataType::ACL_INT32, &input1);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> input1TensorPtr(input1, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> input1DeviceAddrPtr(input1DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建input2 aclTensor
   ret = CreateAclTensor(input2HostData, selfShape2, &input2DeviceAddr, aclDataType::ACL_INT32, &input2);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> input2TensorPtr(input2, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> input2DeviceAddrPtr(input2DeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   // 创建out aclTensor
   ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_INT32, &out);
+  std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+  std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   std::vector<aclTensor*> tmp{input1, input2};
@@ -114,6 +121,7 @@ int main() {
   // 3. 调用CANN算子库API
   uint64_t workspaceSize = 0;
   aclOpExecutor* executor;
+  std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
   // 调用aclnnEinsum第一段接口
   ret = aclnnEinsumGetWorkspaceSize(tensorList, equation, out, &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnEinsumGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
@@ -122,6 +130,7 @@ int main() {
   if (workspaceSize > 0) {
     ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret;);
+    executorAddrPtr.reset(workspaceAddr);
   }
   // 调用aclnnEinsum第二段接口
   ret = aclnnEinsum(workspaceAddr, workspaceSize, executor, stream);
@@ -140,19 +149,7 @@ int main() {
     LOG_PRINT("result[%ld] is: %i\n", i, outHostData[i]);
   }
 
-  // 6. 释放aclTensor和aclScalar, 需要根据具体API的接口定义修改
-  aclDestroyTensorList(tensorList);
-  aclDestroyTensor(input1);
-  aclDestroyTensor(input2);
-  aclDestroyTensor(out);
-
-  // 7. 释放Device资源, 需要根据具体API的接口定义修改
-  aclrtFree(input1DeviceAddr);
-  aclrtFree(input2DeviceAddr);
-  aclrtFree(outDeviceAddr);
-  if (workspaceSize > 0) {
-    aclrtFree(workspaceAddr);
-  }
+  // // 6. 释放Device资源, 需要根据具体API的接口定义修改
   aclrtDestroyStream(stream);
   aclrtResetDevice(deviceId);
   aclFinalize();

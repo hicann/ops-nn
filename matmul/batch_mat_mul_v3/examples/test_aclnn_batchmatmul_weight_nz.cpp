@@ -108,6 +108,7 @@ int CreateAclTensorWeight(
     auto size = static_cast<uint64_t>(GetShapeSize(shape));
 
     const aclIntArray* mat2Size = aclCreateIntArray(shape.data(), shape.size());
+    std::unique_ptr<const aclIntArray, aclnnStatus (*)(const aclIntArray*)> mat2SizePtr(mat2Size, aclDestroyIntArray);
     auto ret = aclnnCalculateMatmulWeightSizeV2(mat2Size, aclDataType::ACL_FLOAT16, &size);
     CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnCalculateMatmulWeightSizeV2 failed. ERROR: %d\n", ret); return ret);
     size *= sizeof(T);
@@ -159,18 +160,25 @@ int main()
     std::vector<uint16_t> outHostData(512, 0);
     // 创建self aclTensor
     ret = CreateAclTensor(selfHostData, selfShape, &selfDeviceAddr, aclDataType::ACL_FLOAT16, &self);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> selfTensorPtr(self, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> selfDeviceAddrPtr(selfDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建other aclTensor
     ret = CreateAclTensorWeight(mat2HostData, mat2Shape, &mat2DeviceAddr, aclDataType::ACL_FLOAT16, &mat2);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> mat2TensorPtr(mat2, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> mat2DeviceAddrPtr(mat2DeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
     // 创建out aclTensor
     ret = CreateAclTensor(outHostData, outShape, &outDeviceAddr, aclDataType::ACL_FLOAT16, &out);
+    std::unique_ptr<aclTensor, aclnnStatus (*)(const aclTensor*)> outTensorPtr(out, aclDestroyTensor);
+    std::unique_ptr<void, aclError (*)(void*)> outdeviceAddrPtr(outDeviceAddr, aclrtFree);
     CHECK_RET(ret == ACL_SUCCESS, return ret);
 
     // 3. 调用CANN算子库API，需要修改为具体的Api名称
     int8_t cubeMathType = 0;
     uint64_t workspaceSize = 0;
     aclOpExecutor* executor;
+    std::unique_ptr<void, aclError (*)(void*)> executorAddrPtr(nullptr, aclrtFree);
     // 调用TransWeight
     ret = aclnnTransMatmulWeightGetWorkspaceSize(mat2, &workspaceSize, &executor);
     CHECK_RET(
@@ -181,6 +189,7 @@ int main()
     if (workspaceSize > 0) {
         ret = aclrtMalloc(&workspaceAddr, workspaceSize, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        executorAddrPtr.reset(workspaceAddr);
     }
 
     // 调用aclnnTransMatmulWeight第二段接口
@@ -189,6 +198,7 @@ int main()
 
     // 调用aclnnBatchMatMulWeightNz第一段接口
     uint64_t workspaceSizeMm = 0;
+    std::unique_ptr<void, aclError (*)(void*)> workspaceAddrMmPtr(nullptr, aclrtFree);
     ret = aclnnBatchMatMulWeightNzGetWorkspaceSize(self, mat2, out, cubeMathType, &workspaceSizeMm, &executor);
     CHECK_RET(
         ret == ACL_SUCCESS, LOG_PRINT("aclnnBatchMatMulWeightNzGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
@@ -198,6 +208,7 @@ int main()
     if (workspaceSizeMm > 0) {
         ret = aclrtMalloc(&workspaceAddrMm, workspaceSizeMm, ACL_MEM_MALLOC_HUGE_FIRST);
         CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("allocate workspace failed. ERROR: %d\n", ret); return ret);
+        workspaceAddrMmPtr.reset(workspaceAddrMm);
     }
     // 调用aclnnBatchMatMulWeightNz第二段接口
     ret = aclnnBatchMatMulWeightNz(workspaceAddrMm, workspaceSizeMm, executor, stream);
@@ -220,22 +231,7 @@ int main()
         LOG_PRINT("result[%ld] is: %f\n", i, fp16Float);
     }
 
-    // 6. 释放aclTensor和aclScalar，需要根据具体API的接口定义修改
-    aclDestroyTensor(self);
-    aclDestroyTensor(mat2);
-    aclDestroyTensor(out);
-
-    // 7. 释放device资源，需要根据具体API的接口定义修改
-    aclrtFree(selfDeviceAddr);
-    aclrtFree(mat2DeviceAddr);
-    aclrtFree(outDeviceAddr);
-
-    if (workspaceSize > 0) {
-        aclrtFree(workspaceAddr);
-    }
-    if (workspaceSizeMm > 0) {
-        aclrtFree(workspaceAddrMm);
-    }
+    // 6. 释放Device资源，需要根据具体API的接口定义修改
     aclrtDestroyStream(stream);
     aclrtResetDevice(deviceId);
     aclFinalize();
