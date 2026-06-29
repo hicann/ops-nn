@@ -92,6 +92,23 @@ bool LambNextMVWithDecayTiling::IsCapable()
 
 ge::graphStatus LambNextMVWithDecayTiling::DoOpTiling()
 {
+
+    // 空 tensor 应对(空进空出): 输出为空(0元素)时设 1 核(空转), 配合全0 tiling 数据(blockFormer=0)使 kernel 空转退出, 直接成功。
+    auto emptyTensorOutShape0 = context_->GetOutputShape(0);
+    if (emptyTensorOutShape0 != nullptr && emptyTensorOutShape0->GetStorageShape().GetShapeSize() == 0) {
+        auto emptyRawTiling = context_->GetRawTilingData();
+        if (emptyRawTiling != nullptr && emptyRawTiling->GetData() != nullptr) {
+            size_t emptyCap = emptyRawTiling->GetCapacity();
+            uint8_t* emptyPtr = reinterpret_cast<uint8_t*>(emptyRawTiling->GetData());
+            for (size_t emptyIdx = 0; emptyIdx < emptyCap; ++emptyIdx) { emptyPtr[emptyIdx] = 0; }
+            emptyRawTiling->SetDataSize(emptyCap);
+        }
+        size_t* emptyWs = context_->GetWorkspaceSizes(1);
+        if (emptyWs != nullptr) { emptyWs[0] = 0; }
+        context_->SetBlockDim(1);
+        tilingKey = GET_TPL_TILING_KEY(1);  // schMode=1(已编译), 配合全0 tiling(blockFormer=0)空转
+        return ge::GRAPH_SUCCESS;
+    }
     auto input0Desc = context_->GetInputDesc(0);
     OP_CHECK_NULL_WITH_CONTEXT(context_, input0Desc);
     ge::DataType input0DType = input0Desc->GetDataType();

@@ -282,9 +282,9 @@ private:
         WaitFlag<HardEvent::V_MTE3>(eventIDVToMTE3);
         if (isRemainder) {
             DataCopyExtParams copyParams{1, static_cast<uint32_t>(dataCount * sizeof(T)), 0, 0, 0};
-            DataCopyPad(Base::outTensorsGM[index * Base::maxDataCount], retLocal, copyParams);
+            DataCopyPad(Base::outTensorsGM[1ULL * index * Base::maxDataCount], retLocal, copyParams);
         } else {
-            DataCopy(Base::outTensorsGM[index * Base::maxDataCount], retLocal, dataCount);
+            DataCopy(Base::outTensorsGM[1ULL * index * Base::maxDataCount], retLocal, dataCount);
         }
         event_t eventIDMTE3ToMTE2 = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::MTE3_MTE2));
         SetFlag<HardEvent::MTE3_MTE2>(eventIDMTE3ToMTE2);

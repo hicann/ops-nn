@@ -26,6 +26,6 @@ extern "C" __global__ __aicore__ void scatter_mul(GM_ADDR var, GM_ADDR indices, 
     REGISTER_TILING_DEFAULT(ScatterReduceSimtTilingData);
     GET_TILING_DATA_WITH_STRUCT(ScatterReduceSimtTilingData, tilingData, tiling);
     ScatterReduceSimt<DTYPE_VAR, DTYPE_INDICES, int64_t, MODE_MUL> op(tilingData, pipe);
-    op.Init(var, indices, updates);
+    op.Init(var, indices, updates, workspace);
     op.Process();
 }

@@ -89,9 +89,20 @@ ge::graphStatus ScatterReduceCommonTiling(gert::TilingContext* context)
 
     context->SetBlockDim(blockNum);
     context->SetTilingKey(0);
+    // user scratch for the sort-based MUL path: sortedIdx + originPos + scratchKeys + scratchPos (per index entry)
+    // + per-core partial slots. The kernel's Init allocates these using mAlign = (M + 7)/8*8 + 128 for padding
+    // and capacity margin on the parallel merge-sort. Must match kernel's layout exactly to avoid overlap.
     size_t* workspaces = context->GetWorkspaceSizes(1);
     OP_CHECK_NULL_WITH_CONTEXT(context, workspaces);
-    workspaces[0] = SYS_WORKSPACE;
+    // per-core partial slot stride. Host uses sliceSize; kernel uses sAlign = align8(min(sliceSize, CHUNK_MAX)),
+    // so when sliceSize > CHUNK_MAX the host stride >= kernel stride -- this OVER-allocates (never under), which
+    // is safe. Keep sliceSize here (not CHUNK) so host can never under-allocate the partial region.
+    uint64_t sliceAlign = (sliceSize + 7UL) / 8UL * 8UL;
+    uint64_t mAlign = ((indicesNum + 7UL) / 8UL * 8UL) + 128UL; // kernel mAlign: 8B align + 128B margin for merge-sort padding
+    // kernel layout: sortedIdx[mAlign] | originPos[mAlign] | scratchKeys[mAlign] | scratchPos[mAlign] | partials[blockNum][sAlign]
+    workspaces[0] = SYS_WORKSPACE +
+                    mAlign * 4UL * 4UL +                        // 4 buffers of mAlign int32_t each
+                    static_cast<uint64_t>(blockNum) * sliceAlign * 4UL;  // per-core partial slots
     return ge::GRAPH_SUCCESS;
 }
 }  // namespace optiling

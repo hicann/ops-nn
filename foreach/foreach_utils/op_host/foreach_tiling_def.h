@@ -22,9 +22,9 @@
 #include "foreach_tiling_common.h"
 
 namespace optiling {
-constexpr uint16_t MAX_TENSOR_CONT = 50;
+constexpr uint16_t MAX_TENSOR_CONT = 256;
 constexpr uint16_t MAX_CORE_CONT = 50;
-constexpr uint16_t MAX_TENSOR_CONT_950 = 50;
+constexpr uint16_t MAX_TENSOR_CONT_950 = 256;
 constexpr uint16_t MAX_CORE_CONT_950 = 80;
 
 BEGIN_TILING_DATA_DEF(ForeachCommonTilingData)
