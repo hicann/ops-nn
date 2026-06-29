@@ -549,6 +549,7 @@ aclnnBaddbmm&aclnnInplaceBaddbmm默认确定性实现。
 - <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>、<term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>：
   - 不支持batch1和batch2两输入其中一个输入为BFLOAT16，另一个输入为FLOAT或FLOAT16的数据类型推导。
   - 升精度计算场景下，目前仅支持输入batch1、batch2的数据类型都为FLOAT16或BFLOAT16，且out数据类型为FLOAT32。
+  - self不需要broadcast的场景下，支持batch1、batch2和out的数据format全为FRACTAL_NZ的输入，内部实现会将NZ格式转换为ND，建议直接使用ND格式输入。
 
 ## 调用示例
 
