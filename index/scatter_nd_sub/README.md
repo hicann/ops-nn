@@ -5,11 +5,11 @@
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                     |     √    |
-| <term>Atlas A3训练系列产品/Atlas A3推理系列产品</term>    |    ×     |
-| <term>Atlas A2训练系列产品/Atlas A2推理系列产品</term>    |    ×     |
-| <term>Atlas 200I/500 A2推理产品</term>                      |    ×     |
-| <term>Atlas推理系列产品</term>                               |    ×     |
-| <term>Atlas训练系列产品</term>                               |    ×     |
+| <term>Atlas A3 训练系列产品/Atlas A3 推理系列产品</term>    |    ×     |
+| <term>Atlas A2 训练系列产品/Atlas A2 推理系列产品</term>    |    ×     |
+| <term>Atlas 200I/500 A2 推理产品</term>                      |    ×     |
+| <term>Atlas 推理系列产品</term>                               |    ×     |
+| <term>Atlas 训练系列产品</term>                               |    ×     |
 
 ## 功能说明
 
@@ -84,17 +84,6 @@ $$
 
 ## 调用说明
 
-<table><thead>
-  <tr>
-    <th>调用方式</th>
-    <th>调用样例</th>
-    <th>说明</th>
-  </tr></thead>
-<tbody>
-  <tr>
-    <td>图模式调用</td>
-    <td><a href="./examples/test_geir_scatter_nd_sub.cpp">test_geir_scatter_nd_sub</a></td>
-    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
-  </tr>
-</tbody>
-</table>
+| 调用方式 | 调用样例 | 说明 |
+| :--- | :--- | :--- |
+| 图模式调用 | [test_geir_scatter_nd_sub](./examples/test_geir_scatter_nd_sub.cpp) | 在host侧通过GE IR构图方式调用scatter_nd_sub算子。 |
