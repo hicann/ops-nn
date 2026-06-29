@@ -77,6 +77,9 @@ protected:
     void DoTilingKey();
     uint64_t GetDeterministicSplitKWorkspaceSize(uint64_t alignedM, uint64_t alignedN);
     void GetVecNz2ndUnAlignedOutWorkspaceSize();
+    void CalcSplitCoreWorkspace(uint64_t rpcSize, uint64_t align256Byte, uint64_t alignedM, uint64_t alignedN,
+                                uint64_t &singleCoreSplitKSize, uint64_t &deterministicSplitKSize);
+    void CalcNd2nzWorkspace(uint64_t &nd2nzASize, uint64_t &nd2nzBSize);
     void DoBasicTiling();
     void FormulaicBaseBlockTiling();
     void FormulaicTilingNoTrans();

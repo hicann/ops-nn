@@ -2813,35 +2813,27 @@ void MatmulV3BaseTiling::GetVecNz2ndUnAlignedOutWorkspaceSize()
     }
 }
 
-ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
+void MatmulV3BaseTiling::CalcSplitCoreWorkspace(uint64_t rpcSize, uint64_t align256Byte, uint64_t alignedM,
+                                                 uint64_t alignedN, uint64_t &singleCoreSplitKSize,
+                                                 uint64_t &deterministicSplitKSize)
 {
-    uint64_t align256Byte = 256 / aDtypeSize_;  // 256B 对齐shape
-    uint64_t alignedM = ops::CeilAlign(tilingData_.matmulTiling.M, 16);
-    uint64_t alignedN = ops::CeilAlign(tilingData_.matmulTiling.N, 16);
-
-    alignedM = std::max(alignedM, static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreM));
-    alignedN = std::max(alignedN, static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreN));
-
-    workspaceSize_ = RPC_WORKSIZE * MB_SIZE; // 20MB reserve > 16MB for rpc
-    if (tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_SPLIT_K || tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_NKM_SPLIT_K ||
+    if (tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_SPLIT_K ||
+        tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_NKM_SPLIT_K ||
         tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::SINGLE_CORE_SPLIT_K_GM_TO_L1) {
-        workspaceSize_ = args_.mValue * ops::CeilAlign(args_.nValue, align256Byte) * DATA_SIZE_FP32 +
-            RPC_WORKSIZE * MB_SIZE; // 20 means 20MB
+        singleCoreSplitKSize = args_.mValue * ops::CeilAlign(args_.nValue, align256Byte) * DATA_SIZE_FP32;
+        workspaceSize_ = singleCoreSplitKSize + rpcSize;
     }
-     OP_LOGI(args_.opName, "if tiling enable is deterministic splitk, workspace size is %lu", workspaceSize_);
     if (tilingEnable_.tilingEnableSplitCore == TilingEnableSplitCore::DETERMINISTIC_SPLIT_K) {
-        workspaceSize_ = GetDeterministicSplitKWorkspaceSize(alignedM, alignedN);
+        deterministicSplitKSize = GetDeterministicSplitKWorkspaceSize(alignedM, alignedN);
+        workspaceSize_ = deterministicSplitKSize;
+        singleCoreSplitKSize = 0;
     }
-    if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE_ENABLE_ALIGNOUT) {
-        workspaceSize_ += ops::CeilAlign(args_.nValue, CACHELINE / cDtypeSize_) * tilingData_.matmulTiling.baseM *
-           tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
-    }
-    if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
-        GetVecNz2ndUnAlignedOutWorkspaceSize();
-    }
-        
+}
+
+void MatmulV3BaseTiling::CalcNd2nzWorkspace(uint64_t &nd2nzASize, uint64_t &nd2nzBSize)
+{
     if (!compileInfo_.supportL0c2out) {
-        return ge::GRAPH_SUCCESS;
+        return;
     }
     uint64_t c0Size = BLOCK_BYTE_SIZE / aDtypeSize_;
     uint64_t kALignForC0 = ops::CeilAlign(args_.kValue, c0Size);
@@ -2849,18 +2841,59 @@ ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
     // 非对齐场景需要预留一些workspace
     if (args_.nd2nzA) {
         if (args_.isATrans) {
-            workspaceSize_ += ops::CeilAlign(args_.mValue, c0Size) * kALignForN * aDtypeSize_;
+            nd2nzASize = ops::CeilAlign(args_.mValue, c0Size) * kALignForN * aDtypeSize_;
         } else {
-            workspaceSize_ += ops::CeilAlign(args_.mValue, N_ALIGNED) * kALignForC0 * aDtypeSize_;
+            nd2nzASize = ops::CeilAlign(args_.mValue, N_ALIGNED) * kALignForC0 * aDtypeSize_;
         }
+        workspaceSize_ += nd2nzASize;
     }
     if (args_.nd2nzB) {
         if (args_.isBTrans) {
-            workspaceSize_ += ops::CeilAlign(args_.nValue, N_ALIGNED) * kALignForC0 * bDtypeSize_;
+            nd2nzBSize = ops::CeilAlign(args_.nValue, N_ALIGNED) * kALignForC0 * bDtypeSize_;
         } else {
-            workspaceSize_ += ops::CeilAlign(args_.nValue, c0Size) * kALignForN * bDtypeSize_;
+            nd2nzBSize = ops::CeilAlign(args_.nValue, c0Size) * kALignForN * bDtypeSize_;
         }
+        workspaceSize_ += nd2nzBSize;
     }
+}
+
+ge::graphStatus MatmulV3BaseTiling::GetWorkspaceSize()
+{
+    uint64_t align256Byte = 256 / aDtypeSize_;  // 256B 对齐shape
+    uint64_t alignedM = ops::CeilAlign(tilingData_.matmulTiling.M, 16);
+    uint64_t alignedN = ops::CeilAlign(tilingData_.matmulTiling.N, 16);
+    alignedM = std::max(alignedM, static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreM));
+    alignedN = std::max(alignedN, static_cast<uint64_t>(tilingData_.matmulTiling.singleCoreN));
+
+    const uint64_t rpcSize = RPC_WORKSIZE * MB_SIZE;
+    uint64_t singleCoreSplitKSize = 0;
+    uint64_t deterministicSplitKSize = 0;
+    uint64_t alignOutSize = 0;
+    uint64_t vecNz2NdSize = 0;
+    uint64_t nd2nzASize = 0;
+    uint64_t nd2nzBSize = 0;
+
+    workspaceSize_ = rpcSize;
+    CalcSplitCoreWorkspace(rpcSize, align256Byte, alignedM, alignedN, singleCoreSplitKSize, deterministicSplitKSize);
+    if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::BASE_ENABLE_ALIGNOUT) {
+        alignOutSize = ops::CeilAlign(args_.nValue, CACHELINE / cDtypeSize_) * tilingData_.matmulTiling.baseM *
+            tilingData_.matmulTiling.usedCoreNum * NUMBER_TWO * cDtypeSize_;
+        workspaceSize_ += alignOutSize;
+    }
+    if (tilingEnable_.tilingEnableFixOpti == TilingEnableFixOpti::VEC_NZ2ND_UNALIGNOUT) {
+        const uint64_t workspaceBeforeVecNz2Nd = workspaceSize_;
+        GetVecNz2ndUnAlignedOutWorkspaceSize();
+        vecNz2NdSize = workspaceSize_ - workspaceBeforeVecNz2Nd;
+    }
+    CalcNd2nzWorkspace(nd2nzASize, nd2nzBSize);
+    OP_LOGI(args_.opName,
+        "[workspace] rpc=%lu singleCoreSplitK=%lu deterministicSplitK=%lu alignOut=%lu vecNz2Nd=%lu "
+        "nd2nzABytes=%lu nd2nzBBytes=%lu supportL0c2out=%d splitCore=%d fixOpti=%d needNd2nzA=%d needNd2nzB=%d",
+        rpcSize, singleCoreSplitKSize, deterministicSplitKSize, alignOutSize, vecNz2NdSize, nd2nzASize, nd2nzBSize,
+        static_cast<int>(compileInfo_.supportL0c2out),
+        static_cast<int>(tilingEnable_.tilingEnableSplitCore),
+        static_cast<int>(tilingEnable_.tilingEnableFixOpti), static_cast<int>(args_.nd2nzA),
+        static_cast<int>(args_.nd2nzB));
     OP_LOGI(args_.opName, "final workspace size is %lu", workspaceSize_);
     return ge::GRAPH_SUCCESS;
 }
