@@ -103,12 +103,15 @@ static bool CheckSelfShapeSupport(const aclTensor* self)
     
 
     const int64_t selfSize = selfDimW * selfDimH * selfDimD;
-    OP_CHECK(
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        OP_CHECK(
         (selfSize <= MAX_INT32),
         OP_LOGE(
-            ACLNN_ERR_PARAM_INVALID, "The size of self should be less than or equal to 2^32 - 1, but got selfSize:%ld",
+            ACLNN_ERR_PARAM_INVALID, "The size of self should be less than or equal to 2^31 - 1, but got selfSize:%ld",
             selfSize),
         return false);
+    }
+    
     return true;
 }
 
