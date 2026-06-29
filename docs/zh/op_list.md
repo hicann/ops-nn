@@ -4281,6 +4281,36 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/sparse_apply_rms_prop/README.md">sparse_apply_rms_prop</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对indices指定的稀疏行执行RMSProp优化器更新，gather对应行应用更新公式后scatter写回，原地更新var/ms/mom，未命中行保持不变。对标TensorFlow的SparseApplyRMSProp接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/sparse_apply_proximal_adagrad/README.md">sparse_apply_proximal_adagrad</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对indices指定的稀疏行执行ProximalAdagrad优化（Adagrad自适应学习率结合FOBOS近端的L1软阈值与L2缩放），原地更新var/accum。对标TensorFlow的SparseApplyProximalAdagrad接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
+    <td><a href="../../optim/sparse_apply_ftrl_v2/README.md">sparse_apply_ftrl_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>对indices指定的稀疏行执行FTRL-proximal V2优化器更新，原地更新var/accum/linear。对标TensorFlow的ResourceSparseApplyFtrlV2接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_momentum/README.md">apply_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
