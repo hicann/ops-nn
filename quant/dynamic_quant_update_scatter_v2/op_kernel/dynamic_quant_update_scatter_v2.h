@@ -111,7 +111,7 @@ private:
             PipeBarrier<PIPE_V>();
             minValue = temp.GetValue(0);
             GetScaleAndOffset(maxValue, minValue, scale, offset);
-            backScale = 1 / scale;
+            backScale = SafeDiv(1.0, scale);
             scaleLocal.SetValue(0, scale);
             offsetLocal.SetValue(0, -offset);
             Muls(tempFp32, tempFp32, backScale, tilingData_.rowLen);

@@ -95,9 +95,9 @@ public:
                 ComputeRmsNormAndSmoothMax(baseGmOffset, rowGmOffset, this->lastDimSliceLenTail, rstdLocalTemp);
             }
 
-            this->localMax1 = DYNAMIC_QUANT_DIVIDEND / this->localMax1;
+            this->localMax1 = SafeDiv(DYNAMIC_QUANT_DIVIDEND, this->localMax1);
             if (this->smooth2Exist) {
-                this->localMax2 = DYNAMIC_QUANT_DIVIDEND / this->localMax2;
+                this->localMax2 = SafeDiv(DYNAMIC_QUANT_DIVIDEND, this->localMax2);
             }
 
             PIPE_S_V();
@@ -115,9 +115,9 @@ public:
             }
 
             LocalTensor<float> scalesTensor = scalesQue.template AllocTensor<float>();
-            scalesTensor.SetValue(0, 1 / this->localMax1);
+            scalesTensor.SetValue(0, SafeDiv(1, this->localMax1));
             if (this->smooth2Exist) {
-                scalesTensor.SetValue(MultiAddRNDQ::ELEM_PER_BLK_FP32, 1 / this->localMax2);
+                scalesTensor.SetValue(MultiAddRNDQ::ELEM_PER_BLK_FP32, SafeDiv(1, this->localMax2));
             }
             scalesQue.EnQue(scalesTensor);
             CopyOutScale(rowIdx);

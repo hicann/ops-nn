@@ -167,8 +167,6 @@ protected:
     uint64_t lenGMMultiRow;
     uint64_t outLen;
     uint64_t outLenQuant;
-    uint64_t outLenHead;
-    uint64_t outLenTail;
     uint64_t loopCnt = 0;
     uint64_t remainRow = 0;
     uint8_t rightPadding = 0;

@@ -203,7 +203,7 @@ ge::graphStatus DynamicQuantUpdateScatterV2Tiling::CheckOutputDtype(gert::Tiling
 
     auto offsetDesc = context->GetOutputDesc(VAR_OFFSET_OUT_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, offsetDesc);
-    auto offsetDtype = scaleDesc->GetDataType();
+    auto offsetDtype = offsetDesc->GetDataType();
     if (offsetDtype != ge::DataType::DT_FLOAT) {
         OP_LOGE(context, "offset dtype is only support fp32!");
         return ge::GRAPH_FAILED;
