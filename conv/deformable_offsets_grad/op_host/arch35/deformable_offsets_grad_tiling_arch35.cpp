@@ -327,7 +327,10 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::GetAttrInfoAndCheck() {
     OP_CHECK_NULL_WITH_CONTEXT(context_, deformableGroupsPtr);
     deformableGroupsAttr_ = *deformableGroupsPtr;
     OP_CHECK_IF(deformableGroupsAttr_ <= 0,
-        OP_LOGE(context_->GetNodeName(), "Deformable groups must be greater than 0"), return ge::GRAPH_FAILED);
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "deformable_groups",
+            std::to_string(deformableGroupsAttr_).c_str(),
+            "The value of deformable_groups must be greater than 0"),
+        return ge::GRAPH_FAILED);
     strideH_ = stridesData[LIST_INDEX_1];
     strideW_ = stridesData[LIST_INDEX_2];
     dilationH_ = dilatesData[LIST_INDEX_1];
@@ -368,7 +371,7 @@ ge::graphStatus DeformableOffsetsGradAscendCTilingImpl::UpdateStrideAndDilationB
         stridesData[LIST_INDEX_0] != 1 || dilatesData[LIST_INDEX_0] != 1,
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "strides and dilations",
             ("stride[0]:" + std::to_string(stridesData[0]) + " and " + "dilation[0]:" + std::to_string(dilatesData[0])).c_str(),
-            "the N dimension of stride(stride[0]) and dilation(dilation[0]) must be 1"),
+            "The N dimension of stride(stride[0]) and dilation(dilation[0]) must be 1"),
         return ge::GRAPH_FAILED);
 
     int64_t offsetHeightSame = offsetHeight_ * static_cast<int64_t>(dimKh_);

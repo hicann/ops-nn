@@ -145,9 +145,16 @@ ge::graphStatus UpdateStrideAndDilationByFormat(
             format.c_str(), "NCHW or NHWC");
         return ge::GRAPH_FAILED;
     }
-    OP_CHECK_IF(
-        deformableOffsetAttrInfo.strideH == 0 || deformableOffsetAttrInfo.strideW == 0,
-        OP_LOGE(context->GetNodeName(), "StrideH not equal to 0"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(deformableOffsetAttrInfo.strideH == 0 || deformableOffsetAttrInfo.strideW == 0,
+                OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                    context->GetNodeName(), "strides",
+                    ("{" + std::to_string(stridesData[0]) + "," + std::to_string(stridesData[1]) + "," +
+                     std::to_string(stridesData[2]) + "," + std::to_string(stridesData[3]) + "}")
+                        .c_str(),
+                    "The H and W dimensions of strides must not be 0.(The third dimension is H dimension and the "
+                    "fourth dimension is W dimension in NCHW format; the second dimension is H dimension and the third "
+                    "dimension is W dimension in NHWC format)"),
+                return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 

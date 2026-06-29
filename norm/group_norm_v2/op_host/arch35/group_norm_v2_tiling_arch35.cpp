@@ -142,7 +142,9 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
     auto xDtype = context->GetInputDesc(INPUT_IDX_X)->GetDataType();
     int64_t xDtypeSize = static_cast<int64_t>(ge::GetSizeByDataType(xDtype));
     OP_CHECK_IF((xDtypeSize <= 0),
-        OP_LOGE(context->GetNodeName(), "xDtypeSize is invalid %ld, please check.", xDtypeSize),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x",
+            ge::TypeUtils::DataTypeToSerialString(xDtype).c_str(),
+            "The dtype size of x must be greater than 0"),
         return ge::GRAPH_FAILED);
     auto xShape = inputX->GetStorageShape();
     int64_t channel = xShape.GetDim(DIM_1);
@@ -191,8 +193,11 @@ static ge::graphStatus CheckInputParams(const gert::TilingContext *context)
             "The datatype size of gamma must be greater than or equal to 0, and the dtype of gamma must be same as beta."),
         return ge::GRAPH_FAILED);
     OP_CHECK_IF((CheckMixType(xDtype, gammaDtype) == ge::GRAPH_FAILED),
-        OP_LOGE(context->GetNodeName(),	 
-         "The dtype combination of gamma, beta and inputs is invalid."),
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context->GetNodeName(), "x, gamma, beta",
+            (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+             ge::TypeUtils::DataTypeToSerialString(gammaDtype) + ", " +
+             ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+            "The dtype of gamma and beta must be the same as x, or be float32 when x is float16 or bfloat16"),
         return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }

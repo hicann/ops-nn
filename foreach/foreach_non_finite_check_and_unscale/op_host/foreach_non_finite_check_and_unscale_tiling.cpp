@@ -119,7 +119,9 @@ ge::graphStatus ForeachNonFiniteCheckAndUnscaleTiling::Init()
         OP_CHECK_NULL_WITH_CONTEXT(tilingContext, shapePtr);
         tensorDataCountList[i] = shapePtr->GetStorageShape().GetShapeSize();
         OP_CHECK_IF(
-            tensorDataCountList[i] == 0, OP_LOGE(nodeName, "Input shape not support empty tensor."),
+            tensorDataCountList[i] == 0, OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(nodeName.c_str(),
+                ("scaled_grads[" + std::to_string(i) + "]").c_str(), "0",
+                "The shape size of scaled_grads must be greater than 0"),
             return ge::GRAPH_FAILED);
         // Make a 32-byte alignment for each Tensor
         tensorDataCountAlignedList[i] = CeilDiv(tensorDataCountList[i], elementsPerBlock) * elementsPerBlock;

@@ -152,8 +152,11 @@ static ge::graphStatus CheckGammaAndBetaParams(
         auto gammaDtype = gammaDtypePtr->GetDataType();
         OP_CHECK_IF(
             (CheckMixType(context, xDtype, gammaDtype) == ge::GRAPH_FAILED),
-            OP_LOGE(
-                context->GetNodeName(), "The dtype combination of gamma, beta and inputs is invalid."),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context->GetNodeName(), "x, gamma",
+                (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                 ge::TypeUtils::DataTypeToSerialString(gammaDtype)).c_str(),
+                "The dtype of gamma must be the same as x, or be float32 when x is float16 or bfloat16"),
             return ge::GRAPH_FAILED);
     }
 
@@ -172,8 +175,11 @@ static ge::graphStatus CheckGammaAndBetaParams(
         auto betaDtype = betaDtypePtr->GetDataType();
         OP_CHECK_IF(
             (CheckMixType(context, xDtype, betaDtype) == ge::GRAPH_FAILED),
-            OP_LOGE(	 
-                context->GetNodeType(), "The dtype combination of gamma, beta and inputs is invalid."),
+            OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
+                context->GetNodeName(), "x, beta",
+                (ge::TypeUtils::DataTypeToSerialString(xDtype) + ", " +
+                 ge::TypeUtils::DataTypeToSerialString(betaDtype)).c_str(),
+                "The dtype of beta must be the same as x, or be float32 when x is float16 or bfloat16"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

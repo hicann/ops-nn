@@ -326,15 +326,16 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputWeightScale()
       if (wScaleDimNum > static_cast<size_t>(1)) {
         if (hasGroupIndex_) {
           OP_CHECK_IF(!(wScaleShape.GetDim(0) == groupIndexShape_.GetDim(0) && wScaleShape[wScaleDimNum - 1] == xShape_.GetDim(xDimNum_ - 1)),
-            OP_LOGE(context_->GetNodeName(),
-                                            "weight_scale shape[0] must be equal to group_index shape[0], and shape[-1] must be equal to x shape[-1] "
-                                            "when group_index exists, please check."),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+                Ops::Base::ToString(wScaleShape).c_str(),
+                "When group_index exists, the first dim of weight_scale must equal the first dim of group_index, and the last dim of weight_scale must equal the last dim of x"),
             return ge::GRAPH_FAILED);
         } else {
           OP_CHECK_IF(!(wScaleShape.GetDim(0) == 1 && wScaleShape.GetDim(wScaleDimNum - 1) == xShape_.GetDim(xDimNum_ - 1)) &&
                       !(wScaleShape.GetDim(0) == xShape_.GetDim(xDimNum_ - 1) && wScaleShape.GetDim(wScaleDimNum - 1) == 1),
-                      OP_LOGE(context_->GetNodeName(), "weight_scale shape must be in {[1, %ld], [%ld, 1]} when weight_scale dimension == 2 and group_index not exists,"
-                      "please check.", xShape_.GetDim(xDimNum_ - 1), xShape_.GetDim(xDimNum_ - 1)),
+                      OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "weight_scale",
+                          Ops::Base::ToString(wScaleShape).c_str(),
+                          ("When the dimension of weight_scale is " + std::to_string(wScaleDimNum) + " and group_index not exists, weight_scale shape must be in {[1, " + std::to_string(xShape_.GetDim(xDimNum_ - 1)) + "], [" + std::to_string(xShape_.GetDim(xDimNum_ - 1)) + ", 1]}").c_str()),
                       return ge::GRAPH_FAILED);
         }
       }
@@ -492,38 +493,44 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantScale()
         if (hasGroupIndex_) {
           if (quantMode_ == 0) {
             OP_CHECK_IF(qScaleShape.GetDim(0) != (groupIndexShape_.GetDim(0)),
-                        OP_LOGE(context_->GetNodeName(),
-                        "quant_scale shape[0] must be equal to group_index shape[0] when static_quant and group_index exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                            Ops::Base::ToString(qScaleShape).c_str(),
+                            "When quant_mode is static and group_index exists, the first dim of quant_scale must equal the first dim of group_index"),
                         return ge::GRAPH_FAILED);
             if (qScaleDimNum == DIM_TWO) {
               OP_CHECK_IF(!((qScaleShape.GetDim(qScaleDimNum - 1) == yShape.GetDim(xDimNum_ - 1)) || (qScaleShape.GetDim(qScaleDimNum - 1) == 1)),
-                          OP_LOGE(context_->GetNodeName(),
-                          "quant_scale shape[-1] must be equal to or can be broadcast to y shape[-1] when static_quant and group_index exists, please check."),
+                          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                              Ops::Base::ToString(qScaleShape).c_str(),
+                              "When quant_mode is static and group_index exists, the last dim of quant_scale must equal the last dim of y or be 1 (broadcastable)"),
                           return ge::GRAPH_FAILED);
             }
           } else if (quantMode_ == 1) {
             OP_CHECK_IF(qScaleShape.GetDim(0) != groupIndexShape_.GetDim(0) || qScaleShape.GetDim(qScaleDimNum - 1) != yShape.GetDim(xDimNum_ - 1),
-                        OP_LOGE(context_->GetNodeName(),
-                        "quant_scale shape must be [ group_index_shape[0], y_shape[-1] ] when dynamic quant and group_index exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                            Ops::Base::ToString(qScaleShape).c_str(),
+                            "When dynamic quant and group_index exists, the shape of quant_scale must be [the first dim of group_index, the last dim of y]"),
                         return ge::GRAPH_FAILED);
           }
           quantIsOne_ = (qScaleDimNum == DIM_TWO && qScaleShape.GetDim(qScaleDimNum - 1) == yShape.GetDim(xDimNum_ - 1)) ? 0 : 1;
         } else {
           if (qScaleDimNum == DIM_TWO) {
             OP_CHECK_IF(qScaleShape.GetDim(0) != 1,
-                        OP_LOGE(context_->GetNodeName(),
-                        "if dim of quant_scale is 2, shape[0] must be [1] when group_index not exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                            Ops::Base::ToString(qScaleShape).c_str(),
+                            ("When quant_scale dimension is " + std::to_string(qScaleDimNum) + " and group_index not exists, the first dim of quant_scale must be 1").c_str()),
                         return ge::GRAPH_FAILED);
           }
           if (quantMode_ == 0) {
             OP_CHECK_IF(qScaleShape.GetDim(0) != 1 && qScaleShape.GetDim(0) != yShape.GetDim(xDimNum_ - 1),
-                        OP_LOGE(context_->GetNodeName(),
-                        "quant_scale shape[0] must be or can be broadcast to y shape[-1] when static_quant and group_index not exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                            Ops::Base::ToString(qScaleShape).c_str(),
+                            "When quant_mode is static and group_index not exists, the first dim of quant_scale must equal the last dim of y or be 1 (broadcastable)"),
                         return ge::GRAPH_FAILED);
           } else if (quantMode_ == 1) {
             OP_CHECK_IF(qScaleShape.GetDim(qScaleDimNum - 1) != yShape.GetDim(xDimNum_ - 1),
-                        OP_LOGE(context_->GetNodeName(),
-                        "quant_scale shape[-1] must be equal to y shape[-1] when dynamic_quant and group_index not exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_scale",
+                            Ops::Base::ToString(qScaleShape).c_str(),
+                            "When dynamic_quant and group_index not exists, the last dim of quant_scale must equal the last dim of y"),
                         return ge::GRAPH_FAILED);
           }
           quantIsOne_ = qScaleShape.GetDim(qScaleDimNum - 1) == yShape.GetDim(xDimNum_ - 1) ? 0 : 1;
@@ -532,7 +539,8 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantScale()
     }
     if (quantMode_ == 0) {
       OP_CHECK_IF(!hasQuantScale_,
-                  OP_LOGE(context_->GetNodeName(), "quant_scale must exist when static_quant, please check."),
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_scale", "None",
+                      "Quant_scale cann not be none when quant_mode is static"),
                   return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;
@@ -573,25 +581,29 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckInputQuantOffset()
       auto& yShape = EnsureNotScalar(yStorageShape->GetStorageShape());
       if (hasGroupIndex_) {
         OP_CHECK_IF(qOffsetShape.GetDim(0) != (groupIndexShape_.GetDim(0)),
-                    OP_LOGE(context_->GetNodeName(),
-                    "quant_offset shape[0] must be equal to group_index shape[0] when group_index exists, please check."),
+                    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                        Ops::Base::ToString(qOffsetShape).c_str(),
+                        "When group_index exists, the first dim of quant_offset must equal the first dim of group_index"),
                     return ge::GRAPH_FAILED);
         if (qOffsetDimNum == DIM_TWO) {
               OP_CHECK_IF(qOffsetShape.GetDim(qOffsetDimNum - 1) != 1 && qOffsetShape.GetDim(qOffsetDimNum - 1) != yShape.GetDim(xDimNum_ - 1),
-                          OP_LOGE(context_->GetNodeName(),
-                          "quant_offset shape[-1] must be equal to or can be broadcast to y shape[-1] when group_index exists, please check."),
+                          OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                              Ops::Base::ToString(qOffsetShape).c_str(),
+                              "When group_index exists, the last dim of quant_offset must equal the last dim of y or be 1 (broadcastable)"),
                           return ge::GRAPH_FAILED);
         }
       } else {
         if (qOffsetDimNum == DIM_TWO) {
             OP_CHECK_IF(qOffsetShape.GetDim(0) != 1,
-                        OP_LOGE(context_->GetNodeName(),
-                        "if dim of quant_offset is 2, shape[0] must be [1] when group_index not exists, please check."),
+                        OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                            Ops::Base::ToString(qOffsetShape).c_str(),
+                            ("When quant_offset dimension is " + std::to_string(qOffsetDimNum) + " and group_index not exists, the first dim of quant_offset must be 1").c_str()),
                         return ge::GRAPH_FAILED);
           }
           OP_CHECK_IF(qOffsetShape.GetDim(0) != 1 && qOffsetShape.GetDim(0) != yShape.GetDim(xDimNum_ - 1),
-                      OP_LOGE(context_->GetNodeName(),
-                      "quant_offset shape[0] must be or can be broadcast to y shape[-1] when static_quant and group_index not exists, please check."),
+                      OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                          Ops::Base::ToString(qOffsetShape).c_str(),
+                          "When quant_mode is static and group_index not exists, the first dim of quant_offset must equal the last dim of y or be 1 (broadcastable)"),
                       return ge::GRAPH_FAILED);
       }
       hasQuantOffset_ = true;
@@ -611,7 +623,9 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckForStaticQuant() // 静态�
     OP_CHECK_NULL_WITH_CONTEXT(context_, qOffsetStorageShape);
     int64_t qOffsetSize = qOffsetStorageShape->GetStorageShape().GetShapeSize();
     OP_CHECK_IF(qScaleSize != qOffsetSize,
-                OP_LOGE(context_->GetNodeName(), "quant_scale size should be equal to quant_offset size, please check."),
+                OP_LOGE_FOR_INVALID_SHAPESIZES_WITH_REASON(context_->GetNodeName(), "quant_scale, quant_offset",
+                    (std::to_string(qScaleSize) + ", " + std::to_string(qOffsetSize)).c_str(),
+                    "The shape size of quant_scale must be equal to the shape size of quant_offset"),
                 return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
@@ -636,14 +650,15 @@ ge::graphStatus DequantSwigluQuantV35DskTiling::CheckOutputScale()
     const size_t yDimNum = yShape.GetDimNum();
 
     OP_CHECK_IF(scaleDimNum != (yDimNum - 1),
-        OP_LOGE(context_->GetNodeName(),
-                                        "scale dimension should be only 1 less than y dimension, please check."),
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "scale", std::to_string(scaleDimNum).c_str(),
+            "The dimension of scale must be exactly 1 less than the dimension of y"),
         return ge::GRAPH_FAILED);
 
     for (size_t i = 0; i < scaleDimNum; i++) {
         OP_CHECK_IF(scaleShape[i] != yShape[i],
-            OP_LOGE(context_->GetNodeName(),
-                                            "scale shape[%zu] must be equal to y shape[%zu], please check.", i, i),
+            OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "scale",
+                Ops::Base::ToString(scaleShape).c_str(),
+                "The shape of scale must the same as that of y"),
             return ge::GRAPH_FAILED);
     }
     return ge::GRAPH_SUCCESS;

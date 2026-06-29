@@ -140,7 +140,9 @@ bool GroupNormGradTiling::CheckInputDtype()
         return false;
     }
     this->dtypeBytes = GetDataTypeSize(this->dtypeStr);
-    OP_TILING_CHECK((this->dtypeBytes == 0), OP_LOGE(tilingContext->GetNodeName(), "dtypeBytes is zero"), return false);
+    OP_TILING_CHECK((this->dtypeBytes == 0), OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(tilingContext->GetNodeName(), "x",
+        ge::TypeUtils::DataTypeToSerialString(this->dtypeStr).c_str(),
+        "The dtype size of x must be greater than 0"), return false);
     // Calculate elePerBlock based on the value of dtypeBytes
     this->elePerBlock = GetElePerBlock(this->dtypeBytes);
     OP_TILING_CHECK(

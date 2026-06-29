@@ -245,8 +245,8 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckForDequant() {
     auto shapeGroupIndex = context_->GetOptionalInputShape(INPUT_GROUP_INDEX);
     const gert::Shape& inputShapeGroupIndex = shapeGroupIndex->GetStorageShape();
     OP_CHECK_IF(inputShapeGroupIndex.GetDimNum() != 1,
-                    OP_LOGE(context_->GetNodeName(),
-                                                    "groupIndex only support 1D Tensor now, please check."),
+                    OP_LOGE_FOR_INVALID_SHAPEDIM(context_->GetNodeName(), "group_index",
+                        std::to_string(inputShapeGroupIndex.GetDimNum()).c_str(), "1"),
                     return ge::GRAPH_FAILED);
   }
   return ge::GRAPH_SUCCESS;
@@ -255,8 +255,8 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckForDequant() {
 ge::graphStatus DequantSwigluQuantDskTiling::CheckForDynamicQuant() {
   auto offsetPtr = context_->GetOptionalInputShape(QUANT_OFFSET_INDEX);
   OP_CHECK_IF(offsetPtr != nullptr,
-                OP_LOGE(context_->GetNodeName(),
-                                                "quantOffSet only support None in dynamic quantization of group mode now, please check."),
+                OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "quant_offset",
+                    "not None", "Quant_offset must be None in dynamic quant mode (quant_mode=1)"),
                 return ge::GRAPH_FAILED);
 
   OP_CHECK_IF(CheckScaleShapeWithDim(QUANT_SCALE_INDEX, outDimy_, "quant_scale") != ge::GRAPH_SUCCESS,
@@ -480,14 +480,18 @@ ge::graphStatus DequantSwigluQuantDskTiling::CheckIllegalParam() {
   // if hasbias, speGroupType_ must be false
   if (hasBias_) {
       OP_CHECK_IF(speGroupType_ == true,
-                      OP_LOGE(context_->GetNodeName(), "speGroupType_ only support false when using bias"),
+                      OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index",
+                          speGroupType_ ? "2D" : "1D",
+                          "Group_index must be 1D when the bias is provided"),
                       return ge::GRAPH_FAILED);
   }
 
   // if swigluMode is 1, speGroupType_ must be false
   if (swigluMode_) {
       OP_CHECK_IF(speGroupType_ == true,
-                  OP_LOGE(context_->GetNodeName(), "speGroupType_ only support false when swiglu mode is 1"),
+                  OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "group_index",
+                      speGroupType_ ? "2D" : "1D",
+                      "When swiglu_mode is 1, group_index must be 1D"),
                   return ge::GRAPH_FAILED);
   }
   return ge::GRAPH_SUCCESS;
