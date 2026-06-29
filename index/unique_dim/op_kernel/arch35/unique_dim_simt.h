@@ -375,8 +375,8 @@ inline void SimtUniqueDetect(int64_t coreStart, int64_t coreLen,
 // Simt Gather rows
 // ============================================================
 template <typename T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(SIMT_BLOCK_DIM)
-inline void SimtGatherRows(int64_t outStart, int64_t outEnd,
+__simt_vf__ __aicore__ LAUNCH_BOUND(GM_BLOCK_DIM)
+inline void SimtGatherRows(int64_t eStart, int64_t eLen,
                            __gm__ uint32_t *compactKeys,
                            __gm__ T *inputFlat, __gm__ T *valueOut,
                            int64_t rowLen)
@@ -387,12 +387,21 @@ inline void SimtGatherRows(int64_t outStart, int64_t outEnd,
     __syncthreads();
     int32_t tid = threadIdx.x;
     int32_t threadNum = blockDim.x;
-    int64_t totalElements = (outEnd - outStart) * rowLen;
-    for (int64_t flat = tid; flat < totalElements; flat += threadNum) {
-        int64_t outIdx = outStart + flat / rowLen;
-        int64_t j = flat % rowLen;
+    // The flat range [eStart, eStart + eLen) is contiguous in output space and
+    // spans a whole number of rows plus at most two partial rows at the ends.
+    // Iterate row-by-row so compactKeys[outIdx] is read once per row and the
+    // inner loop walks j sequentially (no per-element div/mod).
+    int64_t eEnd = eStart + eLen;
+    int64_t firstOut = eStart / rowLen;
+    int64_t lastOut = (eEnd - 1) / rowLen;
+    for (int64_t outIdx = firstOut; outIdx <= lastOut; outIdx++) {
+        int64_t rowBase = outIdx * rowLen;
+        int64_t jLo = (rowBase < eStart) ? (eStart - rowBase) : 0;
+        int64_t jHi = (rowBase + rowLen > eEnd) ? (eEnd - rowBase) : rowLen;
         int64_t srcIdx = static_cast<int64_t>(compactKeys[outIdx]);
-        valueOut[outIdx * rowLen + j] = inputFlat[srcIdx * rowLen + j];
+        for (int64_t j = jLo + tid; j < jHi; j += threadNum) {
+            valueOut[rowBase + j] = inputFlat[srcIdx * rowLen + j];
+        }
     }
     __syncthreads();
     if (threadIdx.x == 0) {

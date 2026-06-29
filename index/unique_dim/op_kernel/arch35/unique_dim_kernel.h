@@ -465,14 +465,17 @@ private:
         __gm__ uint32_t *gpPtr2 = (__gm__ uint32_t *)globalPrefixGm_.GetPhyAddr();
         int64_t numOut = static_cast<int64_t>(gpPtr2[coreNum_]);
 
-        int64_t outPerCore = CeilDiv64(numOut, coreNum_);
-        int64_t outStart = coreId_ * outPerCore;
-        int64_t outEnd = Min64(outStart + outPerCore, numOut);
+        // Split the gather over total output elements (numOut * rowLen) so all
+        // cores participate even when numOut is small but rows are long, and
+        // launch with GM_BLOCK_DIM (2048) threads like the transpose/copy path.
+        int64_t gatherTotal = numOut * rowLen_;
+        int64_t eStart, eLen;
+        SplitWorkByCore(gatherTotal, eStart, eLen);
 
-        if (outStart < outEnd) {
+        if (eLen > 0) {
             asc_vf_call<SimtGatherRows<T>>(
-                dim3(blockDimX_),
-                outStart, outEnd,
+                dim3(GM_BLOCK_DIM),
+                eStart, eLen,
                 (__gm__ uint32_t *)sortBufGm_.GetPhyAddr(),
                 effectiveInputFlat_,
                 (__gm__ T *)valueOutGm_.GetPhyAddr(),
