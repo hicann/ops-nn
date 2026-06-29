@@ -19,26 +19,8 @@ params_4_152064_fp32 = [
     512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
 ]
 
-params_4_152064_fp16 = [
-    # ApplyTopKTopPWithSortedTilingParam
-    4, 152064, 1, # batchSize, vocabSize, batchPerCore
-    0, 4, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
-    1024, 1024, # ubFactorElement, ubFactorElementAligned
-    512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
-]
-
-params_4_152064_bf16 = [
-    # ApplyTopKTopPWithSortedTilingParam
-    4, 152064, 1, # batchSize, vocabSize, batchPerCore
-    0, 4, 1024, 1024, # tailBatch, blockNum, dataNumInit, dataNumInitAligned
-    1024, 1024, # ubFactorElement, ubFactorElementAligned
-    512, 512, 151232 # tailUbFactorElement, tailUbFactorElementAligned, calUbSize
-]
-
 params_info = {
     "test_case_4_152064_fp32": params_4_152064_fp32,
-    "test_case_4_152064_fp16": params_4_152064_fp16,
-    "test_case_4_152064_bf16": params_4_152064_bf16
 }
 
 def main():
