@@ -4180,6 +4180,16 @@
     <td>unsorted_segment_sum主要功能是对一个张量分段求和。</td>
   </tr>
   <tr>
+    <td>index</td>
+    <td><a href="../../index/unsorted_segment_prod/README.md">unsorted_segment_prod</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>unsorted_segment_prod主要功能是对一个张量分段求乘积。</td>
+  </tr>
+  <tr>
     <td>rnn</td>
       <td><a href="../../rnn/single_layer_lstm_grad/README.md">single_layer_lstm_grad</a></td>
       <td>✓</td>
