@@ -1010,8 +1010,8 @@ static const aclTensor* IndexPutProcessArch3510(aclTensor* selfRef, const aclTen
                                               const bool isNonContiguous, const bool useSortedV2Opt, aclOpExecutor* executor)
 {
     int64_t deterministicValue = 0;
-    rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-    if (retRts != RT_ERROR_NONE) {
+    aclError retRts = aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+    if (retRts != ACL_ERROR_NONE) {
         deterministicValue = 0;
     }
     const aclTensor* indexPutOpOut = nullptr;
@@ -1161,8 +1161,8 @@ static bool IsIndexPutV2Scene()
 {
   if (Ops::NN::AclnnUtil::IsRegbase()) {
       int64_t deterministicValue = 0;
-      rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-      if (retRts != RT_ERROR_NONE) {
+      aclError retRts = aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+      if (retRts != ACL_ERROR_NONE) {
           deterministicValue = 0;
       }
       if (deterministicValue == 0) {
@@ -1355,8 +1355,8 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
   }
   if (Ops::NN::AclnnUtil::IsRegbase()) {
       int64_t deterministicValue = 0;
-      rtError_t retRts = rtCtxGetSysParamOpt(SYS_OPT_DETERMINISTIC, &deterministicValue);
-      if (retRts != RT_ERROR_NONE) {
+      aclError retRts = aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, &deterministicValue);
+      if (retRts != ACL_ERROR_NONE) {
           deterministicValue = 0;
       }
       const bool usePutV2SpeOpt = IsSpecialScene(selfRef, masks, accumulate);

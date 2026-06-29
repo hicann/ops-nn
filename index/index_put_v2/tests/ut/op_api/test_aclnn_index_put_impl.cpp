@@ -639,3 +639,121 @@ TEST_F(l2_index_put_impl_test, Ascend950PR_9589_case_008_accTrue) {
   aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
   EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
 }
+// 正常路径，bf16 accumulate=true，覆盖disDeterministicHighPrecision bf16→fp32 cast路径
+// 该路径内部调用aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, ...)获取确定性值
+TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_bf16_acc) {
+  bool unsafe = false;
+  bool accumulate = true;
+  vector<int64_t> self = {300};
+  vector<int64_t> value = {3};
+  vector<int64_t> indices = {3};
+  vector<int64_t> out = {{300}};
+
+  auto self_desc = TensorDesc(self, ACL_BF16, ACL_FORMAT_ND).ValueRange(1, 4);
+  auto value_desc = TensorDesc(value, ACL_BF16, ACL_FORMAT_ND).ValueRange(1, 3);
+  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
+  auto tensor_list_desc = TensorListDesc({indices_desc,});
+  auto output_desc = TensorDesc(out, ACL_BF16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
+                                               accumulate, unsafe),  // host api输入
+                                               OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，int8 accumulate=true，覆盖disDeterministicHighPrecision int8→int32 cast路径
+// 该路径内部调用aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, ...)获取确定性值
+TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_int8_acc) {
+  bool unsafe = false;
+  bool accumulate = true;
+  vector<int64_t> self = {300};
+  vector<int64_t> value = {3};
+  vector<int64_t> indices = {3};
+  vector<int64_t> out = {{300}};
+
+  auto self_desc = TensorDesc(self, ACL_INT8, ACL_FORMAT_ND).ValueRange(1, 4);
+  auto value_desc = TensorDesc(value, ACL_INT8, ACL_FORMAT_ND).ValueRange(1, 3);
+  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
+  auto tensor_list_desc = TensorListDesc({indices_desc,});
+  auto output_desc = TensorDesc(out, ACL_INT8, ACL_FORMAT_ND);
+
+  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
+                                               accumulate, unsafe),  // host api输入
+                                               OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，uint8 accumulate=true，覆盖disDeterministicHighPrecision uint8→int32 cast路径
+// 该路径内部调用aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, ...)获取确定性值
+TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_uint8_acc) {
+  bool unsafe = false;
+  bool accumulate = true;
+  vector<int64_t> self = {300};
+  vector<int64_t> value = {3};
+  vector<int64_t> indices = {3};
+  vector<int64_t> out = {{300}};
+
+  auto self_desc = TensorDesc(self, ACL_UINT8, ACL_FORMAT_ND).ValueRange(1, 4);
+  auto value_desc = TensorDesc(value, ACL_UINT8, ACL_FORMAT_ND).ValueRange(1, 3);
+  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
+  auto tensor_list_desc = TensorListDesc({indices_desc,});
+  auto output_desc = TensorDesc(out, ACL_UINT8, ACL_FORMAT_ND);
+
+  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
+                                               accumulate, unsafe),  // host api输入
+                                               OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，fp16 accumulate=false，验证disDeterministicHighPrecision为false时不走cast分支
+// 该路径内部调用aclrtCtxGetSysParamOpt(ACL_OPT_DETERMINISTIC, ...)获取确定性值
+TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_fp16_noacc) {
+  bool unsafe = false;
+  bool accumulate = false;
+  vector<int64_t> self = {300};
+  vector<int64_t> value = {3};
+  vector<int64_t> indices = {3};
+  vector<int64_t> out = {{300}};
+
+  auto self_desc = TensorDesc(self, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 4);
+  auto value_desc = TensorDesc(value, ACL_FLOAT16, ACL_FORMAT_ND).ValueRange(1, 3);
+  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
+  auto tensor_list_desc = TensorListDesc({indices_desc,});
+  auto output_desc = TensorDesc(out, ACL_FLOAT16, ACL_FORMAT_ND).Precision(0.0001, 0.0001);
+
+  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
+                                               accumulate, unsafe),  // host api输入
+                                               OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
+
+// 正常路径，int32 accumulate=false，覆盖deterministic检查后非高精度非cast分支
+TEST_F(l2_index_put_impl_test, l2_index_put_impl_test_int32_noacc) {
+  bool unsafe = false;
+  bool accumulate = false;
+  vector<int64_t> self = {300};
+  vector<int64_t> value = {3};
+  vector<int64_t> indices = {3};
+  vector<int64_t> out = {{300}};
+
+  auto self_desc = TensorDesc(self, ACL_INT32, ACL_FORMAT_ND).ValueRange(1, 4);
+  auto value_desc = TensorDesc(value, ACL_INT32, ACL_FORMAT_ND).ValueRange(1, 3);
+  auto indices_desc = TensorDesc(indices, ACL_INT64, ACL_FORMAT_ND).ValueRange(1, 1);
+  auto tensor_list_desc = TensorListDesc({indices_desc,});
+  auto output_desc = TensorDesc(out, ACL_INT32, ACL_FORMAT_ND);
+
+  auto ut = OP_API_UT(aclnnIndexPutImpl, INPUT(self_desc, tensor_list_desc, value_desc,
+                                               accumulate, unsafe),  // host api输入
+                                               OUTPUT());
+  uint64_t workspaceSize = 0;
+  aclnnStatus getWorkspaceResult = ut.TestGetWorkspaceSize(&workspaceSize);
+  EXPECT_EQ(getWorkspaceResult, ACLNN_SUCCESS);
+}
