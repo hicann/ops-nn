@@ -21,6 +21,9 @@
 #include "arch35/layer_norm_v3_welford.h"
 #include "arch35/layer_norm_v3_two_pass_perf.h"
 #include "arch35/layer_norm_v3_no_reduce.h"
+#include "arch35/layer_norm_v3_norm_not_equal_params.h"
+#include "arch35/layer_norm_v3_welford_multi_reduce.h"
+#include "arch35/layer_norm_v3_welford_multi_params.h"
 
 using namespace LayerNormV3;
 using AscendC::AIC;
@@ -48,6 +51,24 @@ using AscendC::AIC;
 #define LNV3_REGBASE_TWO_PASS_PERF_HALF_HALF 511
 #define LNV3_REGBASE_TWO_PASS_PERF_BF16_FLOAT 520
 #define LNV3_REGBASE_TWO_PASS_PERF_BF16_BF16 522
+
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT_FLOAT 700
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_FLOAT 710
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_HALF 711
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_FLOAT 720
+#define LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_BF16 722
+
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_FLOAT_FLOAT 800
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_FLOAT 810
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_HALF 811
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_FLOAT 820
+#define LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_BF16 822
+
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_FLOAT_FLOAT 900
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_FLOAT 910
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_HALF 911
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_FLOAT 920
+#define LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16 922
 
 template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
 __aicore__ inline void RegbaseNoReduceImpl(
@@ -93,6 +114,40 @@ __aicore__ inline void RegbaseTwoPassPerfImpl(
     const LayerNormV3TilingDataRegBaseTwoPassPerf* __restrict tilingData = &tiling_data_in;
     LayerNormV3RegbaseTwoPassPerf<Tfm, Tweight, Tmean> op(tilingData, &pipeIn);
     op.Init(x, gamma, beta, y, mean, rstd);
+    op.Process();
+}
+template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
+__aicore__ inline void RegbaseNormNotEqualParamsImpl(
+    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR rstd, GM_ADDR tiling)
+{
+    TPipe pipeIn;
+    GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataRegBaseNormNotEqualParams, tiling_data_in, tiling);
+    const LayerNormV3TilingDataRegBaseNormNotEqualParams* __restrict tilingData = &tiling_data_in;
+    LayerNormV3RegbaseNormNotEqualParams<Tfm, Tweight, Tmean, IsOutRstd> op(tilingData, &pipeIn);
+    op.Init(x, gamma, beta, y, mean, rstd);
+    op.Process();
+}
+template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
+__aicore__ inline void RegbaseWelfordMultiReduceImpl(
+    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+{
+    TPipe pipeIn;
+    GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataWelfordMultiReduce, tiling_data_in, tiling);
+    const LayerNormV3TilingDataWelfordMultiReduce* __restrict tilingData = &tiling_data_in;
+    LayerNormV3WelfordMultiReduce<Tfm, Tweight, Tmean, IsOutRstd> op(tilingData, &pipeIn);
+    op.Init(x, gamma, beta, y, mean, lastout);
+    op.Process();
+}
+
+template <typename Tfm, typename Tweight, typename Tmean, bool IsOutRstd>
+__aicore__ inline void RegbaseWelfordMultiParamsImpl(
+    GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout, GM_ADDR tiling)
+{
+    TPipe pipeIn;
+    GET_TILING_DATA_WITH_STRUCT(LayerNormV3TilingDataWelfordMultiParams, tiling_data_in, tiling);
+    const LayerNormV3TilingDataWelfordMultiParams* __restrict tilingData = &tiling_data_in;
+    LayerNormV3WelfordMultiParams<Tfm, Tweight, Tmean, IsOutRstd> op(tilingData, &pipeIn);
+    op.Init(x, gamma, beta, y, mean, lastout);
     op.Process();
 }
 
@@ -172,6 +227,51 @@ __aicore__ inline void layer_norm_impl(
         return;
     } else if (TILING_KEY_IS(LNV3_REGBASE_NO_REDUCE_BF16_BF16)) {
         RegbaseNoReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT_FLOAT)) {
+        RegbaseNormNotEqualParamsImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_FLOAT)) {
+        RegbaseNormNotEqualParamsImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_HALF_HALF)) {
+        RegbaseNormNotEqualParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_FLOAT)) {
+        RegbaseNormNotEqualParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_NORM_NOT_EQUAL_PARAMS_BF16_BF16)) {
+        RegbaseNormNotEqualParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_FLOAT_FLOAT)) {
+        RegbaseWelfordMultiReduceImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_FLOAT)) {
+        RegbaseWelfordMultiReduceImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_HALF_HALF)) {
+        RegbaseWelfordMultiReduceImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_FLOAT)) {
+        RegbaseWelfordMultiReduceImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_REDUCE_BF16_BF16)) {
+        RegbaseWelfordMultiReduceImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_FLOAT_FLOAT)) {
+        RegbaseWelfordMultiParamsImpl<float, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_FLOAT)) {
+        RegbaseWelfordMultiParamsImpl<half, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_HALF_HALF)) {
+        RegbaseWelfordMultiParamsImpl<half, half, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_FLOAT)) {
+        RegbaseWelfordMultiParamsImpl<bfloat16_t, float, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
+        return;
+    } else if (TILING_KEY_IS(LNV3_REGBASE_WELFORD_MULTI_PARAMS_BF16_BF16)) {
+        RegbaseWelfordMultiParamsImpl<bfloat16_t, bfloat16_t, DTYPE_MEAN, IsOutRstd>(x, gamma, beta, y, mean, lastout, tiling);
         return;
     }
 

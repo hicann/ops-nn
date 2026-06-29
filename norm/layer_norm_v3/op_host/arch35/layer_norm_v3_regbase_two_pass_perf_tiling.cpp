@@ -62,6 +62,10 @@ bool LayerNormV3RegBaseTwoPassPerfTiling::IsCapable()
         return false;
     }
 
+    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 || static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
+        return false;
+    }
+
     if (static_cast<int64_t>(commonParams.rowAlign) >
         LNV3_NUM_TWO * commonParams.vlFp32 * commonParams.vlFp32 * LNV3_NUM_TWO) {
         return false;

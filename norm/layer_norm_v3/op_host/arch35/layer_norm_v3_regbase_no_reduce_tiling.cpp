@@ -34,7 +34,7 @@ bool LayerNormV3RegBaseNoReduceTiling::IsCapable()
         return false;
     }
 
-    if (static_cast<int64_t>(commonParams.rowSize) != 1) {
+    if (static_cast<int64_t>(commonParams.rowSize) != 1 || static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
         return false;
     }
 

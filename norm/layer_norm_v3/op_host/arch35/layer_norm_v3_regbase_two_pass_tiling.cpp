@@ -54,6 +54,10 @@ bool LayerNormV3RegBaseTwoPassTiling::IsCapable()
     }
 
     int64_t betaElemSize = FP32_BYTE;
+    if (static_cast<int64_t>(commonParams.normToParamsSize) != 1 || static_cast<int64_t>(commonParams.paramsToNormSize) != 1) {
+        return false;
+    }
+
     int64_t xElemSize = FP32_BYTE;
     if (commonParams.tensorDtype == ge::DT_FLOAT16 || commonParams.tensorDtype == ge::DT_BF16) {
         xElemSize = FP16_BYTE;

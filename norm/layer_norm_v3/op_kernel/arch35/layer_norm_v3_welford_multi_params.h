@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -9,12 +9,12 @@
  */
 
 /* !
- * \file layer_norm_v3_welford.h
+ * \file layer_norm_v3_welford_multi_params.h
  * \brief
  */
 
-#ifndef LAYER_NORM_V3_WELFORD_H
-#define LAYER_NORM_V3_WELFORD_H
+#ifndef LAYER_NORM_V3_WELFORD_MULTI_PARAMS_H
+#define LAYER_NORM_V3_WELFORD_MULTI_PARAMS_H
 
 #include "kernel_tiling/kernel_tiling.h"
 #include "kernel_operator.h"
@@ -25,23 +25,21 @@ namespace LayerNormV3 {
 using namespace AscendC;
 
 template <typename T, typename U, typename M, bool IsOutRstd>
-class LayerNormV3RegbaseWelford {
+class LayerNormV3WelfordMultiParams {
 public:
-    __aicore__ inline LayerNormV3RegbaseWelford(const LayerNormV3TilingDataWelford* tilingData, TPipe* pipeIn)
+    __aicore__ inline LayerNormV3WelfordMultiParams(
+        const LayerNormV3TilingDataWelfordMultiParams* tilingData, TPipe* pipeIn)
     {
-        // Constructor
         pipe_ = pipeIn;
         td_ = tilingData;
     }
 
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR gamma, GM_ADDR beta, GM_ADDR y, GM_ADDR mean, GM_ADDR lastout)
     {
-        // Init
         if (GetBlockIdx() >= td_->numBlocks) {
             return;
         }
 
-        // init global memory
         currentBlockFactor = (GetBlockIdx() == td_->mainBlockCount) ? td_->tailBlockFactor : td_->mainBlockFactor;
         int64_t fmOffset = GetBlockIdx() * td_->mainBlockFactor * td_->N;
         int64_t paramOffset = GetBlockIdx() * td_->mainBlockFactor;
@@ -53,13 +51,12 @@ public:
         meanGm.SetGlobalBuffer((__gm__ M*)mean + paramOffset, paramSize);
         lastoutGm.SetGlobalBuffer((__gm__ M*)lastout + paramOffset, paramSize);
         if (td_->nullptrGamma == 0) {
-            gammaGm.SetGlobalBuffer((__gm__ U*)gamma, td_->N);
+            gammaGm.SetGlobalBuffer((__gm__ U*)gamma, td_->paramsToNormSize * td_->N);
         }
         if (td_->nullptrBeta == 0) {
-            betaGm.SetGlobalBuffer((__gm__ U*)beta, td_->N);
+            betaGm.SetGlobalBuffer((__gm__ U*)beta, td_->paramsToNormSize * td_->N);
         }
 
-        // init local memory
         pipe_->InitBuffer(inQueueX, DOUBLE_BUFFER, td_->tileLength * sizeof(T));
         pipe_->InitBuffer(outQueueY, DOUBLE_BUFFER, td_->tileLength * sizeof(T));
         pipe_->InitBuffer(outQueueMean, DOUBLE_BUFFER, AGGREGATION_COUNT * sizeof(float));
@@ -76,7 +73,6 @@ public:
 
     __aicore__ inline void Process()
     {
-        // Process
         if (GetBlockIdx() >= td_->numBlocks) {
             return;
         }
@@ -126,25 +122,27 @@ public:
                     shared_, para);
             }
 
-            // Normalize
+            // Normalize — compute gammaBase for current row
+            int64_t globalRowIdx = GetBlockIdx() * td_->mainBlockFactor + i;
+            int64_t gammaBase = (globalRowIdx % td_->paramsToNormSize) * td_->N;
+
             for (int64_t welfordUpdateCount = 0; welfordUpdateCount < td_->welfordUpdateTimes; welfordUpdateCount++) {
                 int64_t fmOffset = i * td_->N + welfordUpdateCount * td_->tileLength;
                 int64_t paramOffset = welfordUpdateCount * td_->tileLength;
-                ProcessNormalize(fmOffset, paramOffset, td_->tileLength);
+                ProcessNormalize(fmOffset, paramOffset, td_->tileLength, gammaBase);
             }
             if (td_->welfordUpdateTail > 0) {
                 int64_t fmOffset = i * td_->N + td_->welfordUpdateTimes * td_->tileLength;
                 int64_t paramOffset = td_->welfordUpdateTimes * td_->tileLength;
-                ProcessNormalize(fmOffset, paramOffset, td_->welfordUpdateTail);
+                ProcessNormalize(fmOffset, paramOffset, td_->welfordUpdateTail, gammaBase);
             }
-
             cacheCount++;
             // check cache buffer
             if (cacheCount >= AGGREGATION_COUNT) {
                 RefreshCache<M>(cacheCount, paramAddr, meanTensor, lastoutTensor,
                     outQueueMean, outQueueLastout, meanGm, lastoutGm);
                 ResetCache();
-            }
+            } 
         }
 
         // refresh cache
@@ -157,15 +155,14 @@ public:
 private:
     __aicore__ inline void ResetCache()
     {
-        // ResetCache
         cacheCount = 0;
         meanTensor = outQueueMean.template AllocTensor<float>();
         lastoutTensor = outQueueLastout.template AllocTensor<float>();
     }
 
-    __aicore__ inline void ProcessNormalize(const int64_t fmOffset, const int64_t paramOffset, const int64_t elemCnt)
+    __aicore__ inline void ProcessNormalize(
+        const int64_t fmOffset, const int64_t paramOffset, const int64_t elemCnt, const int64_t gammaBase)
     {
-        // ProcessNormalize
         xTensor = inQueueX.template AllocTensor<T>();
         CopyIn(xTensor, xGm[fmOffset], elemCnt);
         inQueueX.EnQue(xTensor);
@@ -173,13 +170,13 @@ private:
 
         if (td_->nullptrGamma == 0) {
             gammaTensor = inQueueGamma.template AllocTensor<U>();
-            CopyIn(gammaTensor, gammaGm[paramOffset], elemCnt);
+            CopyIn(gammaTensor, gammaGm[gammaBase + paramOffset], elemCnt);
             inQueueGamma.EnQue(gammaTensor);
             gammaTensor = inQueueGamma.template DeQue<U>();
         }
         if (td_->nullptrBeta == 0) {
             betaTensor = inQueueBeta.template AllocTensor<U>();
-            CopyIn(betaTensor, betaGm[paramOffset], elemCnt);
+            CopyIn(betaTensor, betaGm[gammaBase + paramOffset], elemCnt);
             inQueueBeta.EnQue(betaTensor);
             betaTensor = inQueueBeta.template DeQue<U>();
         }
@@ -216,13 +213,11 @@ private:
 
 private:
     TPipe* pipe_;
-    const LayerNormV3TilingDataWelford* __restrict td_;
+    const LayerNormV3TilingDataWelfordMultiParams* __restrict td_;
 
-    // Constants
     constexpr static int64_t DOUBLE_BUFFER = 2;
     constexpr static int64_t AGGREGATION_COUNT = 256;
 
-    // TQue
     TQue<QuePosition::VECIN, 1> inQueueX;
     TQue<QuePosition::VECIN, 1> inQueueGamma;
     TQue<QuePosition::VECIN, 1> inQueueBeta;
@@ -234,7 +229,6 @@ private:
     TBuf<TPosition::VECCALC> welfordTempBuffer;
     TBuf<TPosition::VECCALC> apiTempBuffer;
 
-    // Global Tensor
     GlobalTensor<T> xGm;
     GlobalTensor<T> yGm;
     GlobalTensor<M> meanGm;
@@ -242,7 +236,6 @@ private:
     GlobalTensor<U> gammaGm;
     GlobalTensor<U> betaGm;
 
-    // Local Tensor
     LocalTensor<T> xTensor;
     LocalTensor<T> yTensor;
     LocalTensor<U> gammaTensor;
@@ -255,7 +248,6 @@ private:
     LocalTensor<float> variance_;
     LocalTensor<uint8_t> shared_;
 
-    // params
     int64_t currentBlockFactor = 0;
     int64_t cacheCount = 0;
     int64_t paramAddr = 0;
@@ -264,4 +256,4 @@ private:
 
 } // namespace LayerNormV3
 
-#endif // LAYER_NORM_V3_WELFORD_H
+#endif // LAYER_NORM_V3_WELFORD_MULTI_PARAMS_H

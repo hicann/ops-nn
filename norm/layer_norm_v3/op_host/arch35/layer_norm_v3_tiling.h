@@ -143,6 +143,107 @@ REGISTER_TILING_DATA_CLASS(LayerNorm_511, LayerNormV3TilingDataRegBaseTwoPassPer
 REGISTER_TILING_DATA_CLASS(LayerNorm_520, LayerNormV3TilingDataRegBaseTwoPassPerf)
 REGISTER_TILING_DATA_CLASS(LayerNorm_522, LayerNormV3TilingDataRegBaseTwoPassPerf)
 
+BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataRegBaseNormNotEqualParams)
+TILING_DATA_FIELD_DEF(int64_t, a);
+TILING_DATA_FIELD_DEF(int64_t, b);
+TILING_DATA_FIELD_DEF(int64_t, r1);
+TILING_DATA_FIELD_DEF(int64_t, blockFactor);
+TILING_DATA_FIELD_DEF(int64_t, ubFactor);
+TILING_DATA_FIELD_DEF(int64_t, ubFactorAlignB32);
+TILING_DATA_FIELD_DEF(int64_t, r);
+TILING_DATA_FIELD_DEF(int64_t, rAlign);
+TILING_DATA_FIELD_DEF(int64_t, gammaBetaRAlign);
+TILING_DATA_FIELD_DEF(int64_t, rAxisCount);
+TILING_DATA_FIELD_DEF(int64_t, formerBlockUbLoops);
+TILING_DATA_FIELD_DEF(int64_t, tailBlockUbLoops);
+TILING_DATA_FIELD_DEF(int64_t, powerOfTwoForR);
+TILING_DATA_FIELD_DEF(float, epsilon);
+TILING_DATA_FIELD_DEF(int8_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(int8_t, nullptrBeta);
+TILING_DATA_FIELD_DEF(bool, isFullB);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV3_700, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_710, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_711, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_720, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_722, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+
+REGISTER_TILING_DATA_CLASS(LayerNorm_700, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_710, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_711, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_720, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_722, LayerNormV3TilingDataRegBaseNormNotEqualParams)
+
+BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelfordMultiReduce)
+TILING_DATA_FIELD_DEF(int64_t, r1);
+TILING_DATA_FIELD_DEF(int64_t, r0);
+TILING_DATA_FIELD_DEF(int64_t, r0Align);
+TILING_DATA_FIELD_DEF(int64_t, n);
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);
+TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);
+TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, cutR1OrR0);
+TILING_DATA_FIELD_DEF(int64_t, r0Factor);
+TILING_DATA_FIELD_DEF(int64_t, r1Factor);
+TILING_DATA_FIELD_DEF(int64_t, loopR0outer);
+TILING_DATA_FIELD_DEF(int64_t, loopR1outer);
+TILING_DATA_FIELD_DEF(int64_t, tileLength);
+TILING_DATA_FIELD_DEF(int64_t, welfordTempSize);
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTimes);
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTail);
+TILING_DATA_FIELD_DEF(int64_t, apiTempBufferSize);
+TILING_DATA_FIELD_DEF(int64_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(int64_t, nullptrBeta);
+TILING_DATA_FIELD_DEF(int64_t, r1ComputeFactor);
+TILING_DATA_FIELD_DEF(int64_t, gammaPackedSize);
+TILING_DATA_FIELD_DEF(float, epsilon);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV3_800, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_810, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_811, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_820, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_822, LayerNormV3TilingDataWelfordMultiReduce)
+
+REGISTER_TILING_DATA_CLASS(LayerNorm_800, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_810, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_811, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_820, LayerNormV3TilingDataWelfordMultiReduce)
+REGISTER_TILING_DATA_CLASS(LayerNorm_822, LayerNormV3TilingDataWelfordMultiReduce)
+
+BEGIN_TILING_DATA_DEF(LayerNormV3TilingDataWelfordMultiParams)
+TILING_DATA_FIELD_DEF(int64_t, M);
+TILING_DATA_FIELD_DEF(int64_t, N);
+TILING_DATA_FIELD_DEF(int64_t, rAlign);
+TILING_DATA_FIELD_DEF(int64_t, numBlocks);
+TILING_DATA_FIELD_DEF(int64_t, mainBlockCount);
+TILING_DATA_FIELD_DEF(int64_t, mainBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, tailBlockFactor);
+TILING_DATA_FIELD_DEF(int64_t, tileLength);
+TILING_DATA_FIELD_DEF(int64_t, welfordTempSize);
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTimes);
+TILING_DATA_FIELD_DEF(int64_t, welfordUpdateTail);
+TILING_DATA_FIELD_DEF(int64_t, nullptrGamma);
+TILING_DATA_FIELD_DEF(int64_t, nullptrBeta);
+TILING_DATA_FIELD_DEF(int64_t, apiTempBufferSize);
+TILING_DATA_FIELD_DEF(int64_t, paramsToNormSize);
+TILING_DATA_FIELD_DEF(float, epsilon);
+END_TILING_DATA_DEF;
+
+REGISTER_TILING_DATA_CLASS(LayerNormV3_900, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_910, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_911, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_920, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNormV3_922, LayerNormV3TilingDataWelfordMultiParams)
+
+REGISTER_TILING_DATA_CLASS(LayerNorm_900, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_910, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_911, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_920, LayerNormV3TilingDataWelfordMultiParams)
+REGISTER_TILING_DATA_CLASS(LayerNorm_922, LayerNormV3TilingDataWelfordMultiParams)
+
 struct ParamsLayerNomrV3 {
     uint64_t coreNum;
     uint64_t ubSizePlatForm;
@@ -152,6 +253,7 @@ struct ParamsLayerNomrV3 {
     float eps = 0;
     float coefficient = 0;
     uint64_t rowAlign;
+    uint64_t gammaBetaRAlign;
     uint64_t gammaNullPtr;
     uint64_t betaNullPtr;
     uint64_t meanAndRstdNullPtr = 0;
@@ -162,6 +264,8 @@ struct ParamsLayerNomrV3 {
     bool isRegBase = false;
     int64_t vlFp32 = 0;
     bool isV1 = false;
+    uint64_t normToParamsSize = 1;
+    uint64_t paramsToNormSize = 1;
 };
 
 enum class LayerNormV3TilingKey : int64_t
@@ -185,6 +289,24 @@ enum class LayerNormV3TilingKey : int64_t
     LAYER_NORM_REGBASE_TWO_PASS_PERF_FLOAT16_FLOAT16 = 511,
     LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_FLOAT32 = 520,
     LAYER_NORM_REGBASE_TWO_PASS_PERF_BFLOAT16_BFLOAT16 = 522,
+    // Regbase norm not equal params
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT32_FLOAT32 = 700,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT32 = 710,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_FLOAT16_FLOAT16 = 711,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_FLOAT32 = 720,
+    LAYER_NORM_REGBASE_NORM_NOT_EQUAL_PARAMS_BFLOAT16_BFLOAT16 = 722,
+    // Welford multi reduce
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT32_FLOAT32 = 800,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT16_FLOAT32 = 810,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_FLOAT16_FLOAT16 = 811,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_BFLOAT16_FLOAT32 = 820,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_REDUCE_BFLOAT16_BFLOAT16 = 822,
+    // Welford multi params (beginParamsAxis < beginNormAxis)
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT32_FLOAT32 = 900,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT16_FLOAT32 = 910,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_FLOAT16_FLOAT16 = 911,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_BFLOAT16_FLOAT32 = 920,
+    LAYER_NORM_REGBASE_WELFORD_MULTI_PARAMS_BFLOAT16_BFLOAT16 = 922,
 };
 
 enum class LNTemplateKey : int
@@ -192,7 +314,9 @@ enum class LNTemplateKey : int
     SINGEL_READ = 1,
     TRANSPOSE = 2,
     SINGEL_READ_REGBASE = 3,
-    WELFORD = 4
+    WELFORD = 4,
+    WELFORD_MULTI_REDUCE = 8,
+    WELFORD_MULTI_PARAMS = 9
 };
 
 struct LayerNormV3CompileInfo {
@@ -229,6 +353,8 @@ protected:
         const gert::Shape& xShape, const gert::Shape& gammaShape, const gert::Shape& betaShape, int64_t& beginNormAxis,
         int64_t& beginParamsAxis);
     ge::graphStatus OutputShapeCheck(const gert::Shape& xShape, int64_t beginNormAxis);
+    ge::graphStatus OutputDtypeCheck(
+        ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType yDtype, ge::DataType meanDtype, ge::DataType rstdDtype);
     bool isIndexValid(const gert::Shape& xShape, int64_t beginAxis) const;
     ge::graphStatus GetCommonPlatformInfo(const LayerNormV3CompileInfo* compileInfo);
 };
@@ -307,6 +433,76 @@ protected:
     ge::graphStatus PostTiling() override;
 
     int64_t blockNum_;
+};
+
+class LayerNormV3RegBaseNormNotEqualParamsTiling : public LayerNormV3TilingBase {
+public:
+    explicit LayerNormV3RegBaseNormNotEqualParamsTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
+    {}
+    ~LayerNormV3RegBaseNormNotEqualParamsTiling() override = default;
+    LayerNormV3TilingDataRegBaseNormNotEqualParams td_;
+
+protected:
+    int64_t GetUBCanUseSize();
+    int64_t GetRowWeight(bool isFullB);
+    bool CanFitInBuffer(int64_t curAxisNum, bool isFullB);
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    void SetBasicTilingParams();
+    bool ComputeTiling();
+    void WriteTiling();
+    bool UpdateTiling();
+
+    int64_t blockNum_;
+    int64_t blockFactor = 0;
+    int64_t ubFactor = 0;
+    int64_t ubFactorAlignB32 = 0;
+    int64_t formerBlockUbLoops = 0;
+    int64_t tailBlockUbLoops = 0;
+    int64_t rAxisCount = 1;
+    bool isFullB = true;
+};
+
+class LayerNormV3WelfordMultiReduceTiling : public LayerNormV3TilingBase {
+public:
+    explicit LayerNormV3WelfordMultiReduceTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
+    {}
+    ~LayerNormV3WelfordMultiReduceTiling() override = default;
+    LayerNormV3TilingDataWelfordMultiReduce td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    bool IsValidTileLength(int64_t tileLength, int64_t gammaFixedR0);
+    int64_t blockNum_ = 0;
+};
+
+class LayerNormV3WelfordMultiParamsTiling : public LayerNormV3TilingBase {
+public:
+    explicit LayerNormV3WelfordMultiParamsTiling(gert::TilingContext* context_) : LayerNormV3TilingBase(context_)
+    {}
+    ~LayerNormV3WelfordMultiParamsTiling() override = default;
+    LayerNormV3TilingDataWelfordMultiParams td_;
+
+protected:
+    bool IsCapable() override;
+    uint64_t GetTilingKey() const override;
+    ge::graphStatus DoOpTiling() override;
+    ge::graphStatus DoLibApiTiling() override;
+    ge::graphStatus PostTiling() override;
+
+private:
+    bool IsValidTileLength(int64_t tileLength);
 };
 
 ge::graphStatus Tiling4LayerNormV3ForAscendC(gert::TilingContext* context);

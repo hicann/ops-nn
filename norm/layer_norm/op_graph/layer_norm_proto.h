@@ -30,15 +30,15 @@ namespace ge {
 * @li x: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
 * The shape is [A1,...,Ai,R1,...,Rj].
 * @li gamma: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as beta. The shape is [R1,...,Rj].
+* Has the same dtype and shape as beta. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤ i).
 * @li beta: A ND Tensor. Must be one of the following dtypes: float16, float32, bfloat16.
-* Has the same dtype and shape as gamma. The shape is [R1,...,Rj]. \n
+* Has the same dtype and shape as gamma. The shape is [R1,...,Rj],[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤ i). \n
 
 *@par Attributes
 * @li begin_norm_axis: An optional attribute, the dtype is int32. Defaults to 0.
 * Indicates the index of the R1 axis in the shape of x.
 * @li begin_params_axis: An optional attribute, the dtype is int32. Defaults to 0.
-* In Ascend 950 AI Processor, begin_params_axis and begin_norm_axis refer to the same axis in the shape of x.
+* Indicates the index value of the starting dimension for input gamma or beta.
 * @li epsilon: An optional attribute, the dtype is float32. Defaults to 1e-7 . \n
 
 *@par Outputs

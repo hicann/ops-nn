@@ -91,6 +91,7 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
     }
 
     if (!isIndexValid(xShape, beginNormAxis)) {
+        
         std::string reasonMsg = 
             "The value of attribute begin_norm_axis depends on the number of shape axes of input x";
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_norm_axis",
@@ -98,6 +99,7 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
         return ge::GRAPH_FAILED;
     }
         
+
     if (!isIndexValid(xShape, beginParamsAxis)) {
         std::string reasonMsg = 
             "The value of attribute begin_params_axis depends on the number of shape axes of input x";
@@ -107,32 +109,27 @@ ge::graphStatus LayerNormV3TilingBase::InputShapeAndAxisCheck(
     }
 
     beginNormAxis = beginNormAxis < 0 ? beginNormAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginNormAxis;
+
     beginParamsAxis =
         beginParamsAxis < 0 ? beginParamsAxis + static_cast<int64_t>(xShape.GetDimNum()) : beginParamsAxis;
-    if (beginNormAxis != beginParamsAxis) {
-        std::string valueMsg = std::to_string(beginNormAxis) + " and " + std::to_string(beginParamsAxis);
-        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(context_->GetNodeName(), "begin_norm_axis and begin_params_axis",
-            valueMsg.c_str(), "The values of attr begin_norm_axis and begin_params_axis must be the same");
-        return ge::GRAPH_FAILED;
-    }
 
     for (size_t index = 0; index < gammaShape.GetDimNum(); index++) {
-        int64_t reduceAxis = index + beginNormAxis;
-        if (!isIndexValid(xShape, reduceAxis)) {
+        int64_t paramsAxis = index + beginParamsAxis;
+        if (!isIndexValid(xShape, paramsAxis)) {
             std::string reasonMsg = 
-                "The value of attribute begin_norm_axis depends on the number of shape axes of input x";
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_norm_axis",
-                std::to_string(beginNormAxis).c_str(), reasonMsg.c_str());
+                "The value of attribute begin_params_axis depends on the number of shape axes of input x";
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(context_->GetNodeName(), "begin_params_axis",
+                std::to_string(beginParamsAxis).c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
         }
-        int64_t inputDim = xShape.GetDim(reduceAxis);
-        int64_t normDim = gammaShape.GetDim(index);
-        if (normDim != inputDim) {
+        int64_t inputDim = xShape.GetDim(paramsAxis);
+        int64_t gammaDim = gammaShape.GetDim(index);
+        if (gammaDim != inputDim) {
             std::string shapeMsg = ToString(gammaShape) + " and " + ToString(xShape);
             std::string reasonMsg =
                 "The shape of input gamma must be the same as the shape consisting of " +
-                std::to_string(gammaShape.GetDimNum()) + " axes starting from the begin_norm_axis of input x, "
-                "where begin_norm_axis refers to the attribute begin_norm_axis";
+                std::to_string(gammaShape.GetDimNum()) + " axes starting from the begin_params_axis of input x, "
+                "where begin_params_axis refers to the attribute begin_params_axis";
             OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context_->GetNodeName(), "gamma and x",
                 shapeMsg.c_str(), reasonMsg.c_str());
             return ge::GRAPH_FAILED;
@@ -224,6 +221,36 @@ ge::graphStatus LayerNormV3TilingBase::OutputShapeCheck(const gert::Shape& xShap
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus LayerNormV3TilingBase::OutputDtypeCheck(
+    ge::DataType xDtype, ge::DataType gammaDtype, ge::DataType yDtype, ge::DataType meanDtype, ge::DataType rstdDtype)
+{
+    if (yDtype != xDtype) {
+        std::string dtypeMsg = ToString(yDtype) + " and " + ToString(xDtype);
+        std::string reasonMsg = "The dtype of output y must be the same as the dtype of input x";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "y and x", dtypeMsg.c_str(),
+            reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    if (meanDtype != gammaDtype) {
+        std::string dtypeMsg = ToString(meanDtype) + " and " + ToString(gammaDtype);
+        std::string reasonMsg = "The dtype of output mean must be the same as the dtype of input gamma and input beta";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "mean and gamma", dtypeMsg.c_str(),
+            reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    if (rstdDtype != gammaDtype) {
+        std::string dtypeMsg = ToString(rstdDtype) + " and " + ToString(gammaDtype);
+        std::string reasonMsg = "The dtype of output rstd must be the same as the dtype of input gamma and input beta";
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(context_->GetNodeName(), "rstd and gamma", dtypeMsg.c_str(),
+            reasonMsg.c_str());
+        return ge::GRAPH_FAILED;
+    }
+
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
 {
     auto xDesc = context_->GetInputDesc(INPUT_IDX_X);
@@ -233,13 +260,27 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
     auto betaDesc = context_->GetInputDesc(INPUT_IDX_BETA);
     OP_CHECK_NULL_WITH_CONTEXT(context_, betaDesc);
 
+    auto yDesc = context_->GetOutputDesc(OUTPUT_IDX_Y);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yDesc);
+    auto meanDesc = context_->GetOutputDesc(OUTPUT_IDX_MEAN);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, meanDesc);
+    auto rstdDesc = context_->GetOutputDesc(OUTPUT_IDX_RSTD);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, rstdDesc);
+
     ge::DataType xDtype = xDesc->GetDataType();
     ge::DataType gammaDtype = gammaDesc->GetDataType();
     ge::DataType betaDtype = betaDesc->GetDataType();
+    ge::DataType yDtype = yDesc->GetDataType();
+    ge::DataType meanDtype = meanDesc->GetDataType();
+    ge::DataType rstdDtype = rstdDesc->GetDataType();
 
     OP_CHECK_IF(
         InputDtypeCheck(xDtype, gammaDtype, betaDtype) == ge::GRAPH_FAILED,
         OP_LOGE(context_->GetNodeName(), "input dtype check failed."), return ge::GRAPH_FAILED);
+
+    OP_CHECK_IF(
+        OutputDtypeCheck(xDtype, gammaDtype, yDtype, meanDtype, rstdDtype) == ge::GRAPH_FAILED,
+        OP_LOGE(context_->GetNodeName(), "output dtype check failed."), return ge::GRAPH_FAILED);
 
     commonParams.tensorDtype = xDtype;
     commonParams.paramDtype = gammaDtype;
@@ -272,16 +313,31 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
         OutputShapeCheck(xShape, beginNormAxis) == ge::GRAPH_FAILED,
         OP_LOGE(context_->GetNodeName(), "output shape check failed."), return ge::GRAPH_FAILED);
 
+    int64_t leftBound = std::min(beginNormAxis, beginParamsAxis);
+    int64_t rightBound = std::max(beginNormAxis, beginParamsAxis);
+
     // fuse axis
     uint64_t colSize = 1;
     uint64_t rowSize = 1;
+    uint64_t normToParamsSize = 1;
+    uint64_t paramsToNormSize = 1;
     for (size_t i = 0; i < xShape.GetDimNum(); i++) {
         if (static_cast<int64_t>(i) < beginNormAxis) {
             colSize *= xShape.GetDim(i);
         } else {
             rowSize *= xShape.GetDim(i);
         }
+
+        if (leftBound <= static_cast<int64_t>(i) && static_cast<int64_t>(i) < rightBound) {
+            if (beginNormAxis < beginParamsAxis) {
+                normToParamsSize *= xShape.GetDim(i);
+            } else {
+                paramsToNormSize *= xShape.GetDim(i);
+            }
+        }
     }
+    commonParams.normToParamsSize = normToParamsSize;
+    commonParams.paramsToNormSize = paramsToNormSize;
 
     OP_CHECK_IF(
         colSize <= 0,
@@ -296,6 +352,7 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
     commonParams.rowSize = rowSize;
     commonParams.coefficient = static_cast<float>(1.0) / static_cast<float>(commonParams.rowSize);
     uint64_t alignment = 16;
+    uint64_t gammaBetaAlignment = 16;
     if (LN_DTYPE_SIZE_MAP.find(commonParams.tensorDtype) != LN_DTYPE_SIZE_MAP.end()) {
         alignment = BLOCK_SIZE / LN_DTYPE_SIZE_MAP.at(commonParams.tensorDtype);
     } else {
@@ -303,7 +360,15 @@ ge::graphStatus LayerNormV3TilingBase::GetShapeAttrsInfo()
             ToString(commonParams.tensorDtype).c_str(), "FLOAT, FLOAT16 or BF16");
         return ge::GRAPH_FAILED;
     }
+    if (LN_DTYPE_SIZE_MAP.find(commonParams.paramDtype) != LN_DTYPE_SIZE_MAP.end()) {
+        gammaBetaAlignment = BLOCK_SIZE / LN_DTYPE_SIZE_MAP.at(commonParams.paramDtype);
+    } else {
+        OP_LOGE_FOR_INVALID_DTYPE(context_->GetNodeName(), "gamma and beta",
+            ToString(commonParams.paramDtype).c_str(), "FLOAT, FLOAT16 or BF16");
+        return ge::GRAPH_FAILED;
+    }
     commonParams.rowAlign = (commonParams.rowSize + alignment - 1) / alignment * alignment;
+    commonParams.gammaBetaRAlign = (commonParams.rowSize + gammaBetaAlignment - 1) / gammaBetaAlignment * gammaBetaAlignment;
 
     return ge::GRAPH_SUCCESS;
 }

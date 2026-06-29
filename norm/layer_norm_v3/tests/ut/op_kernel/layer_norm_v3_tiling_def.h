@@ -89,6 +89,71 @@ struct LayerNormV3TilingDataRegBaseNoReduce {
     int8_t nullptrBeta;
 };
 
+struct LayerNormV3TilingDataRegBaseNormNotEqualParams {
+    int64_t a;
+    int64_t b;
+    int64_t r1;
+    int64_t blockFactor;
+    int64_t ubFactor;
+    int64_t ubFactorAlignB32;
+    int64_t r;
+    int64_t rAlign;
+    int64_t gammaBetaRAlign;
+    int64_t rAxisCount;
+    int64_t formerBlockUbLoops;
+    int64_t tailBlockUbLoops;
+    int64_t powerOfTwoForR;
+    float epsilon;
+    int8_t nullptrGamma;
+    int8_t nullptrBeta;
+    bool isFullB;
+};
+
+struct LayerNormV3TilingDataWelfordMultiReduce {
+    int64_t r1;
+    int64_t r0;
+    int64_t r0Align;
+    int64_t n;
+    int64_t numBlocks;
+    int64_t mainBlockCount;
+    int64_t mainBlockFactor;
+    int64_t tailBlockFactor;
+    int64_t cutR1OrR0;
+    int64_t r0Factor;
+    int64_t r1Factor;
+    int64_t loopR0outer;
+    int64_t loopR1outer;
+    int64_t tileLength;
+    int64_t welfordTempSize;
+    int64_t welfordUpdateTimes;
+    int64_t welfordUpdateTail;
+    int64_t apiTempBufferSize;
+    int64_t nullptrGamma;
+    int64_t nullptrBeta;
+    int64_t r1ComputeFactor;
+    int64_t gammaPackedSize;
+    float epsilon;
+};
+
+struct LayerNormV3TilingDataWelfordMultiParams {
+    int64_t M;
+    int64_t N;
+    int64_t rAlign;
+    int64_t numBlocks;
+    int64_t mainBlockCount;
+    int64_t mainBlockFactor;
+    int64_t tailBlockFactor;
+    int64_t tileLength;
+    int64_t welfordTempSize;
+    int64_t welfordUpdateTimes;
+    int64_t welfordUpdateTail;
+    int64_t nullptrGamma;
+    int64_t nullptrBeta;
+    int64_t apiTempBufferSize;
+    int64_t paramsToNormSize;
+    float epsilon;
+};
+
 #pragma pack()
 
 template <typename T>

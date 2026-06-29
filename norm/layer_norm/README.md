@@ -63,14 +63,14 @@
     <tr>
       <td>gamma</td>
       <td>输入</td>
-      <td>表示进行归一化计算的权重，公式中的输入w。gamma为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与beta的数据类型相同。shape为[R1,...,Rj]，与输入x从begin_norm_axis起始的连续维度shape相同。</td>
+      <td>表示进行归一化计算的权重，公式中的输入w。gamma为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与beta的数据类型相同。shape为[R1,...,Rj]，[Rn,...,Rj]或[Am,...,Ai,R1,...,Rj](1 < n ≤ j，1 ≤ m ≤ i)，与输入x从begin_params_axis起始的连续维度shape相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>beta</td>
       <td>输入</td>
-      <td>表示进行归一化计算的偏移量，公式中的输入b。beta为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与gamma的数据类型相同。shape为[R1,...,Rj]，与gamma的shape相同。</td>
+      <td>表示进行归一化计算的偏移量，公式中的输入b。beta为必选输入，不支持为空。数据类型与输入x一致或为FLOAT类型，且与gamma的数据类型相同。shape与gamma的shape相同。</td>
       <td>FLOAT、FLOAT16、BFLOAT16</td>
       <td>ND</td>
     </tr>
@@ -84,7 +84,7 @@
     <tr>
       <td>begin_params_axis</td>
       <td>可选属性</td>
-      <td><ul><li>表示参数的起始维度。</li><li>默认值为0。</li></ul></td>
+      <td><ul><li>表示输入gamma或者beta的起始维度的索引值，该维度需在输入x的shape维度范围内。</li><li>默认值为0。</li></ul></td>
       <td>INT</td>
       <td>-</td>
     </tr>
@@ -117,8 +117,6 @@
       <td>ND</td>
     </tr>
   </tbody></table>
-
-  - <term>Ascend 950PR/Ascend 950DT</term>：参数begin_params_axis和begin_norm_axis的值保持一致。
 
 ## 约束说明
 

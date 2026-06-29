@@ -245,3 +245,107 @@ TEST_F(layer_norm_v3_test, test_two_pass_half)
     tilingDatafromBin->epsilon = 1e-5;
     ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
 }
+
+TEST_F(layer_norm_v3_test, test_norm_not_equal_params_float32)
+{
+    std::vector<int64_t> xShape = {32, 64};
+    std::vector<int64_t> gammaShape = {64};
+    std::string dtype = "float";
+    uint64_t tilingKey = 700000;
+    uint32_t blockNum = 2;
+    size_t tilingSize = sizeof(LayerNormV3TilingDataRegBaseNormNotEqualParams);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    LayerNormV3TilingDataRegBaseNormNotEqualParams* tilingDatafromBin =
+        reinterpret_cast<LayerNormV3TilingDataRegBaseNormNotEqualParams*>(tiling);
+
+    tilingDatafromBin->a = 32;
+    tilingDatafromBin->b = 1;
+    tilingDatafromBin->r1 = 2;
+    tilingDatafromBin->blockFactor = 32;
+    tilingDatafromBin->ubFactor = 32;
+    tilingDatafromBin->ubFactorAlignB32 = 32;
+    tilingDatafromBin->r = 64;
+    tilingDatafromBin->rAlign = 64;
+    tilingDatafromBin->gammaBetaRAlign = 64;
+    tilingDatafromBin->rAxisCount = 1;
+    tilingDatafromBin->formerBlockUbLoops = 1;
+    tilingDatafromBin->tailBlockUbLoops = 1;
+    tilingDatafromBin->powerOfTwoForR = 64;
+    tilingDatafromBin->epsilon = 1e-5;
+    tilingDatafromBin->nullptrGamma = 0;
+    tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->isFullB = false;
+    ICPU_SET_TILING_KEY(tilingKey);
+    ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
+}
+
+TEST_F(layer_norm_v3_test, test_welford_multi_reduce_float32)
+{
+    std::vector<int64_t> xShape = {32, 128};
+    std::vector<int64_t> gammaShape = {128};
+    std::string dtype = "float";
+    uint64_t tilingKey = 800000;
+    uint32_t blockNum = 2;
+    size_t tilingSize = sizeof(LayerNormV3TilingDataWelfordMultiReduce);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    LayerNormV3TilingDataWelfordMultiReduce* tilingDatafromBin =
+        reinterpret_cast<LayerNormV3TilingDataWelfordMultiReduce*>(tiling);
+
+    tilingDatafromBin->r1 = 1;
+    tilingDatafromBin->r0 = 128;
+    tilingDatafromBin->r0Align = 128;
+    tilingDatafromBin->n = 128;
+    tilingDatafromBin->numBlocks = 2;
+    tilingDatafromBin->mainBlockCount = 2;
+    tilingDatafromBin->mainBlockFactor = 16;
+    tilingDatafromBin->tailBlockFactor = 0;
+    tilingDatafromBin->cutR1OrR0 = 0;
+    tilingDatafromBin->r0Factor = 128;
+    tilingDatafromBin->r1Factor = 1;
+    tilingDatafromBin->loopR0outer = 1;
+    tilingDatafromBin->loopR1outer = 1;
+    tilingDatafromBin->tileLength = 128;
+    tilingDatafromBin->welfordTempSize = 8192;
+    tilingDatafromBin->welfordUpdateTimes = 2;
+    tilingDatafromBin->welfordUpdateTail = 0;
+    tilingDatafromBin->apiTempBufferSize = 8192;
+    tilingDatafromBin->nullptrGamma = 0;
+    tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->r1ComputeFactor = 1;
+    tilingDatafromBin->gammaPackedSize = 0;
+    tilingDatafromBin->epsilon = 1e-5;
+    ICPU_SET_TILING_KEY(tilingKey);
+    ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
+}
+
+TEST_F(layer_norm_v3_test, test_welford_multi_params_float32)
+{
+    std::vector<int64_t> xShape = {32, 128};
+    std::vector<int64_t> gammaShape = {128};
+    std::string dtype = "float";
+    uint64_t tilingKey = 900000;
+    uint32_t blockNum = 2;
+    size_t tilingSize = sizeof(LayerNormV3TilingDataWelfordMultiParams);
+    uint8_t* tiling = (uint8_t*)AscendC::GmAlloc(tilingSize);
+    LayerNormV3TilingDataWelfordMultiParams* tilingDatafromBin =
+        reinterpret_cast<LayerNormV3TilingDataWelfordMultiParams*>(tiling);
+
+    tilingDatafromBin->M = 32;
+    tilingDatafromBin->N = 128;
+    tilingDatafromBin->rAlign = 128;
+    tilingDatafromBin->numBlocks = 2;
+    tilingDatafromBin->mainBlockCount = 2;
+    tilingDatafromBin->mainBlockFactor = 16;
+    tilingDatafromBin->tailBlockFactor = 0;
+    tilingDatafromBin->tileLength = 128;
+    tilingDatafromBin->welfordTempSize = 8192;
+    tilingDatafromBin->welfordUpdateTimes = 2;
+    tilingDatafromBin->welfordUpdateTail = 0;
+    tilingDatafromBin->nullptrGamma = 0;
+    tilingDatafromBin->nullptrBeta = 0;
+    tilingDatafromBin->apiTempBufferSize = 8192;
+    tilingDatafromBin->paramsToNormSize = 1;
+    tilingDatafromBin->epsilon = 1e-5;
+    ICPU_SET_TILING_KEY(tilingKey);
+    ExcuteTestCase(xShape, gammaShape, dtype, tilingKey, blockNum, (uint8_t*)tilingDatafromBin);
+}
