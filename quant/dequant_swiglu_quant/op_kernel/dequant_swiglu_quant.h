@@ -113,12 +113,12 @@ protected:
     float quantScale_ = 1.0f;
     float quantOffset_ = 1.0f;
 
-    uint32_t UbSingleOutSize_ = 0;
-    uint32_t TBufActSclInOfs_ = 0;
-    uint32_t TBufXLocalInOfs_ = 0;
+    int64_t UbSingleOutSize_ = 0;
+    int64_t TBufActSclInOfs_ = 0;
+    int64_t TBufXLocalInOfs_ = 0;
 
-    int32_t actOffset_;
-    int32_t gateOffset_;
+    int64_t actOffset_ = 0;
+    int64_t gateOffset_ = 0;
 
     const DequantSwigluQuantBaseTilingData* tl_ = nullptr;
 };
@@ -145,8 +145,8 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::Init(
     yGm_.SetGlobalBuffer((__gm__ int8_t*)y);
     scaleGm_.SetGlobalBuffer((__gm__ float*)scale);
 
-    UbSingleOutSize_ = static_cast<uint32_t>(tl_->UbFactorDimx * tl_->outDimy);
-    TBufActSclInOfs_ = static_cast<uint32_t>(tl_->UbFactorDimx * tl_->inDimy);
+    UbSingleOutSize_ = tl_->UbFactorDimx * tl_->outDimy;
+    TBufActSclInOfs_ = tl_->UbFactorDimx * tl_->inDimy;
 #if (ORIG_DTYPE_X == DT_BF16)
     TBufXLocalInOfs_ = TBufActSclInOfs_;
 #endif
@@ -252,13 +252,16 @@ __aicore__ inline void DequantSwigluQuantBase<TEMPLATE_DSQ_ARGS>::CopyInQuantSca
     LocalTensor<float> inScaleLocal = inScaleQueue_.AllocTensor<float>();
     if (tl_->quantIsOne) {
         if constexpr (IsSameType<TQuantScale, bfloat16_t>::value) {
-            this->quantScale_ = 1 / ToFloat(this->quantScaleGm_.GetValue(groupIdx));
+            float rawScale = ToFloat(this->quantScaleGm_.GetValue(groupIdx));
+            this->quantScale_ = (rawScale == 0.0f) ? 1.0f : (1.0f / rawScale);
             this->quantOffset_ = ToFloat(this->quantOffsetGm_.GetValue(groupIdx));
         } else if constexpr (IsSameType<TQuantScale, half>::value) {
-            this->quantScale_ = 1 / static_cast<float>(this->quantScaleGm_.GetValue(groupIdx));
+            float rawScale = static_cast<float>(this->quantScaleGm_.GetValue(groupIdx));
+            this->quantScale_ = (rawScale == 0.0f) ? 1.0f : (1.0f / rawScale);
             this->quantOffset_ = static_cast<float>(this->quantOffsetGm_.GetValue(groupIdx));
         } else {
-            this->quantScale_ = 1 / this->quantScaleGm_.GetValue(groupIdx);
+            float rawScale = this->quantScaleGm_.GetValue(groupIdx);
+            this->quantScale_ = (rawScale == 0.0f) ? 1.0f : (1.0f / rawScale);
             this->quantOffset_ = this->quantOffsetGm_.GetValue(groupIdx);
         }
     }
