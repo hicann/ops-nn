@@ -4041,6 +4041,16 @@
   </tr>
   <tr>
     <td>quant</td>
+    <td><a href="../../quant/grouped_quant_max/README.md">group_max</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据输入的scale对输入x进行分组量化，并分组计算输入x的绝对值的最大值amax。</td>
+  </tr>
+  <tr>
+    <td>quant</td>
     <td><a href="../../quant/quantize/README.md">quantize</a></td>
     <td>✓</td>
     <td>✓</td>
