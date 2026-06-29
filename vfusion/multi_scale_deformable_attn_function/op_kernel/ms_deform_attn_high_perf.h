@@ -400,7 +400,7 @@ __aicore__ inline void KernelMultiScaleDeformableAttnOpt<num_points, embed_dims>
                     {1, 1, 1, static_cast<uint8_t>(embedBlk_), static_cast<uint8_t>(embedBlk_),
                         static_cast<uint8_t>(embedBlk_)});
             }
-            SetVectorMask<float>(FULL_MASK, FULL_MASK);
+            ResetMask();
         }
     }
 }
@@ -456,5 +456,6 @@ __aicore__ inline void KernelMultiScaleDeformableAttnOpt<num_points, embed_dims>
     WaitFlag<HardEvent::V_MTE2>(1);
     WaitFlag<HardEvent::MTE3_V>(0);
     WaitFlag<HardEvent::MTE3_V>(1);
+    ResetMask();
 }
 #endif // MS_DEFORM_ATTN_HIGH_PERF_H_
