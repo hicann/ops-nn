@@ -34,7 +34,7 @@ static constexpr MicroAPI::CastTrait castTraitFp32ToVarT = {
 template <typename T>
 __simd_vf__ inline void QuantizeForSumVf(
     __ubuf__ float* sumAddr, __ubuf__ float* rValueAddr, __ubuf__ int32_t* quantaSumAddr, uint16_t rowLen,
-    uint16_t loopCnt, uint32_t maskLen, uint32_t afterAxisAlignFp32, uint32_t vfLen, float scaling)
+    uint16_t loopCnt, uint32_t afterAxis, uint32_t afterAxisAlignFp32, uint32_t vfLen, float scaling)
 {
     AscendC::MicroAPI::RegTensor<float> dataReg;
     AscendC::MicroAPI::RegTensor<float> rValueReg;
@@ -44,6 +44,7 @@ __simd_vf__ inline void QuantizeForSumVf(
     AscendC::MicroAPI::MaskReg maskReg;
     AscendC::MicroAPI::MaskReg cmpReg;
     for (uint16_t rowIdx = 0; rowIdx < static_cast<uint16_t>(rowLen); rowIdx++) {
+        uint32_t maskLen = afterAxis;
         AscendC::MicroAPI::Duplicate(oneReg, (float)1);
         for (uint16_t i = 0; i < loopCnt; i++) {
             maskReg = AscendC::MicroAPI::UpdateMask<float>(maskLen);
@@ -66,7 +67,7 @@ __simd_vf__ inline void QuantizeForSumVf(
 template <typename T>
 __simd_vf__ inline void InverseQuantizeVf(
     __ubuf__ int32_t* sumQuanToIntAddr, __ubuf__ float* rValueAddr, __ubuf__ T* invQuantDataAddr, uint16_t rowLen,
-    uint16_t loopCnt, uint32_t maskLen, uint32_t afterAxisAlignFp32, uint32_t afterAxisAlignSize, uint32_t vfLen,
+    uint16_t loopCnt, uint32_t colLen, uint32_t afterAxisAlignFp32, uint32_t afterAxisAlignSize, uint32_t vfLen,
     float scaleValue)
 {
     AscendC::MicroAPI::RegTensor<int32_t> dataReg;
@@ -79,6 +80,7 @@ __simd_vf__ inline void InverseQuantizeVf(
     maskReg = AscendC::MicroAPI::CreateMask<float, AscendC::MicroAPI::MaskPattern::ALL>();
     AscendC::MicroAPI::Duplicate(scaleReg, scaleValue, maskReg);
     for (uint16_t rowIdx = 0; rowIdx < static_cast<uint16_t>(rowLen); rowIdx++) {
+        uint32_t maskLen = colLen;
         for (uint16_t i = 0; i < loopCnt; ++i) {
             pregLoop = AscendC::MicroAPI::UpdateMask<uint32_t>(maskLen);
             auto rowAlignOfst = rowIdx * afterAxisAlignFp32 + i * vfLen;
