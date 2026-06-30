@@ -87,7 +87,7 @@ aclnnStatus aclnnTake(
       <td>不支持负索引，取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
-      <td>≥8</td>
+      <td>≤8</td>
       <td>√</td>
     </tr>
     <tr>

@@ -120,7 +120,7 @@ bool CheckDtypeValid(
 aclnnStatus CheckParams(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* indices, aclTensor* gradInput)
 {
-    CHECK_RET(CheckNotNullPtr(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckNotNullPtr(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckShapeSame(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
