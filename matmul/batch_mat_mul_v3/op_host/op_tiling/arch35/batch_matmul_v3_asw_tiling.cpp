@@ -70,6 +70,8 @@ void BatchMatMulV3AswTiling::CheckTensorApiSupport()
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::HIGH_LEVEL;
     }
+    batchModel_ = (apiLevel_ == MatMulV3ApiLevel::TENSOR_LEVEL) ? MatMulV3BatchModel::BROADCAST_BATCH_MODEL :
+                                                                  MatMulV3BatchModel::BATCH_MODEL;
 }
 
 uint64_t BatchMatMulV3AswTiling::GetTilingKey() const
@@ -82,6 +84,7 @@ uint64_t BatchMatMulV3AswTiling::GetTilingKey() const
     return BatchMatMulV3TilingKey()
         .SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::BASIC)
+        .SetBatchModel(batchModel_)
         .SetApiLevel(apiLevel_)
         .GetTilingKey();
 }

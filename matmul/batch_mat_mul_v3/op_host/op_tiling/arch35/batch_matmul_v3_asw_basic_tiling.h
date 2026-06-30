@@ -41,7 +41,7 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
     void CalL1Tiling(const MatmulV3CompileInfo& compileInfo, const MatMulV3Args& args, MatMulV3RunInfo& runInfo) const;
-    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::TENSOR_LEVEL_BASIC};
+    MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::BASIC_LEVEL};
     MatMulV3FullLoad fullLoad_{MatMulV3FullLoad::NONE_FULL_LOAD};
 };
 } // namespace batch_matmul_v3_advanced

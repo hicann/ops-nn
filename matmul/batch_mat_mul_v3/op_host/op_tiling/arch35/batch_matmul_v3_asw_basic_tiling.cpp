@@ -95,7 +95,7 @@ void BatchMatMulV3AswBasicTiling::CheckTensorApiSupport()
         isSplitK = true;
     }
     // 非切K且连续场景下才允许切换tensor api实现
-    apiLevel_ = (isBatchMatmul && !isNonContiguous && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL_BASIC :
+    apiLevel_ = (isBatchMatmul && !isNonContiguous && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL :
                                                                    MatMulV3ApiLevel::BASIC_LEVEL;
     // offset_x约定特殊值时强制使用基础API
     if (args_.isForceBasicApi) {

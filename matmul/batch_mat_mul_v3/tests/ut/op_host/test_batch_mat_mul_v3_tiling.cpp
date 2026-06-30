@@ -401,7 +401,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {10, 10, 320, 32}, {10, 10, 32, 32}, {10, 10, 320, 32}, false, 0, 0, 32, 3UL,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, false, {10, 10, 320, 32}, {10, 10, 32, 32}, {10, 10, 320, 32}, false, 0, 0, 32, 2UL,
     "32 320 32 32 160 32 32 160 32 32 32 1 1 1 1 0 0 33686528 0 160 1 0 100 0 "
   },
   // singleCoreM 256->16
@@ -411,7 +411,7 @@ static TilingTestParam ascend950_cases_params[] = {
       "block_dim":{"CORE_NUM":32, "vector_core_cnt": 64},"corerect_range_flag":null,"dynamic_mode":"dynamic_mkn", "fused_double_operand_num": 0,
       "hardware_info": {"BT_SIZE": 4096, "load3d_constraints": "unknown", "Intrinsic_fix_pipe_l0c2out": true, "Intrinsic_data_move_l12ub": false, "Intrinsic_data_move_l0c2ub": false, "Intrinsic_data_move_l12bt": true, "Intrinsic_data_move_out2l1_nd2nz": true, "UB_SIZE": 253952, "L2_SIZE": 134217728, "L1_SIZE": 524288, "L0A_SIZE": 65536, "L0B_SIZE": 65536, "L0C_SIZE": 262144, "CORE_NUM": 32, "vector_core_cnt": 64, "socVersion": "Ascend950" },
       "format_a":"ND","format_b":"ND","repo_range":{},"repo_seeds":{}})",
-    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, true, {1, 1}, {1, 1}, {1, 1}, false, 0, 0, 32, 3UL,
+    ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, ge::FORMAT_ND, false, false, 0, true, {1, 1}, {1, 1}, {1, 1}, false, 0, 0, 32, 2UL,
     "1 1 1 1 16 16 16 16 16 16 1 1 1 1 1 0 0 33686529 0 16 1 0 1 0"
   },
   // singeCoreK / baseK < 8  -> 之前stepK= 1 全载场景去掉上述判断代码以后, stepK = 2
@@ -1408,7 +1408,7 @@ TEST_F(BatchMatMulV3TilingRuntime, 910d_transpose_non_contiguous_cases2)
         "32 196 196 128 208 128 128 208 128 64 128 1 1 1 1 0 0 33686528 0 208 1 0 16 0 ",
         case_name, tiling_key);
     cout << "===== " << tiling_key << " === " << tiling_data_result << std::endl;
-    ASSERT_EQ(tiling_key, 3UL);
+    ASSERT_EQ(tiling_key, 2UL);
     ASSERT_EQ(block_dim, 32);
     ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }

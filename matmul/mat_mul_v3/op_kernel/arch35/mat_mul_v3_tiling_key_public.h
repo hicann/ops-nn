@@ -15,11 +15,9 @@
 
 #pragma once
 
-#define MAT_MUL_TENSOR_LEVEL_BASIC 3
-#define MAT_MUL_TENSOR_LEVEL 2
-#define MAT_MUL_BASIC_LEVEL 1 // 数据类型定义
+#define MAT_MUL_TENSOR_LEVEL 2 // 数据类型定义
+#define MAT_MUL_BASIC_LEVEL 1
 #define MAT_MUL_HIGH_LEVEL 0
-#define MAT_MUL_TENSOR_LEVEL 2
 
 #define MAT_MUL_NO_TRANS 0 //  数据格式定义
 #define MAT_MUL_TRANS 1
@@ -29,6 +27,7 @@
 #define MAT_MUL_BATCH_MATMUL_TO_MUL 2
 #define MAT_MUL_MERGE_BATCH 3
 #define MAT_MUL_FOR_FUSED_BATCH 4
+#define MAT_MUL_BROADCAST_BATCH 5
 
 #define MAT_MUL_BASIC 0
 #define MAT_MUL_STREAM_K 1
@@ -48,21 +47,20 @@
 enum class MatMulV3ATrans : std::uint8_t
 {
     A_NO_TRANS = MAT_MUL_NO_TRANS,
-    A_TRANS = MAT_MUL_TRANS,
+    A_TRANS = MAT_MUL_TRANS
 };
 
 enum class MatMulV3BTrans : std::uint8_t
 {
     B_NO_TRANS = MAT_MUL_NO_TRANS,
-    B_TRANS = MAT_MUL_TRANS,
+    B_TRANS = MAT_MUL_TRANS
 };
 
 enum class MatMulV3ApiLevel : std::uint8_t
 {
     HIGH_LEVEL = MAT_MUL_HIGH_LEVEL,
     BASIC_LEVEL = MAT_MUL_BASIC_LEVEL,
-    TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL,
-    TENSOR_LEVEL_BASIC = MAT_MUL_TENSOR_LEVEL_BASIC
+    TENSOR_LEVEL = MAT_MUL_TENSOR_LEVEL
 };
 
 enum class MatMulV3BatchModel : std::uint8_t
@@ -71,7 +69,8 @@ enum class MatMulV3BatchModel : std::uint8_t
     SINGLE_BIAS_MODEL = MAT_MUL_ITER_BATCH_SINGLE_BIAS,
     BATCH_MATMUL_TO_MUL = MAT_MUL_BATCH_MATMUL_TO_MUL,
     MERGE_BATCH_MODEL = MAT_MUL_MERGE_BATCH,
-    FUSED_BATCH_MODEL = MAT_MUL_FOR_FUSED_BATCH //只用于FusedMatMul的Bmm场景
+    FUSED_BATCH_MODEL = MAT_MUL_FOR_FUSED_BATCH,    // 只用于FusedMatMul的Bmm场景
+    BROADCAST_BATCH_MODEL = MAT_MUL_BROADCAST_BATCH // 只用于BatchMatMul广播场景
 };
 
 enum class MatMulV3Model : std::uint8_t

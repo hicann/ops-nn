@@ -245,7 +245,7 @@ __global__ __aicore__ void batch_mat_mul_v3(
 #if !__FIXED_POINT_ONLY_CUBE_TO_L0C__
     } else if constexpr (
         BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
-        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_BROADCAST_BATCH) {
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3TilingData, tilingData, tilingGM);
 #if IS_BLAZE
         BatchMatMulV3Advanced::BatchMatMulBroadcastKernel<
@@ -257,9 +257,8 @@ __global__ __aicore__ void batch_mat_mul_v3(
             MM_CFG_NO_PRELOAD);
 #endif
     } else if constexpr (
-        BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL_BASIC && BMODEL == MAT_MUL_BASIC &&
-        BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD && BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY &&
-        BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
+        BATCH_API_LEVEL == MAT_MUL_TENSOR_LEVEL && BMODEL == MAT_MUL_BASIC && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+        BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
         GET_TILING_DATA_WITH_STRUCT(BatchMatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
         MatmulV3Advanced::MatMulBasicKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC>(
@@ -295,7 +294,7 @@ __global__ __aicore__ void batch_mat_mul_v3(
         BatchMatMulToMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, workspaceGM, tilingData);
     } else if constexpr (
-        BATCH_API_LEVEL == MAT_MUL_HIGH_LEVEL && BMODEL == MAT_MUL_K_EQUAL_ZERO && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+        BATCH_API_LEVEL == MAT_MUL_BASIC_LEVEL && BMODEL == MAT_MUL_K_EQUAL_ZERO && BATCH_FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
         BATCH_L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY && BATCH_ITER_MODEL == MAT_MUL_FOR_BATCH) {
         TPipe pipe;
         GET_TILING_DATA_WITH_STRUCT(MatMulV3KEqZeroBasicTilingData, tilingData, tilingGM);
