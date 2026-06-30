@@ -47,7 +47,7 @@ inline const gert::Shape& EnsureNotScalar(const gert::Shape& inShape, const gert
 }
 static ge::graphStatus convertCompileInfo(
     const RepeatInterleaveGradCompileInfo* compileInfo, ReduceOpCompileInfo* reduceCompileInfo,
-    gert::TilingContext* context)
+    const gert::TilingContext* context)
 {
     reduceCompileInfo->cacheLineSize = static_cast<uint64_t>(compileInfo->clSize);
     reduceCompileInfo->ubBlockSize = static_cast<uint64_t>(compileInfo->blockSize);
@@ -93,7 +93,7 @@ static ge::graphStatus DoTiling(
     return status;
 }
 
-static ge::graphStatus GetRIGDim(gert::TilingContext* context, int64_t& axis_, int64_t yDimNum)
+static ge::graphStatus GetRIGDim(const gert::TilingContext* context, int64_t& axis_, int64_t yDimNum)
 {
     auto attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
