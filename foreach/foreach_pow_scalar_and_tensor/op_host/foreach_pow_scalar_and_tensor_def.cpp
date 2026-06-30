@@ -45,7 +45,15 @@ public:
             .Format(format_list)
             .UnknownShapeFormat(format_list)
             .AutoContiguous();
-        this->AICore().AddConfig("ascend950");
+        OpAICoreConfig aicoreConfig950;
+        aicoreConfig950.DynamicCompileStaticFlag(true)
+            .DynamicFormatFlag(false)
+            .DynamicRankSupportFlag(true)
+            .DynamicShapeSupportFlag(true)
+            .NeedCheckSupportFlag(false)
+            .PrecisionReduceFlag(true)
+            .ExtendCfgInfo("opFile.value", "foreach_pow_scalar_and_tensor");
+        this->AICore().AddConfig("ascend950", aicoreConfig950);
         this->AICore().AddConfig("ascend910_93");
         this->AICore().AddConfig("ascend910b");
 
