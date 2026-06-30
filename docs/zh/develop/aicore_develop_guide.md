@@ -475,7 +475,7 @@ ${op_name}
             └── test_${op_name}.cpp                     # Kernel UT实现
 ```
 
-执行UT验证的命令，请参考[算子调用](../invocation/quick_op_invocation.md)。下面将依次介绍各UT交付件的编写。
+执行UT验证的命令，请参考[本地验证](../install/compile.md#本地验证)。下面将依次介绍各UT交付件的编写。
 
 #### Infershape UT
 
