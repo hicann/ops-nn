@@ -108,7 +108,9 @@ float BinaryCrossEntropyGradTiling::CalcMeanCof()
             if (inputLabelShape.GetDim(i) != 0) {
                 dimVal = dimVal * inputLabelShape.GetDim(i);
             } else {
-                OP_LOGE(context_->GetNodeName(), "the shape[%u] is 0, do not supported", i);
+                OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), "output",
+                                                      Ops::Base::ToString(inputLabelShape),
+                                                      "All axes of output must be a positive number");
                 return ge::GRAPH_FAILED;
             }
         }

@@ -632,7 +632,10 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
     int64_t colMoveCnt = CEIL_DIV(numCol, colPerTime);
     int64_t colTail =
         (numCol % colPerTime == 0U) ? colPerTime : (numCol % colPerTime);
-    OP_CHECK_IF(dataTypeSize == 0, OP_LOGE(context, "dataTypeSize is zero."), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(dataTypeSize == 0,
+                OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(context->GetNodeName(), "x1", Ops::Base::ToString(dataType),
+                                                      "The dtype size of x1 must be greater than 0."),
+                return ge::GRAPH_FAILED);
     auto blockElementNum = BLOCK_SIZE / dataTypeSize;
     if (is310P) {
         if (((numCol % blockElementNum) != 0) &&

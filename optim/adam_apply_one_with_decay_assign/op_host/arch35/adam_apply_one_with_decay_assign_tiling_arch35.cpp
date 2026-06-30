@@ -137,7 +137,7 @@ ge::graphStatus AdamApplyOneWithDecayAssignTiling::DoOpTiling()
     return ge::GRAPH_SUCCESS;
 }
 
-bool AdamApplyOneWithDecayAssignTiling::CheckIsScalar(int32_t inputIdx)
+bool AdamApplyOneWithDecayAssignTiling::CheckIsScalar(int32_t inputIdx, std::string param)
 {
     auto inputShape = context_->GetInputShape(inputIdx);
     OP_CHECK_NULL_WITH_CONTEXT(context_, inputShape);
@@ -145,32 +145,18 @@ bool AdamApplyOneWithDecayAssignTiling::CheckIsScalar(int32_t inputIdx)
     if (storageShape.IsScalar() || storageShape.GetShapeSize() == 1) {
         return true;
     }
+    OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context_->GetNodeName(), param, Ops::Base::ToString(storageShape),
+                                          param + " must be a scalar.");
     return false;
 }
 
 ge::graphStatus AdamApplyOneWithDecayAssignTiling::CheckShape()
 {
-    OP_CHECK_IF(
-        !CheckIsScalar(INPUT4_INDEX), OP_LOGE(context_->GetNodeName(), "Input η must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(BETA1_INDEX), OP_LOGE(context_->GetNodeName(), "Input β1 must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(BETA2_INDEX), OP_LOGE(context_->GetNodeName(), "Input β2 must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(BETA3_INDEX), OP_LOGE(context_->GetNodeName(), "Input β3 must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(BETA4_INDEX), OP_LOGE(context_->GetNodeName(), "Input β4 must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(BETA5_INDEX), OP_LOGE(context_->GetNodeName(), "Input λ must be scalar."),
-        return ge::GRAPH_FAILED);
-    OP_CHECK_IF(
-        !CheckIsScalar(ADD2_INDEX), OP_LOGE(context_->GetNodeName(), "Input ϵ must be scalar."),
-        return ge::GRAPH_FAILED);
+    if (!CheckIsScalar(INPUT4_INDEX, "η") || !CheckIsScalar(BETA1_INDEX, "β1") || !CheckIsScalar(BETA2_INDEX, "β2") ||
+        !CheckIsScalar(BETA3_INDEX, "β3") || !CheckIsScalar(BETA4_INDEX, "β4") || !CheckIsScalar(BETA5_INDEX, "λ") ||
+        !CheckIsScalar(ADD2_INDEX, "ϵ")) {
+        return ge::GRAPH_FAILED;
+    }
     return ge::GRAPH_SUCCESS;
 }
 

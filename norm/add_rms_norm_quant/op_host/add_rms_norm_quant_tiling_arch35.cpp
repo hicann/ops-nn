@@ -482,7 +482,8 @@ ge::graphStatus AddRmsNormQuantRegbaseTiling::SetInputParams()
     const float* epsilon = attrs->GetFloat(EPS_ATTR_INDEX);
     tilingParams.epsilon = (epsilon == nullptr) ? DEFAULT_EPSILON : *epsilon;
     if (0 == numN) {
-        OP_LOGE(nodeName.c_str(), "Can not div zero.");
+        OP_LOGE_FOR_INVALID_SHAPESIZE_WITH_REASON(nodeName.c_str(), "gamma", "0",
+                                                  "The shape size of gamma should be greater than 0.");
         return ge::GRAPH_FAILED;
     }
     tilingParams.avgFactor = 1.0f / static_cast<float>(numN);

@@ -43,7 +43,7 @@ protected:
     ge::graphStatus GetWorkspaceSize() override;
     ge::graphStatus PostTiling() override;
 
-    bool CheckIsScalar(int32_t inputIdx);
+    bool CheckIsScalar(int32_t inputIdx, std::string param);
     ge::graphStatus CheckShape();
 
 private:
