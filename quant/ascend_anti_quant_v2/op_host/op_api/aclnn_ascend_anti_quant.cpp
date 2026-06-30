@@ -196,7 +196,6 @@ static bool CheckXAndScaleDim(const aclTensor* x, const aclTensor* scale)
     auto xLastDim = (xDimNum > 0) ? xShape.GetDim(xDimNum - 1) : 0;
     auto xSecondLastDim = (xDimNum > 1) ? xShape.GetDim(xDimNum - 2) : 0;
     auto scaleLastDim = (scaleDimNum > 0) ? scaleShape.GetDim(scaleDimNum - 1) : 0;
-
     if (xDimNum == 1 && scaleLastDim != 1 && scaleLastDim != xLastDim * INT4_NUMS_IN_INT32) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID,
             "when the dtype of x is int32 and x dim is 1, scale shape must be [1] or 8 times of x shape.");

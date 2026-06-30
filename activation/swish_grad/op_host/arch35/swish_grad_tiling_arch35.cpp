@@ -15,7 +15,6 @@
 #include "swish_grad_tiling_arch35.h"
 #include <graph/utils/type_utils.h>
 #include "tiling/tiling_api.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "register/op_def_registry.h"
 #include "register/op_impl_registry.h"
 #include "log/log.h"

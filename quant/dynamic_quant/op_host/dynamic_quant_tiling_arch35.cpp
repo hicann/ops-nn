@@ -16,7 +16,6 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 #include "quant/dynamic_quant/op_kernel/arch35/dynamic_quant_struct.h"
@@ -105,7 +104,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpDim(
 }
 
 // 检查输入的shape是否符合要求，设置groupNum
-ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckOpInputShape(const gert::TilingContext* context)
 {
     auto xShape = context->GetInputShape(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xShape);
@@ -187,7 +186,7 @@ OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(context->GetNodeName(), "x", Ops::Base::To
 }
 
 // 检查输出shape
-ge::graphStatus DynamicQuantRegbaseTiling::CheckOpOutputShape(gert::TilingContext* context) const
+ge::graphStatus DynamicQuantRegbaseTiling::CheckOpOutputShape(const gert::TilingContext* context) const
 {
     auto xShape = context->GetInputShape(X_INDEX);
     size_t xDimNum = xShape->GetStorageShape().GetDimNum();
@@ -252,7 +251,7 @@ OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(context->GetNodeName(), "scale, offset",
 }
 
 // 检查算子全部变量的shape
-ge::graphStatus DynamicQuantRegbaseTiling::CheckOpShape(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckOpShape(const gert::TilingContext* context)
 {
     OP_CHECK_IF(
         (CheckOpInputShape(context) != ge::GRAPH_SUCCESS),
@@ -265,7 +264,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOpShape(gert::TilingContext* con
 }
 
 // 检查输出的数据类型
-ge::graphStatus DynamicQuantRegbaseTiling::CheckOutputDtype(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckOutputDtype(const gert::TilingContext* context)
 {
     auto yDesc = context->GetOutputDesc(Y_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, yDesc);
@@ -299,7 +298,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckOutputDtype(gert::TilingContext*
 }
 
 // 检查输入的数据类型
-ge::graphStatus DynamicQuantRegbaseTiling::CheckInputDtype(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckInputDtype(const gert::TilingContext* context)
 {
     auto xDesc = context->GetInputDesc(X_INDEX);
     OP_CHECK_NULL_WITH_CONTEXT(context, xDesc);
@@ -336,7 +335,7 @@ OP_LOGE_FOR_INVALID_DTYPE(context->GetNodeName(), "group_index", ge::TypeUtils::
 }
 
 // 检查attr是否符合要求
-ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(const gert::TilingContext* context)
 {
     auto* attrs = context->GetAttrs();
     OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
@@ -394,7 +393,7 @@ ge::graphStatus DynamicQuantRegbaseTiling::CheckAttrs(gert::TilingContext* conte
 }
 
 // 检查所有变量是否符合要求
-ge::graphStatus DynamicQuantRegbaseTiling::CheckOpParams(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::CheckOpParams(const gert::TilingContext* context)
 {
     OP_CHECK_IF(
         (CheckInputDtype(context) != ge::GRAPH_SUCCESS),
@@ -619,7 +618,7 @@ void DynamicQuantRegbaseTiling::IsCapableForFullLoad(const gert::TilingContext* 
     totalBlockNum = batchBlockNum * nBlockNum;
 }
 
-void DynamicQuantRegbaseTiling::IsCapableForRecompute(gert::TilingContext* context)
+void DynamicQuantRegbaseTiling::IsCapableForRecompute(const gert::TilingContext* context)
 {
     bool iscapable = false;
     int64_t newSize;
@@ -763,7 +762,7 @@ void DynamicQuantRegbaseTiling::PrintTilingDataForPerChannel(gert::TilingContext
 }
 
 // 获取核数vectorCoreNum和UB大小ubSize
-ge::graphStatus DynamicQuantRegbaseTiling::GetCompileInfo(gert::TilingContext* context)
+ge::graphStatus DynamicQuantRegbaseTiling::GetCompileInfo(const gert::TilingContext* context)
 {
     auto compileInfo = context->GetCompileInfo<DynamicQuantCompileInfo>();
     OP_CHECK_NULL_WITH_CONTEXT(context, compileInfo);

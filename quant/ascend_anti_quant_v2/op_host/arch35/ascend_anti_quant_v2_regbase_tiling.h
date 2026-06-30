@@ -29,9 +29,9 @@
 #include "op_host/tiling_templates_registry.h"
 #include "../op_kernel/arch35/ascend_anti_quant_v2_tilingdata.h"
 
+namespace optiling {
 using namespace Ops::NN::Optiling;
 
-namespace optiling {
 struct AscendAntiQuantV2CompileInfo {
     int32_t vectorCoreNum = 0;
     uint64_t ubSize = 0;
@@ -75,7 +75,7 @@ protected:
 
 private:
     gert::TilingContext* context_ = nullptr;
-    AscendAntiQuantV2TilingData tilingData;
+    AscendAntiQuantV2TilingData tilingData_;
 
     int64_t coreNum_{0};
     uint64_t ubSize_{0};
@@ -88,7 +88,6 @@ private:
     ge::DataType yDtype_{ge::DT_UNDEFINED};
     ge::DataType scaleDtype_{ge::DT_UNDEFINED};
     bool hasOffset_{true};
-    bool useDoubleCut{false};
     int16_t sqrtMode_ = 0;
     int32_t dstType_ = 0;
 

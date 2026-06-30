@@ -50,6 +50,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
 // 根据API定义，需要列出所能支持的所有approximate
 static const int64_t APPROXIMATE_NONE_NUM = 0;
 static const int64_t APPROXIMATE_TANH_NUM = 1;
+static constexpr int64_t SPLIT_FACTOR = 2;
 
 static inline bool CheckNotNull(
     const aclTensor* gradOutput, const aclTensor* self, const aclTensor* gelu, const aclTensor* gradInput)
@@ -102,7 +103,7 @@ static inline bool CheckGradOutputDims(
         }
     }
 
-    if (gradOutput->GetViewShape().GetDim(splitDim) * 2 != self->GetViewShape().GetDim(splitDim)) {
+    if (gradOutput->GetViewShape().GetDim(splitDim) * SPLIT_FACTOR != self->GetViewShape().GetDim(splitDim)) {
         OP_LOGE(
             ACLNN_ERR_PARAM_INVALID,
             "the last dimension of gradOutput: %s must be the half of the last dimension of self: %s",

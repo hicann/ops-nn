@@ -46,6 +46,8 @@ constexpr size_t FIRST_DIM = 0;
 static constexpr int64_t INT4_NUMS_IN_INT8_SPACE = 2;
 constexpr int64_t DEFAULT_BASE_LEN = 128;
 constexpr int64_t BUFF_NUM = 2;
+constexpr size_t MAX_SHAPE_DIM_NUM = 8;
+constexpr size_t MIN_SHAPE_DIM_NUM = 1;
 
 const gert::Shape g_vec_1_shape = {1};
 
@@ -214,8 +216,7 @@ ge::graphStatus AscendQuantRegbase::CheckAttrs()
 ge::graphStatus AscendQuantRegbase::CheckShape(const gert::Shape& xShape, const gert::Shape& yShape) const
 {
     size_t xDimNum = xShape.GetDimNum();
-
-    if (xDimNum > 8 || xDimNum < 1) {
+    if (xDimNum > MAX_SHAPE_DIM_NUM || xDimNum < MIN_SHAPE_DIM_NUM) {
         OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON(context_->GetNodeName(), "x", std::to_string(xDimNum),
                                                   "The shape dim of x must be within the range [1,8]");
         return ge::GRAPH_FAILED;
