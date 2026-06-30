@@ -167,7 +167,6 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::VFMode1DbetaDs(
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDgamma;
         RegTensor<float> tempDbeta;
-        RegTensor<float> tempDgamma;
         RegTensor<float> vregX;
         RegTensor<float> vregDy;
         for (uint16_t idx = 0; idx < static_cast<uint16_t>(curCNum); idx++) {
@@ -186,11 +185,10 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::VFMode1DbetaDs(
                 preg = UpdateMask<float>(sreg);
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
-                Mul(vregX, vregX, vregDy, preg);
+                MulDstAdd(vregX, vregDy, vregDgamma, preg);
                 Add(tempDbeta, vregDbeta, vregDy, preg);
-                Add(tempDgamma, vregDgamma, vregX, preg);
                 Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, tempDgamma, preg);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
             }
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             ReduceSum(vregDbeta, vregDbeta, pregAll);
@@ -219,8 +217,8 @@ __aicore__ inline void GroupNormGradCFullLoad<T, U>::ComputeMode1Dx(
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
     float s = 1.0f / this->eleNumPerG_;
-    float C2 = (sum2 * this->meanScalar_ - sum1) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
-    float C3 = -C2 * this->meanScalar_ - sum2 * this->rstdScalar_ * s;
+    float C2 = (sum2 * this->meanScalar_ + (0 - sum1)) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
+    float C3 = (0 - C2) * this->meanScalar_  + (0 - sum2 * this->rstdScalar_ * s);
     this->outQueDbeta_.FreeTensor(dbetaTensor);
     this->outQueDs_.FreeTensor(dsTensor);
     LocalTensor<T> xTensor;

@@ -223,9 +223,8 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::ComputeStage1(int32_
         LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
         this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
         float s = 1.0f / this->eleNumPerG_;
-        float C2 = (sum2 * this->meanScalar_ - sum1) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
-        float C3 = -C2 * this->meanScalar_ - sum2 * this->rstdScalar_ * s;
-
+        float C2 = (sum2 * this->meanScalar_ + (0 - sum1)) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
+        float C3 = (0 - C2) * this->meanScalar_ + (0 - sum2 * this->rstdScalar_ * s);
         if (this->dgammaIsRequire_ || this->dbetaIsRequire_) {
             // 需要计算(ds - mean*db)*rstd
             LocalTensor<float> dgammaTensor = this->outQueDgamma_.template AllocTensor<float>();
@@ -325,11 +324,10 @@ __aicore__ inline void GroupNormGradSmallNGCFullLoad<T, U>::VFMode0DbetaDs(
             preg = UpdateMask<float>(sreg);
             LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
             LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
-            Mul(vregX, vregX, vregDy, preg);
+            MulDstAdd(vregX, vregDy, vregDs, preg);
             Add(tempDbeta, vregDbeta, vregDy, preg);
-            Add(tempDs, vregDs, vregX, preg);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, tempDs, preg);
+            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDs, vregX, preg);
 
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             ReduceSum(vregDbeta, vregDbeta, pregAll);
