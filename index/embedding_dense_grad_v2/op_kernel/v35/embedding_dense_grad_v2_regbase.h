@@ -1060,32 +1060,60 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     uint32_t beginNumber = indicesNumber;
     uint32_t endNumber = indicesNumber + 1;
 
+    constexpr static uint32_t perVfProcessNum = platform::GetVRegSize() / sizeof(int32_t);
+    uint32_t srcStride = perVfProcessNum * interval;
+    uint32_t beginLoop = (beginNumber + perVfProcessNum - 1) / perVfProcessNum;
+    uint32_t endLoop = (endNumber + perVfProcessNum - 1) / perVfProcessNum;
+
+    auto ubBeginSrc = ubBeginAddr;
+    auto ubBeginDst = ubBeginAddr;
+    auto ubEndSrc = ubEndAddr;
+    auto ubEndDst = ubEndAddr;
+
     __VEC_SCOPE__ {
         RegTensorType index;
         RegCastType indexCast;
         RegTensorType vregBegin;
         RegTensorType vregEnd;
 
-        MicroAPI::MaskReg beginMask;
-        MicroAPI::MaskReg endMask;
+        MicroAPI::MaskReg pMaskAll;
         if constexpr (IsSameType<IDX_T, int64_t>::value) {
-            beginMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(beginNumber);
-            endMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(endNumber);
+            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL, MicroAPI::RegTraitNumTwo>();
         } else {
-            beginMask = MicroAPI::UpdateMask<IDX_T>(beginNumber);
-            endMask = MicroAPI::UpdateMask<IDX_T>(endNumber);
+            pMaskAll = MicroAPI::CreateMask<IDX_T, MicroAPI::MaskPattern::ALL>();
         }
 
         MicroAPI::Arange(index, 0);
-
-        Muls(index, index, (IDX_T)interval, endMask);
+        Muls(index, index, (IDX_T)interval, pMaskAll);
         indexCast = (RegCastType&)index;
 
-        MicroAPI::DataCopyGather(vregBegin, (__local_mem__ IDX_T *)(ubBeginAddr), indexCast, beginMask);
-        MicroAPI::DataCopyGather(vregEnd, (__local_mem__ IDX_T *)(ubEndAddr), indexCast, endMask);
+        uint32_t sregBegin = beginNumber;
+        for (uint16_t i = 0; i < beginLoop; ++i) {
+            MicroAPI::MaskReg pMask;
+            if constexpr (IsSameType<IDX_T, int64_t>::value) {
+                pMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sregBegin);
+            } else {
+                pMask = MicroAPI::UpdateMask<IDX_T>(sregBegin);
+            }
+            MicroAPI::DataCopyGather(vregBegin, (__local_mem__ IDX_T *)(ubBeginSrc), indexCast, pMask);
+            MicroAPI::DataCopy((__local_mem__ IDX_T *)ubBeginDst, vregBegin, pMask);
+            ubBeginSrc = ubBeginSrc + srcStride;
+            ubBeginDst = ubBeginDst + perVfProcessNum;
+        }
 
-        MicroAPI::DataCopy((__local_mem__ IDX_T *)ubBeginAddr, vregBegin, beginMask);
-        MicroAPI::DataCopy((__local_mem__ IDX_T *)ubEndAddr, vregEnd, endMask);
+        uint32_t sregEnd = endNumber;
+        for (uint16_t i = 0; i < endLoop; ++i) {
+            MicroAPI::MaskReg pMask;
+            if constexpr (IsSameType<IDX_T, int64_t>::value) {
+                pMask = MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sregEnd);
+            } else {
+                pMask = MicroAPI::UpdateMask<IDX_T>(sregEnd);
+            }
+            MicroAPI::DataCopyGather(vregEnd, (__local_mem__ IDX_T *)(ubEndSrc), indexCast, pMask);
+            MicroAPI::DataCopy((__local_mem__ IDX_T *)ubEndDst, vregEnd, pMask);
+            ubEndSrc = ubEndSrc + srcStride;
+            ubEndDst = ubEndDst + perVfProcessNum;
+        }
     }
 }
 
@@ -1102,11 +1130,14 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
     auto ubIdxEndAddr = (__ubuf__ IDX_T*)indicesEndTensor.GetPhyAddr();
     auto ubDstAddr = (__ubuf__ IDX_T*)rearrangeIndices.GetPhyAddr(indexCountInBlock_);
 
-    uint32_t tailNum = totalIndicesNum > perVfIndices_? (totalIndicesNum - perVfIndices_) : 0;
-    uint32_t stride = perVfIndices_;
-    if constexpr (IsSameType<IDX_T, int64_t>::value) {
-        stride = perVfIndices_ * DOUBLE;
-    }
+    constexpr static uint32_t perVfProcessNum = platform::GetVRegSize() / sizeof(int32_t);
+    uint32_t perInterleave = perVfProcessNum * DOUBLE;
+    uint32_t strideNum = perVfProcessNum;
+    uint32_t totalLoop = (totalIndicesNum + perInterleave - 1) / perInterleave;
+
+    auto ubIdxBeginSrc = ubIdxBeginAddr;
+    auto ubIdxEndSrc = ubIdxEndAddr;
+    auto ubDst = ubDstAddr;
 
     __VEC_SCOPE__
     {
@@ -1115,22 +1146,26 @@ __aicore__ inline void EmbeddingDenseGradV2Kernel<GRAD_T, CAST_T, IDX_T, isScale
         RegTensorType vDstReg0;
         RegTensorType vDstReg1;
 
-        AscendC::MicroAPI::DataCopy(vSrcReg0, ubIdxEndAddr);
-        AscendC::MicroAPI::DataCopy(vSrcReg1, ubIdxBeginAddr);
-        AscendC::MicroAPI::Interleave(vDstReg0, vDstReg1, vSrcReg0, vSrcReg1);
-
-        MicroAPI::MaskReg lowerMask;
-        MicroAPI::MaskReg higherMask;
-        if constexpr (IsSameType<IDX_T, int64_t>::value) {
-            lowerMask = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(totalIndicesNum);
-            higherMask = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(tailNum);
-        } else {
-            lowerMask = AscendC::MicroAPI::UpdateMask<IDX_T>(totalIndicesNum);
-            higherMask = AscendC::MicroAPI::UpdateMask<IDX_T>(tailNum);
+        uint32_t sreg = totalIndicesNum;
+        for (uint16_t i = 0; i < totalLoop; i++) {
+            AscendC::MicroAPI::DataCopy(vSrcReg0, ubIdxEndSrc);
+            AscendC::MicroAPI::DataCopy(vSrcReg1, ubIdxBeginSrc);
+            AscendC::MicroAPI::Interleave(vDstReg0, vDstReg1, vSrcReg0, vSrcReg1);
+            MicroAPI::MaskReg mask0;
+            MicroAPI::MaskReg mask1;
+            if constexpr (IsSameType<IDX_T, int64_t>::value) {
+                mask0 = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sreg);
+                mask1 = AscendC::MicroAPI::UpdateMask<IDX_T, MicroAPI::RegTraitNumTwo>(sreg);
+            } else {
+                mask0 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
+                mask1 = AscendC::MicroAPI::UpdateMask<IDX_T>(sreg);
+            }
+            AscendC::MicroAPI::DataCopy(ubDst, vDstReg0, mask0);
+            AscendC::MicroAPI::DataCopy(ubDst + strideNum, vDstReg1, mask1);
+            ubIdxEndSrc = ubIdxEndSrc + perVfProcessNum;
+            ubIdxBeginSrc = ubIdxBeginSrc + perVfProcessNum;
+            ubDst = ubDst + perInterleave;
         }
-
-        AscendC::MicroAPI::DataCopy(ubDstAddr, vDstReg0, lowerMask);
-        AscendC::MicroAPI::DataCopy(ubDstAddr + stride, vDstReg1, higherMask);
     }
 
     inQueGrad_.FreeTensor(indicesBeginTensor);
