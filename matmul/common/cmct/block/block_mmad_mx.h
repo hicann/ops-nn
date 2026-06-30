@@ -535,10 +535,24 @@ public:
                 LocalTensor<AType> l0a = l0aLocal.template ReinterpretCast<AType>();
                 uint64_t loadTimes =
                     Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), MIN_STEP);
-                for (uint64_t i = 1; i < loadTimes; i++) {
-                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                    AscendC::LoadData(l0a[i * m1 * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
-                    PipeBarrier<PIPE_MTE1>();
+                if constexpr (IS_FP4) {
+                    loadData2DMxParams.xStartPosition = 0;
+                    loadData2DMxParams.yStartPosition = 0;
+                    loadData2DMxParams.xStep = 0;
+                    loadData2DMxParams.yStep = 0;
+                    loadData2DMxParams.srcStride = 0;
+                    loadData2DMxParams.dstStride = 0;
+                    for (uint64_t i = 1; i < loadTimes; i++) {
+                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                        AscendC::LoadData(l0a[i * m1 * BLOCK_CUBE * C0_SIZE], al1Local, scaleAl1Local, loadDataParams, loadData2DMxParams);
+                        PipeBarrier<PIPE_MTE1>();
+                    }
+                } else {
+                    for (uint64_t i = 1; i < loadTimes; i++) {
+                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                        AscendC::LoadData(l0a[i * m1 * BLOCK_CUBE * C0_SIZE], al1Local, loadDataParams);
+                        PipeBarrier<PIPE_MTE1>();
+                    }
                 }
             }
         }
@@ -589,10 +603,24 @@ public:
                 LocalTensor<BType> l0b = l0bLocal.template ReinterpretCast<BType>();
                 uint64_t loadTimes =
                     Cmct::Gemm::CeilDiv(Cmct::Gemm::CeilDiv(tileL1L0Param.curKL0, BLOCK_CUBE), MIN_STEP);
-                for (uint64_t i = 1; i < loadTimes; i++) {
-                    loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
-                    AscendC::LoadData(l0b[i * n1 * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
-                    PipeBarrier<PIPE_MTE1>();
+                if constexpr (IS_FP4) {
+                    loadData2DMxParams.xStartPosition = 0;
+                    loadData2DMxParams.yStartPosition = 0;
+                    loadData2DMxParams.xStep = 0;
+                    loadData2DMxParams.yStep = 0;
+                    loadData2DMxParams.srcStride = 0;
+                    loadData2DMxParams.dstStride = 0;
+                    for (uint64_t i = 1; i < loadTimes; i++) {
+                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                        AscendC::LoadData(l0b[i * n1 * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, scaleBl1Local, loadDataParams, loadData2DMxParams);
+                        PipeBarrier<PIPE_MTE1>();
+                    }
+                } else {
+                    for (uint64_t i = 1; i < loadTimes; i++) {
+                        loadDataParams.mStartPosition = MIN_STEP * i + Cmct::Gemm::CeilDiv(iter * baseK_, BLOCK_CUBE);
+                        AscendC::LoadData(l0b[i * n1 * AscendC::BLOCK_CUBE * C0_SIZE], bl1Local, loadDataParams);
+                        PipeBarrier<PIPE_MTE1>();
+                    }
                 }
             }
         }
