@@ -182,8 +182,9 @@ bool AdaptiveSlidingWindowTilingV4::AnalyzeInputs()
     AnalyzeBatchInfo(x1Shape, x2Shape);
     OP_TILING_CHECK(
         !InferOutBatchDim(x1Shape, x2Shape),
-        OP_LOGE(inputParams_.opName,
-            "batch dim can not be broadcasted or the batch dims of output do not match with input."),
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "batchA, batchB",
+            std::to_string(inputParams_.batchA) + ", " + std::to_string(inputParams_.batchB),
+            "batch dim can not be broadcasted or the batch dims of output do not match with input"),
         return false);
     if (scaleShape != nullptr && !SetQuantMode(scaleShape->GetStorageShape(), pertokenShape)) {
         return false;

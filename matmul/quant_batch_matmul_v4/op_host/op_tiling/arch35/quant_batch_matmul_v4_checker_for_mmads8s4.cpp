@@ -164,18 +164,18 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CalcSingleLutSize(const ge::DataType bD
     auto dtypeBitLengthIterator = DTYPE_BIT_LENGTH_MAP.find(x2TableDtype);
     OP_TILING_CHECK(
         dtypeBitLengthIterator == DTYPE_BIT_LENGTH_MAP.end(),
-        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-            inputParams_.opName, ge::TypeUtils::DataTypeToSerialString(x2TableDtype).c_str(), "x2TableDtype",
-            "DTYPE_BIT_LENGTH_MAP", "dtype not found in bit length map"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "x2Table",
+            ge::TypeUtils::DataTypeToSerialString(x2TableDtype).c_str(), "dtype not found in bit length map"),
         return false);
     uint64_t bitLength = dtypeBitLengthIterator->second;
 
     auto dtypeIdxSizeIterator = DTYPE_INDEX_SIZE_MAP.find(bDtype);
     OP_TILING_CHECK(
         dtypeIdxSizeIterator == DTYPE_INDEX_SIZE_MAP.end(),
-        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-            inputParams_.opName, ge::TypeUtils::DataTypeToSerialString(bDtype).c_str(), "bDtype",
-            "DTYPE_INDEX_SIZE_MAP", "dtype not found in index size map"),
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+            inputParams_.opName, "x2",
+            ge::TypeUtils::DataTypeToSerialString(bDtype).c_str(), "dtype not found in index size map"),
         return false);
     uint64_t idxSize = dtypeIdxSizeIterator->second;
 
@@ -258,17 +258,18 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
     // 当x1为INT8时，支持perchannel量化模式
     OP_TILING_CHECK(
         inputParams_.aDtype == ge::DT_INT8 && !inputParams_.isPerChannel,
-        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(inputParams_.opName, "perchannel", "antiQuantType", "quantMode",
-                                               "When the dtype of x1 is INT8, the quant mode must be per_channel"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "quantMode", "non-per_channel",
+                                              "When the dtype of x1 is INT8, the quant mode must be per_channel"),
         return false);
     // LUT场景x2 UIN1/INT2/INT4尾轴shape分别需要关于8/4/2对齐
     if (inputParams_.isLut && (inputParams_.bDtype == ge::DT_INT4 || inputParams_.bDtype == ge::DT_INT2 ||
                                inputParams_.bDtype == ge::DT_UINT1)) {
         auto it = DTYPE_NUMS_IN_BYTE_MAP.find(inputParams_.bDtype);
         OP_TILING_CHECK(it == DTYPE_NUMS_IN_BYTE_MAP.end(),
-                        OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-                            inputParams_.opName, ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
-                            "bDtype", "DTYPE_NUMS_IN_BYTE_MAP", "dtype not found in nums map"),
+                        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
+                            inputParams_.opName, "x2",
+                            ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype).c_str(),
+                            "dtype not found in nums map"),
                         return false);
 
         OP_TILING_CHECK(
@@ -278,8 +279,9 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckDimValue(const gert::StorageShape 
             return false);
         OP_TILING_CHECK(
             inputParams_.groupSizeK == 0 || inputParams_.groupSizeN == 0,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
-                inputParams_.opName, "groupSizeK/groupSizeN", "[inputParams_.groupSizeK, inputParams_.groupSizeN]",
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                inputParams_.opName, "groupSizeK, groupSizeN",
+                std::to_string(inputParams_.groupSizeK) + ", " + std::to_string(inputParams_.groupSizeN),
                 "When in LUT mode, the values of groupSizeK and groupSizeN can not be 0"),
             return false);
         OP_TILING_CHECK(!CheckX2TableShape(),
@@ -327,14 +329,17 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::ExtraInputCheck() const
         // LUT场景，tranA/transB为false
         OP_TILING_CHECK(
             inputParams_.transA || inputParams_.transB,
-            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "transA/transB", "actual_transA, actual_transB",
-                                                  "When in LUT mode, the values of transA and transB must be false"),
+            OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(inputParams_.opName, "transposeX1, transposeX2",
+                std::string(inputParams_.transA ? "true" : "false") + ", " + (inputParams_.transB ? "true" : "false"),
+                "When in LUT mode, the values of transposeX1 and transposeX2 must be false"),
             return false);
 
         // LUT场景，不支持batch
         OP_TILING_CHECK(!(inputParams_.batchA == 1 && inputParams_.batchB == 1),
-                        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "x1Batch/x2Batch", "actual_batches",
-                                                              "When in LUT mode, the batch of x1 and x2 must be 1"),
+                        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+                            inputParams_.opName, "x1Batch, x2Batch",
+                            std::to_string(inputParams_.batchA) + ", " + std::to_string(inputParams_.batchB),
+                            "When in LUT mode, the batch of x1 and x2 must be 1"),
                         return false);
     }
 
@@ -347,8 +352,8 @@ bool QuantBatchMatmulV4Checker4MmadS8S4::CheckOffset(const gert::StorageShape* o
         // 当outDtype不为INT8时，x2Offset不存在
         OP_TILING_CHECK(
             inputParams_.cDtype != ge::DT_INT8,
-            OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(inputParams_.opName, "x2Offset", "x2Offset", "quantConfig",
-                                                   "When the dtype of y is not INT8, x2Offset can not exist"),
+            OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "x2Offset", "non-null",
+                                                  "When the dtype of y is not INT8, x2Offset must be null"),
             return false);
         // x2Offset维数只能是1维
         OP_TILING_CHECK(

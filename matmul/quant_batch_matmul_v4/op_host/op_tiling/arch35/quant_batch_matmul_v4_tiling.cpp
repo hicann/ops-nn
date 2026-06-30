@@ -53,6 +53,20 @@ inline bool IsFormatNZ(ge::Format format)
            format == ge::FORMAT_FRACTAL_NZ_C0_32;
 }
 
+static const char *QuantTypeToString(QuantType t)
+{
+    switch (t) {
+        case QuantType::NONE: return "NONE";
+        case QuantType::PER_TENSOR: return "PER_TENSOR";
+        case QuantType::PER_CHANNEL: return "PER_CHANNEL";
+        case QuantType::PER_GROUP: return "PER_GROUP";
+        case QuantType::MX: return "MX";
+        case QuantType::PER_TILE: return "PER_TILE";
+        case QuantType::INT4_ASYMMETRICAL: return "INT4_ASYMMETRICAL";
+        default: return "UNKNOWN";
+    }
+}
+
 void QuantBatchMatmulV4TilingBase::InitCompileInfo()
 {
     auto platformInfoPtr = context_->GetPlatformInfo();
@@ -236,7 +250,7 @@ ge::graphStatus QuantBatchMatmulV4TilingBase::CheckInputParams() const
                         "When the format of x2 is FRACTAL_NZ, the dtype of x2 must be INT8 and "
                         "the quantization mode must be perchannel, quantScale can not be supported, "
                         "current bDtype[" + ge::TypeUtils::DataTypeToSerialString(inputParams_.bDtype) +
-                        "], antiQuantType[" + std::to_string(static_cast<int>(inputParams_.antiQuantType)) +
+                        "], antiQuantType[" + QuantTypeToString(inputParams_.antiQuantType) +
                         "], cDtype[" + ge::TypeUtils::DataTypeToSerialString(inputParams_.cDtype) + "]"),
                     return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
@@ -544,9 +558,10 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeBiasShape(const gert::StorageShape* bi
         return true;
     }
     OP_TILING_CHECK(inputParams_.antiQuantType != QuantType::MX,
-                    OP_LOGE_FOR_INVALID_CONFIG_WITH_REASON(
-                        inputParams_.opName, std::to_string(static_cast<int>(inputParams_.antiQuantType)).c_str(),
-                        "antiQuantType", "quantConfig", "When bias exists, the quant mode must be MX"),
+                    OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
+                        inputParams_.opName,
+                        "antiQuantType", QuantTypeToString(inputParams_.antiQuantType),
+                        "When bias exists, the quant mode must be MX"),
                     return false);
     inputParams_.hasBias = true;
     auto biasShapeDimNum = static_cast<uint64_t>(biasShape->GetStorageShape().GetDimNum());
@@ -666,7 +681,8 @@ bool QuantBatchMatmulV4TilingBase::AnalyzeYScaleOffsetShape(
     const gert::StorageShape *yScaleShape, const gert::StorageShape *yOffsetShape) const
 {
     OP_TILING_CHECK(!IsNotEmptyShape(yScaleShape) && IsNotEmptyShape(yOffsetShape),
-        OP_LOGE(inputParams_.opName, "not support quant_offset without quant_scale"),
+        OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(inputParams_.opName, "yOffset", "non-null",
+                                              "yOffset must be null when yScale is null"),
         return false);
     if (!IsNotEmptyShape(yScaleShape)) {
         OP_TILING_CHECK(
