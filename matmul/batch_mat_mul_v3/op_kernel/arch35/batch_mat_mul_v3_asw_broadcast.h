@@ -20,6 +20,7 @@
 #include "blaze/gemm/block/block_mmad_matmul_basic.h"
 #include "blaze/gemm/block/block_scheduler_matmul_basic.h"
 #include "blaze/gemm/policy/dispatch_policy.h"
+#include "blaze/gemm/utils/layout_utils.h"
 
 namespace BatchMatMulV3Advanced {
 
@@ -44,9 +45,11 @@ __aicore__ inline void BatchMatMulBroadcastKernel(
     // 定义shape的形状，tuple保存 m n k batch
     using ProblemShape = AscendC::Te::Shape<int64_t, int64_t, int64_t, int64_t>;
 
+    static constexpr bool isFp32 = (AscendC::Std::is_same_v<BType, float>);
+    static constexpr bool isNDFormat = !(Blaze::Gemm::IsWeightNz<LayoutB>::value);
     // 定义scheduler类型
-    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE>;
-
+    using BlockScheduler = Blaze::Gemm::Block::BlockSchedulerMatmulBasic<ProblemShape, FULL_LOAD_MODE, isFp32,
+                                                                         isNDFormat>;
     // 定义MMAD类型
     using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<
         FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockBmmBroadcast>;
@@ -61,29 +64,21 @@ __aicore__ inline void BatchMatMulBroadcastKernel(
     using Params = typename MatmulKernel::Params;
     Params params = {
         {tilingData.matMulTilingData.tCubeTiling.M, tilingData.matMulTilingData.tCubeTiling.N,
-         tilingData.matMulTilingData.tCubeTiling.Ka, tilingData.cBatchDimAll}, // shape
-        {aGM, bGM, cGM, biasGM},                                               // gm addr
-        {},                                                                    // epilogue args
-        {tilingData.mL1,                                                       // block scheduler args
-         tilingData.nL1,
-         tilingData.kL1,
+         tilingData.matMulTilingData.tCubeTiling.Ka, tilingData.cBatchDimAll}, // problemShape
+        {aGM, bGM, cGM, biasGM, nullptr, nullptr, tilingData.mL1, tilingData.nL1, tilingData.kL1,
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
          static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
-         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK),
-         tilingData.matMulTilingData.mTailCnt,
-         tilingData.matMulTilingData.nTailCnt,
-         tilingData.matMulTilingData.mBaseTailSplitCnt,
-         tilingData.matMulTilingData.nBaseTailSplitCnt,
-         tilingData.matMulTilingData.mTailMain,
-         tilingData.matMulTilingData.nTailMain,
-         static_cast<uint8_t>(tilingData.matMulTilingData.isHf32),
-         static_cast<uint8_t>(tilingData.l1BufferNum),
-         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C),
-         static_cast<uint8_t>(tilingData.ubDB),
-         tilingData.matMulTilingData.l2CacheDisable,
-         tilingData.sliceM,
-         tilingData.srcNdStride,
-         tilingData.innerBatch},
+         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.l1BufferNum,
+         static_cast<uint8_t>(tilingData.matMulTilingData.tCubeTiling.dbL0C)}, // blockMmad args
+        {},                                                                    // blockEpilogue args
+        {tilingData.mL1, tilingData.nL1, tilingData.kL1,                       // blockScheduler args
+         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseM),
+         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseN),
+         static_cast<uint32_t>(tilingData.matMulTilingData.tCubeTiling.baseK), tilingData.matMulTilingData.mTailCnt,
+         tilingData.matMulTilingData.nTailCnt, tilingData.matMulTilingData.mBaseTailSplitCnt,
+         tilingData.matMulTilingData.nBaseTailSplitCnt, tilingData.matMulTilingData.mTailMain,
+         tilingData.matMulTilingData.nTailMain, static_cast<uint8_t>(tilingData.matMulTilingData.isHf32),
+         static_cast<uint32_t>(tilingData.matMulTilingData.l2CacheDisable), tilingData.sliceM, tilingData.srcNdStride, tilingData.innerBatch},
         {tilingData.aBatchDim0, tilingData.bBatchDim0, tilingData.aBatchDim1, tilingData.bBatchDim1,
          tilingData.cBatchDim1, tilingData.aBatchDim2, tilingData.bBatchDim2, tilingData.cBatchDim2,
          tilingData.aBatchDim3, tilingData.bBatchDim3, tilingData.cBatchDim3, tilingData.biasBatchDimAll}};
