@@ -211,7 +211,7 @@ static bool IsComputeByV2(const aclTensor* grad, const uint64_t numWeights, cons
                             GRAD_ROW_LIMIT : (GRAD_ROW_LIMIT + GRAD_ROW_LIMIT);
 
     return (gradRow <= static_cast<int64_t>(INT32_MAX_LIMIT)) &&
-           ((gradRow > embeddingDim && gradRow > gradRowLimit) ||
+           ((gradRow >= embeddingDim && gradRow >= gradRowLimit) ||
             ((numWeights > embeddingDim * MULTIPLES ||
             (embeddingDim / numWeights < SCALE_LIMIT_RATIO && scaleGradByFreq)) && embeddingDim > LIMIT_EMBEDDING_DIM_SIZE));
 }
