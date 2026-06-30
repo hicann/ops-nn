@@ -169,7 +169,7 @@ uint32_t AddExampleCpuKernel::Compute(CpuKernelContext& ctx) {
   // 获取input tensor的数据地址，例如输入的数据类型是int32
   auto input0_data = reinterpret_cast<int32_t*>(input0->GetData());
   // 获取tensor的shape
-  auto input0_shape = input->GetTensorShape();
+  auto input0_shape = input0->GetTensorShape();
 
   // 获取output tensor的数据地址，例如输出的数据类型是int32
   auto y = reinterpret_cast<int32_t*>(output->GetData());

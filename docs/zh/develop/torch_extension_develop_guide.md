@@ -39,7 +39,7 @@ experimental/
 
 算子实现文件需要包含以下四个部分：
 
-1. **算子SchemaSchema注册**
+1. **算子Schema注册**
 2. **算子Meta Function实现（InferShape + InferDtype）**
 3. **算子Kernel实现（Ascend C）**
 4. **算子NPU调用实现**
@@ -98,7 +98,7 @@ __global__ __aicore__ void add_kernel(GM_ADDR x, GM_ADDR y, GM_ADDR z, int64_t t
 }
 
 /**
- * 算子NPU调用实现算子NPU调用实现
+ * 算子NPU调用实现
  */
 torch::Tensor add_npu(const torch::Tensor &x, const torch::Tensor &y)
 {
