@@ -201,7 +201,7 @@ static aclnnStatus CheckParams(
     const aclTensor* self, const aclIntArray* kernelSize, const aclIntArray* stride, const aclIntArray* padding,
     const aclIntArray* dilation, aclTensor* out, aclTensor* indices)
 {
-    CHECK_RET(CheckNotNullPtr(self, kernelSize, stride, padding, dilation, out, indices), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckNotNullPtr(self, kernelSize, stride, padding, dilation, out, indices), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(self, out, indices), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(self, out, indices), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckParamsValid(kernelSize, stride, padding, dilation), ACLNN_ERR_PARAM_INVALID);

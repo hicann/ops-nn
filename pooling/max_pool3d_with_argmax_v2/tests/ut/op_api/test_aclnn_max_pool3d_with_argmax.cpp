@@ -295,7 +295,7 @@ TEST_F(l2_max_pool3d_with_argmax_test, ascend910B1_case_aicore_self_nullptr)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_max_pool3d_with_argmax_test, ascend910B1_case_aicore_kernel_nullptr)
@@ -324,7 +324,7 @@ TEST_F(l2_max_pool3d_with_argmax_test, ascend910B1_case_aicore_kernel_nullptr)
 
     uint64_t workspace_size = 0;
     aclnnStatus aclRet = ut.TestGetWorkspaceSize(&workspace_size);
-    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_INVALID);
+    EXPECT_EQ(aclRet, ACLNN_ERR_PARAM_NULLPTR);
 }
 
 TEST_F(l2_max_pool3d_with_argmax_test, ascend910B1_case_aicore_indices_float)

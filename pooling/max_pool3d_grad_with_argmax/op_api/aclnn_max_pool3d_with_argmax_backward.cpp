@@ -263,7 +263,7 @@ static aclnnStatus CheckParams(
 {
     CHECK_RET(
         CheckNotNullPtr(gradOutput, self, indices, kernelSize, stride, padding, dilation, gradInput),
-        ACLNN_ERR_PARAM_INVALID);
+        ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckDtypeValid(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckFormat(gradOutput, self, indices, gradInput), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckParamsValid(kernelSize, stride, padding, dilation), ACLNN_ERR_PARAM_INVALID);

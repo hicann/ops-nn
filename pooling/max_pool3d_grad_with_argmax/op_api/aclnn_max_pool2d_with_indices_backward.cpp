@@ -167,7 +167,7 @@ static bool CheckFormat(
         if (Ops::NN::AclnnUtil::IsRegbase(curArch)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW or NHWC");
         } else {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support NCHW");
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Format only support ND, NCHW");
         }
 
         return false;
