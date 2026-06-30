@@ -39,7 +39,8 @@ ASCENDC_TPL_UINT_DECL(OutputOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
 ASCENDC_TPL_UINT_DECL(IterOrder, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
     CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),
 ASCENDC_TPL_UINT_DECL(GroupType, ASCENDC_TPL_2_BW, ASCENDC_TPL_UI_LIST,
-    CONV_GROUP_TYPE_NORMAL_CONV, CONV_GROUP_TYPE_ORI_GROUP_CONV, CONV_GROUP_TYPE_OPT_GROUP_CONV),
+    CONV_GROUP_TYPE_NORMAL_CONV, CONV_GROUP_TYPE_ORI_GROUP_CONV, CONV_GROUP_TYPE_OPT_GROUP_CONV,                     \
+    CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV),
 ASCENDC_TPL_UINT_DECL(EnableSmallChannel, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
     CONV_ENABLE_SMALL_CHANNEL_CLOSE, CONV_ENABLE_SMALL_CHANNEL_OPEN),
 ASCENDC_TPL_UINT_DECL(WeightUbTrans, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
@@ -193,6 +194,41 @@ ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                        
     CONV_DIS_CONTINUOUS_CLOSE)                                                                                       \
 CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT)
 
+// simplified depthwise conv2d tilingKey SEL
+#if (!defined(ASCENDC_TPL_PRE) && !defined(ASCENDC_TPL_KERNEL)) ||                                                   \
+     (defined(FORMAT_X) && FORMAT_X == FORMAT_NCHW && defined(FORMAT_FILTER) && FORMAT_FILTER == FORMAT_NCHW &&       \
+     (defined(ORIG_DTYPE_X) && (ORIG_DTYPE_X == DT_FLOAT16 || ORIG_DTYPE_X == DT_BF16 || ORIG_DTYPE_X == DT_FLOAT)))
+#define CONV2D_OPT_GROUP_SIMPLIFIED_SEL()                                                                             \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_MIX_AIC_1_2),                                                                \
+ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_FMAP_TILING_OTHER),                                                                                         \
+ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST,                                                              \
+    CONV_WEIGHT_TILING_OTHER),                                                                                       \
+ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_L1_PINGPONG_ALL_OPEN, CONV_L1_PINGPONG_ALL_CLOSE),                                                          \
+ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN, CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),    \
+ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST,                                                               \
+    CONV_OUTPUT_ORDER_M_MODE),                                                                                       \
+ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST,                                                                 \
+    CONV_ITER_ORDER_MITER_FIRST, CONV_ITER_ORDER_NITER_FIRST),                                                       \
+ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST,                                                                 \
+    CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV),                                                                      \
+ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
+    CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
+ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_WEIGHT_UB_TRANS_CLOSE),                                                                                     \
+ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST,                                                              \
+    CONV_FMAP_LOAD3D_MODE),                                                                                          \
+ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_INNER_BATCH_SINGLE),                                                                                        \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST,                                                             \
+    CONV_DIS_CONTINUOUS_CLOSE)                                                                                       \
+CONV2D_SCALAR_OPT_SEL(CONV_NOT_SMALL_WEIGHT)
+
+#else
+#define CONV2D_OPT_GROUP_SIMPLIFIED_SEL()
+#endif
 #define CONV2D_ORI_GROUP_SEL()                                                                                       \
 ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
 CONV_COMMON_ORI_GROUP_SEL(),                                                                                         \
@@ -490,6 +526,7 @@ ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_M_FIRST_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_N_FIRST_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_DB_OPEN_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_SIMPLIFIED_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ORI_GROUP_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_PRELOAD_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()),

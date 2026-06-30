@@ -20,6 +20,7 @@
 #include "arch35/conv2d_v2_tilingkey.h"
 #include "arch35/conv2d_small_kernel.h"
 #include "arch35/conv2d_small_kernel_parallelism.h"
+#include "arch35/conv2d_v2_depthwise_simplify.h"
 
 using namespace AscendC;
 using namespace Conv2DV2Key;
@@ -142,6 +143,15 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
                             EnableSmallChannel, WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous, BatchOne, NoPad,
                             SmallWeight>> baseConv2d;
             baseConv2d.RunConv2dKernel(x, filter, bias, y, tilingData);
+        } else if constexpr (GroupType == CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV) {
+            DepthwiseConv2dSimplifiedKernel<
+                Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong,
+                              OutputOrder, IterOrder, GroupType, EnableSmallChannel,
+                              WeightUbTrans, FmapCopyMode, InnerBatch, DisContinuous>,
+                DTYPE_X>
+                depthwiseConv2d;
+            depthwiseConv2d.Init(x, filter, bias, y, &tilingData);
+            depthwiseConv2d.Process();
         } else {
             GroupConv2d<fmapType, weightType, outputType, biasType, scaleType,
                 Conv2DV1Param<FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType,

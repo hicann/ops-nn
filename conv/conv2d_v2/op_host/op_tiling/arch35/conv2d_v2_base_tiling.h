@@ -209,6 +209,7 @@ private:
     void ReSetTilingKeyPara();
     uint64_t GetNoPad() const;
     uint64_t GetSmallWeightVal();
+    uint64_t GetGroupTypeVal();
     uint64_t GetSmallKernelVal();
 
     int32_t BasicBlockSortFWDimScores(vector<tuple<uint64_t, float, uint32_t, double>>& scores);

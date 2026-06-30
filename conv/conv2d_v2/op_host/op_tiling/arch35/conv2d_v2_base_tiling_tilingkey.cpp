@@ -21,6 +21,45 @@ namespace optiling {
 namespace conv_ops_tiling {
 using namespace Conv2DV2Key;
 
+uint64_t Conv2dBaseTiling::GetGroupTypeVal()
+{
+    if (flagInfo_.convGroupType != ConvGroupType::OPT_GROUP_CONV) {
+        return static_cast<uint64_t>(flagInfo_.convGroupType);
+    }
+
+    if (shapeInfo_.ci != attrInfo_.groups) {
+        return CONV_GROUP_TYPE_OPT_GROUP_CONV;
+    }
+
+    // Condition group 1: L1 full-load flag
+    uint64_t weightKSize = ConvCeilDiv(optGroupInfo_.enlarge, convOpsConstParams_.k0) *
+                           shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0;
+    bool kL1FullLoadFlag = weightKSize == tilingData_.get_kBL1() &&
+        weightKSize == tilingData_.get_kAL1();
+    bool nBL1FullloadFlag = tilingData_.get_singleCoreCo() <= tilingData_.get_nBL1();
+    bool l1FullLoad = kL1FullLoadFlag && nBL1FullloadFlag;
+
+    // Condition group 2: op type & tiling mode
+    bool opTypeOk = paramInfo_.nodeType == "Conv2DV2";
+    bool tilingModeOk = flagInfo_.mSplitModeFlag;
+
+    // Condition group 3: format & dtype
+    bool formatOk = descInfo_.fMapFormat == ge::FORMAT_NCHW &&
+        !IsWeightNZFormat(descInfo_.weightFormat);
+    bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 ||
+                    descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
+                    descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
+
+    // Condition group 4: single-core split
+    bool singleCoreOk = numBlocksRes.nDim == 1;
+
+    if (opTypeOk && tilingModeOk && l1FullLoad && formatOk && dtypeOk && singleCoreOk) {
+        return CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV;
+    }
+
+    return CONV_GROUP_TYPE_OPT_GROUP_CONV;
+}
+
 uint64_t Conv2dBaseTiling::GetSmallWeightVal()
 {
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
@@ -234,7 +273,8 @@ uint64_t Conv2dBaseTiling::GetFmapCopyMode()
 
 void Conv2dBaseTiling::ReSetTilingKeyPara()
 {
-    if (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV) {
+    if (flagInfo_.convGroupType == ConvGroupType::ORI_GROUP_CONV ||
+        tilingKeyPara_.groupType == CONV_GROUP_TYPE_OPT_SIMPLIFIED_GROUP_CONV) {
         return;
     }
     bool weightTilingResetFlag = tilingKeyPara_.weightTiling == 1 &&
@@ -277,13 +317,13 @@ uint64_t Conv2dBaseTiling::GetNoPad() const
 
 ge::graphStatus Conv2dBaseTiling::SetTilingKey()
 {
+    tilingKeyPara_.groupType = GetGroupTypeVal();
     tilingKeyPara_.fmpTiling = GetFmpTilingVal();
     tilingKeyPara_.weightTiling = GetWeightTilingVal();
     tilingKeyPara_.l1PingPong = GetL1PingPongVal();
     tilingKeyPara_.l0PingPong = GetL0PingPongVal();
     tilingKeyPara_.outputOrder = GetOutputOrderVal();
     tilingKeyPara_.iterOrder = static_cast<uint64_t>(tilingData_.get_iterateMNOrder());
-    tilingKeyPara_.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
     tilingKeyPara_.enableSmallChannel = static_cast<uint64_t>(flagInfo_.enableC04Flag);
     tilingKeyPara_.weightUbTrans = GetWeightUbTrans();
     tilingKeyPara_.fmapCppyMode = GetFmapCopyMode();
