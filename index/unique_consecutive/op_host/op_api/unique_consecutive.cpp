@@ -65,7 +65,6 @@ bool CheckTensorDtype4Aicore(const aclTensor* self, const aclTensor* valueOut, c
 bool CheckSupport4Aicore(const aclTensor* self, bool returnInverse, int64_t dim, aclTensor* valueOut,
                          aclTensor* inverseOut, aclTensor* countsOut)
 {
-    SocVersion version = GetCurrentPlatformInfo().GetSocVersion();
     OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(), OP_LOGW("Aicore UniqueConsecutive only support ASCEND950."),
              return false);
 

@@ -2856,7 +2856,7 @@ static const aclIntArray *SwapDHInPaddingArray6(const aclIntArray *arr, aclOpExe
   int64_t padWLeft = (*arr)[4];
   int64_t padWRight = (*arr)[5];
   int64_t newArray[] = {padHTop, padHBottom, padDHead, padDTail, padWLeft, padWRight}; // swap D and H
-  return executor->AllocIntArray(newArray, 6);
+  return executor->AllocIntArray(newArray, CONV3D_PAD_DIM);
 }
 
 // Apply D-H swap on input tensors and parameters before calculation

@@ -40,8 +40,8 @@ extern "C" {
 
 static constexpr size_t MIN_INPUT_DIM_NUM = 1;
 static constexpr size_t MAX_INPUT_DIM_MUM = 8;
-static constexpr size_t MIN_INDICES_FOR_SORTED = 32;
-static constexpr size_t MIN_UPDATES_FOR_SORTED = 512;
+static constexpr int64_t MIN_INDICES_FOR_SORTED = 32;
+static constexpr int64_t MIN_UPDATES_FOR_SORTED = 512;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> ASCEND910B_DTYPE_DTYPE_SUPPORT_LIST = {
@@ -70,7 +70,6 @@ static bool IsUseScatterAddWithSorted(const aclTensor* varRef, const aclTensor* 
         deterministicValue = 0;
     }
     bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
-
     if (!(isAscend950 && deterministicValue != 0)) {
         return false;
     }

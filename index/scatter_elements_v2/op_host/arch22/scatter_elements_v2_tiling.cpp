@@ -72,6 +72,7 @@ const uint32_t ALIGN_SIZE = 32;
 const uint32_t TILE_SIZE = 5;
 const uint32_t AGG_INDICES_NUM = 1024;
 const uint32_t CACHE_OP_X_LOCAL_LENGTH = 40000;
+const uint32_t CACHE_OP_X_LOCAL_LENGTH_REDUCE = 20480;
 const uint32_t CACHE_OP_INDICES_LOCAL_LENGTH = 2048;
 const uint32_t CACHE_OP_ALL_UB_SIZE = 16384 * 3 * SIZE_OF_FP32;
 } // namespace
@@ -689,12 +690,12 @@ bool ScatterElementsV2Tiling::CacheOpSupport() {
 
 bool ScatterElementsV2Tiling::CheckCacheOpShapeLimit(const gert::Shape& xShape, const char* reduce) const
 {
-    if (xShape.GetDim(realDim) > 40000) {
+    if (xShape.GetDim(realDim) > CACHE_OP_X_LOCAL_LENGTH) {
         OP_LOGD("ScatterElementsV2", "new kernel only support x dim <= 40000.");
         return false;
     }
     bool needHitCount = reduce != nullptr && strcmp(reduce, "none") != 0;
-    if (needHitCount && xShape.GetDim(realDim) > 20480) {
+    if (needHitCount && xShape.GetDim(realDim) > CACHE_OP_X_LOCAL_LENGTH_REDUCE) {
         OP_LOGD("ScatterElementsV2", "new kernel reduce mode only support x dim <= 20480.");
         return false;
     }

@@ -50,8 +50,8 @@ using namespace op;
 extern "C" {
 #endif
 
-static constexpr size_t MIN_INDICES_FOR_SORTED = 32;
-static constexpr size_t MIN_UPDATES_FOR_SORTED = 512;
+static constexpr int64_t MIN_INDICES_FOR_SORTED = 32;
+static constexpr int64_t MIN_UPDATES_FOR_SORTED = 512;
 
 static const std::initializer_list<op::DataType> ASCEND910_DTYPE_SUPPORT_LIST = {
     op::DataType::DT_UINT8,  op::DataType::DT_INT8,      op::DataType::DT_INT16,     op::DataType::DT_INT32,

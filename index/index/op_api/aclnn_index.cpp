@@ -490,7 +490,7 @@ aclnnStatus aclnnIndexGetWorkspaceSize(
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         int64_t indicesSize = static_cast<int64_t>(indices->Size());
-        if (indicesSize <= MAX_SUPPORT_DIMS_NUMS) {
+        if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
             FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
             FVector<bool, MAX_SUPPORT_DIMS_NUMS> dimMask;
             for (int64_t i = 0; i < indicesSize; ++i) {

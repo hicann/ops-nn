@@ -122,7 +122,6 @@ static bool CheckSliceSize(const aclTensor* selfRef, const aclTensorList* indice
 
 static bool CheckDataSize(const aclTensor* selfRef, const aclTensorList* indices) {
     static const int64_t INT32_MAX_LIMIT = 2147483647;
-    static const int64_t CAST_MAX_NUM = 16777216;
     auto indicesSize = indices->Size();
     int64_t shapeProd = 1;
     for (size_t i = 0; i < indicesSize; i++) {
@@ -167,7 +166,6 @@ static bool CheckIndicesDtypeAndShape(const aclTensorList* indices) {
 static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef, 
     const aclTensorList* indices, const aclTensor* values) {
     constexpr int64_t MIN_TAIL_AXIS_ELEMENTS = 2048;
-    constexpr int64_t AVG_BYTES_PER_ELEMENT = 2;
     constexpr int64_t MEMORY_LIMIT_BYTES = 64 * 1024 * 1024; // 64MB
     constexpr int64_t MIN_INDEX_NUM = 512;
     auto selfShape = selfRef->GetViewShape();
@@ -198,7 +196,7 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
     }
 
     int64_t indexNums = 0;
-    for (int64_t i = 0; i < indexCount; i++) {
+    for (size_t i = 0; i < indexCount; i++) {
       if ((*indices)[i]) {
           indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
           if (indexNums > 0) {
@@ -214,8 +212,8 @@ static bool IsSortV2PerformanceOptimal(const aclTensor* selfRef,
     return true;
 }
 
-bool IsSortV2SpecialScene(const aclTensor* selfRef, 
-    const aclTensorList* indices, const aclTensor* values, const bool& usePutV2SpeOpt)
+bool IsSortV2SpecialScene(const aclTensor* selfRef,
+    const aclTensorList* indices, const bool& usePutV2SpeOpt)
 {
     if (!usePutV2SpeOpt) {
         return false;
@@ -224,7 +222,6 @@ bool IsSortV2SpecialScene(const aclTensor* selfRef,
     constexpr int64_t REPEAT_DEGREE = 30;
     constexpr int64_t MIN_INDEX_NUM = 512;
     int64_t headElementsCount = 1;
-    int64_t indexAxisNums = 0;
     auto indexCount = indices->Size();
     auto selfShape = selfRef->GetViewShape();
     int64_t indexNums = 0;
@@ -232,7 +229,7 @@ bool IsSortV2SpecialScene(const aclTensor* selfRef,
     for (size_t i = 0; i < indexCount; i++) {
         headElementsCount *= static_cast<int64_t>(selfShape.GetDim(i));
     }
-    for (int64_t i = 0; i < indexCount; i++) {
+    for (size_t i = 0; i < indexCount; i++) {
       if ((*indices)[i]) {
         indexNums = (*indices)[i]->GetViewShape().GetShapeSize();
         if (indexNums > 0) {
@@ -253,17 +250,15 @@ bool IsSortV2Scene(const aclTensor* selfRef, const aclTensorList* indices, const
 {
     constexpr int64_t REPEAT_DEGREE = 100;
     constexpr int64_t MEMORY_LIMIT_BYTES = 12 * 1024 * 1024;
-    constexpr int64_t MIN_INDEX_NUM = 512;
     int64_t indexAxisNums = 0;
     auto indexCount = indices->Size();
-    auto selfShape = selfRef->GetViewShape();
     auto selfDimNum = selfRef->GetViewShape().GetDimNum();
     int64_t selfShapeSize = static_cast<int64_t>(selfRef->GetViewShape().GetShapeSize());
     int64_t indexNums = 0;
     auto selfDtype = selfRef->GetDataType();
     int64_t selfTypeSize = ge::GetSizeByDataType(selfDtype);
     int64_t selfSize = selfShapeSize * selfTypeSize;
-    for (int64_t i = 0; i < indexCount; i++) {
+    for (size_t i = 0; i < indexCount; i++) {
       if ((*indices)[i]) {
         if ((*indices)[i]->GetViewShape().GetShapeSize() > 0) {
             indexAxisNums++;
@@ -329,7 +324,7 @@ bool IsUseSortedV2OptScene(
         return false;
     }
     // 8. sortv2优化判断
-    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, values, usePutV2SpeOpt) && !IsSortV2Scene(self, indices, accumulate)) {
+    if (!IsSortV2PerformanceOptimal(self, indices, values) && !IsSortV2SpecialScene(self, indices, usePutV2SpeOpt) && !IsSortV2Scene(self, indices, accumulate)) {
         return false;
     }
 

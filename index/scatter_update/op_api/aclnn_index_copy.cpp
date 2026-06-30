@@ -311,7 +311,6 @@ static aclnnStatus ScatterToIndexPutV2(
         return ACLNN_ERR_INNER_NULLPTR);
 
     DataType originalDtype = selfRefReShape->GetDataType();
-    
 
     auto it = dtypeConversionMap.find(originalDtype);
     if (it != dtypeConversionMap.end()) {
@@ -345,7 +344,6 @@ static int64_t GetDeterministicValue()
 static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
 {
     bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
-
     if (!isAscend950 || GetDeterministicValue() != 0 || selfRefReShape->GetDataType() == DataType::DT_COMPLEX128) {
         return false;
     }

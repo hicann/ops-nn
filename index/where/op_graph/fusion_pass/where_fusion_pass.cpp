@@ -96,7 +96,6 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
     // The fusion pass does not support the input dtype not in dtypes of nonzero.
     DataType inputDtype = inputDesc.GetDataType();
     auto dtypeIter = std::find(NONZERO_DTYPE_SUPPORT_LIST.begin(), NONZERO_DTYPE_SUPPORT_LIST.end(), inputDtype);
-
     if (dtypeIter == NONZERO_DTYPE_SUPPORT_LIST.end()) {
         OPS_LOG_D(FUSION_PASS_NAME.c_str(), "%s does not support input dtype %d.", nodeName.GetString(), inputDtype);
         return false;
@@ -141,7 +140,6 @@ GraphUniqPtr WhereFusionPass::Replacement(const std::unique_ptr<MatchResult>& ma
 
     // repalce output
     GraphUniqPtr replaceGraph = replaceGraphBuilder.BuildAndReset({nonzeroOutput});
-
     // todo：exce infershape to shape/dtype
     if (InferShape(replaceGraph, subGraphInputs) != SUCCESS) {
         OPS_LOG_E(FUSION_PASS_NAME.c_str(), "Infershape for replacement failed.");

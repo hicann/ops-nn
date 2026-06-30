@@ -460,11 +460,11 @@ static bool CheckShape(const aclTensor *input,  const aclTensorList *params, con
 
     op::Shape expOutputShape = {timeStep, batchSize, static_cast<int64_t>(dScale * hiddenSize)};
     if (batch_first) {
-        expOutputShape = {batchSize, timeStep, dScale * hiddenSize};
+        expOutputShape = {batchSize, timeStep, static_cast<int64_t>(dScale * hiddenSize)};
     }
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(output, expOutputShape, return false);
 
-    op::Shape expHyShape = {numLayers * dScale, batchSize, hiddenSize};
+    op::Shape expHyShape = {static_cast<int64_t>(numLayers * dScale), batchSize, hiddenSize};
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hy, expHyShape, return false);
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(cy, expHyShape, return false);
 
@@ -1415,7 +1415,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
+                curInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, uniqueExecutor.get());
                 ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);

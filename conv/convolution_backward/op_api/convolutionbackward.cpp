@@ -615,7 +615,6 @@ void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntArray *st
                                           const aclIntArray *padding, const aclIntArray *dilation,
                                           aclOpExecutor *executor, AdaptParam *params)
 {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (stride->Size() == DIM_3) {
     FVector<int64_t> newStrides {1, 1, 1, 1, 1};
     FVector<int64_t> newDilation {1, 1, 1, 1, 1};
@@ -751,7 +750,6 @@ static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *o
   }
 
   auto xDataType = input->GetDataType();
-  auto dedyDataType = outBackprop->GetDataType();
   if (xDataType != op::DataType::DT_FLOAT) {
     OP_LOGD("unsupported dataType , NH transpose disable.");
     return false;

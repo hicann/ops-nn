@@ -54,7 +54,6 @@ void ScatterAddWithSortedSimdTiling::AutoTilingRowCol(int64_t& rowTileNum, int64
     int64_t colBlockTotalNum = (colTotalNum + tmpEleNum - 1) / tmpEleNum;
     usedCoreNum = std::min(usedCoreNum, std::max<int64_t>(1, rowTotalNum * colBlockTotalNum * tmpEleNum / (SINGLE_CORE_THRESHOLD)));
 
-
     std::set<int64_t> cutSet = FindFactor(usedCoreNum);
     std::vector<std::vector<int64_t>> allTiling;
 

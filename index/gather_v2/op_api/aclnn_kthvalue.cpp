@@ -40,6 +40,7 @@ extern "C" {
 #endif
 
 constexpr int64_t KTH_VALUE_DIRECT_AXIS_THRESHOLD = 2048;
+constexpr int64_t KTH_VALUE_MIN_AXIS_LEN = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
@@ -157,7 +158,7 @@ static bool CanKthValueNonLastAxisDirectly(const aclTensor* self, int64_t positi
     }
     auto selfShape = self->GetViewShape();
     int64_t axisLen = selfShape[positiveDim];
-    if (axisLen < 2 || axisLen > KTH_VALUE_DIRECT_AXIS_THRESHOLD) {
+    if (axisLen < KTH_VALUE_MIN_AXIS_LEN || axisLen > KTH_VALUE_DIRECT_AXIS_THRESHOLD) {
         return false;
     }
 

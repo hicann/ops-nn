@@ -114,14 +114,14 @@ std::vector<PatternUniqPtr> MaxPoolFusionPass::Patterns()
     return patterns;
 }
 
-bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match_result)
+bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& matchResult)
 {
     if (!IsRegbasePlatform()) {
         return false;
     }
 
     NodeIo inputIo;
-    OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, false, kPassName.c_str(),
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, false, kPassName.c_str(),
         "Get captured input failed.");
     TensorDesc inputDesc;
     OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, false, kPassName.c_str(),
@@ -131,7 +131,7 @@ bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& mat
     }
 
     NodeIo poolIo;
-    OP_LOGE_IF(match_result->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, false, kPassName.c_str(),
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, false, kPassName.c_str(),
         "Get captured pool failed.");
     GNode sourceNode = poolIo.node;
 
@@ -159,19 +159,19 @@ bool MaxPoolFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& mat
     return true;
 }
 
-GraphUniqPtr MaxPoolFusionPass::Replacement(const std::unique_ptr<MatchResult>& match_result)
+GraphUniqPtr MaxPoolFusionPass::Replacement(const std::unique_ptr<MatchResult>& matchResult)
 {
     OPS_LOG_D(kPassName.c_str(), "Enter Replacement for MaxPoolFusionPass");
 
     NodeIo inputIo;
-    OP_LOGE_IF(match_result->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, nullptr, kPassName.c_str(),
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kCaptureInput, inputIo) != SUCCESS, nullptr, kPassName.c_str(),
         "Get captured input failed.");
     TensorDesc inputDesc;
     OP_LOGE_IF(inputIo.node.GetOutputDesc(inputIo.index, inputDesc) != SUCCESS, nullptr, kPassName.c_str(),
         "Get input desc failed.");
 
     NodeIo poolIo;
-    OP_LOGE_IF(match_result->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, nullptr, kPassName.c_str(),
+    OP_LOGE_IF(matchResult->GetCapturedTensor(kCapturePool, poolIo) != SUCCESS, nullptr, kPassName.c_str(),
         "Get captured pool failed.");
     GNode sourceNode = poolIo.node;
 

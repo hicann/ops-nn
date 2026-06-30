@@ -298,7 +298,6 @@ static const aclTensor* InitializeTensor(const aclTensor* x, aclOpExecutor* exec
 // 将int64_t 转为为1维tensor
 static const aclTensor* IntToTensor(int64_t repeats, aclOpExecutor* executor)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (!Ops::NN::AclnnUtil::IsRegbase()) {
         auto repeatsScalar = executor->AllocScalar(repeats);
         auto repeatsTensor = executor->ConvertToTensor(repeatsScalar, op::DataType::DT_INT64);

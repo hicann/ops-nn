@@ -55,6 +55,7 @@ static const int32_t MAX_CONVERT_NUM = 16777216;
 static constexpr size_t DIM_ZERO = 0;
 static const int64_t SMALLSORTLIMIT = 16;
 static constexpr int64_t KTH_VALUE_DIRECT_AXIS_THRESHOLD = 2048;
+static constexpr int64_t KTH_VALUE_MIN_AXIS_LEN = 2;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST_WITH_INT_AND_BF16 = {
     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,  op::DataType::DT_UINT8,
@@ -446,7 +447,7 @@ static bool CanMedianDimUseKthValueDirectly(const aclTensor* self, int64_t realD
 
     auto selfShape = self->GetViewShape();
     int64_t axisLen = selfShape[realDim];
-    if (axisLen < 2 || axisLen > KTH_VALUE_DIRECT_AXIS_THRESHOLD) {
+    if (axisLen < KTH_VALUE_MIN_AXIS_LEN || axisLen > KTH_VALUE_DIRECT_AXIS_THRESHOLD) {
         return false;
     }
 
