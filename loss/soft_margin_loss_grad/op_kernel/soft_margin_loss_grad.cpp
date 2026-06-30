@@ -19,9 +19,10 @@
 #include "kernel_operator.h"
 #include "arch35/soft_margin_loss_grad.h"
 #include "arch35/soft_margin_loss_grad_tiling_data.h"
+#include "arch35/soft_margin_loss_grad_tiling_key.h"
 
-using TilingData4 = SoftMarginLossGradTilingData<4>;
-using TilingData8 = SoftMarginLossGradTilingData<8>;
+using TilingData4 = SoftMarginLossGradTilingData<SMLG_RANK_4>;
+using TilingData8 = SoftMarginLossGradTilingData<SMLG_RANK_8>;
 
 template <int RANK>
 __global__ __aicore__ void soft_margin_loss_grad(
@@ -32,14 +33,14 @@ __global__ __aicore__ void soft_margin_loss_grad(
     GM_ADDR outs[1] = {out};
     REGISTER_NONE_TILING;
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIV_ONLY);
-    if constexpr (RANK == 4) {
+    if constexpr (RANK == SMLG_RANK_4) {
         GET_TILING_DATA_WITH_STRUCT(TilingData4, td, tiling);
-        SmlgKernel<DTYPE_PREDICT, 4> kernel;
+        SmlgKernel<DTYPE_PREDICT, SMLG_RANK_4> kernel;
         kernel.Init(ins, outs, &td);
         kernel.Process();
     } else {
         GET_TILING_DATA_WITH_STRUCT(TilingData8, td, tiling);
-        SmlgKernel<DTYPE_PREDICT, 8> kernel;
+        SmlgKernel<DTYPE_PREDICT, SMLG_RANK_8> kernel;
         kernel.Init(ins, outs, &td);
         kernel.Process();
     }

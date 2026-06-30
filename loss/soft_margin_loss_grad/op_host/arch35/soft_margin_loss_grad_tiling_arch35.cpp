@@ -85,9 +85,10 @@ static void PadAndSqueeze(
 
 static void FindSplitAxis(const std::vector<int64_t>& s, int64_t ub_per_core, SplitResult& out)
 {
-    int64_t per_buf_bytes = (ub_per_core / kPhysNodes) & ~31LL;
+    int64_t per_buf_bytes = (ub_per_core / kPhysNodes) & kAlignMask;
     int64_t per_buf_elems = per_buf_bytes / kBufElemSize;
-    if (per_buf_elems < 1) per_buf_elems = 1;
+    constexpr int64_t kMinBufElems = 1;
+    if (per_buf_elems < kMinBufElems) per_buf_elems = kMinBufElems;
     int64_t rank = (int64_t)s.size();
     int64_t inner = 1;
     for (int64_t k = rank - 1; k >= 0; k--) {
@@ -135,7 +136,8 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx,
 {
     auto* t = ctx->GetTilingData<SoftMarginLossGradTilingData<R>>();
     OP_CHECK_NULL_WITH_CONTEXT(ctx, t);
-    int64_t per_buf_bytes = (ub / kPhysNodes) & ~31LL;
+    int64_t per_buf_bytes = (ub / kPhysNodes) & kAlignMask;
+
     FindSplitAxis(max_bro, ub, t->split);
     MultiCoreSplit(max_bro, t->split, cores, t->multicore);
     t->per_buf_bytes = per_buf_bytes;
@@ -152,7 +154,7 @@ static ge::graphStatus DoTilingAndSet(gert::TilingContext* ctx,
     for (int64_t d = 0; d < delta; d++) t->max_bro_shape[d] = 1;
     for (int64_t d = 0; d < rank; d++) t->max_bro_shape[d + delta] = max_bro[d];
     t->split.axis += delta;
-    t->num_inputs = num_in; t->num_outputs = 1;
+    t->num_inputs = num_in; t->num_outputs = kMaxOutputSlots;
     for (int64_t i = 0; i < num_in; i++) {
         for (int64_t d = 0; d < delta; d++) { t->input_shapes[i][d] = 1; t->input_strides[i][d] = 0; }
         for (int64_t d = 0; d < rank; d++) { t->input_shapes[i][d+delta] = nin[i][d]; t->input_strides[i][d+delta] = ins[i][d]; }
@@ -173,7 +175,7 @@ static ge::graphStatus SoftMarginLossGradTilingFunc(gert::TilingContext* context
     OP_CHECK_IF(cores == 0 || ubSize == 0, OP_LOGE(context, "platform info invalid"), return ge::GRAPH_FAILED);
 
     std::vector<std::vector<int64_t>> ins;
-    for (size_t i = 0; i < 3; i++) {
+    for (size_t i = 0; i < kMaxInputSlots; i++) {
         auto sh = context->GetInputShape(i); OP_CHECK_NULL_WITH_CONTEXT(context, sh);
         gert::Shape s = sh->GetStorageShape();
         std::vector<int64_t> d;
@@ -183,7 +185,7 @@ static ge::graphStatus SoftMarginLossGradTilingFunc(gert::TilingContext* context
     std::vector<int64_t> maxb, nout; std::vector<std::vector<int64_t>> nin;
     PadAndSqueeze(ins, maxb, nin, nout);
     int64_t rank = (int64_t)maxb.size();
-    OP_CHECK_IF(rank > 8, OP_LOGE(context, "rank %ld exceeds 8", rank), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(rank > SMLG_RANK_8, OP_LOGE(context, "rank %ld exceeds %d", rank, SMLG_RANK_8), return ge::GRAPH_FAILED);
     OP_CHECK_IF(!CheckBroadcastShape(nin, rank), OP_LOGE(context, "broadcast incompatible"), return ge::GRAPH_FAILED);
 
     int64_t total_num = 1;
@@ -210,13 +212,13 @@ static ge::graphStatus SoftMarginLossGradTilingFunc(gert::TilingContext* context
         return ge::GRAPH_SUCCESS;
     }
 
-    int64_t mapped = (rank <= 4) ? 4 : 8;
+    int64_t mapped = (rank <= SMLG_RANK_4) ? SMLG_RANK_4 : SMLG_RANK_8;
     ge::graphStatus ret;
-    if (mapped == 4) {
-        ret = DoTilingAndSet<4>(context, maxb, nin, nout, cof_is_mean, total_num, (int64_t)ubSize, cores);
+    if (mapped == SMLG_RANK_4) {
+        ret = DoTilingAndSet<SMLG_RANK_4>(context, maxb, nin, nout, cof_is_mean, total_num, (int64_t)ubSize, cores);
         context->SetTilingKey(GET_TPL_TILING_KEY(SMLG_RANK_4));
     } else {
-        ret = DoTilingAndSet<8>(context, maxb, nin, nout, cof_is_mean, total_num, (int64_t)ubSize, cores);
+        ret = DoTilingAndSet<SMLG_RANK_8>(context, maxb, nin, nout, cof_is_mean, total_num, (int64_t)ubSize, cores);
         context->SetTilingKey(GET_TPL_TILING_KEY(SMLG_RANK_8));
     }
     return ret;

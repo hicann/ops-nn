@@ -85,10 +85,18 @@ __aicore__ inline int64_t CalcOutputTransferCount(
 
 template <typename T, int64_t RANK>
 class SmlgKernel {
-    static constexpr int64_t ND = (RANK <= 5) ? RANK : 5;
+    static constexpr int64_t ND = (RANK <= kMaxNdDma) ? RANK : kMaxNdDma;
     // fp16/bf16 需中间提升 fp32（Exp/Div 无 bf16/fp16 安全语义），fp32 直算
     static constexpr bool kHalf = AscendC::IsSameType<T, half>::value ||
                                   AscendC::IsSameType<T, bfloat16_t>::value;
+    // TBuf 槽位布局：[BG=0, BX=1, BY=2, BXY=3, BTMP=4] 为公共槽，
+    // fp16/bf16 扩位 Cast 专用 fp32 槽从 kFp32SlotBase 起连续 3 个
+    static constexpr int kSlotGrad   = 0;
+    static constexpr int kSlotX      = 1;
+    static constexpr int kSlotY      = 2;
+    static constexpr int kSlotXY     = 3;
+    static constexpr int kSlotTmp    = 4;
+    static constexpr int kFp32SlotBase = kSlotTmp + 1;
 
     AscendC::TPipe pipe_;
     const SoftMarginLossGradTilingData<RANK>* td_;
@@ -113,7 +121,7 @@ public:
             pipe_.InitBuffer(buf_[i], td_->per_buf_bytes);
 
         cof_ = (td_->cof_is_mean && td_->total_num > 0)
-               ? (1.0f / static_cast<float>(td_->total_num)) : 1.0f;
+               ? (kPosOne / static_cast<float>(td_->total_num)) : kPosOne;
 
         const int64_t* dstShape = td_->max_bro_shape;
         int64_t k = td_->split.axis;
@@ -160,13 +168,13 @@ public:
 
         constexpr int X = 0, Y = 1, GRAD = 2;   // 输入槽（与 OpDef self/target/grad_output 顺序一致）
         constexpr int OUT0 = 0;
-        constexpr int BG = 0, BX = 1, BY = 2, BXY = 3, BTMP = 4;  // TBuf 槽
+        constexpr int BG = kSlotGrad, BX = kSlotX, BY = kSlotY, BXY = kSlotXY, BTMP = kSlotTmp;
 
         int64_t inner_count = 1;
         for (int64_t d = td_->split.axis + 1; d < RANK; d++)
             inner_count *= td_->max_bro_shape[d];
 
-        int64_t coord[8] = {};
+        int64_t coord[RANK] = {};
         for (int64_t flat = start; flat < end; flat++) {
             int64_t a_i_seg = GetUBSplitRange(flat % td_->split.a_o, td_->split.a_o,
                                               td_->split.a_i, td_->split.a_i_tail);
@@ -206,7 +214,7 @@ private:
     {
         if constexpr (kHalf) {
             // bf16/fp16 源驻留 BG/BX/BY；扩位 Cast 写独立 fp32 槽，禁止 in-place 自覆盖
-            constexpr int FG = 5, FX = 6, FY = 7;
+            constexpr int FG = kFp32SlotBase, FX = kFp32SlotBase + 1, FY = kFp32SlotBase + 2;
             AscendC::LocalTensor<float> g  = buf_[FG].Get<float>();
             AscendC::LocalTensor<float> x  = buf_[FX].Get<float>();
             AscendC::LocalTensor<float> y  = buf_[FY].Get<float>();
@@ -217,11 +225,11 @@ private:
             AscendC::Cast(y, buf_[BY].Get<T>(), AscendC::RoundMode::CAST_NONE, count);
             // 字面形：(-y*exp(-xy))/(1+exp(-xy))，对齐 golden 溢出语义（exp 上溢→inf/inf=NaN）
             AscendC::Mul(xy, x, y, count);            // xy
-            AscendC::Muls(xy, xy, -1.0f, count);      // -xy
+            AscendC::Muls(xy, xy, kNegOne, count);    // -xy
             AscendC::Exp(e, xy, count);               // exp(-xy)
-            AscendC::Muls(y, y, -1.0f, count);        // -y
+            AscendC::Muls(y, y, kNegOne, count);      // -y
             AscendC::Mul(x, y, e, count);             // -y*exp(-xy)
-            AscendC::Adds(e, e, 1.0f, count);         // 1+exp(-xy)
+            AscendC::Adds(e, e, kPosOne, count);      // 1+exp(-xy)
             AscendC::Div(x, x, e, count);             // (-y*exp(-xy))/(1+exp(-xy))
             AscendC::Mul(x, x, g, count);             // * grad
             AscendC::Muls(x, x, cof_, count);         // * cof
@@ -234,11 +242,11 @@ private:
             AscendC::LocalTensor<float> e  = buf_[BTMP].Get<float>();
             // 字面形：(-y*exp(-xy))/(1+exp(-xy))，对齐 golden 溢出语义（exp 上溢→inf/inf=NaN）
             AscendC::Mul(xy, x, y, count);
-            AscendC::Muls(xy, xy, -1.0f, count);
+            AscendC::Muls(xy, xy, kNegOne, count);
             AscendC::Exp(e, xy, count);
-            AscendC::Muls(y, y, -1.0f, count);
+            AscendC::Muls(y, y, kNegOne, count);
             AscendC::Mul(x, y, e, count);
-            AscendC::Adds(e, e, 1.0f, count);
+            AscendC::Adds(e, e, kPosOne, count);
             AscendC::Div(x, x, e, count);
             AscendC::Mul(x, x, g, count);
             AscendC::Muls(g, x, cof_, count);   // 结果写回 BG
@@ -264,7 +272,7 @@ private:
         static constexpr AscendC::NdDmaConfig cfg = { false, AscendC::NdDmaConfig::unsetPad,
                                                        AscendC::NdDmaConfig::unsetPad, false };
 
-        if constexpr (RANK <= 5) {
+        if constexpr (RANK <= kMaxNdDma) {
             AscendC::DataCopy<T, ND, cfg>(
                 buf_[slot].Get<T>(), gmIn_[inputIdx][off], params);
         } else {

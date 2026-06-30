@@ -23,19 +23,25 @@
 constexpr int64_t kMaxInputSlots  = 3;   // gradOutput, self, target -> kernel x=self, y=target, grad=gradOutput
 constexpr int64_t kMaxOutputSlots = 1;   // out
 constexpr int64_t kPhysNodes      = 8;   // 物理存活节点 P（= TBuf 槽位数）；fp16/bf16 需 3 bf16 输入槽 + 5 fp32 计算槽，禁止 in-place 扩位 Cast 自覆盖
+constexpr int64_t kAlignBytes     = 32;  // UB buffer 对齐粒度（字节）
+constexpr int64_t kAlignMask      = ~(kAlignBytes - 1);
+constexpr int64_t kMaxNdDma       = 5;   // NdDma 最大维度数
+constexpr float   kNegOne         = -1.0f;
+constexpr float   kPosOne         = 1.0f;
 
 struct SplitResult {
     int64_t axis;
     int64_t a_i;
     int64_t a_o;
     int64_t a_i_tail;
+    SplitResult() : axis(0), a_i(0), a_o(0), a_i_tail(0) {}
 };
 
 struct MultiCoreResult {
-    int64_t num_cores;
-    int64_t total_tiles;
-    int64_t tiles_main;
-    int64_t cores_tail;
+    int64_t num_cores   = 0;
+    int64_t total_tiles = 0;
+    int64_t tiles_main  = 0;
+    int64_t cores_tail  = 0;
 };
 
 template<int64_t kRank>
@@ -43,7 +49,7 @@ struct SoftMarginLossGradTilingData {
     SplitResult     split;
     MultiCoreResult multicore;
     int64_t         rank;                 // 实际有效 rank
-    int64_t         per_buf_bytes;        // (ub_per_core/kPhysNodes)&~31，32B 对齐
+    int64_t         per_buf_bytes;        // (ub_per_core/kPhysNodes)&kAlignMask，kAlignBytes 字节对齐
     int64_t         cof_is_mean;          // reduction==1(mean) → 1，否则 0
     int64_t         total_num;            // broadcast 后元素总数 N（mean 求 cof=1/N）
     int64_t         max_bro_shape[kRank];

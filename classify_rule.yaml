@@ -2329,6 +2329,8 @@ VC3@ops-nn:
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.cpp
         - ops/ops-nn/activation/glu/op_host/glu_tiling_arch35.h
         - ops/ops-nn/activation/glu/op_kernel/arch35/
+        # threshold_grad_v2_d
+        - ops/ops-nn/activation/threshold_grad_v2_d/
       opensource_style: null
       kernel_style: null
     unrelease:
