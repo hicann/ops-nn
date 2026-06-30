@@ -54,35 +54,47 @@
 
     | groups |        dtype           |   x format  | filter format |    y format    |
     |--------|------------------------|-------------|---------------|----------------|
-    |  =1    |HIFLOAT8/FLOAT8_E4M3FN  |    NCDHW    |      NCDHW    |     NCDHW      |
-    |  =1    |HIFLOAT8/FLOAT8_E4M3FN  |    NDHWC    |      NCDHW    |     NDHWC      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NCDHW    |     NCDHW      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NDHWC    |     NCDHW      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      DHWCN    |     NCDHW      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NDHWC    |     NDHWC      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NCDHW    |     NDHWC      |
-    |  =1    |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      DHWCN    |     NDHWC      |
-    |  >1    |HIFLOAT8/FLOAT8_E4M3FN  |    NCDHW    |      NCDHW    |     NCDHW      |
-    |  >1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NCDHW    |     NCDHW      |
-    |  >1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NDHWC    |     NCDHW      |
-    |  >1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      DHWCN    |     NCDHW      |
+    | =1     |HIFLOAT8/FLOAT8_E4M3FN  |    NCDHW    |      NCDHW    |     NCDHW      |
+    | =1     |HIFLOAT8/FLOAT8_E4M3FN  |    NDHWC    |      NCDHW    |     NDHWC      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NCDHW    |     NCDHW      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NDHWC    |     NCDHW      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      DHWCN    |     NCDHW      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NDHWC    |     NDHWC      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      NCDHW    |     NDHWC      |
+    | =1     |FLOAT16/BFLOAT16/FLOAT32|    NDHWC    |      DHWCN    |     NDHWC      |
+    | \>1    |HIFLOAT8/FLOAT8_E4M3FN  |    NCDHW    |      NCDHW    |     NCDHW      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NCDHW    |     NCDHW      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      NDHWC    |     NCDHW      |
+    | \>1    |FLOAT16/BFLOAT16/FLOAT32|    NCDHW    |      DHWCN    |     NCDHW      |
 
 ## 约束说明
 
+* input_size
+    - 可输入的轴序列如下：
+        - [batch, in_depth, in_height, in_width, in_channels]
+        - [batch, in_channels, in_depth, in_height, in_width]
+* x
+    - N、C、D、H和W维度的取值范围必须在 [1,2147483647] 之间。
 * filter
     - 当数据格式为DHWCN或NDHWC时，不支持HIFLOAT8、FLOAT8_E4M3FN。
-    - 高度(H)与宽度(W)维长度必须在[1,511]范围内。
+    - N(out_channels)、C(in_channels)和D维度的取值范围必须在 [1,2147483647] 之间。
+    - H、W维度的取值范围必须在 [1,511] 之间。
 * strides
     - N和C的维度必须为1。
-    - H和W的维度的取值范围必须在[1,63]之间。
-    - D维度的取值范围必须在[1,255]之间。
+    - Ascend 950PR/Ascend 950DT：D、H和W维度的取值范围必须在 [1,2147483647] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：H和W维度的取值范围必须在 [1,63] 之间，D维度的取值范围必须在 [1,255] 之间。
 * pads
-    - 所有维度的取值范围必须在[0,255]之间。
+    - 填充顺序为：[front, back, top, bottom, left, right]。
+    - Ascend 950PR/Ascend 950DT：D、H和W维度的取值范围必须在 [0,2147483647] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：D、H和W维度的取值范围必须在 [0,255] 之间。
 * dilations
     - N与C的维度必须为1。
-    - W、H和D维度的取值范围必须在 [1,2147483647] 之间。
+    - Ascend 950PR/Ascend 950DT：D、H和W维度的取值范围必须在 [1,2147483647] 之间。
+    - Atlas A2 训练系列产品/Atlas A2 推理系列产品、Atlas A3 训练系列产品/Atlas A3 推理系列产品：D、H和W维度的取值范围必须在 [1,255] 之间。
 * output_padding 
     - N和C维度必须为0，仅允许在深度、高度、宽度方向上添加。
+    - D、H和W维度的取值范围必须在 [0,2147483647] 之间。
+* 由于硬件资源限制，算子在部分参数取值组合场景下会执行失败，请根据日志信息提示分析并排查问题。若无法解决，请单击 [Link](https://www.hiascend.com/support)获取技术支持。
 
 ## 调用说明
 
