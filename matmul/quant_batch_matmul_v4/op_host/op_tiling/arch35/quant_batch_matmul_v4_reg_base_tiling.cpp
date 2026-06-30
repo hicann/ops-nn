@@ -127,13 +127,15 @@ bool QuantBatchMatmulV4RegBase::CustomCheck() const
 bool QuantBatchMatmulV4RegBase::CheckCoreNum() const
 {
     if (aivNum_ == 0 || aicNum_ == 0) {
-        OP_LOGE(
-            inputParams_.opName, "aicNum and aivNum must be greater than 0, actual aicNum: %u, aivNum: %u.", aicNum_,
-            aivNum_);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "aicNum, aivNum", std::to_string(aicNum_) + ", " + std::to_string(aivNum_),
+            "aicNum and aivNum must be greater than 0");
         return false;
     }
     if (aivNum_ != CORE_RATIO * aicNum_) {
-        OP_LOGE(inputParams_.opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum_, aivNum_);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "aicNum, aivNum", std::to_string(aicNum_) + ", " + std::to_string(aivNum_),
+            "aicNum:aivNum must be 1:2");
         return false;
     }
     return true;

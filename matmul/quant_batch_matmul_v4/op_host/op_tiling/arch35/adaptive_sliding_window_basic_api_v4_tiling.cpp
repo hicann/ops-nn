@@ -350,7 +350,9 @@ bool AdaptiveSlidingWindowBasicTilingV4::CheckCoreNum() const
     auto aicNum = compileInfoPtr_->aicNum;
     auto aivNum = compileInfoPtr_->aivNum;
     if (aivNum != CORE_RATIO * aicNum) {
-        OP_LOGE(inputParams_.opName, "aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.", aicNum, aivNum);
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            inputParams_.opName, "aicNum, aivNum", std::to_string(aicNum) + ", " + std::to_string(aivNum),
+            "aicNum:aivNum must be 1:2");
         return false;
     }
     return true;
