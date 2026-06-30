@@ -19,7 +19,6 @@ using namespace AdaptiveMaxPool3dGradOp;
 namespace optiling {
 
 static constexpr uint64_t DCACHE_SIZE = 128 * 1024UL;
-static constexpr int64_t MAX_THREAD_NUM = 1024;
 
 bool AdaptiveMaxPool3dGradTilingSimt::IsCapable()
 {
@@ -51,11 +50,10 @@ ge::graphStatus AdaptiveMaxPool3dGradTilingSimt::PostTiling()
         blockNum = Ops::Base::CeilDiv(totalNC, detThreadDim);
     } else {
         int64_t outDataCount = inputData.nX * inputData.cX * inputData.dGrad * inputData.hGrad * inputData.wGrad;
-        int64_t threads = std::min(outDataCount, MAX_THREAD_NUM);
-        blockNum = Ops::Base::CeilDiv(outDataCount, threads);
+        blockNum = (outDataCount == 0) ? 1 : std::min(outDataCount, static_cast<int64_t>(coreNum_));
     }
-    blockNum = std::max(blockNum, static_cast<int64_t>(1));
     blockNum = std::min(blockNum, static_cast<int64_t>(coreNum_));
+    blockNum = std::max(blockNum, static_cast<int64_t>(1));
     context_->SetBlockDim(blockNum);
     context_->SetLocalMemorySize(ubSize_ - DCACHE_SIZE);
     return ge::GRAPH_SUCCESS;
