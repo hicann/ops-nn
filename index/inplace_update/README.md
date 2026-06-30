@@ -1,4 +1,4 @@
-# Threshold
+# InplaceUpdate
 
 ## 产品支持情况
 
@@ -13,12 +13,12 @@
 
 ## 功能说明
 
-- 算子功能：对输入x进行阈值操作。当x中的elements大于threshold时，返回1；否则，返回0。
+- 算子功能：根据indices将updates中的值更新到x中，实现原地更新操作。
 
 - 计算公式：
 
 $$
-y = (x > threshold) \; ? \; 1 : 0
+y = x.copy();\quad y[\text{indices}[i], ...] = v[i, ...]
 $$
 
 ## 参数说明
@@ -42,34 +42,36 @@ $$
     <tr>
       <td>x</td>
       <td>输入</td>
-      <td>待进行threshold计算的入参，公式中的x。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>被更新的输入张量，支持1D~8D。</td>
+      <td>FLOAT16、FLOAT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>indices</td>
+      <td>输入</td>
+      <td>int32类型的一维向量，指定要更新的索引。</td>
+      <td>INT32</td>
+      <td>ND</td>
+    </tr>
+    <tr>
+      <td>v</td>
+      <td>输入</td>
+      <td>更新值张量，与x同dtype，第0维大小等于indices的长度。</td>
+      <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>y</td>
       <td>输出</td>
-      <td>threshold计算后的出参，公式中的y。</td>
-      <td>FLOAT、FLOAT16、BFLOAT16</td>
+      <td>更新后的张量，shape与x相同，dtype与x相同。</td>
+      <td>FLOAT16、FLOAT32</td>
       <td>ND</td>
-    </tr>
-    <tr>
-      <td>threshold</td>
-      <td>属性</td>
-      <td>阈值，x中大于此值的元素输出1，否则输出0。默认值为0.0。</td>
-      <td>FLOAT</td>
-      <td>-</td>
     </tr>
   </tbody></table>
 
 ## 约束说明
 
-- 输入输出为任意维度张量（ND格式）。
-- 输入输出数据类型必须一致。
-- 输出值为离散值（0.0或1.0），与Golden结果bit-exact一致。
-- NaN输入输出0.0（NaN 与任意值比较恒为False）。
-- +Inf输入输出1.0（+Inf > threshold 恒为True）。
-- -Inf输入输出0.0（-Inf > threshold 恒为False）。
+输入输出仅支持ND格式，x和v的 dtype 必须相同，v.shape[0]必须等于indices的长度，x.shape[1:] 必须等于 v.shape[1:]。当 indices 中存在重复值时，结果为非确定性。
 
 ## 调用说明
 
@@ -81,13 +83,9 @@ $$
   </tr></thead>
 <tbody>
   <tr>
-    <td>aclnn调用</td>
-    <td><a href="./examples/test_aclnn_threshold.cpp">test_aclnn_threshold</a></td>
-    <td rowspan="2">参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
-  </tr>
-  <tr>
     <td>图模式调用</td>
-    <td><a href="./examples/test_geir_threshold.cpp">test_geir_threshold</a></td>
+    <td><a href="./examples/test_geir_inplace_update.cpp">test_geir_inplace_update</a></td>
+    <td>参见<a href="../../docs/zh/invocation/quick_op_invocation.md">算子调用</a>完成算子编译和验证。</td>
   </tr>
 </tbody>
 </table>

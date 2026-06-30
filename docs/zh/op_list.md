@@ -740,12 +740,12 @@
   <tr>
     <td>activation</td>
     <td><a href="../../activation/threshold/README.md">threshold</a></td>
-    <td>✗</td>
-    <td>✗</td>
+    <td>✓</td>
+    <td>✓</td>
     <td>✓</td>
     <td>✓</td>
     <td>AI Core</td>
-    <td>该算子暂无Ascend C代码实现，欢迎开发者补充贡献，贡献方式参考<a href="../../CONTRIBUTING.md">贡献指南</a>。</td>
+    <td>对输入x进行阈值操作。当x中的elements大于threshold时，返回 1；否则，返回 0。</td>
   </tr>
   <tr>
     <td>activation</td>
@@ -1776,6 +1776,16 @@
     <td>✗</td>
     <td>AI Core</td>
     <td>根据给定的indices，将updates中的值加到输入张量var的第一维度上。</td>
+  </tr>
+  <tr>
+    <td>index</td>
+    <td><a href="../../index/inplace_update/README.md">inplace_update</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>根据indices将 updates 中的值更新到 x 中，实现原地更新操作。</td>
   </tr>
   <tr>
     <td>index</td>
