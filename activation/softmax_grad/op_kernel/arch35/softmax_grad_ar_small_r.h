@@ -181,14 +181,14 @@ private:
                     LoadTensorForDtypeT(x0Local, x0Reg, pregMask, xOffset);
 
                     DataCopy(x1Reg, tmpAddr2 + xOffset);
-                    Mul(x0Reg, x0Reg, sumReg, pregMask);
-                    Sub(x0Reg, x1Reg, x0Reg, pregMask);
+                    Neg(x0Reg, x0Reg, pregMask);
+                    MulAddDst(x1Reg, x0Reg, sumReg, pregMask);
 
                     if constexpr (xToFp32_) {
-                        MicroAPI::DataCopy(tmpAddrTy + xOffset, x0Reg, pregMask);
+                        MicroAPI::DataCopy(tmpAddrTy + xOffset, x1Reg, pregMask);
                     } else {  // fp16、bf16
                         RegTensor<T> xFp16;
-                        MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, x0Reg, pregMask);
+                        MicroAPI::Cast<T, float, castTraitFp32ToFp16>(xFp16, x1Reg, pregMask);
                         MicroAPI::DataCopy<T, MicroAPI::StoreDist::DIST_PACK_B32>(tmpAddrTy + xOffset, xFp16, pregMask);
                     }
                 }
