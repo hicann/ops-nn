@@ -330,12 +330,12 @@ private:
 
     __aicore__ inline void CopyInXNormal(int64_t xGmOffset, uint32_t curTileA0Len)
     {
-        DataCopyParams copyInParams;
+        DataCopyExtParams copyInParams;
         copyInParams.blockCount = tilingData_->totalRLen;
         copyInParams.blockLen = curTileA0Len * sizeof(T);
         copyInParams.srcStride = 0;
         copyInParams.dstStride = 0;
-        DataCopyPadParams padParams = {false, 0, 0, 0};
+        DataCopyPadExtParams<T> padParams = {false, 0, 0, 0};
 
         LocalTensor<T> x0Local_ = x0Queue_.AllocTensor<T>();
         DataCopyPad(x0Local_, x0Gm_[xGmOffset], copyInParams, padParams);
@@ -350,7 +350,7 @@ private:
     {
         LocalTensor<T> yLocal = yQueue_.DeQue<T>();
 
-        DataCopyParams copyOutParams;
+        DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = tilingData_->totalRLen;
         copyOutParams.blockLen = curTileA0Len * sizeof(T);
         copyOutParams.srcStride = 0;
@@ -364,7 +364,7 @@ private:
     {
         LocalTensor<T> yLocal = yQueue_.DeQue<T>();
 
-        DataCopyParams copyOutParams;
+        DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
         copyOutParams.blockLen = tilingData_->totalRLen * sizeof(T);
         copyOutParams.srcStride = 0;

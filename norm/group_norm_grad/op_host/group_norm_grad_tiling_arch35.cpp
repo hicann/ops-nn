@@ -68,6 +68,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::GetPlatformInfo()
     OP_LOGD(opName, "Tiling initing.");
     // Get compileInfo
     auto compileInfo = context_->GetCompileInfo<GroupNormGradCompileInfo>();
+    OP_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
     ubSize_ = compileInfo->ubSizePlatForm;
     OP_TILING_CHECK(
         (ubSize_ <= 0), OP_LOGE(context_->GetNodeName(), "ubSize should be greater than zero."),
@@ -109,6 +110,7 @@ ge::graphStatus GroupNormGradRegBaseTiling::GetShapeAttrsInfo()
     const bool* dbetaRequire = attrs->GetAttrPointer<bool>(DBETA_IS_REQUIRE_IDX);
     dbetaIsRequire_ = (dbetaRequire == nullptr) ? true : *dbetaRequire;
     const int64_t* gValue = attrs->GetAttrPointer<int64_t>(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, gValue);
     OP_TILING_CHECK(
         (*gValue <= 0),
         OP_LOGE_FOR_INVALID_VALUE(context_->GetNodeName(), "num_groups", std::to_string(*gValue).c_str(), "bigger than 0"),

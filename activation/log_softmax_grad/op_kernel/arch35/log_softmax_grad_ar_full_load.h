@@ -448,8 +448,8 @@ template <typename T>
 __aicore__ inline void LogSoftmaxGradAR<T>::CopyInX(const LocalTensor<T>& xInUb, const GlobalTensor<T>& xInGm, int64_t ubA,
                                                  int64_t offset)
 {
-    DataCopyPadParams padParams{false, 0, 0, 0};
-    DataCopyParams copyInParams;
+    DataCopyPadExtParams<T> padParams{false, 0, 0, 0};
+    DataCopyExtParams copyInParams;
     copyInParams.blockCount = ubA;
     copyInParams.blockLen = tl_->r * sizeof(T);
     copyInParams.srcStride = 0;
@@ -474,7 +474,7 @@ __aicore__ inline void LogSoftmaxGradAR<T>::StoreTensorForDtypeTOut(__local_mem_
 template <typename T>
 __aicore__ inline void LogSoftmaxGradAR<T>::CopyOutY(const LocalTensor<T>& yOutUb, int64_t ubA, int64_t offset)
 {
-    DataCopyParams copyOutParams;
+    DataCopyExtParams copyOutParams;
     copyOutParams.blockCount = ubA;
     copyOutParams.blockLen = tl_->r * sizeof(T);
     copyOutParams.srcStride = (tl_->rAligned - tl_->r) * sizeof(T) / BLOCK_SIZE;

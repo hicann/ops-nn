@@ -501,8 +501,8 @@ __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::StoreTensorForDtypeTOut(__lo
 template <typename T_in, typename T_out>
 __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::CopyInX(const LocalTensor<T_in>& xInUb, int64_t ubA, int64_t offset)
 {
-    DataCopyPadParams padParams{false, 0, 0, 0};
-    DataCopyParams copyInParams;
+    DataCopyPadExtParams<T_in> padParams{false, 0, 0, 0};
+    DataCopyExtParams copyInParams;
     copyInParams.blockCount = ubA;
     copyInParams.blockLen = tl_->r * sizeof(T_in);
     copyInParams.srcStride = 0;
@@ -514,7 +514,7 @@ template <typename T_in, typename T_out>
 __aicore__ inline void LogSoftmaxV2AR<T_in, T_out>::CopyOutY(const LocalTensor<T_out>& yOutUb, int64_t ubA,
                                                              int64_t offset)
 {
-    DataCopyParams copyOutParams;
+    DataCopyExtParams copyOutParams;
     copyOutParams.blockCount = ubA;
     copyOutParams.blockLen = tl_->r * sizeof(T_out);
     copyOutParams.srcStride = (tl_->rAligned - tl_->r) * sizeof(T_out) / BLOCK_SIZE;

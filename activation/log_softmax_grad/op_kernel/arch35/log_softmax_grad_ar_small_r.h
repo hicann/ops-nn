@@ -302,7 +302,7 @@ private:
 
     __aicore__ inline void CopyOutFp32(const LocalTensor<T>& yLocal, int64_t yGmOffset, uint32_t curTileA0Len)
     {
-        DataCopyParams copyOutParams;
+        DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
         copyOutParams.blockLen = tilingData_->totalRLen * sizeof(T);
         copyOutParams.dstStride = 0;
@@ -312,7 +312,7 @@ private:
 
     __aicore__ inline void CopyOutFp16(const LocalTensor<T>& yLocal, int64_t yGmOffset, uint32_t curTileA0Len)
     {
-        DataCopyParams copyOutParams;
+        DataCopyExtParams copyOutParams;
         copyOutParams.blockCount = curTileA0Len;
         copyOutParams.blockLen =  tilingData_->totalRLen * sizeof(T);
         copyOutParams.srcStride = 0;
