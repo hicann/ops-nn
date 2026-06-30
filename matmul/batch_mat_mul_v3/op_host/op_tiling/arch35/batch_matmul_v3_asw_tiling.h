@@ -40,6 +40,7 @@ protected:
     ge::graphStatus GetTilingData(TilingResult& tiling) const override;
 
     MatMulV3ApiLevel apiLevel_{MatMulV3ApiLevel::HIGH_LEVEL};
+    MatMulV3BatchModel batchModel_{MatMulV3BatchModel::BATCH_MODEL};
     MatMulV3FullLoad fullLoad_{MatMulV3FullLoad::NONE_FULL_LOAD};
 };
 } // namespace batch_matmul_v3_advanced

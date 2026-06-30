@@ -185,8 +185,8 @@ struct BatchMatMulV3MergeBatchBasicTilingData {
 
 #pragma pack(push, 8)
 struct MatMulV3KEqZeroBasicTilingData {
-    uint64_t totalDataAmount = 1;
-    uint64_t aivNum = 1;
+    uint32_t totalDataAmount = 1;
+    uint32_t aivNum = 1;
 };
 #pragma pack(pop)
 

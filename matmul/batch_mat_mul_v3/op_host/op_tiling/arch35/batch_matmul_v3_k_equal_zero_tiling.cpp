@@ -56,7 +56,7 @@ uint64_t BatchMatMulV3KEqZeroTiling::GetNumBlocks() const
 uint64_t BatchMatMulV3KEqZeroTiling::GetTilingKey() const
 {
     return BatchMatMulV3TilingKey().SetTrans(false, false)
-        .SetApiLevel(MatMulV3ApiLevel::HIGH_LEVEL)
+        .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .SetBatchModel(MatMulV3BatchModel::BATCH_MODEL)
         .SetModel(MatMulV3Model::K_EQUAL_ZERO)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)

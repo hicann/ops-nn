@@ -95,7 +95,7 @@ void BatchMatMulV3AswBasicTiling::CheckTensorApiSupport()
         isSplitK = true;
     }
     // 非切K且连续场景下才允许切换tensor api实现
-    apiLevel_ = (isBatchMatmul && !isNonContiguous && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL_BASIC :
+    apiLevel_ = (isBatchMatmul && !isNonContiguous && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL :
                                                                    MatMulV3ApiLevel::BASIC_LEVEL;
     // 1952当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
