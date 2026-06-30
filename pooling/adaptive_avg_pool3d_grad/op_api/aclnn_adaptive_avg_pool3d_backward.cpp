@@ -77,7 +77,7 @@ static bool CheckInputOutDims(const aclTensor* gradOutput, const aclTensor* self
     for (size_t i = Ops::NN::AclnnUtil::IsRegbase() ? 1 : 0; i < selfDimNum; i++) {
         if (selfShape.GetDim(i) <= 0) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i + 1, 0);
+                ACLNN_ERR_PARAM_INVALID, "self'dims is invalid, self No.[%lu] dim is not bigger than [%d].", i, 0);
             return false;
         }
         if (selfShape.GetDim(i) != outShape.GetDim(i)) {
@@ -96,7 +96,7 @@ static bool CheckInputOutDims(const aclTensor* gradOutput, const aclTensor* self
         if (gradOutputShape.GetDim(i) <= 0) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "gradOutput dims is invalid, self No.[%lu] dim is not bigger than [%d].",
-                i + 1, 0);
+                i, 0);
             return false;
         }
     }
