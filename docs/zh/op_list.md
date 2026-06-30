@@ -4380,6 +4380,16 @@
     <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
   </tr>
   <tr>
+    <td>optim</td>
+    <td><a href="../../optim/sparse_apply_adagrad_v2/README.md">sparse_apply_adagrad_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>稀疏版本的AdagradV2优化器算子，根据稀疏梯度和索引向量原地更新参数变量和累加器。</td>
+  </tr>
+  <tr>
     <td>hash</td>
     <td><a href="../../hash/embedding_hash_table_apply_adam_w/README.md">embedding_hash_table_apply_adam_w</a></td>
     <td>✓</td>
