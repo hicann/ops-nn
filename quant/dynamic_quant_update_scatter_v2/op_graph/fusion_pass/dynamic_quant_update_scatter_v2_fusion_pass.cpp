@@ -277,16 +277,26 @@ static bool IsAllInputDtypeRight(const std::vector<DataType>& input_dtypes)
     DataType input0_dtype = input_dtypes[2];
     DataType input1_dtype = input_dtypes[3];
     DataType input2_dtype = input_dtypes[4];
-    OP_LOGE_IF(
-        (x_dtype != DT_FLOAT16) && (x_dtype != DT_BF16), false, PASS_NAME.c_str(), "x dtype is not right.");
-    OP_LOGE_IF(
-        (indices_dtype != DT_INT32), false, PASS_NAME.c_str(), "indices dtype is not right.");
-    OP_LOGE_IF(
-        (input0_dtype != DT_INT32), false, PASS_NAME.c_str(), "var dtype is not right.");
-    OP_LOGE_IF(
-        (input1_dtype != DT_FLOAT), false, PASS_NAME.c_str(), "var_scale dtype is not right.");
-    OP_LOGE_IF(
-        (input2_dtype != DT_FLOAT), false, PASS_NAME.c_str(), "var_offset dtype is not right.");
+    if (x_dtype != DT_FLOAT16 && x_dtype != DT_BF16) {
+        OPS_LOG_I(PASS_NAME.c_str(), "x dtype is not right.");
+        return false;
+    }
+    if (indices_dtype != DT_INT32) {
+        OPS_LOG_I(PASS_NAME.c_str(), "indices dtype is not right.");
+        return false;
+    }
+    if (input0_dtype != DT_INT32) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var dtype is not right.");
+        return false;
+    }
+    if (input1_dtype != DT_FLOAT) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var_scale dtype is not right.");
+        return false;
+    }
+    if (input2_dtype != DT_FLOAT) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var_offset dtype is not right.");
+        return false;
+    }
     return true;
 }
 
@@ -295,10 +305,14 @@ static bool IsAllOutputDtypeRight(const std::vector<DataType>& output_dtypes)
     OPS_LOG_I(PASS_NAME.c_str(), "Begin check all output dtype");
     DataType quant_out_dtype = output_dtypes[0];
     DataType var_out_dtype = output_dtypes[1];
-    OP_LOGE_IF(
-        (quant_out_dtype != DT_INT4), false, PASS_NAME.c_str(), "it is not int4 dynamic quant.");
-    OP_LOGE_IF(
-        (var_out_dtype != DT_INT4), false, PASS_NAME.c_str(), "var out dtype is not right.");
+    if (quant_out_dtype != DT_INT4) {
+        OPS_LOG_I(PASS_NAME.c_str(), "it is not int4 dynamic quant.");
+        return false;
+    }
+    if (var_out_dtype != DT_INT4) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var out dtype is not right.");
+        return false;
+    }
     return true;
 }
 
@@ -312,12 +326,13 @@ static bool IsTargetPlatform()
         false, PASS_NAME.c_str(), "Get platform_info failed.");
 
     const string soc = platform_info.str_info.short_soc_version;
-    bool is_platform910b = soc == "Ascend910b";
+    bool is_platform910b = soc == "Ascend910B";
     bool is_platform910_93 = soc == "Ascend910_93";
     OPS_LOG_I(PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
-    OP_LOGE_IF(
-        !is_platform910b && !is_platform910_93, false, PASS_NAME.c_str(),
-        "Platform is not support, only work on 910b or 910_93.");
+    if (!is_platform910b && !is_platform910_93) {
+        OPS_LOG_I(PASS_NAME.c_str(), "Platform is not support, only work on 910b or 910_93.");
+        return false;
+    }
     return true;
 }
 
@@ -344,14 +359,22 @@ static bool IsAllInputShapeRight(std::vector<Shape>& input_shapes)
     Shape input1_shape = input_shapes[3];
     Shape input2_shape = input_shapes[4];
 
-    OP_LOGE_IF(x_shape.GetDims().size() != IDX_3, false, PASS_NAME.c_str(), "x shape is not right.");
-    OP_LOGE_IF(
-        ((x_shape.GetDims().at(IDX_2) % IDX_8) != 0) || (x_shape.GetDims().at(IDX_2) > FULL_LOAD_H_SIZE),
-        false, PASS_NAME.c_str(), "h size is not right.");
-    OP_LOGE_IF(input0_shape.GetDims().size() != IDX_4, false, PASS_NAME.c_str(), "var shape is not right.");
-    OP_LOGE_IF(
-        (input0_shape.GetDims().at(IDX_2) != IDX_1) || ((input0_shape.GetDims().at(IDX_3) * IDX_8) != x_shape.GetDims().at(IDX_2)),
-        false, PASS_NAME.c_str(), "var size is not right.");
+    if (x_shape.GetDims().size() != IDX_3) {
+        OPS_LOG_I(PASS_NAME.c_str(), "x shape is not right.");
+        return false;
+    }
+    if ((x_shape.GetDims().at(IDX_2) % IDX_8) != 0 || x_shape.GetDims().at(IDX_2) > FULL_LOAD_H_SIZE) {
+        OPS_LOG_I(PASS_NAME.c_str(), "h size is not right.");
+        return false;
+    }
+    if (input0_shape.GetDims().size() != IDX_4) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var shape is not right.");
+        return false;
+    }
+    if (input0_shape.GetDims().at(IDX_2) != IDX_1 || input0_shape.GetDims().at(IDX_3) * IDX_8 != x_shape.GetDims().at(IDX_2)) {
+        OPS_LOG_I(PASS_NAME.c_str(), "var size is not right.");
+        return false;
+    }
     return true;
 }
 
@@ -537,10 +560,13 @@ UniqueGraphPtr DynamicQuantUpdateScatterV2FusionPass::Replacement(const std::uni
     auto r_In1 = replace_graph_builder.CreateInput(3);
     auto r_In2 = replace_graph_builder.CreateInput(4);
 
+    // Bitcast var from DT_INT32 → DT_INT4 inside replacement graph
+    auto r_In0_i4 = BuildBitcastNode(replace_graph_builder, r_In0, DT_INT4);
+
     std::vector<SubgraphInput> subgraph_inputs;
     match_result->ToSubgraphBoundary()->GetAllInputs(subgraph_inputs);
 
-    es::DynamicQuantUpdateScatterV2Output dynamic_quant_update_scatter_v2 = es::DynamicQuantUpdateScatterV2(r_x, r_indices, r_In0, r_In1, r_In2);
+    es::DynamicQuantUpdateScatterV2Output dynamic_quant_update_scatter_v2 = es::DynamicQuantUpdateScatterV2(r_x, r_indices, r_In0_i4, r_In1, r_In2);
 
     std::vector<es::EsTensorHolder> replace_outputs;
     replace_outputs.emplace_back(dynamic_quant_update_scatter_v2.ref_var);

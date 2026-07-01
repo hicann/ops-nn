@@ -52,7 +52,7 @@ using namespace fusion;
 namespace ops {
 
 static const std::string FUSED_OP_TYPE = "MultiAddRmsNormDynamicQuant";
-static const std::string SOC_ASCEND910B = "Ascend910b";
+static const std::string SOC_ASCEND910B = "Ascend910B";
 static const std::string SOC_ASCEND910_93 = "Ascend910_93";
 
 using UniqueGraphPtr = std::unique_ptr<Graph>;
@@ -111,9 +111,10 @@ static bool IsTargetPlatform()
     bool is_platform910b = soc == SOC_ASCEND910B;
     bool is_platform910_93 = soc == SOC_ASCEND910_93;
     OPS_LOG_I(PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
-    OP_LOGE_IF(
-        !is_platform910b && !is_platform910_93, false, PASS_NAME.c_str(),
-        "Platform is not support, only work on 910b or 910_93.");
+    if (!is_platform910b && !is_platform910_93) {
+        OPS_LOG_I(PASS_NAME.c_str(), "Platform is not support, only work on 910b or 910_93.");
+        return false;
+    }
     return true;
 }
 
