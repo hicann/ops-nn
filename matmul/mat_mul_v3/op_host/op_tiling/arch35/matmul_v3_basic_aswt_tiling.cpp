@@ -304,13 +304,10 @@ void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
     }
 
     // Matmul非切K场景下才允许切换tensor api实现
-    apiLevel_ = (isMatmul && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    apiLevel_ = (isMatmul && !isSplitK && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL :
+                                                                     MatMulV3ApiLevel::BASIC_LEVEL;
     // 非连续slice单独设置model=slice
     model_ = isSlice ? MatMulV3Model::SLICE : MatMulV3Model::BASIC;
-    // offset_x约定特殊值时强制使用基础API
-    if (args_.isForceBasicApi) {
-        apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
-    }
     // 1952当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;

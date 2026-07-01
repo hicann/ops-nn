@@ -224,7 +224,7 @@ uint64_t MatMulV3BasicStreamKTiling::GetTilingKey() const
     // fusedMatMul and fp32 splitK do not checkout to tensor api
     bool basicApi = std::string_view(context_->GetNodeType()) == "FusedMatMul" ||
                      (runInfo_.singleCoreK > SK_SPLITK_THRESHOLD && args_.aDtypeSize == DATA_SIZE_FP32) ||
-                     args_.isForceBasicApi;
+                     args_.isAvoidTensorApi;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetModel(MatMulV3Model::STREAM_K)
         .SetL0C2Out(l0C2Out_)

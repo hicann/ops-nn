@@ -34,7 +34,7 @@ constexpr uint64_t THREE_BATCH_DIM = 3UL;
 constexpr uint64_t FOUR_BATCH_DIM = 4UL;
 constexpr size_t OFFSET_X_ATTR_NUM = 3UL;
 constexpr size_t OFFSET_X_ATTR_INDEX = 2UL;
-constexpr int64_t OFFSET_X_FORCE_BASIC_API = 0x80;
+constexpr int64_t OFFSET_X_AVOID_TENSOR_API = 0x80;
 constexpr size_t HF32_ATTR_NUM = 4UL;
 constexpr size_t HF32_ATTR_INDEX = 3UL;
 constexpr size_t OP_IMPL_MODE_ATTR_NUM = 4UL;
@@ -54,7 +54,7 @@ inline void GetDtype(const gert::TilingContext &context, MatMulV3Args &args)
     if (strcmp(context.GetNodeType(), "MatMulV3") == 0) {
         if (context.GetAttrs()->GetAttrNum() >= OFFSET_X_ATTR_NUM) {
             int64_t offsetX = *context.GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_ATTR_INDEX);
-            args.isForceBasicApi = offsetX == OFFSET_X_FORCE_BASIC_API;
+            args.isAvoidTensorApi = offsetX == OFFSET_X_AVOID_TENSOR_API;
         }
         if (context.GetAttrs()->GetAttrNum() >= OP_IMPL_MODE_ATTR_NUM) {
             args.isHf32 = *context.GetAttrs()->GetAttrPointer<int64_t>(OP_IMPL_MODE_ATTR_INDEX) == 0x40;
@@ -63,7 +63,7 @@ inline void GetDtype(const gert::TilingContext &context, MatMulV3Args &args)
     } else {
         if (context.GetAttrs()->GetAttrNum() >= OFFSET_X_ATTR_NUM) {
             int64_t offsetX = *context.GetAttrs()->GetAttrPointer<int64_t>(OFFSET_X_ATTR_INDEX);
-            args.isForceBasicApi = offsetX == OFFSET_X_FORCE_BASIC_API;
+            args.isAvoidTensorApi = offsetX == OFFSET_X_AVOID_TENSOR_API;
         }
         if (context.GetAttrs()->GetAttrNum() >= HF32_ATTR_NUM) {
             args.isHf32 = *((context.GetAttrs())->GetAttrPointer<bool>(HF32_ATTR_INDEX));
@@ -71,7 +71,7 @@ inline void GetDtype(const gert::TilingContext &context, MatMulV3Args &args)
     }
     args.aDtypeSize = ge::GetSizeByDataType(args.aType);
     args.bDtypeSize = ge::GetSizeByDataType(args.bType);
-    OP_LOGD(args.opName, "Hf32 flag is: %d, isForceBasicApi flag is: %d", args.isHf32, args.isForceBasicApi);
+    OP_LOGD(args.opName, "Hf32 flag is: %d, isAvoidTensorApi flag is: %d", args.isHf32, args.isAvoidTensorApi);
 }
 
 ge::graphStatus IsValidDtype(const MatMulV3Args &args)
