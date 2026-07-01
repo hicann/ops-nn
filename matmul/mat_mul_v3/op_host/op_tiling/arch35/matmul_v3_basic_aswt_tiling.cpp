@@ -303,8 +303,10 @@ void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
         isSplitK = true;
     }
 
-    // Matmul非切K且连续场景下才允许切换tensor api实现
-    apiLevel_ = (isMatmul && !isSlice && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    // Matmul非切K场景下才允许切换tensor api实现
+    apiLevel_ = (isMatmul && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    // 非连续slice单独设置model=slice
+    model_ = isSlice ? MatMulV3Model::SLICE : MatMulV3Model::BASIC;
     // offset_x约定特殊值时强制使用基础API
     if (args_.isForceBasicApi) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
@@ -312,6 +314,7 @@ void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
     // 1952当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;
+        model_ = MatMulV3Model::BASIC;
     }
 }
 
@@ -336,7 +339,7 @@ uint64_t MatMulV3BasicAswtTiling::GetTilingKey() const
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
     return tilingKey.SetTrans(args_.isATrans, args_.isBTrans)
         .SetFullLoad(fullLoad_)
-        .SetModel(MatMulV3Model::BASIC)
+        .SetModel(model_)
         .SetL0C2Out(l0C2Out_)
         .SetApiLevel(apiLevel_)
         .GetTilingKey();

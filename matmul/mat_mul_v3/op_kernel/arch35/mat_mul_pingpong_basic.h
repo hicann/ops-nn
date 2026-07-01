@@ -26,7 +26,7 @@ namespace MatmulV3Advanced {
 
 template <
     class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAYOUT, class B_LAYOUT, class C_LAYOUT, 
-    uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0>
+    uint64_t FULL_LOAD_MODE = 0, uint64_t FUSED_OP_TYPE = 0, uint64_t NON_CONTIGIOUS_TYPE = 0>
 __aicore__ inline void MatMulBasicKernel(
     GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM, GM_ADDR cGM, GM_ADDR workspaceGM,
     const MatMulV3BasicTilingData& tilingData, int64_t batch = 0)
@@ -52,10 +52,10 @@ __aicore__ inline void MatMulBasicKernel(
                                                                          isNDFormat>;
 
     // 定义MMAD类型
-    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<FULL_LOAD_MODE, FUSED_OP_TYPE,
-                                                              Blaze::Gemm::KernelMmadMultiBlockBasic>;
-    using BlockMmad = Blaze::Gemm::Block::BlockMmad<DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC,
-                                                    BiasType, LayoutBias>;
+    using DispatchPolicy = Blaze::Gemm::MatmulMultiBlockBasic<
+        FULL_LOAD_MODE, FUSED_OP_TYPE, Blaze::Gemm::KernelMmadMultiBlockBasic, NON_CONTIGIOUS_TYPE>;
+    using BlockMmad = Blaze::Gemm::Block::BlockMmad<
+        DispatchPolicy, AType, LayoutA, BType, LayoutB, OutType, LayoutC, BiasType, LayoutBias>;
 
     // 定义BlockEpilogue类型
     using BlockEpilogue = Blaze::Gemm::Block::BlockEpilogueEmpty;

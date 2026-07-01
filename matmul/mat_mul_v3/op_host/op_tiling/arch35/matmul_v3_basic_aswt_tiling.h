@@ -37,6 +37,7 @@ protected:
     MatMulV3FullLoad fullLoad_ {MatMulV3FullLoad::NONE_FULL_LOAD};
     MatMulV3L0C2Out l0C2Out_ {MatMulV3L0C2Out::ON_THE_FLY};
     MatMulV3ApiLevel apiLevel_ {MatMulV3ApiLevel::BASIC_LEVEL};
+    MatMulV3Model model_ {MatMulV3Model::BASIC};
 
 private:
     void ResetFullLoadLoadBalance();

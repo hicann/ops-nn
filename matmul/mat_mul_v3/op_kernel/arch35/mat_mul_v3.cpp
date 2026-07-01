@@ -120,8 +120,8 @@ __global__ __aicore__ void mat_mul_v3(
     KERNEL_TASK_TYPE_DEFAULT(KERNEL_TYPE_AIC_ONLY);
 
     if constexpr (
-        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_BASIC &&
-        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非全载基础API
+        API_LEVEL == MAT_MUL_BASIC_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD &&
+        (MODEL == MAT_MUL_BASIC || MODEL == MAT_MUL_SLICE) && L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板基础API
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
@@ -146,6 +146,19 @@ __global__ __aicore__ void mat_mul_v3(
         GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
 #if IS_BLAZE
         MatmulV3Advanced::MatMulBasicKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#else
+        MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(
+            aGM, bGM, biasGM, cGM, nullptr, tilingData);
+#endif
+    } else if (
+        API_LEVEL == MAT_MUL_TENSOR_LEVEL && FULL_LOAD == MAT_MUL_NO_FULL_LOAD && MODEL == MAT_MUL_SLICE &&
+        L0C2OUT_MODEL == MAT_MUL_ON_THE_FLY) { // ASWT模板非连续Slice场景TensorAPI
+        GET_TILING_DATA_WITH_STRUCT(MatMulV3BasicTilingData, tilingData, tilingGM);
+#if IS_BLAZE
+        // Layout：左矩阵3D 右矩阵2D 实现
+        MatmulV3Advanced::MatMulBasicKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, layoutA, layoutB, layoutC, 0, 0, 1>(
             aGM, bGM, biasGM, cGM, nullptr, tilingData);
 #else
         MatmulV3Advanced::MatMulActKernel<DTYPE_X1, DTYPE_X2, DTYPE_Y, DTYPE_BIAS, aLayout, bLayout, layout::RowMajor>(

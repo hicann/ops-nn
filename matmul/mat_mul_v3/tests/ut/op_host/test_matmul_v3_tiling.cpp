@@ -2784,7 +2784,7 @@ TEST_F(MatMulV3TilingRuntime, 950_slice_non_contiguous_case) {
   auto golden_tiling_data = GenGoldenTilingData(
       "1 10 4 7 16 16 16 16 16 16 7 1 1 1 1 0 0 33686016 0 2 0 0", case_name, tiling_key);
   cout << "===== 950_slice_non_contiguous_case:" << tiling_key << " === \n" << tiling_data_result << std::endl;
-  ASSERT_EQ(tiling_key, 1);
+  ASSERT_EQ(tiling_key, 20482);
   ASSERT_EQ(block_dim, 1);
   ASSERT_EQ(tiling_data_result, golden_tiling_data);
 }
