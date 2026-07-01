@@ -124,7 +124,7 @@
       <td>lr</td>
       <td>属性</td>
       <td><ul><li>学习率，公式中的eta。</li><li>取值范围是0~1。</li></ul></td>
-      <td>INT</td>
+      <td>FLOAT32</td>
       <td>-</td>
     </tr>
     <tr>
