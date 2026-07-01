@@ -263,7 +263,6 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(
         RegTensor<float> vregDbeta;
         RegTensor<float> vregDgamma;
         RegTensor<float> tempDbeta;
-        RegTensor<float> tempDgamma;
         RegTensor<float> vregX;
         RegTensor<float> vregDy;
         for (uint16_t cgIdx = 0; cgIdx < outerLoopTimes; cgIdx++) {
@@ -282,11 +281,10 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFMode0DbetaDs(
                 preg = UpdateMask<float>(sreg);
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
-                Mul(vregX, vregX, vregDy, preg);
+                MulDstAdd(vregX, vregDy, vregDgamma, preg);
                 Add(tempDbeta, vregDbeta, vregDy, preg);
-                Add(tempDgamma, vregDgamma, vregX, preg);
                 Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDbeta, tempDbeta, preg);
-                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, tempDgamma, preg);
+                Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDgamma, vregX, preg);
             }
             MaskReg pregMerge = CreateMask<float, MaskPattern::VL1>();
             ReduceSum(vregDbeta, vregDbeta, pregAll);
@@ -313,8 +311,8 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::ComputeMode0Dx(
     float sum2 = 0;
     this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
     float s = 1.0f / this->eleNumPerG_;
-    float C2 = (sum2 * mean - sum1) * rstd * rstd * rstd * s;
-    float C3 = -C2 * mean - sum2 * rstd * s;
+    float C2 = (sum2 * mean + (0 - sum1)) * rstd * rstd * rstd * s;
+    float C3 = (0 - C2) * mean + (0 - sum2 * rstd * s);
     if (this->eleNumPerC_ == 1) {
         VFComputeMode0DxOneHw(dxTensor, xTensor, dyTensor, gammaTensor, C2, C3, rstd);
     } else {
@@ -359,10 +357,9 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0DxOneHw(
             LoadUnAlignOneTensor<T>(ubX, vregX, uSrcX, preg, sregvl);
             LoadUnAlignOneTensor<T>(ubDy, vregDy, uSrcDy, preg, sregvl);
             LoadOneTensorForDtypeT<float>(ubGamma, vregGamma, preg, i * sregvl);
+            Muls(vregGamma, vregGamma, rstdScalar, preg);
             Muls(vregX, vregX, C2, preg);
-            Muls(vregDy, vregDy, rstdScalar, preg);
-            Mul(vregDy, vregDy, vregGamma, preg);
-            Add(vregX, vregX, vregDy, preg);
+            MulAddDst(vregX, vregDy, vregGamma, preg);
             Adds(vregX, vregX, C3, preg);
             StoreUnAlignOneTensor<T>(ubDst, vregX, uValue, preg, sregvl);
         }
@@ -374,10 +371,9 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0DxOneHw(
             LoadUnAlignOneTensor<T>(ubX, vregX, uSrcX, preg, (uint32_t)tailNum);
             LoadUnAlignOneTensor<T>(ubDy, vregDy, uSrcDy, preg, (uint32_t)tailNum);
             LoadOneTensorForDtypeT<float>(ubGamma, vregGamma, preg, loopCnt * sregvl);
+            Muls(vregGamma, vregGamma, rstdScalar, preg);
             Muls(vregX, vregX, C2, preg);
-            Muls(vregDy, vregDy, rstdScalar, preg);
-            Mul(vregDy, vregDy, vregGamma, preg);
-            Add(vregX, vregX, vregDy, preg);
+            MulAddDst(vregX, vregDy, vregGamma, preg);
             Adds(vregX, vregX, C3, preg);
             StoreUnAlignOneTensor<T>(ubDst, vregX, uValue, preg, tailNum);
         }
@@ -417,6 +413,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(
         RegTensor<float> vregX;
         RegTensor<float> vregDy;
         RegTensor<float> vregGamma;
+ 	    MaskReg pregAll = CreateMask<float, MaskPattern::ALL>();
         for (uint16_t cgIdx = 0; cgIdx < static_cast<uint16_t>(this->C_G_); cgIdx++) {
             MaskReg preg;
             uint32_t ubOffSet = cgIdx * eleNumPerC;
@@ -427,14 +424,13 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(
             DataCopy<float, LoadDist::DIST_BRC_B32>(vregGamma, ubGamma + cgIdx);
             DataCopyUnAlignPre(uSrcX, curUbX);
             DataCopyUnAlignPre(uSrcDy, curUbDy);
+            Muls(vregGamma, vregGamma, rstdScalar, pregAll);
             for (uint16_t i = 0; i < (uint16_t)loopCnt; ++i) {
                 preg = UpdateMask<float>(dataLen);
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, sregvl);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, sregvl);
                 Muls(vregX, vregX, C2, preg);
-                Muls(vregDy, vregDy, rstdScalar, preg);
-                Mul(vregDy, vregDy, vregGamma, preg);
-                Add(vregX, vregX, vregDy, preg);
+                MulAddDst(vregX, vregDy, vregGamma, preg);
                 Adds(vregX, vregX, C3, preg);
                 StoreUnAlignOneTensor<T>(curUbDst, vregX, uValue, preg, sregvl);
             }
@@ -446,9 +442,7 @@ __aicore__ inline void GroupNormGradGFullLoad<T, U>::VFComputeMode0Dx(
                 LoadUnAlignOneTensor<T>(curUbX, vregX, uSrcX, preg, tailNum);
                 LoadUnAlignOneTensor<T>(curUbDy, vregDy, uSrcDy, preg, tailNum);
                 Muls(vregX, vregX, C2, preg);
-                Muls(vregDy, vregDy, rstdScalar, preg);
-                Mul(vregDy, vregDy, vregGamma, preg);
-                Add(vregX, vregX, vregDy, preg);
+                MulAddDst(vregX, vregDy, vregGamma, preg);
                 Adds(vregX, vregX, C3, preg);
                 StoreUnAlignOneTensor<T>(curUbDst, vregX, uValue, preg, tailNum);
             }

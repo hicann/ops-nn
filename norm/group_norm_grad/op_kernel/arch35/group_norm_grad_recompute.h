@@ -205,10 +205,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
             MaskReg pregLoop = UpdateMask<float>(sreg0);
             LoadTwoTensorForDtypeT<T>(ubXMain, ubXFold, vregXM, vregXF, pregMain, pregLoop, i * sregvl, i * sregvl);
             LoadTwoTensorForDtypeT<T>(ubDyMain, ubDyFold, vregDyM, vregDyF, pregMain, pregLoop, i * sregvl, i * sregvl);
-            Mul(vregXM, vregXM, vregDyM, pregMain);
             Mul(vregXF, vregXF, vregDyF, pregLoop);
-            // add Quotient add remainder
-            Add(vregXM, vregXM, vregXF, pregMain);
+            MulDstAdd(vregXM, vregDyM, vregXF, pregMain);
             Add(vregDyM, vregDyM, vregDyF, pregMain);
             ReduceSum(vregDgamma, vregXM, pregLoop);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(ubBinaryDgamma + i, vregDgamma, pregMerge);
@@ -225,11 +223,9 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFMode2DbetaDs(
                 ubDyMain, ubDyFold, vregDyM, vregDyF, pregMain, pregLoop, overLapLoopTimes * sregvl,
                 overLapLoopTimes * sregvl);
             Mul(vregXM, vregXM, vregDyM, pregMain);
-            Mul(vregXF, vregXF, vregDyF, pregLoop);
-            // add Quotient add remainder
-            Add(tempX, vregXM, vregXF, pregLoop);
+            MulDstAdd(vregXF, vregDyF, vregXM, pregLoop);
             Add(tempDy, vregDyM, vregDyF, pregLoop);
-            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, tempX, pregLoop);
+            Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregXM, vregXF, pregLoop);
             Copy<float, AscendC::MicroAPI::MaskMergeMode::MERGING>(vregDyM, tempDy, pregLoop);
             ReduceSum(vregDgamma, vregXM, pregMain);
             DataCopy<float, StoreDist::DIST_FIRST_ELEMENT_B32>(
@@ -367,8 +363,8 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::ComputeMode2Dx(
     LocalTensor<float> gammaTensor = this->inQueGamma_.template DeQue<float>();
     this->ComputeSum1Sum2(dbetaTensor, dsTensor, gammaTensor, sum1, sum2);
     float s = 1.0f / this->eleNumPerG_;
-    float C2 = (sum2 * this->meanScalar_ - sum1) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
-    float C3 = -C2 * this->meanScalar_ - sum2 * this->rstdScalar_ * s;
+    float C2 = (sum2 * this->meanScalar_ + (0 - sum1)) * this->rstdScalar_ * this->rstdScalar_ * this->rstdScalar_ * s;
+    float C3 = (0 - C2) * this->meanScalar_ + (0 - sum2 * this->rstdScalar_ * s);
     this->outQueDbeta_.FreeTensor(dbetaTensor);
     this->outQueDs_.FreeTensor(dsTensor);
     float gamma = 0;
@@ -464,8 +460,7 @@ __aicore__ inline void GroupNormGradReCompute<T, U>::VFComputeMode2Dx(
             LoadOneTensorForDtypeT<T>(ubX, vregX, preg, i * sregvl);
             LoadOneTensorForDtypeT<T>(ubDy, vregDy, preg, i * sregvl);
             Muls(vregX, vregX, C2, preg);
-            Muls(vregDy, vregDy, dyMulScalar, preg);
-            Add(vregX, vregX, vregDy, preg);
+            Axpy(vregX, vregDy, dyMulScalar, preg);
             Adds(vregX, vregX, C3, preg);
             StoreOneTensorForDtypeT<T>(ubDst, vregX, preg, i * sregvl);
         }
