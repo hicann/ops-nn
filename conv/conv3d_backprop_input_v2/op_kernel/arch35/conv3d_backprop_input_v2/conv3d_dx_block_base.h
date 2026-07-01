@@ -9,18 +9,18 @@
  */
 
 /*!
- * \file conv3d_backprop_input_v2.h
- * \brief
+ * \file conv3d_dx_block_base.h
+ * \brief a basic block move strategy that reuse overlapping sliding window cache
  */
-#ifndef CONV3D_BACKPROP_INPUT_V2_ADVANCE_H
-#define CONV3D_BACKPROP_INPUT_V2_ADVANCE_H
+#ifndef CONV3D_DX_BLOCK_BASE_H
+#define CONV3D_DX_BLOCK_BASE_H
 
 #include "conv3d_bp_input.h"
 #include "basic_api/kernel_basic_intf.h"
 #include "kernel_type.h"
+#include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "lib/matmul_intf.h"
 #include "conv3d_backprop_input_v2_tiling_data.h"
-#include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 #ifndef DTYPE_BIAS
 #define DTYPE_BIAS int32_t
@@ -33,6 +33,11 @@
 #endif
 
 namespace AscendC {
+constexpr uint8_t LOOP_DNM = 1;
+constexpr uint8_t LOOP_DMN = 2;
+constexpr uint8_t LOOP_MDN = 3;
+static constexpr uint8_t SYNC_MODE2 = 2;
+static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
 
 using Conv3dConfig = typename Convolution3DBackprop::Conv3dConfig;
 
@@ -63,131 +68,30 @@ __aicore__ inline constexpr Convolution3DBackprop::CubeFormat GetScaleFormat(int
 }
 
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
-        typename biasType, int biasFormat,
-        uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
-        uint8_t b1Condition = TPL_GM_TO_L1,
-        bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
-class Conv3dDx {
-public:
-    __aicore__ inline Conv3dDx(){};
-    __aicore__ inline void Init(GM_ADDR filter, GM_ADDR dedy, GM_ADDR y, GM_ADDR workSpace,
-                                const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData, GM_ADDR bias = nullptr,
-                                GM_ADDR scale=nullptr)
-    {
-        InitTilingData(tilingData);
-        enableSplitDk_ = tiling_->singleIterateDk != tiling_->dk;
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-        if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
-            groupMode == TPL_GROUP_MODE_ORIGIN) {
-            if (!enableSplitDk_) {
-                if ASCEND_IS_AIV_SHOULD_RETURN {
-                    return;
-                }
-            }
-        }
-#else
-        if ASCEND_IS_AIV_SHOULD_RETURN {
-            return;
-        }
-#endif
-        // init global buffer
-        filterGm_.SetGlobalBuffer((__gm__ filterType *)filter);
-        dedyGm_.SetGlobalBuffer((__gm__ dedyType *)dedy);
-        yGm_.SetGlobalBuffer((__gm__ yType *)y);
-
-        if (unlikely(bias != nullptr)) {
-            hasBias_ = true;
-            biasGm_.SetGlobalBuffer((__gm__ biasType *)bias);
-        }
-        dedx_.Init(&(tilingData->conv3DDxTiling), hasBias_);
-
-        if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-            scaleGm_.SetGlobalBuffer((__gm__ scaleType *)scale);
-        }
-
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-        InitMixCoreBuffer(workSpace);
-#endif
-    }
-
-    /** main logical function
-     */
-    __aicore__ inline void Process()
-    {
-#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 3510) || (__NPU_ARCH__ == 5102)
-        if constexpr ((kernelSplitMode != TPL_SPLIT_KERNEL_HW) &&
-            groupMode == TPL_GROUP_MODE_ORIGIN) {
-            if (!enableSplitDk_) {
-                if ASCEND_IS_AIV_SHOULD_RETURN {
-                    return;
-                }
-            }
-        }
-#else
-        if ASCEND_IS_AIV_SHOULD_RETURN {
-            return;
-        }
-#endif
-        CalSingleCoreShape();
-        if (curHoStartIdx_ >= static_cast<int32_t>((tiling_->ho - 1) * tiling_->strideH + 1) || singleShapeM_ == 0) {
-            dedx_.End();
-            return;
-        }
-
-        InitBlockStride();
-        CalcBlockOffset(batchCoreIdx_ * tiling_->singleCoreBatch, groupCoreIdx_ * tiling_->singleCoreGroup);
-        if (likely(tiling_->group == 1)) {
-            for (uint32_t batchIdx = 0; batchIdx < singleShapeBatch_; ++batchIdx) {
-                dedx_.SetOutBackprop(dedyGm_[offsetA_]);
-                dedx_.SetWeight(filterGm_[offsetB_]);
-
-                if (unlikely(hasBias_)) {
-                    dedx_.SetBias(biasGm_[offsetBias_]);
-                }
-
-                if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-                    dedx_.SetScale(scaleGm_[offsetScale_]);
-                }
-                dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
-                CalcBatchOffset();
-            }
-        } else {
-            ProcessGroup();
-        }
-
-        dedx_.End();
-    }
-
-    __aicore__ inline void ProcessGroup()
-    {
-        for (uint32_t batchIdx = 0; batchIdx < singleShapeBatch_; ++batchIdx) {
-            uint64_t backupOffsetA = offsetA_;
-            uint64_t backupOffsetB = offsetB_;
-            uint64_t backupOffsetC = offsetC_;
-            for (uint32_t groupIdx = 0; groupIdx < singleShapeGroup_; ++groupIdx) {
-                CalSingleCoreShapeInGroup(groupIdx);
-                if (singleShapeKInGroup_ == 0 || singleShapeNInGroup_ == 0) {
-                    continue;
-                }
-                dedx_.SetOutBackprop(dedyGm_[offsetA_]);
-                dedx_.SetWeight(filterGm_[offsetB_]);
-
-                if (unlikely(hasBias_)) {
-                    offsetBias_ = nCoreIdx_ * tiling_->singleCoreCin + groupIdx * tiling_->cinG;
-                    dedx_.SetBias(biasGm_[offsetBias_]);
-                }
-
-                if constexpr (GetScaleFormat(scaleFormat) != Convolution3DBackprop::CubeFormat::UNSUPPORT) {
-                    dedx_.SetScale(scaleGm_[offsetScale_]);
-                }
-                dedx_.IterateAll(yGm_[offsetC_], 0, fullLoadBiasFlag_, freeBiasFlag_);  // 1 means atomic add
-                CalcGroupOffset();
-            }
-            CalcBatchOffset(backupOffsetA, backupOffsetB, backupOffsetC);
-        }
-    }
-
+    typename biasType, int biasFormat,
+    uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
+    uint8_t b1Condition = TPL_GM_TO_L1,
+    bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
+class Conv3dDxBase {
 protected:
+    uint8_t loopDirect_ = LOOP_DMN;
+    uint64_t mCnt_ = 0;
+    uint64_t mCoreTail_ = 0;
+    uint64_t nCnt_ = 0;
+    uint64_t nTailCnt_ = 0;
+    uint64_t nCoreTail_ = 0;
+    uint64_t nGroupCoreTail_ = 0;
+    uint64_t dinCnt_ = 0;
+    uint64_t dinCoreTail_ = 0;
+    uint64_t coutGroupTail_ = 0;
+    uint64_t totalCnt_ = 0;
+    uint64_t tailCnt_ = 0;
+    uint64_t calRound_ = 0;
+    uint64_t usedCoreNum_ = 0;
+    uint64_t preOffsetB_ = 0;
+    uint8_t preEnableFullLoad = 0;
+    uint8_t useUbAccumForSplitK_ = 0;
+
     static constexpr Convolution3DBackprop::CubeFormat filterCubeFormat = GetFormat(filterFormat);
     static constexpr Convolution3DBackprop::CubeFormat dedyCubeFormat = GetFormat(dedyFormat);
     static constexpr Convolution3DBackprop::CubeFormat yCubeFormat = GetFormat(yFormat);
@@ -239,23 +143,12 @@ protected:
     uint32_t singleShapeN_ = 0;
     uint64_t singleShapeK_ = 0;
     uint32_t singleShapeDin_ = 0;
-    uint32_t singleShapeGroup_ = 0;
-    uint32_t singleShapeNInGroup_ = 0;
-    uint64_t singleShapeKInGroup_ = 0;
-    bool enableSplitDk_ = false;
     bool enableVecTrans_ = false;
     bool hasBias_ = false;
     bool fullLoadBiasFlag_ = false;
     bool freeBiasFlag_ = false;
 
     const conv_bp_v2_kernel::TConv3DInputV2Tiling* tiling_;
-    const conv_bp_v2_kernel::Conv3DBackpropInputV2Params* params_;
-
-    __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData *tilingData)
-    {
-        tiling_ = &(tilingData->conv3DDxTiling);
-        params_ = &(tilingData->params);
-    }
 
     __aicore__ inline void InitBlockStride()
     {
@@ -385,7 +278,7 @@ protected:
 
     __aicore__ inline void CalcBiasFullLoadFlag()
     {
-        if (unlikely(hasBias_ && (offsetBias_ != preOffsetBias_))) {
+        if (hasBias_ && (offsetBias_ != preOffsetBias_)) {
             // bias按照group全载
             fullLoadBiasFlag_ = true;
         }
@@ -402,6 +295,7 @@ protected:
             }            
         }
     }
+
     __aicore__ inline void CalcBlockOffset(uint32_t batchIdx, uint32_t groupIdx)
     {
         CalcBlockOffsetA(batchIdx);
@@ -412,136 +306,7 @@ protected:
         CalcBiasOffset(groupIdx);
         CalcScaleOffset(groupIdx);
     }
-
-    __aicore__ inline void CalcBatchOffset()
-    {
-        offsetA_ += batchStrideA_;
-        offsetC_ += batchStrideC_;
-    }
-
-    __aicore__ inline void CalcBatchOffset(uint64_t &backupOffsetA, uint64_t backupOffsetB,
-        uint64_t backupOffsetC)
-    {
-        offsetA_ = backupOffsetA + batchStrideA_;
-        offsetB_ = backupOffsetB;
-        offsetC_ = backupOffsetC + batchStrideC_;
-    }
-
-    __aicore__ inline void CalcBatchOffsetForKernelSplit(uint64_t &curOffsetA, uint64_t &curOffsetC)
-    {
-        curOffsetA += batchStrideA_;
-        curOffsetC += batchStrideC_;
-    }
-
-    __aicore__ inline void CalcGroupOffset()
-    {
-        offsetA_ += groupStrideA_;
-        offsetB_ += groupStrideB_;
-        offsetC_ += groupStrideC_;
-    }
-
-    __aicore__ inline void ReCalSingleCoreShapeForOutputPad(uint64_t &mTail, uint32_t &dTail)
-    {
-        int32_t diRemain = static_cast<int32_t>(tiling_->backpropPadTail - (tiling_->dilationD * (tiling_->dk - 1)));
-        if (dTail > 0 && dTail > diRemain) {
-            dTail = dTail - diRemain;
-        }
-
-        int32_t hiRemain = static_cast<int32_t>(tiling_->backpropPadDown - (tiling_->dilationH * (tiling_->hk - 1)));
-        if (mTail > 0 && mTail >= hiRemain * tiling_->wi) {
-            int32_t hiLen = hiRemain * tiling_->wi;
-            mTail = (mTail > hiLen) ? mTail - hiLen : 0;
-        }
-    }
-
-    __aicore__ inline void CalSingleCoreShape()
-    {
-        uint64_t blockIdx = GetAicBlockIdx();
-        kCoreIdx_ = blockIdx % params_->kDim;
-        nCoreIdx_ = (blockIdx / params_->kDim) % params_->nDim;
-        mCoreIdx_ = (blockIdx / (params_->kDim * params_->nDim)) % params_->mDim;
-        batchCoreIdx_ = (blockIdx / (params_->kDim * params_->nDim * params_->mDim)) % params_->batchDim;
-        dCoreIdx_ = (blockIdx / (params_->kDim * params_->nDim * params_->mDim * params_->batchDim)) % params_->dDim;
-        groupCoreIdx_ = (blockIdx / (params_->kDim * params_->nDim * params_->mDim * params_->batchDim * params_->dDim)) % params_->groupDim;
-        // 放大后的绝对坐标
-        uint32_t backpropPadUp = tiling_->backpropPadUp;
-        if constexpr (kernelSplitMode == TPL_SPLIT_KERNEL_HW) {
-            backpropPadUp >>= 1;
-            curHoStartIdx_ = static_cast<int32_t>(mCoreIdx_ * (tiling_->singleCoreM / (tiling_->wi * tiling_->strideH))) - backpropPadUp;
-        } else {
-            curHoStartIdx_ = static_cast<int32_t>(mCoreIdx_ * tiling_->singleCoreM / tiling_->wi) - backpropPadUp;
-        }
-        uint64_t batchTail = tiling_->batch - batchCoreIdx_ * tiling_->singleCoreBatch;
-        uint64_t mTail = tiling_->hi * tiling_->wi - mCoreIdx_ * tiling_->singleCoreM;
-        uint32_t dTail = tiling_->di - dCoreIdx_ * tiling_->singleCoreDin;
-        uint32_t groupTail = tiling_->group - groupCoreIdx_ * tiling_->singleCoreGroup;
-        if constexpr (kernelSplitMode != TPL_SPLIT_KERNEL_H) {
-            ReCalSingleCoreShapeForOutputPad(mTail, dTail);
-        }
-
-        singleShapeBatch_ = Min(batchTail, tiling_->singleCoreBatch);
-        singleShapeM_ = Min(mTail, tiling_->singleCoreM);
-        singleShapeDin_ = Min(dTail, tiling_->singleCoreDin);
-        singleShapeGroup_ = Min(groupTail, tiling_->singleCoreGroup);
-        uint32_t curDinStartIdx = dCoreIdx_ * tiling_->singleCoreDin;
-        uint32_t curCinStartIdx = nCoreIdx_ * tiling_->singleCoreCin;
-        uint32_t curCoutStartIdx = 0;
-
-        if (likely(tiling_->group == 1)) {
-            uint32_t nTail = tiling_->cin - nCoreIdx_ * tiling_->singleCoreCin;
-            singleShapeN_ = Min(nTail, tiling_->singleCoreCin);
-            singleShapeK_ = tiling_->cout * tiling_->hk * tiling_->wk;
-        } else {
-            uint32_t nTail = tiling_->cin - groupCoreIdx_ * tiling_->singleCoreGroup * tiling_->cinG;
-            uint32_t coutTail = tiling_->cout - groupCoreIdx_ * tiling_->singleCoreGroup * tiling_->coutG;
-            singleShapeN_ = Min(nTail, tiling_->singleCoreGroup * tiling_->cinG);
-            singleShapeK_ = Min(coutTail, tiling_->singleCoreGroup * tiling_->coutG);
-        }
-
-        dedx_.SetSingleShape(singleShapeM_, singleShapeK_, singleShapeN_, singleShapeDin_);
-        dedx_.SetStartIdx(curDinStartIdx, this->mCoreIdx_ * this->tiling_->singleCoreM, curCinStartIdx, curCoutStartIdx);
-    }
-
-    __aicore__ inline void CalSingleCoreShapeInGroup(uint32_t groupIdx)
-    {
-        uint32_t coutTail = singleShapeK_ - groupIdx * tiling_->coutG;
-        uint32_t nTail = singleShapeN_ - groupIdx * tiling_->cinG;
-        if (coutTail == 0) {
-            singleShapeKInGroup_ = 0;
-            return;
-        }
-
-        uint64_t blockIdx = GetAicBlockIdx();
-        nCoreIdx_ = (blockIdx / params_->kDim) % params_->nDim;
-        if (nTail <= nCoreIdx_ * tiling_->singleCoreCin) {
-            singleShapeNInGroup_ = 0;
-            return;
-        }
-        uint32_t singleShapeCoutInGroup = Min(coutTail, tiling_->coutG);
-        singleShapeKInGroup_ = static_cast<uint64_t>(singleShapeCoutInGroup) * tiling_->hk * tiling_->wk;
-        nTail = Min(nTail, tiling_->cinG);
-        nTail -= nCoreIdx_ * tiling_->singleCoreCin;
-        singleShapeNInGroup_ = Min(nTail, tiling_->singleCoreCin);
-        dedx_.SetSingleShape(singleShapeM_, singleShapeKInGroup_, singleShapeNInGroup_, singleShapeDin_);
-    }
-
-    __aicore__ inline void InitMixCoreBuffer(GM_ADDR workSpace)
-    {
-        dedx_.ctx.l0cOutGm_.SetGlobalBuffer((__gm__ float *)workSpace);
-    }
-
-    template <typename T>
-    __aicore__ inline T Max(T a, T b)
-    {
-        return a > b ? a : b;
-    }
-
-    template <typename T>
-    __aicore__ inline T Min(T a, T b)
-    {
-        return a < b ? a : b;
-    }
 };
-}  // namespace AscendC
+}
 
-#endif  // CONV3D_BACKPROP_INPUT_V2_ADVANCE_H
+#endif // CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H

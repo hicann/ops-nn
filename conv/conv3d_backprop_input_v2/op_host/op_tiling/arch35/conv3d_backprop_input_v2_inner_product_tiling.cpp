@@ -26,6 +26,8 @@
 #include "conv/common/op_host/op_tiling/conv_platform_util.h"
 #include "conv/conv3d_backprop_input_v2/op_kernel/conv3d_backprop_input_v2_arch35_tiling_key.h"
 #include "runtime_kb_api.h"
+#include "conv/common/op_host/op_tiling/conv_math_util.h"
+#include "conv/common/op_host/op_tiling/convbp_tiling_debug_util.h"
 
 using Ops::NN::Optiling::RecursiveSum;
 
@@ -38,12 +40,52 @@ constexpr uint8_t ENABLE_TILING_HK = 2;
 constexpr uint8_t ENABLE_TILING_HK_WK = 3;
 constexpr uint32_t MAX_16_BIT_NUM = 65535;
 constexpr uint32_t USE_UB_SIZE = 32 * 1024;
+constexpr uint32_t F8_C0_BITS = 5;
+constexpr uint32_t F16_C0_BITS = 4;
+constexpr uint32_t F32_C0_BITS = 3;
+constexpr uint32_t BIT8_DATA_SIZE = 1; // for hif8 and fp8
+constexpr uint64_t MAX_UINT16 = 65535;
+const int32_t kInputSizeDim = 1;
+const int32_t kConv3DbpDim = 5;
+const int32_t strideIndex = 0;
+const int32_t dilationIndex = 2;
+const int32_t groupIndex = 3;
 constexpr uint8_t SINGLE_CORE_DIN_SIZE = 1;
 }
 
 namespace Ops {
 namespace NN {
 namespace Conv {
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::GetPlatformInfo()
+{
+    return ge::GRAPH_SUCCESS;
+}
+
+void Conv3DDXV2InnerProductTiling::Reset()
+{
+    OP_TILING_CHECK(memset_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                                 1, context_->GetRawTilingData()->GetCapacity()) != EOK,
+                        CUBE_INNER_ERR_REPORT(opName_, "Fail to clear tiling data"), return);
+    opName_ = nullptr;
+}
+
+int32_t Conv3DDXV2InnerProductTiling::CalFmapH(const int32_t& mL1Size, bool isL1SplitHk) const
+{
+    int32_t hiCal;
+    if (mL1Size % runInfo_.dedx_w == 0 || runInfo_.dedx_w % mL1Size == 0) {
+        hiCal = Ops::Base::CeilDiv(mL1Size, runInfo_.dedx_w);
+    } else if (mL1Size > runInfo_.dedx_w) {
+        hiCal = mL1Size / runInfo_.dedx_w + FMAP_H_NUM;
+    } else {
+        hiCal = FMAP_H_NUM;
+    }
+    // L1不加载完整地HK时，此时只加载hk=1地数据，因此无需dilation膨胀
+    int32_t khDilation = isL1SplitHk ? 1 : (runInfo_.kernel_h - 1) * runInfo_.dilation_h + 1;
+    int32_t hoCal = (hiCal - 1) + khDilation;
+    int64_t hoExpand = static_cast<int64_t>(runInfo_.dedy_h - 1) * runInfo_.stride_h + 1;
+    return static_cast<int32_t>(std::min(static_cast<int64_t>(hoCal), hoExpand));
+}
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
 {
@@ -89,7 +131,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetLargeHkWkTilingMode()
 
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetPublicShapeAttrsInfo()
 {
-    if (Conv3DBackpropInputV2TilingArch35::GetShapeAttrsInfo() != ge::GRAPH_SUCCESS) {
+    if (Conv3DDXV2InnerProductTiling::GetShapeAttrsInfoBase() != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
 
@@ -200,6 +242,159 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::CalcKSegment()
     return ge::GRAPH_SUCCESS;
 }
 
+ge::graphStatus Conv3DDXV2InnerProductTiling::SetCoreMemSizeInfo()
+{
+    OP_TILING_CHECK(context_ == nullptr,
+                    CUBE_INNER_ERR_REPORT(this->opName_, "context is null"),
+                return ge::GRAPH_FAILED);
+    fe::PlatFormInfos* platformInfo = context_->GetPlatformInfo();
+    OP_TILING_CHECK(platformInfo == nullptr,
+                    CUBE_INNER_ERR_REPORT(this->opName_, "platformInfoPtr is null"),
+                return ge::GRAPH_FAILED);
+
+    auto ascendcPlatform = platform_ascendc::PlatformAscendC(platformInfo);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_A, platformInfo_.l0_ab_size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L0_C, platformInfo_.l0_c_size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::L1, platformInfo_.l1_size);
+    ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, platformInfo_.ub_size);
+
+    OP_LOGD(opName_, "L0ab size:%d, L0c size:%d, L1 size:%d, UB size:%d",
+            platformInfo_.l0_ab_size,
+            platformInfo_.l0_c_size,
+            platformInfo_.l1_size,
+            platformInfo_.ub_size);
+    return ge::GRAPH_SUCCESS;
+}
+
+bool Conv3DDXV2InnerProductTiling::GetShapeFormatInfo()
+{
+    size_t aMatrixIndex = OUTPUT_BP_INDEX;
+    size_t bMatrixIndex = FILTER_INDEX;
+
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+        aMatrixIndex = FILTER_INDEX;
+        bMatrixIndex = OUTPUT_BP_INDEX;
+    }
+
+    const auto out_backprop_desc = context_->GetInputDesc(aMatrixIndex);
+    OP_TILING_CHECK(
+        out_backprop_desc == nullptr, CUBE_INNER_ERR_REPORT(opName_, "out_backprop_desc is null"), return false);
+    runInfo_.outBackpropFormat = out_backprop_desc->GetStorageFormat();
+
+    const auto filter_desc = context_->GetInputDesc(bMatrixIndex);
+    OP_TILING_CHECK(filter_desc == nullptr, CUBE_INNER_ERR_REPORT(opName_, "filter_desc is null"), return false);
+    runInfo_.filterFormat = filter_desc->GetStorageFormat();
+
+    const auto y_desc = context_->GetOutputDesc(Y_INDEX);
+    OP_TILING_CHECK(y_desc == nullptr, CUBE_INNER_ERR_REPORT(opName_, "y_desc is null"), return false);
+    runInfo_.yFormat = y_desc->GetStorageFormat();
+    return true;
+}
+
+bool Conv3DDXV2InnerProductTiling::AnalyzeFuseDtype(const DtypeFlags flags, const ge::DataType outputBackpropDtype,
+    const ge::DataType filterDtype, const ge::DataType yDtype) const
+{
+    if (!IsSocVersionFuse(context_)) {
+        return true;
+    }
+    OP_TILING_CHECK(
+        !flags.f16flag && !flags.int8flag && !flags.f16int8flag && !flags.a16w8flag,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "out_backprop, filter and y",   
+            (ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype) + ", " +
+            ge::TypeUtils::DataTypeToSerialString(filterDtype) + " and " +
+            ge::TypeUtils::DataTypeToSerialString(yDtype)).c_str(),
+            "The dtypes of out_backprop, filter and y must be within the range {DT_FLOAT16, DT_INT8}"),
+        return false);
+    return true;
+}
+
+DtypeFlags Conv3DDXV2InnerProductTiling::ComputeDtypeFlags(const ge::DataType outputBackpropDtype,
+    const ge::DataType filterDtype, const ge::DataType yDtype) const
+{
+    DtypeFlags flags;
+    flags.hif8flag = outputBackpropDtype == ge::DT_HIFLOAT8 && filterDtype == ge::DT_HIFLOAT8 && yDtype == ge::DT_HIFLOAT8;
+    flags.fp8e4m3flag = outputBackpropDtype == ge::DT_FLOAT8_E4M3FN && filterDtype == ge::DT_FLOAT8_E4M3FN &&
+                        yDtype == ge::DT_FLOAT8_E4M3FN;
+    flags.bf16flag = outputBackpropDtype == ge::DT_BF16 && filterDtype == ge::DT_BF16 && yDtype == ge::DT_BF16;
+    flags.f16flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_FLOAT16;
+    flags.f32flag = outputBackpropDtype == ge::DT_FLOAT && filterDtype == ge::DT_FLOAT && yDtype == ge::DT_FLOAT;
+    flags.int8flag = outputBackpropDtype == ge::DT_INT8 && filterDtype == ge::DT_INT8 && (yDtype == ge::DT_FLOAT16 || yDtype == ge::DT_INT8);
+    flags.a16w8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_INT8 && (yDtype == ge::DT_INT8 || yDtype == ge::DT_FLOAT16);
+    flags.f16int8flag = outputBackpropDtype == ge::DT_FLOAT16 && filterDtype == ge::DT_FLOAT16 && yDtype == ge::DT_INT8;
+    return flags;
+}
+
+bool Conv3DDXV2InnerProductTiling::CheckDtypeFormatAttrs(
+    size_t aMatrixesIndex, size_t bMatrixesIndex, bool hif8flag, bool fp8e4m3flag) const
+{
+    const auto out_backprop_desc = context_->GetInputDesc(aMatrixesIndex);
+    const auto filter_desc = context_->GetInputDesc(bMatrixesIndex);
+    const auto y_desc = context_->GetOutputDesc(Y_INDEX);
+    bool isFormatNotDn = runInfo_.outBackpropFormat != ge::FORMAT_NCDHW || runInfo_.filterFormat != ge::FORMAT_NCDHW ||
+                         runInfo_.yFormat != ge::FORMAT_NCDHW;
+
+    OP_TILING_CHECK(
+        (hif8flag || fp8e4m3flag) && isFormatNotDn,
+        OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(opName_, "out_backprop, filter and y", 
+            (ge::TypeUtils::FormatToSerialString(runInfo_.outBackpropFormat) + ", " + 
+             ge::TypeUtils::FormatToSerialString(runInfo_.filterFormat) + " and " +
+             ge::TypeUtils::FormatToSerialString(runInfo_.yFormat)).c_str(),
+            ("The formats of out_backprop, filter and y must be NCDHW, when the current output_backprop_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(out_backprop_desc->GetDataType()) + ", filter_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(filter_desc->GetDataType()) + ", y_dtype is " + 
+             ge::TypeUtils::DataTypeToSerialString(y_desc->GetDataType())).c_str()),
+        return false);
+
+    return true;
+}
+
+bool Conv3DDXV2InnerProductTiling::AnalyzeDtype() const
+{
+    size_t inputSizeIndex = INPUT_SIZE_INDEX;
+    size_t outputBackpropIndex = OUTPUT_BP_INDEX;
+    size_t filterIndex = FILTER_INDEX;
+
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+        outputBackpropIndex = FILTER_INDEX;
+        filterIndex = OUTPUT_BP_INDEX;
+    }
+    OP_TILING_CHECK(
+        context_->GetInputDesc(outputBackpropIndex) == nullptr || context_->GetInputDesc(filterIndex) == nullptr ||
+            context_->GetOutputDesc(Y_INDEX) == nullptr || context_->GetInputDesc(inputSizeIndex) == nullptr,
+        CUBE_INNER_ERR_REPORT(opName_, "failed to get out_backprop/filter/y/input_size tensor desc from context"),
+        return false);
+
+    ge::DataType outputBackpropDtype = context_->GetInputDesc(outputBackpropIndex)->GetDataType();
+    ge::DataType filterDtype = context_->GetInputDesc(filterIndex)->GetDataType();
+    ge::DataType inputSizeDtype = context_->GetInputDesc(inputSizeIndex)->GetDataType();
+    ge::DataType yDtype = context_->GetOutputDesc(Y_INDEX)->GetDataType();
+
+    DtypeFlags flags = ComputeDtypeFlags(outputBackpropDtype, filterDtype, yDtype);
+    if (IsSocVersionFuse(context_)) {
+        OP_TILING_CHECK(!AnalyzeFuseDtype(flags, outputBackpropDtype, filterDtype, yDtype),
+            CUBE_INNER_ERR_REPORT(opName_, "check dtype failed!"), return false);
+    } else {
+        OP_TILING_CHECK(
+        !flags.hif8flag && !flags.fp8e4m3flag && !flags.bf16flag && !flags.f16flag && !flags.f32flag && !flags.int8flag,
+        OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(opName_, "out_backprop, filter and y",   
+            (ge::TypeUtils::DataTypeToSerialString(outputBackpropDtype) + ", " +
+            ge::TypeUtils::DataTypeToSerialString(filterDtype) + " and " +
+            ge::TypeUtils::DataTypeToSerialString(yDtype)).c_str(),
+            "The dtypes of out_backprop, filter and y must be within the range {DT_HIFLOAT8, DT_FLOAT8_E4M3FN, DT_BF16, DT_FLOAT16, DT_FLOAT, DT_INT8}"),
+        return false);
+    }
+
+    OP_TILING_CHECK(
+        (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) && inputSizeDtype != ge::DT_INT32 && inputSizeDtype != ge::DT_INT64,
+        OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(opName_, "input_size", ge::TypeUtils::DataTypeToSerialString(inputSizeDtype).c_str(), 
+            "The dtype of input_size must be within the range {DT_INT32, DT_INT64}"),
+        return false);
+    if (!CheckDtypeFormatAttrs(outputBackpropIndex, filterIndex, flags.hif8flag, flags.fp8e4m3flag)) {
+        return false;
+    }
+    return true;
+}
+
 ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
 {
     if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
@@ -235,6 +430,33 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfo()
     }
 
     return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::GetShapeAttrsInfoBase()
+{
+    opName_ = context_->GetNodeName();
+    if (context_->GetCompileInfo<Conv3DBackpropV2CompileInfo>()->npuArch !=
+        NpuArch::DAV_3510 && !IsSocVersionFuse(context_)) {
+        return ge::GRAPH_SUCCESS;
+    }
+    if (SetCoreMemSizeInfo() != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+
+    OP_TILING_CHECK(
+        !GetShapeFormatInfo(), CUBE_INNER_ERR_REPORT(opName_, "fail to shape format info"), return ge::GRAPH_FAILED);
+    OP_TILING_CHECK(
+        !AnalyzeDtype(), CUBE_INNER_ERR_REPORT(opName_, "fail to analyze context info"), return ge::GRAPH_FAILED);
+    return ge::GRAPH_SUCCESS;
+}
+
+void Conv3DDXV2InnerProductTiling::SetGroupConvMode(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)
+{
+    if (dxt.enlarge == 1) {
+        groupConvMode_ = TILING_GROUP_MODE_ORIGIN;
+    } else {
+        groupConvMode_ = TILING_GROUP_MODE_ENLARGE;
+    }
 }
 
 uint64_t Conv3DDXV2InnerProductTiling::GetCVRation()
@@ -469,13 +691,6 @@ void Conv3DDXV2InnerProductTiling::SetCommonTilingData(
     dxt.singleCoreGroup = 1;
     dxt.singleCoreDin = coreParams.singleCoreDin;
 
-    tilingData_.params.batchDim = 1;
-    tilingData_.params.groupDim = 1;
-    tilingData_.params.mDim = 1;
-    tilingData_.params.kDim = 1;
-    tilingData_.params.nDim = 1;
-    tilingData_.params.dDim = 1;
-
     dxt.singleCoreM = coreParams.singleCoreM;
     dxt.singleCoreCout = coreParams.singleCoreCout;
     dxt.singleCoreCin = coreParams.singleCoreCin;
@@ -526,7 +741,7 @@ void Conv3DDXV2InnerProductTiling::SetTilingData(
         uint64_t tmpCnt = Ops::Base::CeilDiv(cntCoutCin1, GetCVRation()); // v100, v120 C:V=1:2
         totalCnt = std::max(totalCnt, tmpCnt); // vector需要的aiCoreNum和cube需要的aiCoreNum不一定一样，取大值
     }
-    tilingData_.params.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
+    tilingData_.conv3DDxTiling.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
 }
 
 bool Conv3DDXV2InnerProductTiling::GetTilingFromRepo()
@@ -709,7 +924,7 @@ void Conv3DDXV2InnerProductTiling::TranslateTilingData(std::shared_ptr<tuningtil
     tilingData_.conv3DDxTiling.enableSplitK = tunerTiling->enableSplitK;
     tilingData_.conv3DDxTiling.useUbAccumForSplitK = tunerTiling->useUbAccumForSplitK;
     tilingData_.conv3DDxTiling.enRelu = tunerTiling->enRelu;
-    tilingData_.params.coreNum = tunerTiling->coreNum;
+    tilingData_.conv3DDxTiling.coreNum = tunerTiling->coreNum;
     tilingData_.conv3DDxKSTiling.kSCoutFullLoad = tunerTiling->kSCoutFullLoad;
     tilingData_.conv3DDxKSTiling.kSUseWorkSpace = tunerTiling->kSUseWorkSpace;
 }
@@ -802,7 +1017,7 @@ ge::graphStatus Conv3DDXV2InnerProductTiling::GetWorkspaceSize()
             static_cast<uint64_t>(runInfo_.dedx_h) * static_cast<uint64_t>(runInfo_.dedx_w),
             static_cast<uint64_t>(tilingRunInfo_.m0));
         uint64_t singleCoreUsrSpaceSize = singleCoreDin * singleCoreCin * singleCoreM * sizeof(float);
-        uint64_t usrSpaceSizeForSplitK = tilingData_.params.coreNum * singleCoreUsrSpaceSize;
+        uint64_t usrSpaceSizeForSplitK = tilingData_.conv3DDxTiling.coreNum * singleCoreUsrSpaceSize;
         workspaces[0] += usrSpaceSizeForSplitK;
         OP_LOGD(opName_, "SplitK non-fp32 workspace size = %ld", usrSpaceSizeForSplitK);
     }
@@ -816,6 +1031,29 @@ uint64_t Conv3DDXV2InnerProductTiling::GetTilingKey() const
     OP_LOGD(context_->GetNodeName(), "loadB2Condition_, loadB1Condition_, kernelSplitMode_ is: [%u, %u, %u]",
             loadB2Condition_, loadB1Condition_, kernelSplitMode_);
     return tilingKey;
+}
+
+ge::graphStatus Conv3DDXV2InnerProductTiling::PostTiling()
+{
+    OP_LOGD(opName_, "final tiling data size: %zu", sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
+
+    OP_TILING_CHECK(
+        sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData) % sizeof(uint64_t) != 0,
+        CUBE_INNER_ERR_REPORT(opName_, "tiling data size[%zu] not aligned to 8", sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData)),
+        return ge::GRAPH_FAILED);
+    uint32_t dstStride = tilingData_.conv3DDxTiling.baseM / blockSize_; // 为load3d的dstStride做截断保护
+    OP_TILING_CHECK(
+        dstStride > MAX_UINT16, CUBE_INNER_ERR_REPORT(opName_, "dstStride > MAX_UINT16"), return ge::GRAPH_FAILED);
+    context_->SetBlockDim(tilingData_.conv3DDxTiling.coreNum);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
+                           &tilingData_, sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
+    if (ret != EOK) {
+        OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
+        return ge::GRAPH_FAILED;
+    }
+    context_->GetRawTilingData()->SetDataSize(sizeof(conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData));
+
+    return ge::GRAPH_SUCCESS;
 }
 
 bool Conv3DDXV2InnerProductTiling::IsHkWkAligned(const L1TilingParams& l1Params, const L0TilingParams& l0Params)
@@ -1469,6 +1707,248 @@ void Conv3DDXV2InnerProductTiling::SetSingleCoreInfo(CoreTilingParams& coreParam
     uint32_t kernelDHW = static_cast<uint32_t>(runInfo_.kernel_d) * runInfo_.kernel_h * runInfo_.kernel_w;
     uint64_t kSCnt = ONE_U64; // 1 : 非kernel拆分不需要kernel拆分循环
     SetSingleCoreInfoCore(coreParams, l0Params, hwI, kernelDHW, kSCnt);
+}
+
+void Conv3DDXV2InnerProductTiling::SetRunInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)
+{
+    // shape
+    SetRunBaseShapeInfoTiling(dxt);
+    dxt.enlarge = runInfo_.enlarge;
+    dxt.group = runInfo_.real_g;
+    dxt.oriGroup = runInfo_.groups;
+    dxt.strideH = runInfo_.stride_h;
+    dxt.strideW = runInfo_.stride_w;
+    dxt.strideD = runInfo_.stride_d;
+    dxt.padFront = runInfo_.pad_h;
+    dxt.padBack = runInfo_.pad_t;
+    dxt.padUp = runInfo_.pad_u;
+    dxt.padDown = runInfo_.pad_d;
+    dxt.padLeft = runInfo_.pad_l;
+    dxt.padRight = runInfo_.pad_r;
+    SetBackpropPadInfo(dxt);
+
+    dxt.dilationH = runInfo_.dilation_h;
+    dxt.dilationW = runInfo_.dilation_w;
+    dxt.dilationD = runInfo_.dilation_d;
+    dxt.hf32Flag = runInfo_.hf32_flag;
+    dxt.initOutputFlag = runInfo_.initOutputFlag;
+    dxt.isBiasFullLoad = isBiasFullLoad_;
+    dxt.singleIterateDk = singleIterateDk_;
+    dxt.enRelu = runInfo_.enRelu;
+    dxt.quantMode = runInfo_.quantMode;
+    dxt.offsetX = runInfo_.offsetX;
+}
+
+void Conv3DDXV2InnerProductTiling::SetRunBaseShapeInfoTiling(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)
+{
+    dxt.batch = runInfo_.batch_n;
+    dxt.cin = runInfo_.dedx_cin;
+    dxt.cout = runInfo_.dedy_cout;
+    dxt.cinG = runInfo_.dedx_cin_g;
+    dxt.coutG = runInfo_.dedy_cout_g;
+    dxt.cin1 = runInfo_.dedx_cin1;
+    dxt.cout1 = runInfo_.dedy_cout1;
+    dxt.cin1G = runInfo_.dedx_cin1_g;
+    dxt.cout1G = runInfo_.dedy_cout1_g;
+    dxt.c0 = blockSize_;
+
+    if (dtypeByteL0a_ == BIT8_DATA_SIZE) {
+        dxt.c0BitsA = F8_C0_BITS;
+    } else if (dtypeByteL0a_ == FP32_DATA_SIZE) {
+        dxt.c0BitsA = F32_C0_BITS;
+    } else {
+        dxt.c0BitsA = F16_C0_BITS;
+    }
+
+    if (dtypeByteL0b_ == BIT8_DATA_SIZE) {
+        dxt.c0BitsB = F8_C0_BITS;
+    } else if (dtypeByteL0b_ == FP32_DATA_SIZE) {
+        dxt.c0BitsB = F32_C0_BITS;
+    } else {
+        dxt.c0BitsB = F16_C0_BITS;
+    }
+
+    dxt.ho = runInfo_.dedy_h;
+    dxt.wo = runInfo_.dedy_w;
+    dxt.dout = runInfo_.dedy_d;
+    dxt.di = runInfo_.dedx_d;
+    dxt.hi = runInfo_.dedx_h;
+    dxt.wi = runInfo_.dedx_w;
+    dxt.hk = runInfo_.kernel_h;
+    dxt.wk = runInfo_.kernel_w;
+    dxt.dk = runInfo_.kernel_d;
+}
+
+void Conv3DDXV2InnerProductTiling::SetBackpropPadInfo(conv_bp_v2_kernel::TConv3DInputV2Tiling& dxt)
+{
+    int64_t bpPadTail = runInfo_.dedx_d - (static_cast<int64_t>(runInfo_.dedy_d - 1) * runInfo_.stride_d + 1) +
+                        (runInfo_.kernel_d - 1) * runInfo_.dilation_d - runInfo_.backprop_pad_h;
+    if (bpPadTail < PAD_DIM_LOW || bpPadTail > PAD_DIM_UP) {
+        dxt.backpropPadTail = runInfo_.backprop_pad_t;
+    } else {
+        dxt.backpropPadTail = static_cast<uint32_t>(bpPadTail);
+    }
+    OP_LOGD(opName_, "backprop tail pad: %ld, origin backprop_pad_t: %d", bpPadTail, runInfo_.backprop_pad_t);
+
+    dxt.backpropPadUp = runInfo_.backprop_pad_u;
+    dxt.backpropPadDown = runInfo_.backprop_pad_d;
+    OP_LOGD(opName_, "backprop down pad: %ld", runInfo_.backprop_pad_d);
+
+    dxt.backpropPadLeft = runInfo_.backprop_pad_l;
+    int64_t bpPadRight = runInfo_.dedx_w - (static_cast<int64_t>(runInfo_.dedy_w - 1) * runInfo_.stride_w + 1) +
+                         (runInfo_.kernel_w - 1) * runInfo_.dilation_w - runInfo_.backprop_pad_l;
+    if (bpPadRight > PAD_DIM_UP) {
+        dxt.backpropPadRight = runInfo_.backprop_pad_r;
+    } else {
+        dxt.backpropPadRight = static_cast<int32_t>(bpPadRight);
+    }
+
+    OP_LOGD(opName_, "backprop right pad: %ld, origin backprop_pad_r: %d", bpPadRight, runInfo_.backprop_pad_r);
+}
+
+bool Conv3DDXV2InnerProductTiling::PrintInputsAttrs(conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling){
+    const auto op_name = context_->GetNodeName();
+    size_t weight_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_FILTER_INDEX : FILTER_INDEX; // dx filter idx 1 | transpose filter idx 2
+    size_t dedy_x_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_X_INDEX : OUTPUT_BP_INDEX; // dx dedy idx 2 | transpose x idx 1
+    auto inputSizeInfo = GetTensorInfo(context_, INPUT_SIZE_INDEX, true, kInputSizeDim); // input_size dim=1
+    auto weightInfo = GetTensorInfo(context_, weight_index, true, kConv3DbpDim);
+    auto dedyInfo = GetTensorInfo(context_, dedy_x_index, true, kConv3DbpDim);
+    auto outputInfo = GetTensorInfo(context_, Y_INDEX, false, kConv3DbpDim);
+    auto biasShape = context_->GetOptionalInputShape(BAIS_INDEX);
+    TensorInfo biasInfo;
+    if (biasShape != nullptr && biasShape->GetStorageShape().GetShapeSize() != 0) {
+        biasInfo = GetTensorInfo(context_, BAIS_INDEX, true, 1);
+    }
+    OP_LOGD(op_name, "input_size shape: %s, format: %s, dtype: %s; filter shape: %s, format: %s, dtype: %s; out_backprop/x shape: %s, format: %s, dtype: %s; y shape: %s, format: %s, dtype: %s; bias shape: %s, format: %s, dtype: %s;", 
+            DebugString(inputSizeInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(inputSizeInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(inputSizeInfo.dtype).c_str(),
+            DebugString(weightInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(weightInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(weightInfo.dtype).c_str(),
+            DebugString(dedyInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(dedyInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(dedyInfo.dtype).c_str(),
+            DebugString(outputInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(outputInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(outputInfo.dtype).c_str(),
+            DebugString(biasInfo.shape).c_str(), ge::TypeUtils::FormatToSerialString(biasInfo.format).c_str(), 
+            ge::TypeUtils::DataTypeToSerialString(biasInfo.dtype).c_str()
+    );
+    
+    auto stridesShape = GetAttrVector(context_, strideIndex, kConv3DbpDim, "strides");
+    // pads打印需要修改，可能从padding获取
+    std::vector<int64_t> padsShape{tiling.padFront, tiling.padBack, tiling.padUp, tiling.padDown, tiling.padLeft, tiling.padRight};
+    auto dilationsShape = GetAttrVector(context_, dilationIndex, kConv3DbpDim, "dilations");
+    auto attrs = context_->GetAttrs();
+    const auto groups = attrs->GetAttrPointer<int64_t>(groupIndex);
+    size_t enable_hf32_index = (opType_ == optiling::OpTypeV2::kConv3DTransposeV2 || opType_ == optiling::OpTypeV2::kExtendConvTranspose) ? TRANSPOSE_ENABLE_HF32_INDEX : ENABLE_HF32_INDEX; // dx hf32 idx 5 | transpose hf32 idx 7
+    const auto enableHf32 = attrs->GetAttrPointer<bool>(enable_hf32_index);
+    OP_CHECK_IF(groups == nullptr, CUBE_INNER_ERR_REPORT(op_name, "get groups from context fail."), return false);
+    if (opType_ == optiling::OpTypeV2::kConv3DTransposeV2){
+        auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
+        const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
+        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d, output_padding: %s, offset_x: %ld", 
+        DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), *groups, *enableHf32, DebugString(output_paddingShape).c_str(), *offset);
+    } else if (opType_ == optiling::OpTypeV2::kExtendConvTranspose) {
+        auto output_paddingShape = GetAttrVector(context_, OUTPUT_PADDING_INDEX, kConv3DbpDim, "output_padding");
+        const auto offset = attrs->GetAttrPointer<bool>(OFFSET_X_INDEX);
+        const auto fusion_mode = attrs->GetAttrPointer<int32_t>(K_FUSION_MODE_CONV3D_TRANSPOSE_IDX);
+        const auto y_quant_mode = attrs->GetAttrPointer<int32_t>(K_Y_QUANT_MODE_CONV3D_TRANSPOSE_IDX);
+        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, output_padding: %s, offset_x: %ld, fusion_mode: %s, y_quant_mode: %s", 
+        DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), *groups, DebugString(output_paddingShape).c_str(), *offset, std::to_string(*fusion_mode).c_str(), std::to_string(*y_quant_mode).c_str());
+    } else {
+        OP_LOGD(op_name, "Attrs stride: %s, pads: %s, dilation: %s, groups: %ld, enable_hf32: %d.", 
+        DebugString(stridesShape).c_str(), DebugString(padsShape).c_str(), DebugString(dilationsShape).c_str(), *groups, *enableHf32);
+    }
+
+    return true;
+}
+
+void Conv3DDXV2InnerProductTiling::PrintTilingData()
+{
+    conv_bp_v2_kernel::TConv3DInputV2Tiling& tiling = tilingData_.conv3DDxTiling;
+    conv_bp_v2_kernel::TConv3DInputV2KSTiling& ksTiling = tilingData_.conv3DDxKSTiling;
+    std::stringstream ss;
+    // 删除shape stride dilation 相关打印 pads下移
+    ss << " coreNum: " << tiling.coreNum
+       << " al0Pbuffer: " << static_cast<uint32_t>(tiling.al0Pbuffer)
+       << " bl0Pbuffer: " << static_cast<uint32_t>(tiling.bl0Pbuffer)
+       << " cl0Pbuffer: " << static_cast<uint32_t>(tiling.cl0Pbuffer)
+       << " al1Pbuffer: " << static_cast<uint32_t>(tiling.al1Pbuffer)
+       << " bl1Pbuffer: " << static_cast<uint32_t>(tiling.bl1Pbuffer)
+       << " iterateOrder: " << static_cast<uint32_t>(tiling.iterateOrder)
+       << " c0: " << static_cast<uint32_t>(tiling.c0) << " c0BitsA: " << static_cast<uint32_t>(tiling.c0BitsA)
+       << " c0BitsB: " << static_cast<uint32_t>(tiling.c0BitsB)
+       << " enlarge: " << static_cast<uint32_t>(tiling.enlarge)
+       << " hf32Flag: " << static_cast<uint32_t>(tiling.hf32Flag)
+       << " initOutputFlag: " << static_cast<uint32_t>(tiling.initOutputFlag)
+       << " isBiasFullLoad: " << static_cast<uint32_t>(tiling.isBiasFullLoad)
+       << " cinG: " << tiling.cinG
+       << " coutG: " << tiling.coutG << " cout1: " << tiling.cout1 << " cin1: " << tiling.cin1
+       << " cout1G: " << tiling.cout1G << " cin1G: " << tiling.cin1G
+       << " group: " << tiling.group << " oriGroup: " << tiling.oriGroup
+       << " backpropPadTail: " << tiling.backpropPadTail << " backpropPadUp: " << tiling.backpropPadUp
+       << " backpropPadDown: " << tiling.backpropPadDown << " backpropPadLeft: " << tiling.backpropPadLeft
+       << " backpropPadRight: " << tiling.backpropPadRight
+       << " singleCoreGroup: " << tiling.singleCoreGroup << " singleCoreCout: " << tiling.singleCoreCout
+       << " singleCoreCin: " << tiling.singleCoreCin << " singleCoreDin: " << tiling.singleCoreDin
+       << " baseM: " << tiling.baseM << " baseK: " << tiling.baseK << " baseN: " << tiling.baseN
+       << " stepKa: " << tiling.stepKa << " stepKb: " << tiling.stepKb << " singleIterateDk: " << tiling.singleIterateDk
+       << " singleCoreBatch: " << tiling.singleCoreBatch << " singleCoreM: " << tiling.singleCoreM
+       << " enableVecTrans: " << static_cast<uint32_t>(tiling.enableVecTrans)
+       << " kSCoutFullLoad: " << ksTiling.kSCoutFullLoad << " kSUseWorkSpace: " << ksTiling.kSUseWorkSpace
+       << " enableFullLoad: " << static_cast<uint32_t>(tiling.enableFullLoad)
+       << " quantMode: " << static_cast<uint32_t>(tiling.quantMode) << " enRelu: " << tiling.enRelu
+       << " enableSplitK: " << static_cast<uint32_t>(tiling.enableSplitK)
+       << " useUbAccumForSplitK: " << static_cast<uint32_t>(tiling.useUbAccumForSplitK)
+       << " kSegment: " << tiling.kSegment << " kSegmentTail: " << tiling.kSegmentTail << " kValueSegment: " << tiling.kValueSegment;
+    OP_LOGD(opName_, "api tiling: %s", ss.str().c_str());
+    PrintInputsAttrs(tiling);
+}
+
+void Conv3DDXV2InnerProductTiling::PrintRunInfoData() {
+    std::stringstream ss;
+    ss << "batch_n: " << runInfo_.batch_n << " groups: " << runInfo_.groups << " real_g: " << runInfo_.real_g
+       << " dedx_cin: " << runInfo_.dedx_cin << " dedx_cin_g: " << runInfo_.dedx_cin_g
+       << " dedx_cin1: " << runInfo_.dedx_cin1 << " dedx_cin1_g: " << runInfo_.dedx_cin1_g
+       << " dedy_cout: " << runInfo_.dedy_cout << " dedy_cout_g: " << runInfo_.dedy_cout_g
+       << " dedy_cout1: " << runInfo_.dedy_cout1 << " dedy_cout1_g: " << runInfo_.dedy_cout1_g
+       << " dedx_d: " << runInfo_.dedx_d << " dedx_h: " << runInfo_.dedx_h
+       << " dedx_w: " << runInfo_.dedx_w << " dedy_d: " << runInfo_.dedy_d
+       << " dedy_h: " << runInfo_.dedy_h << " dedy_w: " << runInfo_.dedy_w
+       << " kernel_d: " << runInfo_.kernel_d << " kernel_h: " << runInfo_.kernel_h
+       << " kernel_w: " << runInfo_.kernel_w << " stride_d: " << runInfo_.stride_d
+       << " stride_h: " << runInfo_.stride_h << " stride_w: " << runInfo_.stride_w
+       << " pad_t: " << runInfo_.pad_t <<" pad_h: "<< runInfo_.pad_h << " pad_u:" << runInfo_.pad_u
+       << " pad_d:" << runInfo_.pad_d << " pad_l:" << runInfo_.pad_l << " pad_r:"<<runInfo_.pad_r
+       << " backprop_pad_t:" << runInfo_.backprop_pad_t << " backprop_pad_h:"<<runInfo_.backprop_pad_h
+       << " backprop_pad_u:"<<runInfo_.backprop_pad_u << " backprop_pad_d:" << runInfo_.backprop_pad_d
+       << " backprop_pad_l:" << runInfo_.backprop_pad_l<<" backprop_pad_r:"<<runInfo_.backprop_pad_r
+       << " dilation_d:" << runInfo_.dilation_d << " dilation_h:" << runInfo_.dilation_h << " dilation_w:" << runInfo_.dilation_w
+       << " enlarge: " << runInfo_.enlarge << " hf32_flag: " << runInfo_.hf32_flag
+       << " a_dtype_bytes:" << runInfo_.a_dtype_bytes
+       << " b_dtype_bytes: " << runInfo_.b_dtype_bytes
+       << " c_dtype_bytes: " << runInfo_.c_dtype_bytes
+       << " initOutputFlag: " << runInfo_.initOutputFlag
+       << " enRelu: " << static_cast<uint32_t>(runInfo_.enRelu)
+       << " quantMode: " << static_cast<uint32_t>(runInfo_.quantMode)
+       << " outBackpropFormat: " << static_cast<uint32_t>(runInfo_.outBackpropFormat)
+       << " filterFormat: " << static_cast<uint32_t>(runInfo_.filterFormat)
+       << " yFormat: " << static_cast<uint32_t>(runInfo_.yFormat);
+    OP_LOGD(opName_, "runInfo Data: %s", ss.str().c_str());
+}
+
+void Conv3DDXV2InnerProductTiling::PrintTilingRunInfo()
+{
+    std::stringstream ss;
+    ss << "enableC04Flag: " << tilingRunInfo_.enableC04Flag << " enableFullLoadTiling: " << tilingRunInfo_.enableFullLoadTiling
+       << " enableVecTransFlag: " << tilingRunInfo_.enableVecTransFlag << " enableSplitKernelFlag: " << tilingRunInfo_.enableSplitKernelFlag
+       << " tilingHkWkMode: " << static_cast<uint32_t>(tilingRunInfo_.tilingHkWkMode);
+    OP_LOGD(opName_, "TilingRunInfo: %s", ss.str().c_str());
+}
+
+void Conv3DDXV2InnerProductTiling::PrintTilingSummary()
+{
+    PrintRunInfoData();
+    PrintTilingRunInfo();
+    PrintTilingData();
 }
 
 REGISTER_TILING_TEMPLATE("Conv3DBackpropInputV2", Conv3DDXV2InnerProductTiling, 101);

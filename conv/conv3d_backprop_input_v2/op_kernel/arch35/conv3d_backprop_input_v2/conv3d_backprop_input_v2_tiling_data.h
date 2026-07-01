@@ -89,15 +89,6 @@ struct TConv3DInputV2Tiling {
     bool enableSplitK = false;
     bool useUbAccumForSplitK = false;
     int8_t offsetX = 0;
-};
-
-struct Conv3DBackpropInputV2Params {
-    uint32_t batchDim = 1;
-    uint32_t groupDim = 1;
-    uint32_t mDim = 1;
-    uint32_t kDim = 1;
-    uint32_t nDim = 1;
-    uint32_t dDim = 1;
     uint64_t coreNum = 1;
 };
 
@@ -107,7 +98,6 @@ struct TConv3DInputV2KSTiling {
 };
 
 struct Conv3DBackpropInputV2TilingData{
-    struct Conv3DBackpropInputV2Params params;
     struct TConv3DInputV2Tiling conv3DDxTiling;
     struct TConv3DInputV2KSTiling conv3DDxKSTiling;
 };

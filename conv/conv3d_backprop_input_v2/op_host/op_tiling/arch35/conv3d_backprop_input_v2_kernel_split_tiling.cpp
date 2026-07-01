@@ -495,7 +495,7 @@ void Conv3DDXV2KernelSplitTiling::SetTilingData(
         uint64_t tmpCnt = Ops::Base::CeilDiv(cntCoutCin1, GetCVRation()); // v100, v120 C:V=1:2
         totalCnt = std::max(totalCnt, tmpCnt); // vector需要的aiCoreNum和cube需要的aiCoreNum不一定一样，取大值
     }
-    tilingData_.params.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
+    tilingData_.conv3DDxTiling.coreNum = std::min(totalCnt, static_cast<uint64_t>(coreNum_));
 
     SetTilingCondition(coreParams, l1Params, l0Params);
 }

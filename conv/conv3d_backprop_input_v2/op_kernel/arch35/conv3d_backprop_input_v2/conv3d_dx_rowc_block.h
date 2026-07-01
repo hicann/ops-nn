@@ -12,28 +12,18 @@
  * \file conv3d_dx_rowc_block.h
  * \brief a basic block move strategy that reuse overlapping sliding window cache
  */
-#ifndef CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H
-#define CONV3D_BACKPROP_INPUT_ROWC_BLOCK_ADVANCE_H
+#ifndef CONV3D_DX_ROWC_BLOCK_ADVANCE_H
+#define CONV3D_DX_ROWC_BLOCK_ADVANCE_H
 
-#include "conv3d_bp_input.h"
-#include "basic_api/kernel_basic_intf.h"
-#include "kernel_type.h"
-#include "conv3d_backprop_input_v2.h"
-#include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
+#include "conv3d_dx_block_base.h"
 
 namespace AscendC {
-constexpr uint8_t LOOP_DNM = 1;
-constexpr uint8_t LOOP_DMN = 2;
-constexpr uint8_t LOOP_MDN = 3;
-static constexpr uint8_t SYNC_MODE2 = 2;
-static constexpr uint16_t SYNC_AIV_AIC_DET_FLAG = 6;
-
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
     typename biasType, int biasFormat,
     uint8_t b2Condition, uint8_t kernelSplitMode, uint8_t groupMode,
     uint8_t b1Condition = TPL_GM_TO_L1,
     bool enableC04Flag = false, typename scaleType = uint64_t, int scaleFormat = FORMAT_MAX>
-class Conv3dDxOswBlock : public Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
+class Conv3dDxOswBlock : public Conv3dDxBase<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
     b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat> {
 public:
     __aicore__ inline Conv3dDxOswBlock() {};
@@ -101,24 +91,6 @@ public:
     }
 
 protected:
-    uint8_t loopDirect_ = LOOP_DMN;
-    uint64_t mCnt_ = 0;
-    uint64_t mCoreTail_ = 0;
-    uint64_t nCnt_ = 0;
-    uint64_t nTailCnt_ = 0;
-    uint64_t nCoreTail_ = 0;
-    uint64_t nGroupCoreTail_ = 0;
-    uint64_t dinCnt_ = 0;
-    uint64_t dinCoreTail_ = 0;
-    uint64_t coutGroupTail_ = 0;
-    uint64_t totalCnt_ = 0;
-    uint64_t tailCnt_ = 0;
-    uint64_t calRound_ = 0;
-    uint64_t usedCoreNum_ = 0;
-    uint64_t preOffsetB_ = 0;
-    uint8_t preEnableFullLoad = 0;
-    uint8_t useUbAccumForSplitK_ = 0;
-
      __aicore__ inline void CrossCoreWaitVecTrans()
     {
         if (this->enableVecTrans_) {
@@ -233,8 +205,7 @@ protected:
     }
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
-        Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat>::InitTilingData(tilingData);
+        this->tiling_ = &(tilingData->conv3DDxTiling);
         this->singleShapeM_ = this->tiling_->singleCoreM;
         if(unlikely(this->tiling_->group > 1)) {
             if constexpr (b1Condition == TPL_GM_TO_L1) {
@@ -355,8 +326,8 @@ protected:
     __aicore__ inline void CalBasicBlock() {
         uint64_t blockIdx = GetAicBlockIdx();
         // 拖尾的部分依次分配到前面的核计算，这些核会多算一轮
-        if (blockIdx < tailCnt_) {
-            ++calRound_;
+        if (blockIdx < this->tailCnt_) {
+            ++this->calRound_;
         }
 
         uint64_t blockNum = this->usedCoreNum_;

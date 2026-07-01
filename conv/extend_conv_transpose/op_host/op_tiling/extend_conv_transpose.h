@@ -15,7 +15,6 @@
 #ifndef EXTEND_CONV_TRANSPOSE_TILING_ADVANCE_H
 #define EXTEND_CONV_TRANSPOSE_TILING_ADVANCE_H
 
-#include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_base_tiling_arch35.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_fullLoad_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_inner_product_tiling.h"
 #include "conv/conv3d_backprop_input_v2/op_host/op_tiling/arch35/conv3d_backprop_input_v2_kernel_split_fullLoad_tiling.h"
@@ -26,9 +25,9 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 
-class ExtendConvTransposeTiling : public Conv3DBackpropInputV2TilingArch35 {
+class ExtendConvTransposeTiling : public Conv3DDXV2InnerProductTiling {
 public:
-    explicit ExtendConvTransposeTiling(gert::TilingContext *context) : Conv3DBackpropInputV2TilingArch35(context)
+    explicit ExtendConvTransposeTiling(gert::TilingContext *context) : Conv3DDXV2InnerProductTiling(context)
     {
         Reset();
         opType_ = optiling::OpTypeV2::kExtendConvTranspose;

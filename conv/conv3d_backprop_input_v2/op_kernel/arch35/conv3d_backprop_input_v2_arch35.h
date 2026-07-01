@@ -14,10 +14,9 @@
  */
 #ifndef CONV3D_BACKPROP_INPUT_V2_ARCH_35_H
 #define CONV3D_BACKPROP_INPUT_V2_ARCH_35_H
-#include "conv3d_backprop_input_v2/conv3d_backprop_input_v2.h"
-#include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "conv3d_backprop_input_v2/conv3d_dx_rowc_block.h"
 #include "conv3d_backprop_input_v2/conv3d_dx_kernel_split_block.h"
+#include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_init_output.h"
 #include "conv3d_backprop_input_v2/conv3d_backprop_input_v2_vec_transpose.h"
 
 using namespace AscendC;
@@ -74,10 +73,6 @@ __global__ __aicore__ void conv3d_backprop_input_v2_arch35(GM_ADDR input_size, G
         CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
                                                 FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
                                                 loadB2Condition, kernelSplitMode, groupConvMode, TPL_GM_TO_L1, true>);
-    } else if constexpr ((isBasicBlockTiling == false) && (loadB1Condition == TPL_GM_TO_L1)) {
-        CONV3D_DX_INPUT_RUN_OP(Conv3dDx<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
-                                        FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,
-                                        loadB2Condition, kernelSplitMode, groupConvMode>);
     } else {
         CONV3D_DX_INPUT_RUN_OP(Conv3dDxOswBlock<DTYPE_FILTER, FORMAT_FILTER, DTYPE_OUT_BACKPROP,
                                                 FORMAT_OUT_BACKPROP, DTYPE_Y, FORMAT_Y, DTYPE_BIAS, FORMAT_BIAS,

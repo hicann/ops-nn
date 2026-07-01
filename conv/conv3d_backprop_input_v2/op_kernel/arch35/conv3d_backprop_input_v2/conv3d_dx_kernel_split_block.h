@@ -12,14 +12,10 @@
  * \file conv3d_dx_kernel_split_block.h
  * \brief a basic block move strategy that reuse overlapping sliding window cache
  */
-#ifndef CONV3D_BACKPROP_INPUT_KERNEL_SPLIT_BLOCK_H
-#define CONV3D_BACKPROP_INPUT_KERNEL_SPLIT_BLOCK_H
+#ifndef CONV3D_DX_KERNEL_SPLIT_BLOCK_H
+#define CONV3D_DX_KERNEL_SPLIT_BLOCK_H
 
-#include "conv3d_bp_input.h"
-#include "basic_api/kernel_basic_intf.h"
-#include "kernel_type.h"
 #include "conv3d_dx_rowc_block.h"
-#include "../../conv3d_backprop_input_v2_arch35_tiling_key.h"
 
 namespace AscendC {
 template <typename filterType, int filterFormat, typename dedyType, int dedyFormat, typename yType, int yFormat,
@@ -205,8 +201,7 @@ protected:
     }
 
     __aicore__ inline void InitTilingData(const conv_bp_v2_kernel::Conv3DBackpropInputV2TilingData* tilingData) {
-        Conv3dDx<filterType, filterFormat, dedyType, dedyFormat, yType, yFormat, biasType, biasFormat,
-            b2Condition, kernelSplitMode, groupMode, b1Condition, enableC04Flag, scaleType, scaleFormat>::InitTilingData(tilingData);
+        this->tiling_ = &(tilingData->conv3DDxTiling);
         this->kSUseWorkSpace_ = tilingData->conv3DDxKSTiling.kSUseWorkSpace;
         this->dedx_.SetKernelSplitParams(tilingData->conv3DDxKSTiling.kSCoutFullLoad, this->kSUseWorkSpace_);
         this->singleShapeM_ = this->tiling_->singleCoreM;
