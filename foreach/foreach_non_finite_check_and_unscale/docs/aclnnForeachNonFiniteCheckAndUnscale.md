@@ -84,7 +84,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>foundInf（aclTensor*）</td>
@@ -94,7 +94,7 @@ aclnnStatus aclnnForeachNonFiniteCheckAndUnscale(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>0-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>invScale（aclTensor*）</td>
