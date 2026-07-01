@@ -25,7 +25,7 @@
   - x1Level1Scale、x2Level1Scale二级量化参数，数据类型为FLOAT8_E8M0
   - bias可选参数，矩阵乘运算后累加的偏置，数据类型为FLOAT32
   - level0GroupSize为一级量化groupsize的大小，仅支持512
-  - level1GroupSize为一级量化groupsize的大小，仅支持32
+  - level1GroupSize为二级量化groupsize的大小，仅支持32
 
 ## 函数原型
 
