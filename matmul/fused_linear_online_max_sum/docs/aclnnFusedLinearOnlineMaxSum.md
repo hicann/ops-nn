@@ -19,7 +19,7 @@
 
 - 计算公式：
 
-  1. $input$与$wight^T$做矩阵乘得到：
+  1. $input$与$weight^T$做矩阵乘得到：
 
      $$
      vocabParallelLogitsOutOptional = input @ weight^T
