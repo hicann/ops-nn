@@ -551,7 +551,12 @@ ge::graphStatus Tiling4DeepNormGradCompileInfo(gert::TilingContext* context)
     }
 
     // attr config
-    float alpha = *context->GetAttrs()->GetFloat(0);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+
+    const float* alphaPtr = attrs->GetFloat(0);
+    OP_CHECK_IF(nullptr == alphaPtr, OP_LOGE(context, "Get required attr alphaPtr failed. "), return ge::GRAPH_FAILED);
+    float alpha = *alphaPtr;
     tiling.set_alpha(*reinterpret_cast<uint32_t*>(&alpha));
 
     // tiling key

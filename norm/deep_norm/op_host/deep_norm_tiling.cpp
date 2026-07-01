@@ -212,10 +212,17 @@ static ge::graphStatus Tiling4DeepNorm(gert::TilingContext* context)
     uint32_t rowWork = CEIL_DIV(static_cast<uint32_t>(numRow), numCore);
     uint32_t lFirstdimPerCoreNum = static_cast<uint32_t>(numRow) - rowWork * (numCore - 1U);
 
-    float tempAlpha = *context->GetAttrs()->GetFloat(0);
-    float tempAve = numCol == 0U ? 1 : float(1.0 / numCol);
-    float eps = *context->GetAttrs()->GetFloat(1);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
 
+    const float* tempAlphaPtr = attrs->GetFloat(0);
+    OP_CHECK_IF(nullptr == tempAlphaPtr, OP_LOGE(context, "Get required attr tempAlphaPtr failed. "), return ge::GRAPH_FAILED);
+    float tempAlpha = *tempAlphaPtr;
+    float tempAve = numCol == 0U ? 1 : float(1.0 / numCol);
+    const float* epsPtr = attrs->GetFloat(1);
+    OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return ge::GRAPH_FAILED);
+    float eps = *epsPtr;
+    
     // About tiling
     uint32_t usedLastDim = numCol;
     if (limitLastDim < numCol) {
