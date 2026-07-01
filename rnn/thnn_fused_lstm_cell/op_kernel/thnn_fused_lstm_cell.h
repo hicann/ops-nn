@@ -277,10 +277,10 @@ __aicore__ inline void ProcessI()
     PipeBarrier<PIPE_V>();
     Add(ubs[BUF1], ubs[BUF1], ubs[BUF4], info.x);
     PipeBarrier<PIPE_V>();
-    Sigmoid(ubs[BUF1], ubs[BUF1], info.x);
+    Sigmoid(ubs[BUF3], ubs[BUF1], info.x);
     PipeBarrier<PIPE_V>();
     if constexpr (Std::is_same<dtype, half>::value) {
-        Cast(ubsHalf[BUF2], ubs[BUF1], RoundMode::CAST_RINT, info.x);
+        Cast(ubsHalf[BUF2], ubs[BUF3], RoundMode::CAST_RINT, info.x);
         PipeBarrier<PIPE_V>();
     }
 }
@@ -311,10 +311,10 @@ __aicore__ inline void ProcessF()
     PipeBarrier<PIPE_V>();
     Add(ubs[BUF9], ubs[BUF9], ubs[BUF12], info.x);
     PipeBarrier<PIPE_V>();
-    Sigmoid(ubs[BUF9], ubs[BUF9], info.x);
+    Sigmoid(ubs[BUF11], ubs[BUF9], info.x);
     PipeBarrier<PIPE_V>();
     if constexpr (Std::is_same<dtype, half>::value) {
-        Cast(ubsHalf[BUF10], ubs[BUF9], RoundMode::CAST_RINT, info.x);
+        Cast(ubsHalf[BUF10], ubs[BUF11], RoundMode::CAST_RINT, info.x);
         PipeBarrier<PIPE_V>();
     }
 }
@@ -327,42 +327,42 @@ __aicore__ inline void ProcessO()
     PipeBarrier<PIPE_V>();
     Add(ubs[BUF13], ubs[BUF13], ubs[BUF16], info.x);
     PipeBarrier<PIPE_V>();
-    Sigmoid(ubs[BUF13], ubs[BUF13], info.x);
+    Sigmoid(ubs[BUF15], ubs[BUF13], info.x);
     PipeBarrier<PIPE_V>();
     if constexpr (Std::is_same<dtype, half>::value) {
-        Cast(ubsHalf[BUF14], ubs[BUF13], RoundMode::CAST_RINT, info.x);
+        Cast(ubsHalf[BUF14], ubs[BUF15], RoundMode::CAST_RINT, info.x);
         PipeBarrier<PIPE_V>();
     }
 }
 
 __aicore__ inline void ProcessCy()
 {
-    Mul(ubs[BUF3], ubs[BUF9], ubs[BUF17], info.x);
+    Mul(ubs[BUF1], ubs[BUF11], ubs[BUF17], info.x);
     PipeBarrier<PIPE_V>();
-    Mul(ubs[BUF4], ubs[BUF1], ubs[BUF6], info.x);
+    Mul(ubs[BUF4], ubs[BUF3], ubs[BUF6], info.x);
     PipeBarrier<PIPE_V>();
-    Add(ubs[BUF3], ubs[BUF3], ubs[BUF4], info.x);
+    Add(ubs[BUF1], ubs[BUF3], ubs[BUF4], info.x);
     PipeBarrier<PIPE_V>();
     if constexpr (Std::is_same<dtype, half>::value) {
-        Cast(ubsHalf[BUF17], ubs[BUF3], RoundMode::CAST_RINT, info.x);
+        Cast(ubsHalf[BUF17], ubs[BUF1], RoundMode::CAST_RINT, info.x);
         PipeBarrier<PIPE_V>();
     }
 }
 
 __aicore__ inline void ProcessCTanh()
 {
-    Tanh(ubs[BUF4], ubs[BUF3], info.x);
+    Tanh(ubs[BUF4], ubs[BUF1], info.x);
     PipeBarrier<PIPE_V>();
-    TanhPartialHighPrecision(ubs[BUF3], ubs[BUF4], ubs[BUF11], ubs[BUF12], info.x);
+    TanhPartialHighPrecision(ubs[BUF1], ubs[BUF4], ubs[BUF9], ubs[BUF12], info.x);
     PipeBarrier<PIPE_V>();
 }
 
 __aicore__ inline void ProcessHy()
 {
-    Mul(ubs[BUF15], ubs[BUF13], ubs[BUF4], info.x);
+    Mul(ubs[BUF13], ubs[BUF14], ubs[BUF4], info.x);
     if constexpr (Std::is_same<dtype, half>::value) {
         PipeBarrier<PIPE_V>();
-        Cast(ubsHalf[BUF16], ubs[BUF15], RoundMode::CAST_RINT, info.x);
+        Cast(ubsHalf[BUF16], ubs[BUF13], RoundMode::CAST_RINT, info.x);
     }
 
     que.EnQue<TPosition::VECOUT, TPosition::GM, float>(ubTotal);
@@ -372,13 +372,13 @@ __aicore__ inline void ProcessHy()
 __aicore__ inline void ProcessCopyOut()
 {
     // it、gt、ft、ot -> gm
-    CopyOut(ubs[BUF1], storageGM[info.iOffset]);
+    CopyOut(ubs[BUF3], storageGM[info.iOffset]);
     CopyOut(ubs[BUF6], storageGM[info.gOffset]);
-    CopyOut(ubs[BUF9], storageGM[info.fOffset]);
-    CopyOut(ubs[BUF13], storageGM[info.oOffset]);
+    CopyOut(ubs[BUF11], storageGM[info.fOffset]);
+    CopyOut(ubs[BUF15], storageGM[info.oOffset]);
     // hy、cy -> gm
-    CopyOut(ubs[BUF15], hyGM[info.commonOffset]);
-    CopyOut(ubs[BUF3], cyGM[info.commonOffset]);
+    CopyOut(ubs[BUF13], hyGM[info.commonOffset]);
+    CopyOut(ubs[BUF1], cyGM[info.commonOffset]);
 
     que.FreeTensor(ubTotal);
 }
