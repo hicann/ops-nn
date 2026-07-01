@@ -20,6 +20,7 @@ function(add_opbase_ut_common)
     target_link_libraries(opbase_ut_common PRIVATE
         ascendalog
         unified_dlog
+        tiling_api
     )
     target_link_directories(opbase_ut_common PRIVATE ${ASCEND_DIR}/${SYSTEM_PREFIX}/lib64)
 endfunction()
