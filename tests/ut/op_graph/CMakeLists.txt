@@ -61,6 +61,7 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         es_math
         es_nn
         $<BUILD_INTERFACE:intf_llt_pub_asan_cxx17>
+        -Wl,--allow-multiple-definition
         -Wl,--whole-archive
         $<$<TARGET_EXISTS:${OP_GRAPH_MODULE_NAME}_static_lib>:${OP_GRAPH_MODULE_NAME}_static_lib>
         -Wl,--no-whole-archive
@@ -78,6 +79,7 @@ if(UT_TEST_ALL OR OP_GRAPH_UT)
         register
         opp_registry
         rt2_registry
+        runtime
         c_sec
         mmpa
         dlog

@@ -338,7 +338,6 @@ function(add_graph_plugin_modules)
       ${ASCEND_DIR}/include/exe_graph
       ${ASCEND_DIR}/include/base/context_builder
       ${ASCEND_DIR}/include/ge
-      ${ASCEND_DIR}/include/aclnn
     )
     target_compile_definitions(${GRAPH_PLUGIN_NAME}_obj PRIVATE OPS_UTILS_LOG_SUB_MOD_NAME="GRAPH_PLUGIN" LOG_CPP)
     if(BUILD_WITH_INSTALLED_DEPENDENCY_CANN_PKG)

@@ -206,12 +206,8 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
 
     # add op graph ut test cases obj
     add_library(${OP_GRAPH_MODULE_NAME}_cases_obj OBJECT)
-    target_sources(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
-        ${UT_PATH}/op_api/stub/opdev/platform.cpp
-    )
     
     target_include_directories(${OP_GRAPH_MODULE_NAME}_cases_obj PRIVATE
-        ${UT_PATH}/op_api/stub
         ${UT_COMMON_INC}
         ${JSON_INCLUDE}
         ${GTEST_INCLUDE}
@@ -223,7 +219,6 @@ function(add_op_graph_ut_modules OP_GRAPH_MODULE_NAME)
         ${ASCEND_DIR}/include/exe_graph
         ${ASCEND_DIR}/include/base/context_builder
         ${ASCEND_DIR}/include/ge/
-        ${ASCEND_DIR}/include/aclnn
         ${CMAKE_BINARY_DIR}/es_packages/include/es_math/
         ${CMAKE_BINARY_DIR}/es_packages/include/es_nn/
     )

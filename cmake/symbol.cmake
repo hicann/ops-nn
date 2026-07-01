@@ -143,7 +143,6 @@ function(gen_opgraph_symbol)
             c_sec
             -Wl,--no-as-needed
             register
-            nnopbase
             -Wl,--as-needed
             -Wl,--whole-archive
             rt2_registry_static

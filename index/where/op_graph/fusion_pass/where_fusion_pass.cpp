@@ -10,10 +10,10 @@
 
 #include "es_nn_ops.h"
 #include "ge/ge_utils.h"
+#include "platform/platform_info.h"
 
 #include "common/inc/error_util.h"
 #include "where_fusion_pass.h"
-#include "opdev/platform.h"
 #include <set>
 
 using namespace ge;
@@ -22,7 +22,7 @@ using namespace fusion;
 
 /**
  * @brief Define fusion where pattern
- * @details Only support 910_93 and Ascend950
+ * @details Only support MC62CM12A and Ascend950
  *                  input                    input
  *                    |          ==>           |
  *                  Where                   Nonzero
@@ -38,16 +38,6 @@ static const std::initializer_list<DataType> NONZERO_DTYPE_SUPPORT_LIST = {DT_FL
 const std::string FUSION_PASS_NAME = "WhereFusionPass";
 const int64_t CAPTURE_TENSOR_IDX_INPUT = 0l;
 static constexpr size_t INPUT_NUM_COUNT = 2;
-
-/**
- * 检查当前芯片架构是否为RegBase
- */
-inline static bool IsRegBase()
-{
-    auto npuArch = op::GetCurrentPlatformInfo().GetCurNpuArch();
-    const static std::set<NpuArch> regbaseNpuArchs = {NpuArch::DAV_3510, NpuArch::DAV_5102};
-    return regbaseNpuArchs.find(npuArch) != regbaseNpuArchs.end();
-}
 
 std::vector<PatternUniqPtr> WhereFusionPass::Patterns()
 {
@@ -70,8 +60,17 @@ bool WhereFusionPass::MeetRequirements(const std::unique_ptr<MatchResult>& match
 {
     OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Enter MeetRequirements for WhereFusionPass");
 
-    if (!IsRegBase()) {
-        OPS_LOG_W(FUSION_PASS_NAME.c_str(), "WhereFusionPass can only support regbase arch, do nothing.");
+    PlatformInfo platform_info;
+    OptionalInfo optional_info;
+    OP_LOGE_IF(
+        PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platform_info, optional_info) != SUCCESS,
+        false, FUSION_PASS_NAME.c_str(), "Get platform_info failed.");
+    const std::string soc = platform_info.str_info.short_soc_version;
+    bool is_platform5102 = (soc == "MC62CM12A");
+    bool is_platform950 = (soc == "Ascend950");
+    OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Platform short soc: %s", soc.c_str());
+    if (!(is_platform5102 || is_platform950)) {
+        OPS_LOG_D(FUSION_PASS_NAME.c_str(), "Only support Ascend910_93 and Ascend950");
         return false;
     }
 
