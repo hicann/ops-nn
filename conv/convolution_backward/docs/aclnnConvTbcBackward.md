@@ -156,7 +156,7 @@ aclnnStatus aclnnConvTbcBackward(
         <li>数据类型与self、weight一致。</li></ul>
      </td>
      <td>FLOAT、FLOAT16、BFLOAT16</td>
-     <td>ND、NCL</td>
+     <td>ND</td>
      <td>1</td>
      <td>√</td>
     </tr>
