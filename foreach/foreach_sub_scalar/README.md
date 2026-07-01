@@ -57,7 +57,7 @@
       <td>scalar</td>
       <td>输入</td>
       <td>表示减法运算的第二个输入张量，对应公式中的`scalar`。元素个数为1。</td>
-      <td>FLOAT32、FLOAT16、INT32、INT64、DOUBLE</td>
+      <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>

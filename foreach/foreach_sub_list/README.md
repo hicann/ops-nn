@@ -65,7 +65,7 @@
       <td>alpha</td>
       <td>输入</td>
       <td>表示进行相减运算的第二个输入的系数，对应公式中的`alpha`。元素个数为1。</td>
-      <td>FLOAT32、FLOAT16、INT32、BFLOAT16、DOUBLE、INT64</td>
+      <td>FLOAT32、FLOAT16、INT32</td>
       <td>ND</td>
     </tr>
     <tr>

@@ -24,7 +24,7 @@
   $$
 
   $$
-  y_i = {\rm erf}({x_i}) = \frac{2}{\sqrt{\pi}} \int_{0}^{{x_i}} e^{-t^2} dt (i=0,1,...n-1)
+  y_i = {\rm erfc}(x_i) = 1 - {\rm erf}(x_i) = 1 - \frac{2}{\sqrt{\pi}} \int_{0}^{x_i} e^{-t^2} dt = \frac{2}{\sqrt{\pi}} \int_{x_i}^{\infty} e^{-t^2} dt   (i=0,1,...n-1)
   $$
 
 ## 参数说明
