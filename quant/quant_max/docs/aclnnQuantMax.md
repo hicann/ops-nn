@@ -37,10 +37,10 @@
 aclnnStatus aclnnQuantMaxGetWorkspaceSize(
   const aclTensor  *x,
   const aclTensor  *scale,
-  const char       *roundMode,
+  char       *roundMode,
   int64_t           dstType,
-  aclTensor        *y,
-  aclTensor        *amax,
+  const aclTensor        *y,
+  const aclTensor        *amax,
   uint64_t         *workspaceSize,
   aclOpExecutor    **executor)
 ```
