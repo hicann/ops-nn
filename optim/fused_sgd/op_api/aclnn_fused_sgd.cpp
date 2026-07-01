@@ -142,6 +142,18 @@ static void CheckOptionalTensorListEmpty(const aclTensorList *&tensorList)
     }
 }
 
+static void CheckOptionalTensorEmpty(const aclTensor *&tensor)
+{
+    if (tensor == nullptr) {
+        OP_LOGI("gradScaleOptional is nullptr");
+        return;
+    }
+    if (tensor->IsEmpty()) {
+        OP_LOGI("gradScaleOptional is empty, treating as nullptr.");
+        tensor = nullptr;
+    }
+}
+
 static void CheckIsFirstStep(bool isFirstStep)
 {
     if (isFirstStep) {
@@ -185,8 +197,7 @@ static bool CheckAttr(
 static bool CheckShape(
     const aclTensorList *paramsRef,
     const aclTensorList *gradsRef,
-    const aclTensorList *momentumBufferListOptionalRef,
-    const aclTensor *gradScaleOptional) 
+    const aclTensorList *momentumBufferListOptionalRef) 
 {
     for (uint64_t i = 0; i < paramsRef->Size(); i++) {
         op::Shape expectShape = (*paramsRef)[i]->GetViewShape();
@@ -194,12 +205,6 @@ static bool CheckShape(
             (momentumBufferListOptionalRef != nullptr && 
             (*momentumBufferListOptionalRef)[i]->GetViewShape() != expectShape)) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "expects all input tensors with the same shape.");
-            return false;
-        }
-    }
-    if (gradScaleOptional != nullptr && !(gradScaleOptional->IsEmpty())) {
-        op::Shape shape = gradScaleOptional->GetViewShape();
-        if (shape.GetDimNum() != 1 || shape.GetDim(0) != 1) {
             return false;
         }
     }
@@ -217,7 +222,7 @@ static aclnnStatus CheckParams(
     CHECK_RET(CheckNotNull(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_NULLPTR);
     CHECK_RET(CheckTensorListCount(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_INVALID);
     CHECK_RET(CheckDtype(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_INVALID);
-    CHECK_RET(CheckShape(paramsRef, gradsRef, momentumBufferListOptionalRef, gradScaleOptional), ACLNN_ERR_PARAM_INVALID);
+    CHECK_RET(CheckShape(paramsRef, gradsRef, momentumBufferListOptionalRef), ACLNN_ERR_PARAM_INVALID);
     return ACLNN_SUCCESS;
 }
 
@@ -297,13 +302,14 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
     }
 
     CheckOptionalTensorListEmpty(momentumBufferListOptionalRef);
+    CheckOptionalTensorEmpty(gradScaleOptional);
 
     CheckIsFirstStep(isFirstStep);
 
     auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, gradScaleOptional, weightDecay, momentum, lr, dampening, nesterov);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
-    if (gradScaleOptional != nullptr && !(gradScaleOptional->IsEmpty())) {
+    if (gradScaleOptional != nullptr) {
         gradScaleOptional = l0op::Cast(gradScaleOptional, DataType::DT_FLOAT, uniqueExecutor.get());
     }
 
