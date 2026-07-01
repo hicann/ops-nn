@@ -117,7 +117,8 @@ __global__ __aicore__ void extend_conv2d(GM_ADDR x, GM_ADDR filter, GM_ADDR bias
 #endif
 
     ExtendParams extendParams(scale0, relu_weight0, clip_value0, scale1, relu_weight1, clip_value1, y1);
-    if constexpr (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
+    if constexpr (SmallKernel == 1 && weightFormat == ConvFormat::FRACTAL_Z &&
+        OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
         fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW &&
         (AscendC::IsSameType<DTYPE_X, half>::value || AscendC::IsSameType<DTYPE_X, int8_t>::value)) {
         const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);

@@ -116,23 +116,29 @@ __global__ __aicore__ void conv2dv2(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_
     using scaleType = ConvType<TPosition::GM, scaleFormat, uint64_t>;
 
     if constexpr (SmallKernel == 1 && OutputOrder == static_cast<int8_t>(ConvOutputOrder::M_MODE) &&
-        fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW &&
-        AscendC::IsSameType<DTYPE_X, half>::value) {
-        const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
-        uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
-        bool isParallelism = false;
-        if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
-            isParallelism = true;
-        } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
-            isParallelism = true;
-        }
+        fmapFormat == ConvFormat::NCHW && outputFormat == ConvFormat::NCHW) {
+        if constexpr (weightFormat == ConvFormat::FRACTAL_Z &&
+            AscendC::IsSameType<DTYPE_X, half>::value) {
+            const static uint32_t GK0 = C0_SIZE / sizeof(DTYPE_FILTER);
+            uint32_t cinAligned = AlignB(tilingData.singleCoreCi, GK0);
+            bool isParallelism = false;
+            if (tilingData.kernelHxkernelW == 1 && cinAligned >= 2 * 2 * GK0) {
+                isParallelism = true;
+            } else if (tilingData.kernelHxkernelW != 1 && cinAligned >= 2 * GK0) {
+                isParallelism = true;
+            }
 
-        if (isParallelism) {
-            Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
-            op.Init(tilingData);
-            op.Process(x, filter, bias, y, nullptr);
+            if (isParallelism) {
+                Conv2dSmallKernelParallelism<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+                op.Init(tilingData);
+                op.Process(x, filter, bias, y, nullptr);
+            } else {
+                Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+                op.Init(tilingData);
+                op.Process(x, filter, bias, y, nullptr);
+            }
         } else {
-            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y> op;
+            Conv2dSmallKernel<DTYPE_X, DTYPE_FILTER, biasType::T, DTYPE_Y, half, weightFormat> op;
             op.Init(tilingData);
             op.Process(x, filter, bias, y, nullptr);
         }

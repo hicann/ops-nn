@@ -211,6 +211,7 @@ private:
     uint64_t GetSmallWeightVal();
     uint64_t GetGroupTypeVal();
     uint64_t GetSmallKernelVal();
+    bool IsSmallKernelBlocked();
 
     int32_t BasicBlockSortFWDimScores(vector<tuple<uint64_t, float, uint32_t, double>>& scores);
     ge::graphStatus GetConv2DAxisPosInfo();

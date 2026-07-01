@@ -43,7 +43,8 @@ __aicore__ inline void LoadChannelWiseL1FullLoad(const LocalTensor<ChannelWiseT>
     DataCopyPad<ChannelWiseT>(tensorL1, tensorGm, dataCopyParams, padParams);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type = half>
+template <typename FmapType, typename weightType, typename biasType, typename out0Type,
+          typename out1Type = half, ConvFormat WeightFmt = ConvFormat::FRACTAL_Z>
 class Conv2dSmallKernel {
 public:
     using FmapT = FmapType;
@@ -51,6 +52,11 @@ public:
     using BiasT = biasType;
     using Output0T = out0Type;
     using Output1T = out1Type;
+#if defined(__NPU_ARCH__) && (__NPU_ARCH__ == 5102)
+    using L0cT = int32_t;
+#else
+    using L0cT = float;
+#endif
     const static uint32_t GK0 = C0_SIZE / sizeof(WeightT);
 
     __aicore__ inline void Init(const Conv2DTilingData& tiling);
@@ -58,7 +64,7 @@ public:
                                    const ExtendParams* extendParams);
 
 protected:
-    static constexpr uint32_t L0C_ELEMS = L0C_SIZE / sizeof(int32_t);
+    static constexpr uint32_t L0C_ELEMS = L0C_SIZE / sizeof(L0cT);
     __aicore__ inline void InitCommon(const Conv2DTilingData& tiling);
     __aicore__ inline void LoadFmapL1(GM_ADDR x);
     __aicore__ inline void LoadWeightL1(GM_ADDR filter);
@@ -69,14 +75,18 @@ protected:
                                       uint32_t kOff, uint32_t curK);
     __aicore__ inline void DoLoadBL0(LocalTensor<WeightT>& bl0, LocalTensor<WeightT>& bl1,
                                       uint32_t kOff, uint32_t curK);
-    __aicore__ inline void DoCopyOut0(GM_ADDR y, LocalTensor<int32_t>& cl0,
+    __aicore__ inline void DoCopyOut0(GM_ADDR y, LocalTensor<L0cT>& cl0,
                                        uint32_t mOff, uint32_t curM, uint32_t curMAlign,
                                        uint32_t actualCo);
-    __aicore__ inline void DoCopyOut1(GM_ADDR y1, LocalTensor<int32_t>& cl0,
+    __aicore__ inline void DoCopyOut1(GM_ADDR y1, LocalTensor<L0cT>& cl0,
                                        uint32_t mOff, uint32_t curM, uint32_t curMAlign,
                                        uint32_t actualCo);
-    template <typename OutputT, uint64_t FixpipeIdx>
+    template <typename OutputT,
+         uint64_t FixpipeIdx>
     __aicore__ inline QuantMode_t GetQuantPreInt32();
+    template <typename OutputT,
+         uint64_t FixpipeIdx>
+    __aicore__ inline QuantMode_t GetQuantPreFp32();
 
     const Conv2DTilingData* tiling_;
     bool coreActive_;
@@ -123,8 +133,10 @@ protected:
     GlobalTensor<float> reluWeight1Gm_;
 };
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::InitCommon(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::InitCommon(
     const Conv2DTilingData& tiling)
 {
     tiling_ = &tiling;
@@ -172,8 +184,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     k1Total_ = CeilDiv(kTotal_, GK0);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Init(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::Init(
     const Conv2DTilingData& tiling)
 {
     InitCommon(tiling);
@@ -212,7 +226,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     bl1ElemCount_ = k1Total_ * n1PerCore_ * GN0 * GK0;
     uint32_t afterBl1 = bl1OffBytes_ + bl1ElemCount_ * sizeof(WeightT);
     biasL1OffBytes_ = AlignB(afterBl1, ADDR_ALIGN_SIZE);
-    uint32_t afterBias = tiling_->hasBias ? biasL1OffBytes_ + tiling_->singleCoreCo * sizeof(int32_t) : biasL1OffBytes_;
+    uint32_t afterBias = tiling_->hasBias ? biasL1OffBytes_ + tiling_->singleCoreCo * sizeof(L0cT) : biasL1OffBytes_;
     scale0L1OffBytes_ = AlignB(afterBias, ADDR_ALIGN_SIZE);
     uint32_t afterScale0 = tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT) ?
                            afterBias + tiling_->singleCoreCo * sizeof(uint64_t) : afterBias;
@@ -225,8 +239,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     reluWeight1L1OffBytes_ = AlignB(afterScale1, ADDR_ALIGN_SIZE);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadFmapL1(GM_ADDR x)
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::LoadFmapL1(GM_ADDR x)
 {
     uint64_t batchFmapOff = static_cast<uint64_t>(batchIdx_) * tiling_->cin * tiling_->hin * tiling_->win;
     GlobalTensor<FmapT> fmapGm;
@@ -248,8 +264,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     DataCopy(al1, fmapGm, p);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadWeightL1(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::LoadWeightL1(
     GM_ADDR filter)
 {
     uint32_t n1Total = AlignB(tiling_->cout, GN0) / GN0;
@@ -258,21 +276,55 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                               k1Total_ * n1Total * GN0 * GK0);
     LocalTensor<WeightT> bl1(TPosition::B1, bl1OffBytes_, bl1ElemCount_);
 
-    if (tiling_->nDim == 1) {
-        DataCopy(bl1, filterGm[0], bl1ElemCount_);
+    if constexpr (WeightFmt == ConvFormat::NCHW) {
+        uint32_t khkw = tiling_->kh * tiling_->kw;
+        uint64_t gmOff = static_cast<uint64_t>(nIdx_) * tiling_->singleCoreCo *
+                         tiling_->singleCoreCi * khkw;
+        if (khkw == 1) {
+            // 1x1 kernel: Nd2NzParams
+            Nd2NzParams p;
+            p.ndNum = 1;
+            p.nValue = actualCo_;
+            p.dValue = tiling_->singleCoreCi;
+            p.srcNdMatrixStride = 0;
+            p.srcDValue = tiling_->singleCoreCi;
+            p.dstNzC0Stride = n1PerCore_ * GN0;
+            p.dstNzNStride = 1;
+            p.dstNzMatrixStride = 0;
+            DataCopy(bl1, filterGm[gmOff], p);
+        } else {
+            // General kernel: Dn2NzParams (matching LoadBL1Tools)
+            Dn2NzParams p;
+            p.dnNum = actualCo_;
+            p.nValue = khkw;
+            p.dValue = tiling_->singleCoreCi;
+            p.srcDnMatrixStride = tiling_->coutOffsetBlock;
+            p.srcDValue = khkw;
+            p.dstNzC0Stride = khkw * n1PerCore_ * GN0;
+            p.dstNzNStride = n1PerCore_ * GN0;
+            p.dstNzMatrixStride = GK0;
+            DataCopy(bl1, filterGm[gmOff], p);
+        }
     } else {
-        uint32_t n1Start = nIdx_ * tiling_->singleCoreCo / GN0;
-        uint32_t tileBytes = GN0 * GK0 * sizeof(WeightT);
-        uint32_t srcGmOff = n1Start * GN0 * GK0;
-        uint16_t blkLen = static_cast<uint16_t>((n1PerCore_ * tileBytes) / 32);
-        uint32_t srcGap = static_cast<uint16_t>(((n1Total - n1PerCore_) * tileBytes) / 32);
-        DataCopyParams cp(static_cast<uint16_t>(k1Total_), blkLen, srcGap, 0);
-        DataCopy(bl1, filterGm[srcGmOff], cp);
+        // FRACTAL_Z weight: direct copy
+        if (tiling_->nDim == 1) {
+            DataCopy(bl1, filterGm[0], bl1ElemCount_);
+        } else {
+            uint32_t n1Start = nIdx_ * tiling_->singleCoreCo / GN0;
+            uint32_t tileBytes = GN0 * GK0 * sizeof(WeightT);
+            uint32_t srcGmOff = n1Start * GN0 * GK0;
+            uint16_t blkLen = static_cast<uint16_t>((n1PerCore_ * tileBytes) / 32);
+            uint32_t srcGap = static_cast<uint16_t>(((n1Total - n1PerCore_) * tileBytes) / 32);
+            DataCopyParams cp(static_cast<uint16_t>(k1Total_), blkLen, srcGap, 0);
+            DataCopy(bl1, filterGm[srcGmOff], cp);
+        }
     }
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadBiasScaleL1(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::LoadBiasScaleL1(
     GM_ADDR bias, const ExtendParams* extendParams)
 {
     uint32_t bsOff = nIdx_ * tiling_->singleCoreCo;
@@ -325,20 +377,24 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     }
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::LoadBiasToBT()
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::LoadBiasToBT()
 {
     constexpr uint32_t BT_ALIGN = 64;
-    uint32_t btElemNum = AlignB(tiling_->singleCoreCo * sizeof(int32_t), BT_ALIGN) / sizeof(int32_t);
-    LocalTensor<int32_t> biasBT(TPosition::C2, 0, btElemNum);
+    uint32_t btElemNum = AlignB(tiling_->singleCoreCo * sizeof(L0cT), BT_ALIGN) / sizeof(L0cT);
+    LocalTensor<L0cT> biasBT(TPosition::C2, 0, btElemNum);
     LocalTensor<BiasT> biasL1src(TPosition::A1, biasL1OffBytes_, tiling_->singleCoreCo);
     uint32_t blkCnt = AlignB(actualCo_ * sizeof(BiasT), BT_ALIGN) / 32;
     DataCopyParams cp(1, static_cast<uint16_t>(blkCnt), 0, 0);
     DataCopy(biasBT, biasL1src[0], cp);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::SetupLoad3DBase()
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::SetupLoad3DBase()
 {
     uint8_t padList[PAD_LIST_NUM] = {
         static_cast<uint8_t>(tiling_->padLeft),
@@ -372,8 +428,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
                     ((static_cast<uint64_t>(posM) & MASK_16) << POSM_OFFSET);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::DoLoadAL0(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::DoLoadAL0(
     LocalTensor<FmapT>& al1, LocalTensor<FmapT>& al0, uint32_t kOff, uint32_t curK)
 {
     uint64_t posK = kOff;
@@ -384,8 +442,10 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     LoadData<TPosition::A2, TPosition::A1, FmapT>(al0, al1, param);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::DoLoadBL0(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::DoLoadBL0(
     LocalTensor<WeightT>& bl0, LocalTensor<WeightT>& bl1, uint32_t kOff, uint32_t curK)
 {
     uint32_t kStep = CeilDiv(curK, GK0);
@@ -401,55 +461,55 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     LoadData<TPosition::B2, TPosition::B1, WeightT>(bl0, bl1, param);
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-template <typename OutputT, uint64_t FixpipeIdx>
-__aicore__ inline QuantMode_t Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::GetQuantPreInt32()
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+template <typename OutputT,
+         uint64_t FixpipeIdx>
+__aicore__ inline QuantMode_t
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::GetQuantPreInt32()
 {
-    // l0c (int32) -> ddr(fp16/int8)
+    // l0c (int32) -> ddr(fp16/int8) — for NPU_ARCH 5102
     if constexpr (AscendC::IsSameType<OutputT, half>::value) {
         if constexpr (AscendC::IsSameType<WeightT, int8_t>::value) {
-            if constexpr (FixpipeIdx == 0) {
-                if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                    return QuantMode_t::VDEQF16;
-                } else {
-                    return QuantMode_t::DEQF16;
-                }
-            } else {
-                if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                    return QuantMode_t::VDEQF16;
-                } else {
-                    return QuantMode_t::DEQF16;
-                }
-            }
+            uint8_t quantMode = (FixpipeIdx == 0) ? tiling_->quantMode0 : tiling_->quantMode1;
+            bool isVector = (quantMode == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT));
+            return isVector ? QuantMode_t::VDEQF16 : QuantMode_t::DEQF16;
         } else if constexpr (AscendC::IsSameType<WeightT, half>::value) {
             return QuantMode_t::DEQF16;
         }
     } else if constexpr (AscendC::IsSameType<OutputT, int8_t>::value) {
         if constexpr (AscendC::IsSameType<WeightT, int8_t>::value) {
-            if constexpr (FixpipeIdx == 0) {
-                if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                    return QuantMode_t::VREQ8;
-                } else {
-                    return QuantMode_t::REQ8;
-                }
-            } else {
-                if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
-                    return QuantMode_t::VREQ8;
-                } else {
-                    return QuantMode_t::REQ8;
-                }
-            }
+            uint8_t quantMode = (FixpipeIdx == 0) ? tiling_->quantMode0 : tiling_->quantMode1;
+            bool isVector = (quantMode == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT));
+            return isVector ? QuantMode_t::VREQ8 : QuantMode_t::REQ8;
         } else if constexpr (AscendC::IsSameType<WeightT, half>::value) {
             return QuantMode_t::REQ8;
         }
     }
-
     return QuantMode_t::DEQF16;
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::DoCopyOut0(
-    GM_ADDR y, LocalTensor<int32_t>& cl0, uint32_t mOff, uint32_t curM, uint32_t curMAlign, uint32_t actualCo)
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+template <typename OutputT,
+         uint64_t FixpipeIdx>
+__aicore__ inline QuantMode_t
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::GetQuantPreFp32()
+{
+    // l0c (float) -> ddr(fp16/bf16/fp32) — for IsWeightND (NCHW weight)
+    if constexpr (AscendC::IsSameType<OutputT, float>::value) {
+        return QuantMode_t::NoQuant;
+    } else if constexpr (AscendC::IsSameType<OutputT, bfloat16_t>::value) {
+        return QuantMode_t::F322BF16;
+    }
+    return QuantMode_t::F322F16;
+}
+
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::DoCopyOut0(
+    GM_ADDR y, LocalTensor<L0cT>& cl0, uint32_t mOff, uint32_t curM, uint32_t curMAlign, uint32_t actualCo)
 {
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     uint64_t batchOutOff = static_cast<uint64_t>(batchIdx_) * tiling_->cout * hwOut;
@@ -463,7 +523,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     fp.mSize = curM;
     fp.srcStride = curMAlign;
     fp.dstStride = static_cast<uint32_t>(hwOut);
-    fp.quantPre = GetQuantPreInt32<Output0T, 0>();
+    if constexpr (AscendC::IsSameType<L0cT, float>::value) {
+        fp.quantPre = GetQuantPreFp32<Output0T, 0>();
+    } else {
+        fp.quantPre = GetQuantPreInt32<Output0T, 0>();
+    }
     fp.unitFlag = tiling_->dualOutput == 1 ? UNIT_FLAG_ENABLE_ONLY : UNIT_FLAG_ENABLE_WITH_FLIP;
     fp.params.dnNum = 1;
     fp.params.srcNzMatrixStride = curMAlign * CeilDiv(actualCo, GM0);
@@ -483,24 +547,29 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
     if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         LocalTensor<uint64_t> scale0L1(TPosition::A1, scale0L1OffBytes_, tiling_->singleCoreCo);
-        Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, scale0L1, fp);
+        Fixpipe<Output0T, L0cT, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, scale0L1, fp);
     } else if (tiling_->quantMode0 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
         fp.deqScalar = scale0Gm_.GetValue(0);
         if constexpr (AscendC::IsSameType<WeightT, half>::value) {
-            Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output0Gm[mIdxStart_ + mOff], cl0, fp);
+            Fixpipe<Output0T, L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output0Gm[mIdxStart_ + mOff], cl0, fp);
         } else {
-            Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, fp);
+            Fixpipe<Output0T, L0cT, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, fp);
         }
     } else {
         fp.deqScalar = FLOAT_ONE_FIXED_POINT;
-        Fixpipe<Output0T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output0Gm[mIdxStart_ + mOff], cl0, fp);
+        Fixpipe<Output0T, L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output0Gm[mIdxStart_ + mOff], cl0, fp);
     }
+#else
+    fp.deqScalar = FLOAT_ONE_FIXED_POINT;
+    Fixpipe<Output0T, L0cT, CFG_COLUMN_MAJOR>(output0Gm[mIdxStart_ + mOff], cl0, fp);
 #endif
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::DoCopyOut1(
-    GM_ADDR y1, LocalTensor<int32_t>& cl0, uint32_t mOff, uint32_t curM, uint32_t curMAlign, uint32_t actualCo)
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::DoCopyOut1(
+    GM_ADDR y1, LocalTensor<L0cT>& cl0, uint32_t mOff, uint32_t curM, uint32_t curMAlign, uint32_t actualCo)
 {
     uint64_t hwOut = static_cast<uint64_t>(tiling_->hout) * tiling_->wout;
     uint64_t batchOutOff = static_cast<uint64_t>(batchIdx_) * tiling_->cout * hwOut;
@@ -514,7 +583,11 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
     fp.mSize = curM;
     fp.srcStride = curMAlign;
     fp.dstStride = static_cast<uint32_t>(hwOut);
-    fp.quantPre = GetQuantPreInt32<Output1T, 1>();
+    if constexpr (AscendC::IsSameType<L0cT, float>::value) {
+        fp.quantPre = GetQuantPreFp32<Output1T, 1>();
+    } else {
+        fp.quantPre = GetQuantPreInt32<Output1T, 1>();
+    }
     fp.unitFlag = UNIT_FLAG_ENABLE_WITH_FLIP;
     fp.params.dnNum = 1;
     fp.params.srcNzMatrixStride = curMAlign * CeilDiv(actualCo, GM0);
@@ -534,23 +607,28 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
 
     if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::VECTOR_QUANT)) {
         LocalTensor<uint64_t> scale1L1(TPosition::A1, scale1L1OffBytes_, tiling_->singleCoreCo);
-        Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, scale1L1, fp);
+        Fixpipe<Output1T, L0cT, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, scale1L1, fp);
     } else if (tiling_->quantMode1 == static_cast<uint8_t>(QuantModeType::SCALAR_QUANT)) {
         fp.deqScalar = scale1Gm_.GetValue(0);
         if constexpr (AscendC::IsSameType<WeightT, half>::value) {
-            Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output1Gm[mIdxStart_ + mOff], cl0, fp);
+            Fixpipe<Output1T, L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output1Gm[mIdxStart_ + mOff], cl0, fp);
         } else {
-            Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, fp);
+            Fixpipe<Output1T, L0cT, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, fp);
         }
     } else {
         fp.deqScalar = FLOAT_ONE_FIXED_POINT;
-        Fixpipe<Output1T, int32_t, CFG_COLUMN_MAJOR_FIXED_POINT>(output1Gm[mIdxStart_ + mOff], cl0, fp);
+        Fixpipe<Output1T, L0cT, CFG_COLUMN_MAJOR_FIXED_POINT>(output1Gm[mIdxStart_ + mOff], cl0, fp);
     }
+#else
+    fp.deqScalar = FLOAT_ONE_FIXED_POINT;
+    Fixpipe<Output1T, L0cT, CFG_COLUMN_MAJOR>(output1Gm[mIdxStart_ + mOff], cl0, fp);
 #endif
 }
 
-template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
-__aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type>::Process(
+template <typename FmapType, typename weightType, typename biasType,
+         typename out0Type, typename out1Type, ConvFormat WeightFmt>
+__aicore__ inline void
+    Conv2dSmallKernel<FmapType, weightType, biasType, out0Type, out1Type, WeightFmt>::Process(
     GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
     if (!coreActive_ || actualCo_ == 0) return;
@@ -594,7 +672,7 @@ __aicore__ inline void Conv2dSmallKernel<FmapType, weightType, biasType, out0Typ
             LoadDataRepeatParam(0, 1, 0, static_cast<uint16_t>(curMAlign / GM0)));
 #endif
 
-        LocalTensor<int32_t> cl0(TPosition::CO1, 0, L0C_ELEMS);
+        LocalTensor<L0cT> cl0(TPosition::CO1, 0, L0C_ELEMS);
 
         MmadParams mp;
         mp.m = curMAlign;

@@ -61,6 +61,31 @@ ASCENDC_TPL_UINT_DECL(SmallKernel, ASCENDC_TPL_1_BW, ASCENDC_TPL_UI_LIST,
     CONV_NOT_SMALL_KERNEL, CONV_SMALL_KERNEL)
 );
 
+#if defined(FORMAT_FILTER) && (FORMAT_FILTER == FORMAT_FRACTAL_Z || FORMAT_FILTER == FORMAT_FRACTAL_Z_C04)
+#define CONV2D_SMALL_KERNEL_NCHW_SEL()
+#else
+#define CONV2D_SMALL_KERNEL_NCHW_SEL()                                                                               \
+ASCENDC_TPL_KERNEL_TYPE_SEL(ASCENDC_TPL_AIC_ONLY),                                                                   \
+ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST, CONV_FMAP_TILING_FULLLOAD_AL1),                                \
+ASCENDC_TPL_UINT_SEL(WeightTiling, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_TILING_FULLLOAD_BL1),                            \
+ASCENDC_TPL_UINT_SEL(L1PingPong, ASCENDC_TPL_UI_LIST, CONV_L1_PINGPONG_ALL_CLOSE),                                   \
+ASCENDC_TPL_UINT_SEL(L0PingPong, ASCENDC_TPL_UI_LIST,                                                                \
+    CONV_L0_PINGPONG_ALL_CLOSE, CONV_L0_PINGPONG_AL0_OPEN,                                                            \
+    CONV_L0_PINGPONG_BL0_OPEN, CONV_L0_PINGPONG_ALL_OPEN),                                                            \
+ASCENDC_TPL_UINT_SEL(OutputOrder, ASCENDC_TPL_UI_LIST, CONV_OUTPUT_ORDER_M_MODE),                                    \
+ASCENDC_TPL_UINT_SEL(IterOrder, ASCENDC_TPL_UI_LIST, CONV_ITER_ORDER_MITER_FIRST),                                   \
+ASCENDC_TPL_UINT_SEL(GroupType, ASCENDC_TPL_UI_LIST, CONV_GROUP_TYPE_NORMAL_CONV),                                   \
+ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST, CONV_ENABLE_SMALL_CHANNEL_CLOSE),                      \
+ASCENDC_TPL_UINT_SEL(WeightUbTrans, ASCENDC_TPL_UI_LIST, CONV_WEIGHT_UB_TRANS_CLOSE),                                \
+ASCENDC_TPL_UINT_SEL(FmapCopyMode, ASCENDC_TPL_UI_LIST, CONV_FMAP_LOAD3D_MODE),                                      \
+ASCENDC_TPL_UINT_SEL(InnerBatch, ASCENDC_TPL_UI_LIST, CONV_INNER_BATCH_SINGLE),                                      \
+ASCENDC_TPL_UINT_SEL(DisContinuous, ASCENDC_TPL_UI_LIST, CONV_DIS_CONTINUOUS_CLOSE),                                 \
+ASCENDC_TPL_UINT_SEL(BatchOne, ASCENDC_TPL_UI_LIST, 0),                                                              \
+ASCENDC_TPL_UINT_SEL(NoPad, ASCENDC_TPL_UI_LIST, 0),                                                                 \
+ASCENDC_TPL_UINT_SEL(SmallWeight, ASCENDC_TPL_UI_LIST, 0),                                                           \
+ASCENDC_TPL_UINT_SEL(SmallKernel, ASCENDC_TPL_UI_LIST, CONV_SMALL_KERNEL)
+#endif
+
 #define CONV2D_COMMON_C04_TPL_UINT_SEL()                                                                             \
 ASCENDC_TPL_UINT_SEL(EnableSmallChannel, ASCENDC_TPL_UI_LIST,                                                        \
     CONV_ENABLE_SMALL_CHANNEL_CLOSE),                                                                                \
@@ -516,6 +541,7 @@ ASCENDC_TPL_ARGS_SEL(CONV2D_ONLY_AL1_FULLLOAD_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ONLY_BL1_FULLLOAD_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_M_FIRST_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_N_FIRST_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_SMALL_KERNEL_NCHW_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ONLY_MN_FULLLOAD_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_NO_FULLLOAD_AL0_OPEN_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_NO_FULLLOAD_BL0_OPEN_MIXCORE_SEL()),
@@ -525,8 +551,8 @@ ASCENDC_TPL_ARGS_SEL(CONV2D_ONLY_BL1_FULLLOAD_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_M_FIRST_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_N_FIRST_MIXCORE_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ABL1_FULLLOAD_DB_OPEN_SEL()),
-ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_SIMPLIFIED_SEL()),
+ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_ORI_GROUP_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_OPT_GROUP_PRELOAD_SEL()),
 ASCENDC_TPL_ARGS_SEL(CONV2D_WEIGHT_UB_ONLY_MN_FULLLOAD_SEL()),
