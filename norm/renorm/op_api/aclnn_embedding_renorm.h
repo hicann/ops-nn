@@ -117,7 +117,7 @@ ACLNN_API aclnnStatus aclnnEmbeddingRenormGetWorkspaceSize(aclTensor* selfRef, c
  * @param [in] executor: op执行器，包含了算子计算流程。
  * @return aclnnStatus: 返回状态码。
  */
-ACLNN_API aclnnStatus aclnnEmbeddingRenorm(void* workspace, uint64_t workspace_size, aclOpExecutor* executor,
+ACLNN_API aclnnStatus aclnnEmbeddingRenorm(void* workspace, uint64_t workspaceSize, aclOpExecutor* executor,
                                            const aclrtStream stream);
 #ifdef __cplusplus
 }

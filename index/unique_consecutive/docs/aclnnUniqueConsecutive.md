@@ -25,7 +25,7 @@ aclnnStatus aclnnUniqueConsecutiveGetWorkspaceSize(
   bool             returnInverse, 
   bool             returnCounts, 
   int64_t          dim, 
-  clTensor*        valueOut, 
+  aclTensor*       valueOut, 
   aclTensor*       inverseOut, 
   aclTensor*       countsOut, 
   uint64_t*        workspaceSize, 

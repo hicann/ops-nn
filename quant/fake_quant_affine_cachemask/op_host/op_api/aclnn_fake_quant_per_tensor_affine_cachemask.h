@@ -67,7 +67,7 @@ extern "C" {
  * @return aclnnStatus: 返回状态码。
  */
 ACLNN_API aclnnStatus aclnnFakeQuantPerTensorAffineCachemaskGetWorkspaceSize(
-    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, float fakeQuantEnbled, int64_t quantMin,
+    const aclTensor* self, const aclTensor* scale, const aclTensor* zeroPoint, float fakeQuantEnabled, int64_t quantMin,
     int64_t quantMax, aclTensor* out, aclTensor* mask, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
