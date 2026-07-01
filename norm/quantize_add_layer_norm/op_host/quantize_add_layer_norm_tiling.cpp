@@ -95,6 +95,33 @@ static inline uint64_t ComputeTilingKey(ge::DataType dataType, bool enableAdditi
     return tilingKey;
 }
 
+static bool GetAndSetAttrs(gert::TilingContext* context, int64_t& qdtype, int64_t& axis, float& eps, bool& enableAdditionalOutput)
+{
+    auto attrs = context->GetAttrs();
+    OP_CHECK_IF(nullptr == attrs, OP_LOGE(context, "GetAttrs failed. "), return false);
+
+    const int64_t* qdtypePtr = attrs->GetInt(0);
+    OP_CHECK_IF(nullptr == qdtypePtr, OP_LOGE(context, "Get required attr qdtypePtr failed. "), return false);
+    qdtype = *qdtypePtr;
+
+    const int64_t* axisPtr = attrs->GetInt(1);
+    OP_CHECK_IF(nullptr == axisPtr, OP_LOGE(context, "Get required attr axisPtr failed. "), return false);
+    axis = *axisPtr;
+
+    const float* epsPtr = attrs->GetFloat(2);
+    OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return false);
+    eps = *epsPtr;
+
+    const bool* enableAdditionalOutputPtr = attrs->GetBool(3);
+    OP_CHECK_IF(nullptr == enableAdditionalOutputPtr, OP_LOGE(context, "Get required attr enableAdditionalOutputPtr failed. "), return false);
+    enableAdditionalOutput = *enableAdditionalOutputPtr;
+
+    OP_LOGD(
+        "QuantizeAddLayerNorm", "eps: %f, x_out: %d, qdtype: %ld, axis: %ld", eps, enableAdditionalOutput, qdtype,
+        axis);
+    return true;
+}
+
 static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
 {
     OP_LOGD("QuantizeAddLayerNorm", "Enter QuantizeAddLayerNorm tiling");
@@ -104,27 +131,24 @@ static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
     auto dataType = context->GetInputDesc(0)->GetDataType();
     auto dataTypeSize = GetSizeByDataType(dataType);
     OP_LOGD("QuantizeAddLayerNorm", "dataTypeSize: %d", dataTypeSize);
-    int64_t qdtype = *context->GetAttrs()->GetInt(0);
-    int64_t axis = *context->GetAttrs()->GetInt(1);
-    float eps = *context->GetAttrs()->GetFloat(2);
-    bool enableAdditionalOutput = *context->GetAttrs()->GetBool(3);
 
-    OP_LOGD(
-        "QuantizeAddLayerNorm", "eps: %f, x_out: %d, qdtype: %ld, axis: %ld", eps, enableAdditionalOutput, qdtype,
-        axis);
+    int64_t qdtype = 0;
+    int64_t axis = 0;
+    float eps = 0.00001; 
+    bool enableAdditionalOutput=false;
+    bool res = GetAndSetAttrs(context, qdtype, axis, eps, enableAdditionalOutput);
+    OP_CHECK_IF(!res, OP_LOGE("QuantizeAddLayerNorm", "GetAndSetAttrs Failed"), return ge::GRAPH_FAILED);
+    
     auto maxCoreNum = ascendcPlatform.GetCoreNumAiv();
     int32_t numRow = 1;
     for (size_t i = 0; i < context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1; i++) {
         numRow *= context->GetInputShape(0)->GetStorageShape().GetDim(i);
     }
-    int32_t numCol = context->GetInputShape(0)->GetStorageShape().GetDim(
-        context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
+    int32_t numCol = context->GetInputShape(0)->GetStorageShape().GetDim(context->GetInputShape(0)->GetStorageShape().GetDimNum() - 1);
 
     uint64_t ubSize = -1;
     ascendcPlatform.GetCoreMemSize(platform_ascendc::CoreMemType::UB, ubSize);
-    OP_CHECK_IF(
-        !(CheckUbLimit(ubSize, numCol, axis, dataTypeSize)),
-        OP_LOGE("QuantizeAddLayerNorm", "CheckUbLimit Failed"), return ge::GRAPH_FAILED);
+    OP_CHECK_IF(!(CheckUbLimit(ubSize, numCol, axis, dataTypeSize)), OP_LOGE("QuantizeAddLayerNorm", "CheckUbLimit Failed"), return ge::GRAPH_FAILED);
 
     auto firstdimPerCore = CEIL_DIV(numRow, maxCoreNum);
     uint32_t numCore = CEIL_DIV(numRow, firstdimPerCore);
@@ -145,11 +169,7 @@ static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
     float tempAve = (numCol == 0) ? 0 : float(1.0 / numCol);
     tiling.set_eps(eps);
     tiling.set_aveFactor(tempAve);
-    OP_LOGD(
-        "QuantizeAddLayerNorm",
-        "numRow: %d, numCol: %d, numCore: %u, maxCoreNum: %u, firstDimPerCore: %u, firstDimPerCoreTail: %u, "
-        "firstDimPerTime: %d, eps: %f, aveFactor: %f",
-        numRow, numCol, numCore, maxCoreNum, rowFactor, rowTail, 1, eps, tempAve);
+    OP_LOGD("QuantizeAddLayerNorm", "numRow: %d, numCol: %d, numCore: %u, maxCoreNum: %u, firstDimPerCore: %u, firstDimPerCoreTail: %u, firstDimPerTime: %d, eps: %f, aveFactor: %f", numRow, numCol, numCore, maxCoreNum, rowFactor, rowTail, 1, eps, tempAve);
 
     uint64_t tilingKey = ComputeTilingKey(dataType, enableAdditionalOutput, axis);
     context->SetTilingKey(tilingKey);
@@ -157,8 +177,7 @@ static ge::graphStatus Tiling4QuantizeAddLayerNorm(gert::TilingContext* context)
     tiling.SaveToBuffer(context->GetRawTilingData()->GetData(), context->GetRawTilingData()->GetCapacity());
     context->GetRawTilingData()->SetDataSize(tiling.GetDataSize());
 
-    size_t usrSize = numCore * numCol * sizeof(float) *
-                     4; // useCore * column_size * sizeof(float32) * count(beta, gamma, scales, offsets)
+    size_t usrSize = numCore * numCol * sizeof(float) * 4; // useCore * column_size * sizeof(float32) * count(beta, gamma, scales, offsets)
     size_t sysWorkspaceSize = 16 * 1024 * 1024;
     size_t* currentWorkspace = context->GetWorkspaceSizes(1);
     currentWorkspace[0] = usrSize + sysWorkspaceSize;

@@ -551,8 +551,16 @@ static ge::graphStatus Tiling4AddLayerNorm(gert::TilingContext* context)
         !CheckInputShape4AddLayerNorm(context), OP_LOGE(context, "Input shape invalid."),
         return ge::GRAPH_FAILED);
     AddLayerNormTilingData tiling;
-    float eps = *context->GetAttrs()->GetFloat(0);
-    auto enableAdditionalOutput = *context->GetAttrs()->GetBool(1);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_NULL_WITH_CONTEXT(context, attrs);
+
+    const float* epsPtr = attrs->GetFloat(0);
+    OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return ge::GRAPH_FAILED);
+    float eps = *epsPtr;
+
+    const bool* enableAdditionalOutputPtr = attrs->GetBool(1);
+    OP_CHECK_IF(nullptr == enableAdditionalOutputPtr, OP_LOGE(context, "Get required attr enableAdditionalOutputPtr failed. "), return false);
+    auto enableAdditionalOutput = *enableAdditionalOutputPtr;
     tiling.set_eps(eps);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();

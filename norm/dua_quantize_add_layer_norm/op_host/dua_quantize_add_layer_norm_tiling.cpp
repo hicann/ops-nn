@@ -73,16 +73,26 @@ static inline void GetSocInfos(gert::TilingContext* context, uint64_t& ubSize, u
     maxCoreNum = ascendcPlatform.GetCoreNumAiv();
 }
 
-static inline void GetAndSetAttrs(
+static bool GetAndSetAttrs(
     gert::TilingContext* context, DuaQuantizeAddLayerNormTilingData* tiling, uint64_t& tilingKey)
 {
-    float eps = *context->GetAttrs()->GetFloat(EPS_IDX);
-    int64_t axis = *context->GetAttrs()->GetInt(AXIS_IDX);
+    auto attrs = context->GetAttrs();
+    OP_CHECK_IF(nullptr == attrs, OP_LOGE(context, "GetAttrs failed. "), return false);
+
+    const float* epsPtr = attrs->GetFloat(EPS_IDX);
+    OP_CHECK_IF(nullptr == epsPtr, OP_LOGE(context, "Get required attr epsPtr failed. "), return false);
+    float eps = *epsPtr;
+
+    const int64_t* axisPtr = attrs->GetInt(AXIS_IDX);
+    OP_CHECK_IF(nullptr == axisPtr, OP_LOGE(context, "Get required attr axisPtr failed. "), return false);
+    int64_t axis = *axisPtr;
+
     OP_LOGD("DuaQuantizeAddLayerNorm", "eps: %f, axis: %ld", eps, axis);
     tiling->set_eps(eps);
     if (axis == AXIS_VALUE_FOR_MUL_MODE) {
         tilingKey += TILING_MUL_MODE;
     }
+    return true;
 }
 
 static inline void GetRowCols(gert::TilingContext* context, int64_t& numRow, int32_t& numLastDim)
@@ -151,7 +161,10 @@ static ge::graphStatus Tiling4DuaQuantizeAddLayerNorm(gert::TilingContext* conte
     GetSocInfos(context, ubSize, maxCoreNum);
 
     uint64_t tilingKey = TILING_BASE;
-    GetAndSetAttrs(context, &tiling, tilingKey);
+    bool res = GetAndSetAttrs(context, &tiling, tilingKey);
+    OP_CHECK_IF(
+        !res, OP_LOGE("DuaQuantizeAddLayerNorm", "GetAndSetAttrs Failed"),
+        return ge::GRAPH_FAILED);
 
     int64_t numRow = 1;
     int32_t numLastDim = 1;
