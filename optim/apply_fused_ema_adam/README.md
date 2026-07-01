@@ -129,35 +129,35 @@
     <td>lr</td>
     <td>属性</td>
     <td>学习率，对应公式中的lr，取值范围是(0,1)，默认为1e-3。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>emaDecay</td>
     <td>属性</td>
     <td>指数移动平均（EMA）的衰减速率，对应公式中的emaDecay，取值范围是(0,1)，默认为0.9999。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>beta1</td>
     <td>属性</td>
     <td>计算一阶动量的系数，对应公式中的β1，取值范围是(0,1)，默认为0.9。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>beta2</td>
     <td>属性</td>
     <td>计算二阶动量的系数，对应公式中的β2，取值范围是(0,1)，默认为0.999。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
     <td>eps</td>
     <td>属性</td>
     <td>加到分母上的项，用于数值稳定性，对应公式中的eps，默认为1e-8。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
   <tr>
@@ -178,7 +178,7 @@
     <td>weightDecay</td>
     <td>属性</td>
     <td>权重衰减，对应公式中的weightDecay，取值范围是(0,1)，默认为0.0。</td>
-    <td>DOUBLE</td>
+    <td>FLOAT</td>
     <td>-</td>
   </tr>
 </tbody></table>

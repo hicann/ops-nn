@@ -43,7 +43,7 @@
 
 ```Cpp
 aclnnStatus aclnnSmoothL1LossBackwardGetWorkspaceSize(
-    const aclTensor* gradOutput, 
+    const aclTensor* gradOut, 
     const aclTensor* self,
     const aclTensor* target, 
     int64_t          reduction, 
@@ -88,7 +88,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
     </tr></thead>
   <tbody>
     <tr>
-      <td class="tg-0pky">gradOutput（aclTensor*）</td>
+      <td class="tg-0pky">gradOut（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">梯度反向输入，公式中的SmoothL1Loss。</td>
       <td class="tg-0pky">shape需要与self和target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与self、target的数据类型需满足数据类型推导规则。</td>
@@ -101,7 +101,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">self（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">输入张量，公式中的输入x。</td>
-      <td class="tg-0pky">shape需要与gradOutput、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradout、target满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradout、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -111,7 +111,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">target（aclTensor*）</td>
       <td class="tg-0pky">输入</td>
       <td class="tg-0pky">真实的标签，公式中的输入y。</td>
-      <td class="tg-0pky">shape需要与gradOutput、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradOutput、target的数据类型需满足数据类型推导规则。</td>
+      <td class="tg-0pky">shape需要与gradout、self满足<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast关系</a>。<br>数据类型与gradout、target的数据类型需满足数据类型推导规则。</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -141,7 +141,7 @@ aclnnStatus aclnnSmoothL1LossBackward(
       <td class="tg-0pky">gradInput（aclTensor*）</td>
       <td class="tg-0pky">输出</td>
       <td class="tg-0pky">计算输出。</td>
-      <td class="tg-0pky">shape为gradOutput，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果</td>
+      <td class="tg-0pky">shape为gradout，self，target的<a href="../../../docs/zh/context/broadcast关系.md" target="_blank">broadcast</a>结果</td>
       <td class="tg-0pky">FLOAT、FLOAT16、BFLOAT16</td>
       <td class="tg-0pky">ND</td>
       <td class="tg-0pky">1-8</td>
@@ -190,21 +190,21 @@ aclnnStatus aclnnSmoothL1LossBackward(
     <tr>
       <td class="tg-0pky">ACLNN_ERR_PARAM_NULLPTR</td>
       <td class="tg-0pky">161001</td>
-      <td class="tg-0pky">传入的self、target、gradOutput或gradInput为空指针。</td>
+      <td class="tg-0pky">传入的self、target、gradout或gradInput为空指针。</td>
     </tr>
     <tr>
       <td class="tg-0pky" rowspan="4">ACLNN_ERR_PARAM_INVALID</td>
       <td class="tg-0pky" rowspan="4">161002</td>
-      <td class="tg-0pky">self、target、gradOutput或gradInput的数据类型不在支持的范围之内。</td>
+      <td class="tg-0pky">self、target、gradout或gradInput的数据类型不在支持的范围之内。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、gradOutput或gradInput的shape不符合约束。</td>
+      <td class="tg-0pky">self、target、gradout或gradInput的shape不符合约束。</td>
     </tr>
     <tr>
       <td class="tg-0pky">reduction不符合约束。</td>
     </tr>
     <tr>
-      <td class="tg-0pky">self、target、gradOutput的shape不满足参数说明中的要求。</td>
+      <td class="tg-0pky">self、target、gradout的shape不满足参数说明中的要求。</td>
     </tr>
   </tbody>
   </table>
