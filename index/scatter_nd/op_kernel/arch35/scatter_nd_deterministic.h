@@ -704,6 +704,11 @@ __aicore__ inline void ScatterNdDeterministicImpl<T,  U>::CopySumOutToWs(uint64_
 
     // max逐行搬出, max计数加1
     Abs(updateSumLocal, updateSumLocal, uniqueIdNum_ * postVarAlignSizeFp32_);
+
+    auto mte3WaitVEventID = static_cast<event_t>(GetTPipePtr()->FetchEventID(HardEvent::V_MTE3));
+    SetFlag<HardEvent::V_MTE3>(mte3WaitVEventID);
+    WaitFlag<HardEvent::V_MTE3>(mte3WaitVEventID);
+    
     for (uint32_t i = 0; i < uniqueIdNum_; i++) {
         uint64_t maxWspOffset = static_cast<uint64_t>(updateSumIdxLocal(i) * tilingData_.afterAxis);
         if (updateSumIdxLocal(i) < 0 || updateSumIdxLocal(i) >= static_cast<U>(tilingData_.rankFusedAxis)) {
