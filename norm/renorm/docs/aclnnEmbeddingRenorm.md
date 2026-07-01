@@ -171,7 +171,7 @@ aclnnStatus aclnnEmbeddingRenorm(
       <tr>
       <td rowspan="2">ACLNN_ERR_PARAM_INVALID</td>
       <td rowspan="2">161002</td>
-      <td>selfRef、indices、maxNorm、normType的数据类型和数据格式不在支持的范围之内。</td>
+      <td>selfRef、indices的数据类型和数据格式不在支持的范围之内。</td>
       </tr>
       <tr>
       <td>selfRef的dim不为2、indices的dim超出8维。</td>
