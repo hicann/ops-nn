@@ -74,20 +74,12 @@ bool AdaptiveSlidingWindowCubeBasicAPITiling::IsCapable()
         inputParams_.aDtype = ge::DT_INT8;
         inputParams_.bDtype = ge::DT_INT8;
     }
-    bool isCubePerTensor =
-        inputParams_.isPerTensor &&
-        ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.biasDtype == ge::DT_INT32 && !inputParams_.isPertoken) ||
-         ((inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
-           inputParams_.aDtype == ge::DT_HIFLOAT8) &&
-          inputParams_.scaleDtype == ge::DT_UINT64));
-    bool isCubePerChannel =
-        inputParams_.isPerChannel && (inputParams_.scaleDtype == ge::DT_UINT64 ||
-                                      inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.cDtype == ge::DT_INT32);
-    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix();
+    bool isCubeBasicApiCapable = IsCubeBasicApiCapable(inputParams_);
+    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
     bool capable =
         !isFp8OrHif8TTBiasMix &&
-        (((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel) &&
-         (inputParams_.bFormat == ge::FORMAT_ND || IsWeightNzCubeBasicApiCapable(inputParams_)));
+        ((isCubeBasicApiCapable && inputParams_.bFormat == ge::FORMAT_ND) ||
+         IsWeightNzNonMxCubeBasicApiCapable(inputParams_));
     if (!capable && isSupportS4S4_) {
         inputParams_.aDtype = originADtype;
         inputParams_.bDtype = originBDtype;
@@ -115,6 +107,19 @@ uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetBatchCoreCnt() const
 const void* AdaptiveSlidingWindowCubeBasicAPITiling::GetTilingData() const
 {
     return &tilingData_;
+}
+
+uint64_t AdaptiveSlidingWindowCubeBasicAPITiling::GetApiLevel(NpuArch npuArch) const
+{
+    if (npuArch != NpuArch::DAV_3510) {
+        return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
+    }
+    const bool isTensorapiCapable = IsTensorapiCapable();
+    if (inputParams_.bFormat == ge::FORMAT_FRACTAL_NZ && !isTensorapiCapable) {
+        return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
+    }
+    return isTensorapiCapable ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+                                static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 bool AdaptiveSlidingWindowCubeBasicAPITiling::CalcBasicBlock()

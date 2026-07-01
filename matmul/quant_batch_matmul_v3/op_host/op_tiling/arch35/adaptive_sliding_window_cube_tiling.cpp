@@ -70,7 +70,7 @@ bool AdaptiveSlidingWindowCubeTiling::IsCapable()
     bool isCubePerChannel =
         inputParams_.isPerChannel && (inputParams_.scaleDtype == ge::DT_UINT64 ||
                                       inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.cDtype == ge::DT_INT32);
-    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix();
+    bool isFp8OrHif8TTBiasMix = IsFp8OrHif8TTFloatBiasMix(inputParams_);
     return compileInfo_.supportMmadS8S4 ||
            (!isFp8OrHif8TTBiasMix &&
             ((inputParams_.isDoubleScale && !inputParams_.isPerChannel) || isCubePerTensor || isCubePerChannel) &&

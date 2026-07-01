@@ -100,9 +100,9 @@ protected:
     uint32_t CalUsedCoreNum(uint32_t mTile, uint32_t nTile);
     bool IsMxKOdd() const;
     bool IsMxBackwardTrans() const;
-    bool IsFp8OrHif8TTFloatBiasMix() const;
     uint64_t GetBiasMode() const;
     virtual uint64_t GetKernelType() const;
+    virtual uint64_t GetApiLevel(NpuArch npuArch) const;
 
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
 

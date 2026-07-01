@@ -308,11 +308,17 @@ uint64_t QuantBatchMatmulV3IterbatchTiling::GetKernelType() const
     return QuantBatchMatMulV3TilingUtil::GetKernelType(inputParams_, basicTiling_, false, false, false, false);
 }
 
+uint64_t QuantBatchMatmulV3IterbatchTiling::GetApiLevel(NpuArch) const
+{
+    return static_cast<uint64_t>(QMMApiLevel::HIGH_LEVEL);
+}
+
 uint64_t QuantBatchMatmulV3IterbatchTiling::GetTilingKey() const
 {
+    uint64_t kernelType = GetKernelType();
     return GET_TPL_TILING_KEY(
         static_cast<uint64_t>(inputParams_.transA), static_cast<uint64_t>(inputParams_.transB), GetBiasMode(),
-        GetKernelType());
+        kernelType, GetApiLevel(compileInfo_.npuArch));
 }
 
 ge::graphStatus QuantBatchMatmulV3IterbatchTiling::GetWorkspaceSize()

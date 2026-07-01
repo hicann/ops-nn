@@ -62,7 +62,7 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::Reset()
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::IsCapable()
 {
-    return inputParams_.isPerBlock && inputParams_.bFormat == ge::FORMAT_ND;
+    return IsPerblockBasicApiCapable(inputParams_);
 }
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CheckCoreNum() const
@@ -84,6 +84,11 @@ uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetBatchCoreCnt() const
 const void* AdaptiveSlidingWindowPerblockBasicAPITiling::GetTilingData() const
 {
     return &tilingData_;
+}
+
+uint64_t AdaptiveSlidingWindowPerblockBasicAPITiling::GetApiLevel(NpuArch) const
+{
+    return static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalcBasicBlock()

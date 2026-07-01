@@ -72,12 +72,7 @@ void AdaptiveSlidingWindowMXBasicAPITiling::Reset()
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::IsCapable()
 {
-    bool isMxfp8 = (inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2) &&
-                   (inputParams_.bDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.bDtype == ge::DT_FLOAT8_E5M2) &&
-                   inputParams_.isMxPerGroup;
-    bool isMxfp4 = inputParams_.isMxPerGroup && inputParams_.aDtype == ge::DT_FLOAT4_E2M1 &&
-                   inputParams_.bDtype == ge::DT_FLOAT4_E2M1;
-    return isMxfp8 || isMxfp4;
+    return IsMxBasicApiCapable(inputParams_);
 }
 
 uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const
@@ -88,6 +83,12 @@ uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetBatchCoreCnt() const
 const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
 {
     return &tilingData_;
+}
+
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch) const
+{
+    return IsTensorapiCapable() ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
+                                  static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);
 }
 
 bool AdaptiveSlidingWindowMXBasicAPITiling::CalcBasicBlock()
