@@ -14,106 +14,100 @@ from ml_dtypes import bfloat16
 
 __golden__ = {
     "kernel": {
-        "mat_mul_v3": "mat_mul_v3_golden"
+        "transpose_batch_mat_mul": "transpose_batch_mat_mul_golden"
     }
 }
 
 _FRACTAL_DIMS = {
-    "float16":   (16, 16),
-    "bfloat16":  (16, 16),
-    "float32":   (16, 8),
-    "int8":      (16, 32),
+    "float16":  (16, 16),
+    "bfloat16": (16, 16),
+    "float32":  (16, 8),
 }
 
 
-def customize_inputs(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                     transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
+def customize_inputs(x1, x2, bias=None, scale=None, *, perm_x1=(0, 1, 2),
+                     perm_x2=(0, 1, 2), perm_y=(1, 0, 2), enable_hf32=False,
+                     batch_split_factor=1, **kwargs):
     input_formats = kwargs.get('input_formats', ())
     input_ori_shapes = kwargs.get('input_ori_shapes', ())
     if len(input_formats) > 1 and input_formats[1] == 'FRACTAL_NZ':
         x2_dtype_str = _dtype_to_str(x2.dtype)
         ori_shape = input_ori_shapes[1] if len(input_ori_shapes) > 1 else None
         x2 = _nz_to_nd(x2, x2_dtype_str, ori_shape)
-    return x1, x2, bias, offset_w
+    return x1, x2, bias, scale
 
 
 def pre_compare(*outputs, **kwargs):
     return list(outputs)
 
 
-def mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                      transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
-    x1, x2, bias, offset_w = customize_inputs(
-        x1, x2, bias, offset_w,
-        transpose_x1=transpose_x1, transpose_x2=transpose_x2,
-        offset_x=offset_x, opImplMode=opImplMode, **kwargs)
+def transpose_batch_mat_mul_golden(x1, x2, bias=None, scale=None, *,
+                                    perm_x1=(0, 1, 2), perm_x2=(0, 1, 2),
+                                    perm_y=(1, 0, 2), enable_hf32=False,
+                                    batch_split_factor=1, **kwargs):
+    x1, x2, bias, scale = customize_inputs(
+        x1, x2, bias, scale,
+        perm_x1=perm_x1, perm_x2=perm_x2, perm_y=perm_y,
+        enable_hf32=enable_hf32, batch_split_factor=batch_split_factor, **kwargs)
 
     x1_dtype = x1.dtype
-    x2_dtype = x2.dtype
 
-    if opImplMode == 64 and x1_dtype == np.float32:
+    is_hf32 = enable_hf32
+
+    if is_hf32 and x1_dtype == np.float32:
         x1 = _hf32_truncate(x1)
         x2 = _hf32_truncate(x2)
 
     if x1_dtype in (np.float16, bfloat16):
         x1 = x1.astype(np.float32)
         x2 = x2.astype(np.float32)
-        bias_comp_dtype = np.float32
+        comp_dtype = np.float32
     elif x1_dtype == np.float32:
         x1 = x1.astype(np.float64)
         x2 = x2.astype(np.float64)
-        bias_comp_dtype = np.float64
+        comp_dtype = np.float64
     else:
         x1 = x1.astype(np.float64)
         x2 = x2.astype(np.float64)
-        bias_comp_dtype = np.float64
+        comp_dtype = np.float64
 
-    if transpose_x1:
-        x1 = np.swapaxes(x1, -2, -1)
-    if transpose_x2:
-        x2 = np.swapaxes(x2, -2, -1)
+    x1_t = np.transpose(x1, axes=list(perm_x1))
 
-    out = np.matmul(x1, x2)
+    if tuple(perm_x2) == (0, 2, 1):
+        x2_t = np.swapaxes(x2, -2, -1)
+    else:
+        x2_t = x2
 
-    if bias is not None:
-        bias = bias.astype(bias_comp_dtype)
-        out = out + bias
+    mm_out = np.matmul(x1_t, x2_t)
+
+    if scale is not None:
+        B, M, N = mm_out.shape
+        mm_out = mm_out.transpose(1, 0, 2).reshape(M, B * N)
+        scale_f = scale.astype(comp_dtype).reshape(1, B * N)
+        mm_out = mm_out * scale_f
+        mm_out = np.round(mm_out).clip(-128, 127).astype(np.int8)
+        mm_out = mm_out.reshape(M, 1, B * N)
+    elif batch_split_factor > 1:
+        B, M, N = mm_out.shape
+        inner_batch = B // batch_split_factor
+        mm_out = mm_out.reshape(batch_split_factor, inner_batch, M, N)
+        mm_out = mm_out.transpose(0, 2, 1, 3)
+        mm_out = mm_out.reshape(batch_split_factor, M, inner_batch * N)
+    else:
+        mm_out = np.transpose(mm_out, axes=list(perm_y))
 
     output_dtypes = kwargs.get("output_dtypes", None)
     if output_dtypes is not None:
-        out = _cast_output_dtype(out, output_dtypes[0])
+        mm_out = _cast_output_dtype(mm_out, output_dtypes[0])
 
-    return [out]
+    return [mm_out]
 
 
-class MatMulV3Assets:
+class TransposeBatchMatMulAssets:
 
-    golden = mat_mul_v3_golden
+    golden = transpose_batch_mat_mul_golden
     customize_inputs = customize_inputs
     pre_compare = pre_compare
-
-    class ThirdPartyImpl:
-        def __init__(self, *, transpose_x1=False, transpose_x2=False,
-                     offset_x=0, opImplMode=0, **kwargs):
-            self.transpose_x1 = transpose_x1
-            self.transpose_x2 = transpose_x2
-            self.opImplMode = opImplMode
-
-        def __call__(self, x1, x2, bias=None, offset_w=None, **kwargs):
-            import torch
-            if self.transpose_x1:
-                x1 = x1.transpose(-2, -1)
-            if self.transpose_x2:
-                x2 = x2.transpose(-2, -1)
-
-            out = torch.matmul(x1, x2)
-
-            if bias is not None:
-                out = out + bias
-
-            return [out]
-
-    third_party = {"torch": ThirdPartyImpl}
 
     tolerance = {
         "float32": {"standard": "IsClose", "rtol": 1e-4, "atol": 1e-4},
@@ -181,15 +175,13 @@ def _dtype_to_str(dtype):
         np.float16: "float16",
         np.float32: "float32",
         np.float64: "float64",
-        np.int8: "int8",
-        np.int32: "int32",
         bfloat16: "bfloat16",
     }
     return dtype_map.get(dtype, str(dtype))
 
 
 def _cast_output_dtype(arr, dtype_name):
-    dtype_map = {"float16": np.float16, "float32": np.float32, "bfloat16": bfloat16}
+    dtype_map = {"float16": np.float16, "float32": np.float32, "bfloat16": bfloat16, "int8": np.int8}
     target = dtype_map.get(dtype_name)
     if target is not None:
         return arr.astype(target)

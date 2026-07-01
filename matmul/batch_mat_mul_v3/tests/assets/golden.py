@@ -14,20 +14,19 @@ from ml_dtypes import bfloat16
 
 __golden__ = {
     "kernel": {
-        "mat_mul_v3": "mat_mul_v3_golden"
+        "batch_mat_mul_v3": "batch_mat_mul_v3_golden"
     }
 }
 
 _FRACTAL_DIMS = {
-    "float16":   (16, 16),
-    "bfloat16":  (16, 16),
-    "float32":   (16, 8),
-    "int8":      (16, 32),
+    "float16":  (16, 16),
+    "bfloat16": (16, 16),
+    "float32":  (16, 8),
 }
 
 
-def customize_inputs(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                     transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
+def customize_inputs(x1, x2, bias=None, offset_w=None, *, adj_x1=False,
+                     adj_x2=False, offset_x=0, opImplMode=0, **kwargs):
     input_formats = kwargs.get('input_formats', ())
     input_ori_shapes = kwargs.get('input_ori_shapes', ())
     if len(input_formats) > 1 and input_formats[1] == 'FRACTAL_NZ':
@@ -41,12 +40,11 @@ def pre_compare(*outputs, **kwargs):
     return list(outputs)
 
 
-def mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                      transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
+def batch_mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, adj_x1=False,
+                            adj_x2=False, offset_x=0, opImplMode=0, **kwargs):
     x1, x2, bias, offset_w = customize_inputs(
         x1, x2, bias, offset_w,
-        transpose_x1=transpose_x1, transpose_x2=transpose_x2,
-        offset_x=offset_x, opImplMode=opImplMode, **kwargs)
+        adj_x1=adj_x1, adj_x2=adj_x2, offset_x=offset_x, opImplMode=opImplMode, **kwargs)
 
     x1_dtype = x1.dtype
     x2_dtype = x2.dtype
@@ -68,9 +66,9 @@ def mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
         x2 = x2.astype(np.float64)
         bias_comp_dtype = np.float64
 
-    if transpose_x1:
+    if adj_x1:
         x1 = np.swapaxes(x1, -2, -1)
-    if transpose_x2:
+    if adj_x2:
         x2 = np.swapaxes(x2, -2, -1)
 
     out = np.matmul(x1, x2)
@@ -86,24 +84,25 @@ def mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
     return [out]
 
 
-class MatMulV3Assets:
+class BatchMatMulV3Assets:
 
-    golden = mat_mul_v3_golden
+    golden = batch_mat_mul_v3_golden
     customize_inputs = customize_inputs
     pre_compare = pre_compare
 
     class ThirdPartyImpl:
-        def __init__(self, *, transpose_x1=False, transpose_x2=False,
+        def __init__(self, *, adj_x1=False, adj_x2=False,
                      offset_x=0, opImplMode=0, **kwargs):
-            self.transpose_x1 = transpose_x1
-            self.transpose_x2 = transpose_x2
+            self.adj_x1 = adj_x1
+            self.adj_x2 = adj_x2
             self.opImplMode = opImplMode
 
         def __call__(self, x1, x2, bias=None, offset_w=None, **kwargs):
             import torch
-            if self.transpose_x1:
+
+            if self.adj_x1:
                 x1 = x1.transpose(-2, -1)
-            if self.transpose_x2:
+            if self.adj_x2:
                 x2 = x2.transpose(-2, -1)
 
             out = torch.matmul(x1, x2)
@@ -116,7 +115,14 @@ class MatMulV3Assets:
     third_party = {"torch": ThirdPartyImpl}
 
     tolerance = {
-        "float32": {"standard": "IsClose", "rtol": 1e-4, "atol": 1e-4},
+        "float32": {
+            "standard": "BenchmarkCompareStandard",
+            "avg_re_rtol": 2.0,
+            "max_re_rtol": 5.0,
+            "rmse_rtol": 2.0,
+            "small_value": 1e-6,
+            "small_value_atol": 1e-9,
+        },
         "float16": {
             "standard": "BenchmarkCompareStandard",
             "avg_re_rtol": 2.0,

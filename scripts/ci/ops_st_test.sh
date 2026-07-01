@@ -437,7 +437,7 @@ run_kernel_test() {
     
     cd "${ttk_path}"
     
-    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -c --pc=8 --warmup=false"
+    local cmd="python3 -m ttk kernel -i ${test_csv} -o ${log_op_dir}/${testcase_name}_result.csv --plugin ${ops_test_path} -d=false -b=release --pc=16"
     print_msg "Executing: ${cmd}"
     
     local start_time=$(date +%s)

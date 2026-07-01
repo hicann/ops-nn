@@ -9,111 +9,113 @@
 # INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
 # See LICENSE in the root of the software repository for the full text of the License.
 # ----------------------------------------------------------------------------
+import math
 import numpy as np
 from ml_dtypes import bfloat16
 
 __golden__ = {
     "kernel": {
-        "mat_mul_v3": "mat_mul_v3_golden"
+        "fused_mat_mul": "fused_mat_mul_golden"
     }
 }
 
+_GELU_BIAS_FORBIDDEN = ("gelu_erf", "gelu_tanh")
+
 _FRACTAL_DIMS = {
-    "float16":   (16, 16),
-    "bfloat16":  (16, 16),
-    "float32":   (16, 8),
-    "int8":      (16, 32),
+    "float16":  (16, 16),
+    "bfloat16": (16, 16),
+    "float32":  (16, 8),
 }
 
 
-def customize_inputs(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                     transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
+def customize_inputs(x1, x2, bias=None, x3=None, *, transpose_x1=False,
+                     transpose_x2=False, fused_op_type="", opImplMode=0,
+                     enable_hf32=False, **kwargs):
     input_formats = kwargs.get('input_formats', ())
     input_ori_shapes = kwargs.get('input_ori_shapes', ())
     if len(input_formats) > 1 and input_formats[1] == 'FRACTAL_NZ':
         x2_dtype_str = _dtype_to_str(x2.dtype)
         ori_shape = input_ori_shapes[1] if len(input_ori_shapes) > 1 else None
         x2 = _nz_to_nd(x2, x2_dtype_str, ori_shape)
-    return x1, x2, bias, offset_w
+    return x1, x2, bias, x3
 
 
 def pre_compare(*outputs, **kwargs):
     return list(outputs)
 
 
-def mat_mul_v3_golden(x1, x2, bias=None, offset_w=None, *, transpose_x1=False,
-                      transpose_x2=False, offset_x=0, opImplMode=0, **kwargs):
-    x1, x2, bias, offset_w = customize_inputs(
-        x1, x2, bias, offset_w,
+def fused_mat_mul_golden(x1, x2, bias=None, x3=None, *, transpose_x1=False,
+                         transpose_x2=False, fused_op_type="",
+                         opImplMode=0, enable_hf32=False, **kwargs):
+    x1, x2, bias, x3 = customize_inputs(
+        x1, x2, bias, x3,
         transpose_x1=transpose_x1, transpose_x2=transpose_x2,
-        offset_x=offset_x, opImplMode=opImplMode, **kwargs)
+        fused_op_type=fused_op_type, opImplMode=opImplMode,
+        enable_hf32=enable_hf32, **kwargs)
 
     x1_dtype = x1.dtype
     x2_dtype = x2.dtype
 
-    if opImplMode == 64 and x1_dtype == np.float32:
+    is_hf32 = enable_hf32
+
+    if is_hf32 and x1_dtype == np.float32:
         x1 = _hf32_truncate(x1)
         x2 = _hf32_truncate(x2)
 
     if x1_dtype in (np.float16, bfloat16):
         x1 = x1.astype(np.float32)
         x2 = x2.astype(np.float32)
-        bias_comp_dtype = np.float32
+        comp_dtype = np.float32
     elif x1_dtype == np.float32:
         x1 = x1.astype(np.float64)
         x2 = x2.astype(np.float64)
-        bias_comp_dtype = np.float64
+        comp_dtype = np.float64
     else:
         x1 = x1.astype(np.float64)
         x2 = x2.astype(np.float64)
-        bias_comp_dtype = np.float64
+        comp_dtype = np.float64
 
     if transpose_x1:
         x1 = np.swapaxes(x1, -2, -1)
     if transpose_x2:
         x2 = np.swapaxes(x2, -2, -1)
 
-    out = np.matmul(x1, x2)
+    mm_out = np.matmul(x1, x2)
 
-    if bias is not None:
-        bias = bias.astype(bias_comp_dtype)
-        out = out + bias
+    if bias is not None and x1.shape[-1] != 0:
+        bias = bias.astype(comp_dtype)
+        mm_out = mm_out + bias
+
+    if fused_op_type in ("add", "mul"):
+        output_dtypes = kwargs.get("output_dtypes", None)
+        if output_dtypes is not None and x1_dtype in (np.float16, bfloat16):
+            mm_out = _cast_output_dtype(mm_out, output_dtypes[0]).astype(comp_dtype)
+
+    if fused_op_type == "relu":
+        mm_out = np.maximum(mm_out, 0)
+    elif fused_op_type == "add":
+        x3 = x3.astype(comp_dtype)
+        mm_out = mm_out + x3
+    elif fused_op_type == "mul":
+        x3 = x3.astype(comp_dtype)
+        mm_out = mm_out * x3
+    elif fused_op_type == "gelu_erf":
+        mm_out = 0.5 * mm_out * (1.0 + np.vectorize(math.erf)(mm_out / np.sqrt(2.0)))
+    elif fused_op_type == "gelu_tanh":
+        mm_out = 0.5 * mm_out * (1.0 + np.tanh(np.sqrt(2.0 / np.pi) * (mm_out + 0.044715 * mm_out ** 3)))
 
     output_dtypes = kwargs.get("output_dtypes", None)
     if output_dtypes is not None:
-        out = _cast_output_dtype(out, output_dtypes[0])
+        mm_out = _cast_output_dtype(mm_out, output_dtypes[0])
 
-    return [out]
+    return [mm_out]
 
 
-class MatMulV3Assets:
+class FusedMatMulAssets:
 
-    golden = mat_mul_v3_golden
+    golden = fused_mat_mul_golden
     customize_inputs = customize_inputs
     pre_compare = pre_compare
-
-    class ThirdPartyImpl:
-        def __init__(self, *, transpose_x1=False, transpose_x2=False,
-                     offset_x=0, opImplMode=0, **kwargs):
-            self.transpose_x1 = transpose_x1
-            self.transpose_x2 = transpose_x2
-            self.opImplMode = opImplMode
-
-        def __call__(self, x1, x2, bias=None, offset_w=None, **kwargs):
-            import torch
-            if self.transpose_x1:
-                x1 = x1.transpose(-2, -1)
-            if self.transpose_x2:
-                x2 = x2.transpose(-2, -1)
-
-            out = torch.matmul(x1, x2)
-
-            if bias is not None:
-                out = out + bias
-
-            return [out]
-
-    third_party = {"torch": ThirdPartyImpl}
 
     tolerance = {
         "float32": {"standard": "IsClose", "rtol": 1e-4, "atol": 1e-4},
@@ -181,8 +183,6 @@ def _dtype_to_str(dtype):
         np.float16: "float16",
         np.float32: "float32",
         np.float64: "float64",
-        np.int8: "int8",
-        np.int32: "int32",
         bfloat16: "bfloat16",
     }
     return dtype_map.get(dtype, str(dtype))
