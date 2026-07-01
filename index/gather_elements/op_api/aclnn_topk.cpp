@@ -37,6 +37,7 @@
 #include "opdev/small_vector.h"
 #include "opdev/platform.h"
 #include "level0/fill.h"
+#include "util/math_util.h"
 
 #include <cstdint>
 #include <cmath>
@@ -68,6 +69,9 @@ constexpr int64_t RADIX_TOP_K_S_K_RATIO_1 = 100;
 constexpr int64_t RADIX_TOP_K_S_THRESHOLD_2 = 100000000;
 constexpr int64_t RADIX_TOP_K_S_K_RATIO_2 = 50;
 constexpr int64_t RADIX_TOP_K_MIN_K = 1000;
+static const int64_t NON_TRANSPOSE_DIM_MAX = 8;
+const int64_t TOPK_NON_TRANSPOSE_AXIS_THRESHOLD = 2048;
+constexpr int64_t SMALL_ROW_LARGE_OUTER_THRESHOLD = 1024;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -516,6 +520,54 @@ static const aclTensor* GetTensorWithValueZero(aclTensor* out, aclOpExecutor* ex
     return viewCopyResult;
 }
 
+// 获得tensor的维度数
+static inline int64_t GetTensorDim(const aclTensor *self)
+{
+    return static_cast<int64_t> (self->GetViewShape().GetDimNum());
+}
+
+static bool IsNoTransposeProfitable(const aclTensor *self, int64_t dim)
+{
+    auto selfShape = self->GetViewShape();
+    int64_t outerSize = 1;
+    int64_t innerSize = 1;
+    int64_t dimSize = GetTensorDim(self);
+    for (int64_t i = 0; i < dim; ++i) {
+        outerSize *= selfShape[i];
+    }
+    for (int64_t i = dim + 1; i < dimSize; ++i) {
+        innerSize *= selfShape[i];
+    }
+
+    int64_t dtypeSize = static_cast<int64_t>(op::TypeSize(self->GetDataType()));
+
+    // If each GM row copy is smaller than one block, no-transpose pays heavy per-row padding/gather overhead.
+    // With many outer slices, that fixed cost can dominate the transpose traffic saved by the no-transpose path.
+    int64_t blockBytes = GetCurrentPlatformInfo().GetBlockSize();
+    int64_t blockElems = Ops::Base::CeilDiv(blockBytes, dtypeSize);
+    if (innerSize < blockElems && outerSize >= SMALL_ROW_LARGE_OUTER_THRESHOLD) {
+        return false;
+    }
+    return true;
+}
+
+static bool IsTopKUseNoTranspose(const aclTensor *self, int64_t dim)
+{
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        return false;
+    }
+    int64_t dimSize = GetTensorDim(self);
+    if (dimSize <= 0 || dimSize > NON_TRANSPOSE_DIM_MAX || dim == dimSize - 1) {
+        return false;
+    }
+    auto selfShape = self->GetViewShape();
+    int64_t axisLen = selfShape[dim];
+    if (axisLen < 2 || axisLen > TOPK_NON_TRANSPOSE_AXIS_THRESHOLD) {
+        return false;
+    }
+    return IsNoTransposeProfitable(self, dim);
+}
+
 aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool largest, bool sorted,
                                       aclTensor *valuesOut, aclTensor *indicesOut, uint64_t *workspaceSize,
                                       aclOpExecutor **executor) {
@@ -586,7 +638,14 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
   }
 
   OP_LOGD("aclnnTopkGetWorkspaceSize positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
-  if (positiveDim != lastDim) {
+  
+  if (IsTopKUseNoTranspose(selfCast, positiveDim)) {
+      OP_LOGD("topk non transpose positiveDim=%ld, lastDim=%ld, indexType=%d", positiveDim, lastDim, static_cast<int32_t>(indicesDType));
+      std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
+      topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
+      valuesTopkOut = std::get<0>(topkOut);
+      indicesCastInt32 = std::get<1>(topkOut);
+  } else if (positiveDim != lastDim) {
     aclIntArray *axes = GetDimTransposeArray(dimNum, lastDim, positiveDim, uniqueExecutor.get());
     CHECK_RET(axes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
