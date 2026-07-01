@@ -93,15 +93,14 @@ graphStatus ComputeInferShape(gert::InferShapeContext* context, const gert::Shap
         hasGroup && groupIndexShape->GetDimNum() != 1,
         OP_LOGE(context->GetNodeName(), "the rank of group_index must be 1, but is %d", groupIndexShape->GetDimNum()),
         return ge::GRAPH_FAILED);
+    OP_CHECK_IF(
+        hasGroup && xRank != 2,
+        OP_LOGE(context->GetNodeName(), "when groupIndex is exist, the rank of input x must be 2, but is %ld", xRank),
+        return ge::GRAPH_FAILED);
     int64_t groupIndexNum = 0;
     if (hasGroup) {
         groupIndexNum = groupIndexShape->GetDim(0);
     }
-    // 校验：当前仅支持 axis 为尾轴
-    OP_CHECK_IF(axisNorm != xRank - 1,
-        OP_LOGE(context->GetNodeName(), "Only axis=-1 (tail axis) is supported currently, but got axis=%ld (normalized=%ld).",
-                *axis, axisNorm),
-        return ge::GRAPH_FAILED);
 
     // 计算 mxscale 的倒数第二维
     int64_t yAxisSize = 0;

@@ -115,7 +115,7 @@ TEST_F(SwigluMxQuantTest, SwigluMxQuant_infershape_error_invalid_axis)
     xDesc.SetShape(xShape);
     xDesc.SetOriginShape(xShape);
     op.UpdateInputDesc("x", xDesc);
-    op.SetAttr("axis", 0);
+    op.SetAttr("axis", 3);
 
     Runtime2TestParam param{{"activate_dim", "activate_left", "swiglu_mode", "clamp_limit", "glu_alpha", "glu_bias", "group_mode", "axis", "dst_type", "round_mode", "scale_alg", "max_dtype_value"}};
     EXPECT_EQ(InferShapeTest(op, param), ge::GRAPH_FAILED);

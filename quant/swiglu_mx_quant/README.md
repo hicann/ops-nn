@@ -68,7 +68,7 @@
     <tr>
       <td>group_index</td>
       <td>可选输入</td>
-      <td>预留参数</td>
+      <td>shape必须为1维，且小于等于256</td>
       <td>INT32、INT64</td>
       <td>ND</td>
     </tr>
@@ -176,8 +176,11 @@
 
 - 输入x支持2-7维张量，在activate_dim指定维度上的尺寸必须能被2整除。
 - activate_dim和axis的值必须为-1或-2。
-- 当前实现限制：仅支持`activate_dim = -1`且`axis = -1`的场景。
-- 当dst_type为FP4类型时，最后一维必须能被4整除。
+- activate_dim为-2时， swiglu_mode必须为0。
+- 当activate_dim = -2 或者axis = -2, group_index存在时，输入x必须为2维。
+- 当dst_type为FP4类型时，输出shape的最后一维必须能被2整除。
+- 当dst_type为FP4类型时，scale_alg必须为0。
+- group_index存在时，必须为1维，且shape值小于等于256。
 - FP8输出类型仅支持"rint"舍入模式。
 
 ## 调用说明

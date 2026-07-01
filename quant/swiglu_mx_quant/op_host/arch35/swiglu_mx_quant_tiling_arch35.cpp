@@ -15,6 +15,7 @@
 
 #include "swiglu_mx_quant_tiling_arch35.h"
 #include "../../op_kernel/arch35/swiglu_mx_quant_tiling_data.h"
+#include "quant/swiglu_mx_quant/op_kernel/arch35/swiglu_mx_quant_tiling_key.h"
 
 #include <cmath>
 #include <sstream>
@@ -25,6 +26,7 @@
 using namespace std;
 using namespace ge;
 using namespace AscendC;
+using namespace SwigluMxQuantOp;
 
 namespace optiling {
 // ==================== 常量定义 ====================
@@ -48,20 +50,17 @@ constexpr int64_t BYTES_OF_FP8 = 1;
 constexpr int64_t RESERVED_UB_SIZE = 32;
 constexpr int64_t RESERVED_UB_FOR_ALIGN = 128;
 constexpr int64_t BLOCK_SIZE = 32;
-constexpr int64_t TILING_KEY_BASE = 1000;
-constexpr int64_t INPUT_GROUP_INDEX = 1;
 constexpr int64_t DOUBLE_BUFFER = 2;
 constexpr int64_t CONST_TWO = 2;
 constexpr int64_t CONST_THREE = 3;
 constexpr int64_t CONST_FOUR = 4;
-constexpr int64_t DTYPE_35 = 35;               // F8e5m2
-constexpr int64_t DTYPE_36 = 36;               // F8e8m0
-constexpr int64_t DTYPE_40 = 40;               // F4e2m1
-constexpr int64_t DTYPE_41 = 41;               // F4e1m2
-constexpr int64_t BASE_LAST_FACTOR_DIM1 = 256; // 尾轴量化时基本块大小是(1, 256)
-constexpr int64_t BASE_NOT_LAST_FACTOR_DIM0 = 64;
-constexpr int64_t BASE_NOT_LAST_FACTOR_DIM1 = 128; // 非尾轴量化时基本块大小是(64, 128)
-constexpr int64_t LIMIT_GRPUP_INDEX = 256;         // group_index的输入shape大小的限制值
+constexpr int64_t DTYPE_35 = 35;   // F8e5m2
+constexpr int64_t DTYPE_36 = 36;   // F8e8m0
+constexpr int64_t DTYPE_40 = 40;   // F4e2m1
+constexpr int64_t DTYPE_41 = 41;   // F4e1m2
+constexpr int64_t BASE_DIM1 = 256; // 尾轴量化时基本块大小是(1, 256)
+constexpr int64_t BASE_DIM0 = 64;
+constexpr int64_t LIMIT_GRPUP_INDEX = 256; // group_index的输入shape大小的限制值
 
 // 支持的数据类型集合
 const std::set<ge::DataType> INPUT_SUPPORT_DTYPE_SET = { ge::DT_FLOAT16, ge::DT_BF16 };
@@ -178,6 +177,13 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     auto roundMode = GetRoundModeEnum(roundModeStr);
     OP_CHECK_IF((roundMode == RoundModeList::MODE_UNDEFINED),
         OP_LOGE(context_->GetNodeName(), "Invalid round_mode: %s", roundModeStr.c_str()), return ge::GRAPH_FAILED);
+    if (roundMode == RoundModeList::MODE_FLOOR) {
+        roundMode_ = TPL_FLOOR;
+    } else if (roundMode == RoundModeList::MODE_ROUND) {
+        roundMode_ = TPL_ROUND;
+    } else {
+        roundMode_ = TPL_RINT;
+    }
     attrParam_.roundMode = static_cast<int64_t>(roundMode);
     OP_LOGD(context_->GetNodeName(), "attr round_mode = %s -> %ld", roundModeStr.c_str(), attrParam_.roundMode);
 
@@ -187,9 +193,6 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
     OP_LOGD(context_->GetNodeName(), "attr scale_alg = %ld", attrParam_.scaleAlg);
     OP_CHECK_IF((attrParam_.scaleAlg != 0) && (attrParam_.scaleAlg != 1) && (attrParam_.scaleAlg != 2),
         OP_LOGE(context_->GetNodeName(), "Invalid scaleAlg: %ld", attrParam_.scaleAlg), return ge::GRAPH_FAILED);
-    // Get max_dtype_value (float type)
-    auto *attrMaxDtypeValue = attrs->GetAttrPointer<float>(INDEX_ATTR_MAX_DTYPE_VALUE);
-    attrParam_.maxDtypeValue = (attrMaxDtypeValue != nullptr) ? *attrMaxDtypeValue : 0.0f;
 
     // Get group_mode (int64 type)
     auto *attrGroupMode = attrs->GetAttrPointer<int64_t>(INDEX_ATTR_GROUP_MODE);
@@ -218,16 +221,15 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ParseAttrs()
         attrParam_.axis -= inputInfo_.dimNum;
     }
 
-    // Check constraints: only support activate_dim=-1 and axis=-1 currently
-    OP_CHECK_IF((attrParam_.activateDim != -1),
-        OP_LOGE(context_->GetNodeName(), "Only activate_dim=-1 is supported currently, but got %ld.",
+    // Check constraints: only support activate_dim=-1, axis=-1 or axis=-2
+    OP_CHECK_IF((attrParam_.activateDim != -1) && (attrParam_.activateDim != -2),
+        OP_LOGE(context_->GetNodeName(), "Only activate_dim=-1 or -2 is supported currently, but got %ld.",
         attrParam_.activateDim),
         return ge::GRAPH_FAILED);
 
-    OP_CHECK_IF((attrParam_.axis != -1),
-        OP_LOGE(context_->GetNodeName(), "Only axis=-1 is supported currently, but got %ld.", attrParam_.axis),
+    OP_CHECK_IF((attrParam_.axis != -1 && attrParam_.axis != -2),
+        OP_LOGE(context_->GetNodeName(), "axis must be -1 or -2, but got %ld.", attrParam_.axis),
         return ge::GRAPH_FAILED);
-
     return ge::GRAPH_SUCCESS;
 }
 
@@ -255,10 +257,10 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateInput()
 
     // Extract dimensions
     inputInfo_.inputDim2 = xShape->GetStorageShape().GetDim(dimNum - 1);
-
+    inputInfo_.inputDim1 = xShape->GetStorageShape().GetDim(dimNum - 2);
     // Detect optional input group_index
     inputInfo_.groupIndexNum = 0; // 初始值为 0
-    auto groupIndexDesc = context_->GetOptionalInputDesc(INPUT_GROUP_INDEX);
+    auto groupIndexDesc = context_->GetOptionalInputDesc(1);
     if (groupIndexDesc != nullptr) {
         auto groupIndexDtype = groupIndexDesc->GetDataType();
         if (groupIndexDtype == ge::DT_INT32) {
@@ -273,7 +275,7 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateInput()
         }
 
         // 获取 group_index 的 shape 并校验维度必须为 1
-        auto groupIndexShape = context_->GetOptionalInputShape(INPUT_GROUP_INDEX);
+        auto groupIndexShape = context_->GetOptionalInputShape(1);
         OP_CHECK_NULL_WITH_CONTEXT(context_, groupIndexShape);
         size_t groupIndexDimNum = groupIndexShape->GetStorageShape().GetDimNum();
         OP_CHECK_IF(groupIndexDimNum != 1,
@@ -295,8 +297,59 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateInput()
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateOutput()
+ge::graphStatus SwigluMxQuantRegbaseTiling::CheckScaleShape(const gert::StorageShape* scaleShape,
+    const gert::StorageShape* yShape, int64_t scaleDimNum)
 {
+    if (attrParam_.axis == -1) {
+        int64_t expectedScaleNum = Ops::Base::CeilDiv(outputInfo_.outputDim2, BASE_DIM0);
+        int64_t mxScaleNum = scaleShape->GetStorageShape().GetDim(scaleDimNum - CONST_TWO);
+        OP_CHECK_IF(mxScaleNum != expectedScaleNum,
+            OP_LOGE(context_->GetNodeName(),
+            "Output mxScale's axis dimension size is error,mxScaleNum is %ld, expectedScaleNum is %ld", mxScaleNum,
+            expectedScaleNum),
+            return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < scaleDimNum - CONST_TWO; i++) {
+            OP_CHECK_IF(scaleShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i),
+                OP_LOGE(context_->GetNodeName(),
+                "axis = -1, scaleShape[i] must be equal yShape[i], but i is %ld, scaleShape[i] is %ld, yShape[i] is "
+                "%ld",
+                i, scaleShape->GetStorageShape().GetDim(i), yShape->GetStorageShape().GetDim(i)),
+                return ge::GRAPH_FAILED);
+        }
+    } else { // axis == -2
+        int64_t expectedScaleM = inputInfo_.groupIndexType == 0 ?
+            Ops::Base::CeilDiv(outputInfo_.outputDim1, BASE_DIM0) :
+            Ops::Base::FloorDiv(outputInfo_.outputDim1, BASE_DIM0) + inputInfo_.groupIndexNum;
+        int64_t mxScaleDim = scaleShape->GetStorageShape().GetDim(scaleDimNum - CONST_THREE);
+        OP_CHECK_IF(mxScaleDim != expectedScaleM,
+            OP_LOGE(context_->GetNodeName(), "axis=-2: mxScale dim error, got=%ld, expected=%ld", mxScaleDim,
+            expectedScaleM),
+            return ge::GRAPH_FAILED);
+        int64_t scaleN = scaleShape->GetStorageShape().GetDim(scaleDimNum - CONST_TWO);
+        OP_CHECK_IF(scaleN != outputInfo_.outputDim2,
+            OP_LOGE(context_->GetNodeName(), "axis=-2: mxScale N mismatch, got=%ld, expected=%ld", scaleN,
+            outputInfo_.outputDim2),
+            return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < scaleDimNum - CONST_THREE; i++) {
+            OP_CHECK_IF(scaleShape->GetStorageShape().GetDim(i) != yShape->GetStorageShape().GetDim(i),
+                OP_LOGE(context_->GetNodeName(),
+                "axis = -2, scaleShape[i] must be equal yShape[i], but i is %ld, scaleShape[i] is %ld, yShape[i] is "
+                "%ld",
+                i, scaleShape->GetStorageShape().GetDim(i), yShape->GetStorageShape().GetDim(i)),
+                return ge::GRAPH_FAILED);
+        }
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateScaleOutput()
+{
+    OP_CHECK_IF((inputInfo_.groupIndexType != 0) && (attrParam_.activateDim != -1 || attrParam_.axis != -1) &&
+        (inputInfo_.dimNum != CONST_TWO),
+        OP_LOGE(context_->GetNodeName(),
+        "When axis = -2 or activate_dim = -2 and group is exist, the rank of x must be 2, but now is %ld ",
+        inputInfo_.dimNum),
+        return ge::GRAPH_FAILED);
     // Check y dtype
     auto yDtype = context_->GetOutputDesc(0)->GetDataType();
     OP_CHECK_IF((Y_SUPPORT_DTYPE_SET.find(yDtype) == Y_SUPPORT_DTYPE_SET.end()),
@@ -317,24 +370,33 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateOutput()
         OP_LOGE(context_->GetNodeName(), "Output mxscale dtype %d is not supported.", static_cast<int>(mxscaleDtype)),
         return ge::GRAPH_FAILED);
     outputInfo_.mxscaleDtype = mxscaleDtype;
-
-    // 获取输出 y 的 shape，设置 outputDim2 为 y 的 activateDim 维度的值
-    auto yShape = context_->GetOutputShape(0);
+    const gert::StorageShape* yShape = context_->GetOutputShape(0);
+    const gert::StorageShape* scaleShape = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
-    auto scaleShape = context_->GetOutputShape(1);
     OP_CHECK_NULL_WITH_CONTEXT(context_, scaleShape);
-    auto yShapeNew = Ops::NN::OpTiling::EnsureNotScalar(yShape->GetStorageShape());
     auto scaleShapeNew = Ops::NN::OpTiling::EnsureNotScalar(scaleShape->GetStorageShape());
-    int64_t yShapeSize = yShapeNew.GetShapeSize();
     int64_t scaleShapeSize = scaleShapeNew.GetShapeSize();
-    int64_t yDimNum = static_cast<int64_t>(yShape->GetStorageShape().GetDimNum());
     int64_t scaleDimNum = static_cast<int64_t>(scaleShape->GetStorageShape().GetDimNum());
-    OP_CHECK_IF(yShapeSize <= 0 || scaleShapeSize <= 0 || yDimNum < CONST_TWO || scaleDimNum < CONST_THREE,
+    OP_CHECK_IF(scaleShapeSize <= 0 || scaleDimNum < CONST_THREE,
         OP_LOGE(context_->GetNodeName(),
-        "out not support empty tensor, rank of yShape must >=2, rank of scale must >=3, but yDim %ld, scaleDim %ld",
-        yDimNum, scaleDimNum),
+        "out not support empty tensor, rank of scale must >=3, but rank of scale is %ld", scaleDimNum),
         return ge::GRAPH_FAILED);
-    outputInfo_.outputDim2 = yShape->GetStorageShape().GetDim(yDimNum - 1);
+    int64_t scaleLast = scaleShape->GetStorageShape().GetDim(scaleDimNum - 1);
+    OP_CHECK_IF(scaleLast != CONST_TWO,
+        OP_LOGE(context_->GetNodeName(), "last dim of scaleShape must be 2, but is %ld", scaleLast),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF((attrParam_.dstType == DTYPE_35 || attrParam_.dstType == DTYPE_36) && (attrParam_.roundMode != 1),
+        OP_LOGE(context_->GetNodeName(), "outDtype is fp8, roundMode must be rint, but is %ld", attrParam_.roundMode),
+        return ge::GRAPH_FAILED);
+    OP_CHECK_IF(CheckScaleShape(scaleShape, yShape, scaleDimNum) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context_->GetNodeName(), "CheckScaleShape check failed"),
+        return ge::GRAPH_FAILED);
+
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateYOutput(const gert::StorageShape* xShape, const gert::StorageShape* yShape, int64_t yDimNum)
+{
     // 校验：y 的 activateDim 轴的 shape = x 的 activateDim 轴的 shape / 2
     if (attrParam_.activateDim == -1) {
         int64_t expectedOutputDim2 = inputInfo_.inputDim2 / CONST_TWO;
@@ -344,93 +406,116 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::ValidateOutput()
             "%ld.",
             outputInfo_.outputDim2, expectedOutputDim2),
             return ge::GRAPH_FAILED);
-    }
-    if (attrParam_.axis == -1) {
-        int64_t scaleNum = Ops::Base::CeilDiv(outputInfo_.outputDim2, BLOCK_SIZE);
-        if ((scaleNum % CONST_TWO) != 0) {
-            scaleNum = scaleNum + 1;
+        for (int64_t i = 0; i < yDimNum - 1; i++) {
+            OP_CHECK_IF((yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
+                OP_LOGE(context_->GetNodeName(),
+                "activateDim = -1, yShape[i] must be equal xShape[i], but i is %ld, yShape[i] is %ld, xShape[i] is %ld",
+                i, yShape->GetStorageShape().GetDim(i), xShape->GetStorageShape().GetDim(i)),
+                return ge::GRAPH_FAILED);
         }
-        int64_t expectedScaleNum = scaleNum / CONST_TWO;
-        int64_t mxScaleNum = scaleShape->GetStorageShape().GetDim(scaleDimNum - CONST_TWO);
-        OP_CHECK_IF(mxScaleNum != expectedScaleNum,
-            OP_LOGE(context_->GetNodeName(),
-            "Output mxScale's axis dimension size is error,mxScaleNum is %ld, expectedScaleNum is %ld",
-            mxScaleNum, expectedScaleNum),
-            return ge::GRAPH_FAILED);
     }
-    OP_CHECK_IF((attrParam_.dstType == DTYPE_35 || attrParam_.dstType == DTYPE_36) && (attrParam_.roundMode != 1),
-        OP_LOGE(context_->GetNodeName(), "outDtype is fp8, roundMode must be rint, but is %ld", attrParam_.roundMode),
+    if (attrParam_.activateDim == -2) {
+        int64_t expectedOutputDim1 = inputInfo_.inputDim1 / CONST_TWO;
+        OP_CHECK_IF((outputInfo_.outputDim1 != expectedOutputDim1),
+            OP_LOGE(context_->GetNodeName(),
+            "Output y's activateDim dimension size %ld should equal to x's activateDim dimension size / 2, expected "
+            "%ld.",
+            outputInfo_.outputDim1, expectedOutputDim1),
+            return ge::GRAPH_FAILED);
+        OP_CHECK_IF(outputInfo_.outputDim2 != inputInfo_.inputDim2,
+            OP_LOGE(context_->GetNodeName(),
+            "activateDim = -2, yShape[-1] must be equal xShape[-1], but yShape[-1] is %ld, xShape[-1] is %ld",
+            outputInfo_.outputDim2, inputInfo_.inputDim2),
+            return ge::GRAPH_FAILED);
+        for (int64_t i = 0; i < yDimNum - CONST_TWO; i++) {
+            OP_CHECK_IF((yShape->GetStorageShape().GetDim(i) != xShape->GetStorageShape().GetDim(i)),
+                OP_LOGE(context_->GetNodeName(),
+                "activateDim = -2, yShape[i] must be equal xShape[i], but i is %ld, yShape[i] is %ld, xShape[i] is %ld",
+                i, yShape->GetStorageShape().GetDim(i), xShape->GetStorageShape().GetDim(i)),
+                return ge::GRAPH_FAILED);
+        }
+    }
+    // 对齐检查
+    bool alignLast = outputInfo_.outputDim2 % CONST_TWO == 0 ? true : false;
+    OP_CHECK_IF((attrParam_.dstType == DTYPE_40 || attrParam_.dstType == DTYPE_41) && (!alignLast),
+        OP_LOGE(context_->GetNodeName(), "When dst_type is FP4, outputShape last dim must be even number, but is %ld",
+        outputInfo_.outputDim2),
         return ge::GRAPH_FAILED);
-    OP_LOGI(context_->GetNodeName(), "Output y outputDim2=%ld", outputInfo_.outputDim2);
-
     return ge::GRAPH_SUCCESS;
 }
 
 ge::graphStatus SwigluMxQuantRegbaseTiling::PreProcess()
 {
-    // 获取 x 的完整 shape
-    auto xShape = context_->GetInputShape(0);
+    const gert::StorageShape* xShape = context_->GetInputShape(0);
     int64_t dimNum = inputInfo_.dimNum;
-
-    // 根据 activateDim 合轴计算 inputDim1 和 inputDim2
-    if (attrParam_.activateDim == -1) {
-        // 对 -1 轴之前的轴做合轴，shape 视为三维 [1, 前序轴乘积, 最后一维]
-        // 例如: [a, b, c, d, e, f, g] -> [1, a*b*c*d*e*f, g]
-        int64_t mergedDim1 = 1;
+    const gert::StorageShape* yShape = context_->GetOutputShape(0);
+    OP_CHECK_NULL_WITH_CONTEXT(context_, yShape);
+    auto yShapeNew = Ops::NN::OpTiling::EnsureNotScalar(yShape->GetStorageShape());
+    int64_t yShapeSize = yShapeNew.GetShapeSize();
+    int64_t yDimNum = static_cast<int64_t>(yShape->GetStorageShape().GetDimNum());
+    OP_CHECK_IF(yShapeSize <= 0 || yDimNum != dimNum,
+        OP_LOGE(context_->GetNodeName(),
+        "y not support empty tensor, rank of yShape must equal rank of xShape, but xRank=%ld, yRank=%ld", dimNum,
+        yDimNum),
+        return ge::GRAPH_FAILED);
+    outputInfo_.outputDim2 = yShape->GetStorageShape().GetDim(yDimNum - 1);
+    outputInfo_.outputDim1 = yShape->GetStorageShape().GetDim(yDimNum - 2);
+    if ((attrParam_.axis == -1) && (attrParam_.activateDim == -1)) {
+        int64_t inDim1 = 1;
+        int64_t outDim1 = 1;
         for (int64_t i = 0; i < dimNum - 1; i++) {
-            mergedDim1 *= xShape->GetStorageShape().GetDim(i);
+            inDim1 *= xShape->GetStorageShape().GetDim(i);
+            outDim1 *= yShape->GetStorageShape().GetDim(i);
         }
-        inputInfo_.inputDim1 = mergedDim1;
-        // inputDim2 保持为最后一维
-    } else { // activateDim == -2
-        // 对 -2 轴之前的轴做合轴，shape 视为三维 [前序轴乘积, 激活轴, 最后一维]
-        // 例如: [a, b, c, d, e, f, g] -> [a*b*c*d*e, f, g]
-        // 预留分支，暂不处理
-        return ge::GRAPH_FAILED;
+        inputInfo_.inputDim1 = inDim1;
+        outputInfo_.outputDim1 = outDim1;
     }
-
-    OP_LOGI(context_->GetNodeName(), "After merge: inputDim1=%ld, inputDim2=%ld, outputDim2=%ld", inputInfo_.inputDim1,
-        inputInfo_.inputDim2, outputInfo_.outputDim2);
-
-    // 获取 x 在 activateDim 维度的 shape 值
-    int64_t activateDimSize = 0;
-    if (attrParam_.activateDim == -1) {
-        activateDimSize = inputInfo_.inputDim2;
-    } else { // activateDim == -2
-        activateDimSize = inputInfo_.inputDim1;
+    if ((attrParam_.axis == -2 || attrParam_.activateDim == -2) && inputInfo_.groupIndexType == 0) {
+        for (int64_t i = 0; i < dimNum - 2; i++) {
+            inputInfo_.inputDim0 *= xShape->GetStorageShape().GetDim(i);
+            outputInfo_.outputDim0 *= yShape->GetStorageShape().GetDim(i);
+        }
     }
-
-    // 根据 dstType 检查 activateDim 维度的 shape 是否满足对齐要求
-    if (attrParam_.dstType == DTYPE_40 || attrParam_.dstType == DTYPE_41) {
-        // FP4 类型: activateDim 维度必须能被 4 整除
-        OP_CHECK_IF((activateDimSize % CONST_FOUR != 0),
-            OP_LOGE(context_->GetNodeName(),
-            "When dst_type is FP4, activate_dim dimension size %ld must be divisible by 4.", activateDimSize),
-            return ge::GRAPH_FAILED);
-    } else {
-        // FP8 类型: activateDim 维度必须能被 2 整除
-        OP_CHECK_IF((activateDimSize % CONST_TWO != 0),
-            OP_LOGE(context_->GetNodeName(),
-            "When dst_type is FP8, activate_dim dimension size %ld must be divisible by 2.", activateDimSize),
-            return ge::GRAPH_FAILED);
-    }
+    OP_LOGI(context_->GetNodeName(), "3D view: dim0=%ld, dim1=%ld, dim2=%ld", inputInfo_.inputDim0,
+        inputInfo_.inputDim1, inputInfo_.inputDim2);
+    OP_CHECK_IF(ValidateYOutput(xShape, yShape, yDimNum) != ge::GRAPH_SUCCESS,
+        OP_LOGE(context_->GetNodeName(), "Tiling ValidateYOutput failed."), return ge::GRAPH_FAILED);
     return ge::GRAPH_SUCCESS;
 }
 
-ge::graphStatus SwigluMxQuantRegbaseTiling::CalculateTiling()
+ge::graphStatus SwigluMxQuantRegbaseTiling::ComputeTilingAxisNotLast()
 {
-    // Set basic block parameters according to axis
-    if (attrParam_.axis == -1) {
-        tilingResult_.basicDim2 = BASE_LAST_FACTOR_DIM1;
-        tilingResult_.basicDim1 = 1;
-    } else { // axis == -2
-        tilingResult_.basicDim2 = BASE_NOT_LAST_FACTOR_DIM1;
-        tilingResult_.basicDim1 = BASE_NOT_LAST_FACTOR_DIM0;
+    tilingResult_.basicDim1 = BASE_DIM0;
+    tilingResult_.basicDim2 = BASE_DIM1;
+    int64_t inHalfSize_ = tilingResult_.basicDim1 * tilingResult_.basicDim2;
+    int64_t inBufferSize = inHalfSize_ * BYTES_OF_FP16;
+    int64_t xUb = inBufferSize * CONST_TWO * CONST_TWO;
+    int64_t swigluUb = inBufferSize;
+    int64_t yUb = inHalfSize_ * CONST_TWO;
+    int64_t scaleUb = tilingResult_.basicDim2 * CONST_THREE * CONST_TWO;
+    int64_t scaleInt16Ub = tilingResult_.basicDim2 * CONST_TWO * CONST_TWO;
+    int64_t allNeedUb = xUb + swigluUb + yUb + scaleUb + scaleInt16Ub;
+    OP_CHECK_IF(allNeedUb > compileInfo_.ubSize, OP_LOGE(context_->GetNodeName(), "ub not enough"),
+        return ge::GRAPH_FAILED);
+    tilingResult_.dimMBlockNum = Ops::Base::CeilDiv(outputInfo_.outputDim1, tilingResult_.basicDim1);
+    tilingResult_.dimNBlockNum = Ops::Base::CeilDiv(outputInfo_.outputDim2, tilingResult_.basicDim2);
+    tilingResult_.blockCountPerBatch = tilingResult_.dimMBlockNum * tilingResult_.dimNBlockNum;
+    int64_t totalBlocks = inputInfo_.inputDim0 * tilingResult_.blockCountPerBatch;
+    tilingResult_.usedCoreNum = std::min(totalBlocks, compileInfo_.totalCoreNum);
+    if (inputInfo_.groupIndexType != 0) {
+        tilingResult_.usedCoreNum = compileInfo_.totalCoreNum;
     }
+    tilingResult_.dimMTail = outputInfo_.outputDim1 - (tilingResult_.dimMBlockNum - 1) * tilingResult_.basicDim1;
+    tilingResult_.dimNTail = outputInfo_.outputDim2 - (tilingResult_.dimNBlockNum - 1) * tilingResult_.basicDim2;
+    tilingResult_.tailCoreBasicNumDim1 = Ops::Base::FloorDiv(totalBlocks, tilingResult_.usedCoreNum);
+    tilingResult_.frontCoreNum = totalBlocks % tilingResult_.usedCoreNum;
+    return ge::GRAPH_SUCCESS;
+}
 
+ge::graphStatus SwigluMxQuantRegbaseTiling::ComputeTilingAxisLast()
+{
     // Calculate available UB size
     int64_t availableUB = compileInfo_.ubSize - RESERVED_UB_SIZE - RESERVED_UB_FOR_ALIGN;
-
     // UB capacity calculation per iteration
     int64_t bytesPerIteration = 0;
     bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 * CONST_TWO * BYTES_OF_FP16; // Input x
@@ -440,67 +525,81 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::CalculateTiling()
     } else { // FP8_E4M3FN(36) or FP8_E5M2(35)
         bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 * BYTES_OF_FP8; // Output y (FP8)
     }
-    bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 / BLOCK_SIZE * BYTES_OF_FP8; // Output Scale
+    // Output Scale: axis=-1 groups by columns, axis=-2 groups by rows
+    int64_t scaleCount = tilingResult_.basicDim1 * tilingResult_.basicDim2 / BLOCK_SIZE;
+    bytesPerIteration += scaleCount * BYTES_OF_FP8;
     bytesPerIteration *= DOUBLE_BUFFER;
-    bytesPerIteration +=
-        tilingResult_.basicDim1 * tilingResult_.basicDim2 / BLOCK_SIZE * BYTES_OF_FP16; // reciprocal_scale[8]
-    bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 / BLOCK_SIZE * BYTES_OF_INT16; // max_exp[8]
-    bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 * BYTES_OF_FP16;               // SwiGLU
+    bytesPerIteration += scaleCount * BYTES_OF_FP16;                                        // reciprocal_scale
+    bytesPerIteration += scaleCount * BYTES_OF_INT16;                                       // max_exp
+    bytesPerIteration += tilingResult_.basicDim1 * tilingResult_.basicDim2 * BYTES_OF_FP16; // SwiGLU
 
     // Calculate how many basic blocks can fit in UB
     int64_t ubTotalBasicBlock = availableUB / bytesPerIteration;
     OP_LOGI(context_->GetNodeName(), "ubTotalBasicBlock is %ld", ubTotalBasicBlock);
 
     // Calculate basic blocks per row
-    int64_t basicPerRow = Ops::Base::CeilDiv(outputInfo_.outputDim2, tilingResult_.basicDim2);
-
-    if (ubTotalBasicBlock >= basicPerRow) {
+    if (ubTotalBasicBlock >= tilingResult_.dimNBlockNum) {
         // Full-load scenario: entire row fits in UB
-        tilingResult_.maxBasicNumUbDim2 = basicPerRow;
-        tilingResult_.maxBasicNumUbDim1 = Ops::Base::FloorDiv(ubTotalBasicBlock, basicPerRow);
-        tilingResult_.ubLoopPerRow = 1;
-        tilingResult_.ubTailPerRow = outputInfo_.outputDim2;
-        tilingResult_.isFullLoad = 1;
+        tilingResult_.maxBasicNumUbDim2 = tilingResult_.dimNBlockNum;
+        tilingResult_.maxBasicNumUbDim1 = Ops::Base::FloorDiv(ubTotalBasicBlock, tilingResult_.dimNBlockNum);
     } else {
         // Non-full-load scenario
         tilingResult_.maxBasicNumUbDim2 = ubTotalBasicBlock;
         tilingResult_.maxBasicNumUbDim1 = 1;
-        tilingResult_.ubLoopPerRow = Ops::Base::CeilDiv(basicPerRow, tilingResult_.maxBasicNumUbDim2);
-        tilingResult_.ubTailPerRow = outputInfo_.outputDim2 -
-            (tilingResult_.ubLoopPerRow - 1) * tilingResult_.maxBasicNumUbDim2 * tilingResult_.basicDim2;
-        tilingResult_.isFullLoad = 0;
     }
-
-    // Calculate inter-core split strategy
-    int64_t basicPerCol = Ops::Base::CeilDiv(inputInfo_.inputDim1, tilingResult_.basicDim1);
-    tilingResult_.usedCoreNum = std::min(basicPerCol, compileInfo_.totalCoreNum);
-
-    // Tail core parameters
-    int64_t tailCoreBasicNumDim1 = Ops::Base::FloorDiv(basicPerCol, tilingResult_.usedCoreNum);
-    int64_t tailCoreLoopTimes = Ops::Base::CeilDiv(tailCoreBasicNumDim1, tilingResult_.maxBasicNumUbDim1);
-    int64_t tailCoreLastLoopBasicNum = tailCoreBasicNumDim1 - (tailCoreLoopTimes - 1) * tilingResult_.maxBasicNumUbDim1;
-
-    // Front core parameters
-    tilingResult_.frontCoreNum = basicPerCol % tilingResult_.usedCoreNum;
-    tilingResult_.frontCoreBasicNumDim1 = tailCoreBasicNumDim1 + 1;
-    tilingResult_.frontCoreLoopTimes =
-        Ops::Base::CeilDiv(tilingResult_.frontCoreBasicNumDim1, tilingResult_.maxBasicNumUbDim1);
-    tilingResult_.frontCoreLastLoopBasicNum =
-        tilingResult_.frontCoreBasicNumDim1 - (tilingResult_.frontCoreLoopTimes - 1) * tilingResult_.maxBasicNumUbDim1;
-
-    tilingResult_.tailCoreBasicNumDim1 = tailCoreBasicNumDim1;
-    tilingResult_.tailCoreLoopTimes = tailCoreLoopTimes;
-    tilingResult_.tailCoreLastLoopBasicNum = tailCoreLastLoopBasicNum;
-
+    // Calculate blockIdx
+    int64_t batch = inputInfo_.inputDim0;
+    int64_t dimM = outputInfo_.outputDim1;
+    int64_t totalBMRows = batch * dimM;
+    // Step 1: prefer whole rows per core, only split N if extra cores available
+    int64_t bmCores = std::min(totalBMRows, compileInfo_.totalCoreNum);
+    int64_t nCores = 1;
+    if (bmCores < compileInfo_.totalCoreNum) {
+        nCores = compileInfo_.totalCoreNum / bmCores;
+        nCores = std::min(nCores, tilingResult_.dimNBlockNum);
+    }
+    if (attrParam_.axis == -1 && attrParam_.activateDim == -2) {
+        int64_t bCores = std::min(batch, bmCores);
+        int64_t mCoresPerB = bmCores / bCores;
+        tilingResult_.bCoreNum = bCores;
+        tilingResult_.mCorePerB = mCoresPerB;
+    } else {
+        tilingResult_.bCoreNum = 1;
+        tilingResult_.mCorePerB = bmCores;
+    }
+    tilingResult_.nCoreNum = nCores;
+    tilingResult_.usedCoreNum = tilingResult_.bCoreNum * tilingResult_.mCorePerB * nCores;
+    if (inputInfo_.groupIndexType != 0) {
+        tilingResult_.usedCoreNum = compileInfo_.totalCoreNum;
+    }
     return ge::GRAPH_SUCCESS;
 }
 
-int64_t SwigluMxQuantRegbaseTiling::CalculateTilingKey()
+ge::graphStatus SwigluMxQuantRegbaseTiling::CalculateTiling()
 {
-    // TilingKey = 1000 + groupIndexType * 100 + activateDimIndex * 10 + axisIndex
-    int64_t activateDimIndex = (attrParam_.activateDim == -1) ? 0 : 1;
-    int64_t axisIndex = (attrParam_.axis == -1) ? 0 : 1;
-    return TILING_KEY_BASE + inputInfo_.groupIndexType * 100 + activateDimIndex * 10 + axisIndex;
+    if (attrParam_.axis == -1) {
+        tilingResult_.basicDim1 = 1;
+        tilingResult_.basicDim2 = BASE_DIM1;
+        tilingResult_.dimNBlockNum = Ops::Base::CeilDiv(outputInfo_.outputDim2, tilingResult_.basicDim2);
+        tilingResult_.dimNTail = outputInfo_.outputDim2 - (tilingResult_.dimNBlockNum - 1) * tilingResult_.basicDim2;
+        return ComputeTilingAxisLast();
+    } else {
+        return ComputeTilingAxisNotLast();
+    }
+}
+
+void SwigluMxQuantRegbaseTiling::SetTilingKeyAndCore()
+{
+    groupIndexType_ = static_cast<uint64_t>(inputInfo_.groupIndexType);
+    axisLast_ = (attrParam_.axis == -1) ? TPL_AXIS_LAST : TPL_AXIS_NOT_LAST;
+    activateDimLast_ = (attrParam_.activateDim == -1) ? TPL_ACTIVATE_LAST : TPL_ACTIVATE_NOT_LAST;
+
+    int64_t tilingKey = GET_TPL_TILING_KEY(groupIndexType_, axisLast_, activateDimLast_, roundMode_);
+    OP_LOGI(context_->GetNodeName(),
+        "!!!! groupIndexType=%lu, axisLast=%lu, activateDimLast=%lu, roundMode_=%ld, tilingKey=%ld", groupIndexType_,
+        axisLast_, activateDimLast_, roundMode_, tilingKey);
+    context_->SetTilingKey(tilingKey);
+    context_->SetBlockDim(tilingData_->usedCoreNum);
 }
 
 ge::graphStatus SwigluMxQuantRegbaseTiling::FillTilingData()
@@ -517,27 +616,29 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::FillTilingData()
     // Basic parameters
     tilingData_->usedCoreNum = tilingResult_.usedCoreNum;
 
-    // Data shape
-    tilingData_->inputDim2 = inputInfo_.inputDim2;
-    tilingData_->inputDim1 = inputInfo_.inputDim1;
-    tilingData_->outputDim2 = outputInfo_.outputDim2;
+    // 3D data shape
+    tilingData_->inputDim0 = inputInfo_.inputDim0;
+    tilingData_->inputDim1 = outputInfo_.outputDim1;
+    tilingData_->inputDim2 = outputInfo_.outputDim2; // axis=-2: N (SwiGLU output)
 
     // Memory allocation
-    tilingData_->basicDim2 = tilingResult_.basicDim2;
-    tilingData_->basicDim1 = tilingResult_.basicDim1;
     tilingData_->maxBasicNumUbDim2 = tilingResult_.maxBasicNumUbDim2;
     tilingData_->maxBasicNumUbDim1 = tilingResult_.maxBasicNumUbDim1;
-    tilingData_->ubLoopPerRow = tilingResult_.ubLoopPerRow;
-    tilingData_->ubTailPerRow = tilingResult_.ubTailPerRow;
 
     // Inter-core split
     tilingData_->frontCoreNum = tilingResult_.frontCoreNum;
-    tilingData_->frontCoreBasicNumDim1 = tilingResult_.frontCoreBasicNumDim1;
-    tilingData_->frontCoreLoopTimes = tilingResult_.frontCoreLoopTimes;
-    tilingData_->frontCoreLastLoopBasicNum = tilingResult_.frontCoreLastLoopBasicNum;
     tilingData_->tailCoreBasicNumDim1 = tilingResult_.tailCoreBasicNumDim1;
-    tilingData_->tailCoreLoopTimes = tilingResult_.tailCoreLoopTimes;
-    tilingData_->tailCoreLastLoopBasicNum = tilingResult_.tailCoreLastLoopBasicNum;
+
+    // 3D block distribution (axis=-2 path)
+    tilingData_->dimNBlockNum = tilingResult_.dimNBlockNum;
+    tilingData_->dimNTail = tilingResult_.dimNTail;
+    tilingData_->dimMBlockNum = tilingResult_.dimMBlockNum;
+    tilingData_->dimMTail = tilingResult_.dimMTail;
+    tilingData_->blockCountPerBatch = tilingResult_.blockCountPerBatch;
+    // 3D grid core distribution (act=-2, axis=-1 path)
+    tilingData_->nCoreNum = tilingResult_.nCoreNum;
+    tilingData_->bCoreNum = tilingResult_.bCoreNum;
+    tilingData_->mCorePerB = tilingResult_.mCorePerB;
 
     // SwiGLU parameters
     tilingData_->activateLeft = attrParam_.activateLeft ? 1 : 0;
@@ -547,9 +648,7 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::FillTilingData()
     tilingData_->gluBias = attrParam_.gluBias;
 
     // Quantization parameters
-    tilingData_->roundMode = attrParam_.roundMode;
     tilingData_->scaleAlg = attrParam_.scaleAlg;
-    tilingData_->maxDtypeValue = attrParam_.maxDtypeValue;
     tilingData_->groupMode = attrParam_.groupMode;
     tilingData_->groupIndexNum = inputInfo_.groupIndexNum;
     return ge::GRAPH_SUCCESS;
@@ -558,29 +657,22 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::FillTilingData()
 void SwigluMxQuantRegbaseTiling::PrintTilingData() const
 {
     OP_LOGI(context_->GetNodeName(),
-        "TilingData: usedCoreNum=%ld, inputDim2=%ld, inputDim1=%ld, outputDim2=%ld, "
-        "basicDim2=%ld, basicDim1=%ld, maxBasicNumUbDim2=%ld, maxBasicNumUbDim1=%ld, "
-        "ubLoopPerRow=%ld, ubTailPerRow=%ld, isFullLoad=%ld, "
-        "frontCoreNum=%ld, frontCoreBasicNumDim1=%ld, frontCoreLoopTimes=%ld, frontCoreLastLoopBasicNum=%ld, "
-        "tailCoreBasicNumDim1=%ld, tailCoreLoopTimes=%ld, tailCoreLastLoopBasicNum=%ld, "
-        "scaleAlg=%ld, roundMode=%ld, groupIndexNum=%ld, swigluMode=%ld, "
-        "activateLeft=%ld, clampLimit=%f, gluBias=%f, gluAlpha=%f",
-        tilingData_->usedCoreNum, tilingData_->inputDim2, tilingData_->inputDim1, tilingData_->outputDim2,
-        tilingData_->basicDim2, tilingData_->basicDim1, tilingData_->maxBasicNumUbDim2, tilingData_->maxBasicNumUbDim1,
-        tilingData_->ubLoopPerRow, tilingData_->ubTailPerRow, tilingResult_.isFullLoad, tilingData_->frontCoreNum,
-        tilingData_->frontCoreBasicNumDim1, tilingData_->frontCoreLoopTimes, tilingData_->frontCoreLastLoopBasicNum,
-        tilingData_->tailCoreBasicNumDim1, tilingData_->tailCoreLoopTimes, tilingData_->tailCoreLastLoopBasicNum,
-        tilingData_->scaleAlg, tilingData_->roundMode, tilingData_->groupIndexNum, tilingData_->swigluMode,
-        tilingData_->activateLeft, tilingData_->clampLimit, tilingData_->gluBias, tilingData_->gluAlpha);
+        "TilingData: usedCoreNum=%ld, inputDim0=%ld, inputDim1=%ld, inputDim2=%ld, "
+        "maxBasicNumUbDim2=%ld, maxBasicNumUbDim1=%ld, frontCoreNum=%ld, tailCoreBasicNumDim1=%ld, scaleAlg=%ld, "
+        "groupIndexNum=%ld, swigluMode=%ld, "
+        "activateLeft=%ld, dimMBlockNum=%ld, dimNBlockNum = %ld, blockCountPerBatch=%ld, dimMTail=%ld, dimNTail=%ld, "
+        "bCoreNum=%ld, mCorePerB=%ld, nCoreNum=%ld, clampLimit=%f, gluBias=%f, gluAlpha=%f",
+        tilingData_->usedCoreNum, tilingData_->inputDim0, tilingData_->inputDim1, tilingData_->inputDim2,
+        tilingData_->maxBasicNumUbDim2, tilingData_->maxBasicNumUbDim1, tilingData_->frontCoreNum,
+        tilingData_->tailCoreBasicNumDim1, tilingData_->scaleAlg, tilingData_->groupIndexNum, tilingData_->swigluMode,
+        tilingData_->activateLeft, tilingData_->dimMBlockNum, tilingData_->dimNBlockNum,
+        tilingData_->blockCountPerBatch, tilingData_->dimMTail, tilingData_->dimNTail, tilingData_->bCoreNum,
+        tilingData_->mCorePerB, tilingData_->nCoreNum, tilingData_->clampLimit, tilingData_->gluBias,
+        tilingData_->gluAlpha);
 }
 
 ge::graphStatus SwigluMxQuantRegbaseTiling::SetParams()
 {
-    // Set TilingKey and BlockDim
-    int64_t tilingKey = CalculateTilingKey();
-    context_->SetTilingKey(tilingKey);
-    context_->SetBlockDim(tilingData_->usedCoreNum);
-
     // Set workspace
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     size_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
@@ -590,8 +682,7 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::SetParams()
     OP_CHECK_NULL_WITH_CONTEXT(context_, workspaces);
     workspaces[0] = usrWorkspaceSize + sysWorkspaceSize;
 
-    OP_LOGI(context_->GetNodeName(), "SetParams done. TilingKey=%ld, BlockDim=%ld", tilingKey,
-        tilingData_->usedCoreNum);
+    OP_LOGI(context_->GetNodeName(), "SetParams done. BlockDim=%ld", tilingData_->usedCoreNum);
 
     return ge::GRAPH_SUCCESS;
 }
@@ -599,7 +690,6 @@ ge::graphStatus SwigluMxQuantRegbaseTiling::SetParams()
 // ==================== TilingPrepare ====================
 ge::graphStatus TilingPrepare4SwigluMxQuant(gert::TilingParseContext *context)
 {
-    OP_LOGD(context->GetNodeName(), "TilingPrepare4SwigluMxQuant begin.");
     return ge::GRAPH_SUCCESS;
 }
 
@@ -621,14 +711,13 @@ ge::graphStatus Tiling4SwigluMxQuant(gert::TilingContext *context)
     // Phase 2: Parse attributes (在 ValidateInput 之后，可以使用 inputInfo_.dimNum 进行属性校验)
     OP_CHECK_IF(tilingImpl.ParseAttrs() != ge::GRAPH_SUCCESS,
         OP_LOGE(context->GetNodeName(), "Failed to parse attributes."), return ge::GRAPH_FAILED);
-
-    // Phase 3: Validate output
-    OP_CHECK_IF(tilingImpl.ValidateOutput() != ge::GRAPH_SUCCESS,
-        OP_LOGE(context->GetNodeName(), "Output validation failed."), return ge::GRAPH_FAILED);
-
     // Phase 3.5: Post process (检查 shape 对齐要求)
     OP_CHECK_IF(tilingImpl.PreProcess() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Post process failed."),
         return ge::GRAPH_FAILED);
+    // Phase 3: Validate output
+    OP_CHECK_IF(tilingImpl.ValidateScaleOutput() != ge::GRAPH_SUCCESS,
+        OP_LOGE(context->GetNodeName(), "Output validation failed."), return ge::GRAPH_FAILED);
+    // 后续需要把输出shape和输入shape非axis对应的其他维度校验加上去，防止非法的shape情况
 
     // Phase 4: Calculate tiling
     OP_CHECK_IF(tilingImpl.CalculateTiling() != ge::GRAPH_SUCCESS,
@@ -639,6 +728,7 @@ ge::graphStatus Tiling4SwigluMxQuant(gert::TilingContext *context)
         OP_LOGE(context->GetNodeName(), "Failed to fill tiling data."), return ge::GRAPH_FAILED);
 
     // Phase 6: Set params (TilingKey, BlockDim, Workspace)
+    tilingImpl.SetTilingKeyAndCore();
     OP_CHECK_IF(tilingImpl.SetParams() != ge::GRAPH_SUCCESS, OP_LOGE(context->GetNodeName(), "Failed to set params."),
         return ge::GRAPH_FAILED);
 

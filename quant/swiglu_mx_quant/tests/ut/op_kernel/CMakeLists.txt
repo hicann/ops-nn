@@ -8,5 +8,5 @@
 #/
 
 if ((UT_TEST_ALL OR OP_KERNEL_UT) AND NOT UT_DONE)
-    AddOpTestCase(swiglu_mx_quant "ascend950pr_9599" "-DDTYPE_X=half -DDTYPE_Y=fp8_e4m3fn_t")
+    AddOpTestCase(swiglu_mx_quant "ascend950pr_9599" "")
 endif()

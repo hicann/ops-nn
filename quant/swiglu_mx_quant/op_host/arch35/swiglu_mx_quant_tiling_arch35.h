@@ -51,6 +51,8 @@ struct SwigluMxQuantOutputInfo {
     ge::DataType yDtype{ge::DT_UNDEFINED};
     ge::DataType mxscaleDtype{ge::DT_UNDEFINED};
     int64_t outputDim2{0};
+    int64_t outputDim1{0};
+    int64_t outputDim0{1};
 };
 
 // ==================== 属性参数 ====================
@@ -63,7 +65,7 @@ struct SwigluMxQuantAttrParam {
     float gluBias{1.0f};
     int64_t axis{-1};
     int64_t dstType{40};
-    int64_t roundMode{4};       // MODE_RINT
+    int64_t roundMode{4};
     int64_t blockSize{32};
     int64_t scaleAlg{0};
     float maxDtypeValue{0.0f};
@@ -89,6 +91,16 @@ struct SwigluMxQuantTilingResult {
     int64_t tailCoreBasicNumDim1{0};
     int64_t tailCoreLoopTimes{0};
     int64_t tailCoreLastLoopBasicNum{0};
+    // 3D block distribution (axis=-2 path)
+    int64_t dimNBlockNum{0};
+    int64_t dimNTail{0};
+    int64_t dimMBlockNum{0};
+    int64_t dimMTail{0};
+    int64_t blockCountPerBatch{0};
+    // 3D grid core distribution (act=-2, axis=-1 path)
+    int64_t nCoreNum{1};
+    int64_t bCoreNum{1};
+    int64_t mCorePerB{1};
 };
 
 // ==================== Round Mode 枚举 ====================
@@ -113,10 +125,14 @@ public:
     ge::graphStatus GetNpuInfo();
     ge::graphStatus ParseAttrs();
     ge::graphStatus ValidateInput();
-    ge::graphStatus ValidateOutput();
+    ge::graphStatus ValidateScaleOutput();
     ge::graphStatus PreProcess();
     ge::graphStatus CalculateTiling();
-    int64_t CalculateTilingKey();
+    ge::graphStatus ComputeTilingAxisNotLast();
+    ge::graphStatus ValidateYOutput(const gert::StorageShape* xShape, const gert::StorageShape* yShape, int64_t yDimNum);
+    ge::graphStatus CheckScaleShape(const gert::StorageShape* scaleShape, const gert::StorageShape* yShape, int64_t scaleDimNum);
+    ge::graphStatus ComputeTilingAxisLast();
+    void SetTilingKeyAndCore();
     ge::graphStatus FillTilingData();
     ge::graphStatus SetParams();
     void PrintTilingData() const;
@@ -134,6 +150,12 @@ private:
 
     // Tiling result
     SwigluMxQuantTilingResult tilingResult_;
+
+    // Tiling key variables
+    uint64_t groupIndexType_ = 0;
+    uint64_t axisLast_ = 0;
+    uint64_t activateDimLast_ = 0;
+    uint64_t roundMode_ = 0;
 
     // Context and tiling data
     gert::TilingContext* context_ = nullptr;

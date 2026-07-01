@@ -29,8 +29,8 @@ namespace ge {
 * @li x: An input tensor. Must be one of the following types: float16, bfloat16.
 * The size of the dimension specified by activate_dim must be divisible by 2.
 * Supports 2-7 dimensional tensors.
-* @li group_index: An optional tensor for reserved parameter. Must be one of the following types: int32, int64.
-* This parameter is reserved for future use and is not currently used in computation.
+* @li group_index: An optional tensor. Must be one of the following types: int32, int64.
+* If provided, group_index must be 1-dimensional and its shape must be less than or equal to 256.
 
 * @par Attributes:
 * @li activate_left: An optional bool. Reserved parameter for SwiGLU activation side. Defaults to false.
@@ -68,9 +68,13 @@ namespace ge {
 * @par Constraints:
 * @li Input dimension specified by activate_dim must be divisible by 2.
 * @li activate_dim and axis must be last or second-to-last dimension, example -1 or -2;
-* @li When dst_type is FP4 (40 or 41), the last dimension must be divisible by 4.
+* @li When dst_type is FP4 (40 or 41), the last dimension of y shape must be an even number.
 * @li When dst_type is FP8_E4M3FN (36) or FP8_E5M2 (35), round_mode supports "rint".
 * @li When dst_type is FP4_E2M1 (40) or FP4_E1M2 (41), round_mode supports "rint", "floor", "round".
+* @li When activate_dim or axis is not the last axis, if group_index is provided, input x shape must be 2-dimensional.
+* @li If group_index is provided, it must be 1-dimensional and its shape must be less than or equal to 256.
+* @li When dst_type is FP4 (40 or 41), scale_alg must be 0.
+* @li When activate_dim is not the last axis, swiglu_mode must be 0.
 
 * @par Third-party framework compatibility
 * It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.

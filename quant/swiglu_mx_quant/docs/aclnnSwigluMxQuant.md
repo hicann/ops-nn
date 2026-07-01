@@ -164,7 +164,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>groupIndexOptional（aclTensor*）</td>
       <td>输入</td>
       <td>MoE分组需要的group_index。</td>
-      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>可选参数，支持传空指针。</li></ul></td>
+      <td><ul><li>shape支持1维的Tensor，shape为[groupNum]，groupNum大于等于1且小于等于256。</li><li>可选参数，支持传空指针。</li><li>当此输入存在，且activateDim 或者 axis 任一一个非尾轴， 输入x的shape必须为2维</li></ul></td>
       <td>INT64</td>
       <td>ND</td>
       <td>1</td>
@@ -174,7 +174,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>activateDim（int64_t）</td>
       <td>输入</td>
       <td>表示进行swish计算时，选择的指定切分轴。</td>
-      <td><ul><li>activateDim的取值范围是：[-1, -2, xDim - 2, xDim - 1]（其中xDim指输入x的维度）。</li><li>当前仅支持-1。</li></ul></td>
+      <td><ul><li>activateDim的取值范围是：[-1, -2, xDim - 2, xDim - 1]（其中xDim指输入x的维度）。</li><li>当activateDim为非最后一根轴时，swigluMode必须为0</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -244,7 +244,7 @@ aclnnStatus aclnnSwigluMxQuant(
       <td>axis（int64_t）</td>
       <td>输入</td>
       <td>表示DynamicMxQuant量化发生的轴</td>
-      <td><ul><li>取值范围为：[-1, -2, xDim - 2, xDim - 1]（其中xDim指输入x的维度）。当前仅支持-1。</li></ul></td>
+      <td><ul><li>取值范围为：[-1, -2, xDim - 2, xDim - 1]（其中xDim指输入x的维度）。</li></ul></td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
@@ -436,9 +436,13 @@ aclnnStatus aclnnSwigluMxQuant(
   - aclnnSwigluMxQuant默认确定性实现。
 
 - 输入x对应activateDim的维度需要是2的倍数，且x的维数必须大于1维。
-- 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数，x的最后一维需要是4的倍数。
+- activateDim为非last轴， swigluMode必须为0。
+- 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，yOut的最后一维需要是2的倍数。
+- 当输出yOut的数据类型为FLOAT4_E2M1、FLOAT4_E1M2时，scaleAlg必须为0。
 - groupIndexOptional所有元素之和不能大于输入x除尾轴之外的剩余轴的乘积，groupIndexOptional的每个元素需要大于0。
 - 输出yOut和mxscaleOut超出groupIndexOptional所有元素之和的部分未进行清理，该部分内存为垃圾数据。
+- 当activateDim为非last轴， 或者 axis为非last轴， groupIndexOptional存在时，x的输入必须为2维。
+- 当输出yOut的数据类型为FLOAT8_E4M3FN、FLOAT8_E5M2时，roundModeOptional必须为 rint。
 
 ## 调用示例
 
