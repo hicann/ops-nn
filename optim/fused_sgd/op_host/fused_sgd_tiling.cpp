@@ -109,10 +109,7 @@ void FusedSgdTiling::CheckOptionalInputs()
         const gert::Shape& inputShapeGradScale = shapeInput->GetStorageShape();
         uint32_t gradScaleDims = inputShapeGradScale.GetDimNum();
         bool flag = true;
-        if (gradScaleDims < 1) {
-            flag = false;
-        }
-        if (flag) {
+        if (gradScaleDims > 0) {
             for(uint32_t i = 0; i < gradScaleDims; i++) {
                 int64_t dimValue = inputShapeGradScale.GetDim(i);
                 if (dimValue == 0) {
