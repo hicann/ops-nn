@@ -1,0 +1,65 @@
+name: arm_compile_action 
+
+on:
+  workflow_call:
+    inputs: 
+      task_name:
+        required: true
+        type: string
+      image_version:
+        required: true
+        type: string
+
+jobs:
+  JOB_compile:
+    name: compile
+    steps:
+      - 
+        name: Checkout
+        identifier: process_checkout
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
+          token: ${{secrets.GIT_TOKEN}}
+      -
+        name: download
+        uses: obs-download
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          key: |
+            ${{ env.obs_path }}/pr_filelist.txt
+            ${{ env.obs_path }}/pr_filelist_mod.txt
+            ${{ env.obs_path }}/update_file_detail.txt
+          path: ${{ steps.process_checkout.outputs.path }}
+      -
+        name: arm_compile_acc
+        identifier: compile
+        uses: build-accelerate
+        with:
+          command: |
+            export WORKSPACE=${{ steps.process_checkout.outputs.path }}
+            cd ${{ steps.process_checkout.outputs.path }}
+            export task_name=${{ inputs.task_name }}
+            export target_branch=${{ env.target_branch }}
+            BuildAccelerate bash .gitcode/workflows/arm_compile.sh
+          AC_SERVER_IP: ${{ vars.AC_SERVER_IP }}
+      - name: verify_package
+        uses: cann/.gitcode/actions/verify-package@master
+        with:
+          workspace: ${{ steps.process_checkout.outputs.path }}
+      - name: upload
+        uses: obs-upload
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{ secrets.AK }}
+          secret-key: ${{ secrets.SK }}
+          artifact-path: "${{ steps.process_checkout.outputs.path }}/build_out/*.run"
+          object-prefix: ${{ env.obs_path }}/  
+    if: "${{ default() }}"
+    runs-on: [dedicate-hosted, arm64, xlarge]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.image_version }}

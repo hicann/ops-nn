@@ -1,0 +1,127 @@
+name: llt_action 
+
+on:
+  workflow_call:
+    inputs:
+      ut_type:
+        required: true
+        type: string
+      ut_package:
+        type: string
+        default: 'ut_cov_*.tar.gz'
+      image_version:
+        required: true
+        type: string       
+
+jobs:
+  JOB_ut:
+    name: ut
+    steps:
+      - 
+        name: Checkout
+        identifier: process_checkout
+        uses: checkout
+        with:
+          ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
+          token: ${{secrets.GIT_TOKEN}}
+      -
+        name: download
+        uses: obs-download
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          key: |
+            ${{ env.obs_path }}/pr_filelist.txt
+            ${{ env.obs_path }}/pr_filelist_mod.txt
+          path: ${{ steps.process_checkout.outputs.path }}
+      -
+        name: ut
+        identifier: ut
+        run: |
+          set -x
+          cd ${{ steps.process_checkout.outputs.path }}
+          echo $(grep -E "^VERSION_ID=" /etc/os-release | cut -d'"' -f2)
+          sudo update-alternatives --set gcc /usr/bin/gcc-14
+          gcc --version
+          source /home/jenkins/Ascend/cann/bin/setenv.bash
+          set +e
+          if [ "$TARGET_BRANCH" = "master" ];then
+              case "${{ inputs.ut_type }}" in
+                  ophost)
+                      bash build.sh -u --cov --ophost --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                  opapi)
+                      bash build.sh -u --cov --opapi --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                  opgraph)
+                      bash build.sh -u --opgraph --cov --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16     
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                  opkernel)
+                      bash scripts/ci/check_kernel_ut.sh "pr_filelist.txt" "${repo_name}" "-j16" | tee output.txt
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                esac
+          else
+              case "${{ inputs.ut_type }}" in
+                  ophost)
+                      bash build.sh -u --ophost --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16          
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                  opapi)
+                      bash build.sh -u --opapi --cann_3rd_lib_path=/home/jenkins/opensource -f "pr_filelist.txt" -j16                     
+                      ret=$?
+                      coverage_save="true"
+                      ;;
+                  *)
+                      echo "Skip UT test execution for ${{ inputs.ut_type }} on non-master branch"
+                      exit 0
+                      ;;
+
+              esac
+          fi
+
+          if [ $ret -ne 200 ] && [ $ret -ne 0 ]; then
+              echo "run ut fail"
+              exit 1
+          fi
+          if [ $ret -eq 0 ]; then
+              if [ "$coverage_save" = "true" ];then
+                echo "ut_process=coverage" >> $ATOMGIT_OUTPUT
+              else
+                echo "ut_process=ut_cov" >> $ATOMGIT_OUTPUT
+              fi
+          fi
+          exit 0 
+      -
+        name: ut_cov
+        identifier: ut_cov
+        uses: cann/.gitcode/actions/ut-cov-report@master
+        with:
+          ut_process: ${{ steps.ut.outputs.ut_process }}
+          workspace: ${{ steps.process_checkout.outputs.path }}
+          ut_type: ${{ inputs.ut_type }}
+          target_branch: ${{ env.TARGET_BRANCH }}
+          git_token: ${{secrets.GIT_TOKEN}}
+      -
+        name: upload
+        uses: obs-upload
+        with:
+          endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+          bucket: "ascend-ci"
+          access-key: ${{secrets.AK}}
+          secret-key: ${{secrets.SK}}
+          artifact-path: |
+            ${{ steps.process_checkout.outputs.path }}/${{ inputs.ut_package }}
+          object-prefix: ${{ env.obs_path }}/            
+    if: "${{ default() }}"
+    runs-on: [dedicate-hosted, x64, xlarge]
+    container:
+      image: swr.cn-north-4.myhuaweicloud.com/ci_cann/${{ inputs.image_version }}

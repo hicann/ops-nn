@@ -1,0 +1,252 @@
+name: ops-nn_action
+ 
+on:  
+  pr_comment:
+      types: [ created ]
+      keyword: '^(?:\/)?compile*'
+  pull_request_comment:
+    types: [created]
+    branches: [ '*' ]
+    comments: [ '^(?:\/)?compile*' ]
+
+env:
+  org_name: "cann"
+  obs_path: "test/ops-nn/package/${{ env.MERGE_ID }}"
+  repo_name: "ops-nn"
+  
+
+stages:
+  stage1:
+    name: image
+    jobs:
+      JOB_image:
+        name: image
+        steps:
+          - name: revise_image
+            identifier: revise_image
+            uses: cann/.gitcode/actions/revise-img@master
+            with:
+              repo_name: "ops-nn"
+              target_branch: ${{ env.TARGET_BRANCH }}
+              repo_url: ${{ vars.CI_PATH }}
+          -
+            name: show_output
+            run: |
+              echo "image: ${{ steps.revise_image.outputs.Compile_Ascend_X86  }}"
+        if: "${{ default() }}"
+        runs-on: ["codearts-hosted", "ubuntu-latest", "x64", "large"]
+      JOB_pr:  
+        name: get_pr_files
+        steps:
+          - 
+            name: Checkout
+            identifier: process_checkout
+            uses: checkout
+            with:
+              ref: ${{ atomgit.event.pull_request.merge_commit_sha || atomgit.sha }}
+              token: ${{secrets.GIT_TOKEN}}
+          -
+            name: get_pr
+            identifier: get_pr
+            uses: cann/.gitcode/actions/get-pr@master
+            with:
+              workspace: ${{ steps.process_checkout.outputs.path }}
+              target_branch: ${{ env.TARGET_BRANCH }}
+              git_token: ${{secrets.GIT_TOKEN}}
+          - 
+            name: upload
+            uses: obs-upload
+            with:
+              endpoint: "https://obs.cn-north-4.myhuaweicloud.com"
+              bucket: "ascend-ci"
+              access-key: ${{secrets.AK}}
+              secret-key: ${{secrets.SK}}
+              artifact-path: |
+                ${{ steps.process_checkout.outputs.path }}/pr_filelist.txt
+                ${{ steps.process_checkout.outputs.path }}/pr_filelist_mod.txt
+                ${{ steps.process_checkout.outputs.path }}/pr_filelist_precommit.txt
+                ${{ steps.process_checkout.outputs.path }}/update_file_detail.txt
+              object-prefix: ${{ env.obs_path }}/
+        runs-on: 
+        - default
+    pre:
+    - type: auto
+    fail-fast: true
+  stage2:
+    name: compile
+    jobs:
+      JOB_codecheck_action:
+        name: codecheck_action
+        uses: .gitcode/workflows/codecheck_action.yml
+        with:
+          precommit_image_version: ${{ jobs.JOB_image.outputs.precommit }}
+          codecheck_image_version: ${{ jobs.JOB_image.outputs.codecheck }}
+      JOB_x86_compile:
+        name: x86_compile
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'x86_compile'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86 }}
+      JOB_x86_compile_ubuntu24:
+        name: x86_compile_ubuntu24
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with: 
+          task_name: 'x86_compile_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_ubuntu24 }}
+      JOB_X86_monitor_910b:
+        name: X86_monitor_910b
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'X86_monitor_910b'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_910b }}
+      JOB_X86_monitor_910c:
+        name: X86_monitor_910c
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'X86_monitor_910c'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_910c }}
+      JOB_X86_monitor_950:
+        name: X86_monitor_950
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'X86_monitor_950'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_X86_monitor_9_0_0 }}
+      JOB_Compile_Ascend_X86_mobile_station:
+        name: Compile_Ascend_X86_mobile_station
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_X86_mobile_station'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station }}
+      JOB_Compile_Ascend_X86_mobile_station_ubuntu24:
+        name: Compile_Ascend_X86_mobile_station_ubuntu24
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_X86_mobile_station_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_mobile_station_ubuntu24 }}
+      JOB_Compile_Ascend_X86_950:
+        name: Compile_Ascend_X86_950
+        uses: .gitcode/workflows/x86_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_X86_950'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_X86_950 }}
+      JOB_Pre_compile:
+        name: Pre_compile
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'Pre_compile'
+          image_version: ${{ jobs.JOB_image.outputs.Pre_Compile }}
+      JOB_compile_single:
+        name: compile_single
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'compile_single'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single }}
+      JOB_arm_compile:
+        name: arm_compile
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'arm_compile'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM }}
+      JOB_arm_compile_ubuntu24:
+        name: arm_compile_ubuntu24
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'arm_compile_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_ubuntu24 }}
+      JOB_compile_single_ubuntu24:
+        name: compile_single_ubuntu24
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'compile_single_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_single_ubuntu24 }}
+      JOB_Compile_Ascend_experimental:
+        name: Compile_Ascend_experimental
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_experimental'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental }}
+      JOB_Compile_Ascend_experimental_ubuntu24:
+        name: Compile_Ascend_experimental_ubuntu24
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_experimental_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_experimental_ubuntu24 }}
+      JOB_Compile_Ascend_ARM_950_ubuntu24:
+        name: Compile_Ascend_ARM_950_ubuntu24
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_ARM_950_ubuntu24'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950_ubuntu24 }}
+      JOB_Compile_Ascend_ARM_950:
+        name: Compile_Ascend_ARM_950
+        uses: .gitcode/workflows/arm_compile_action.yml
+        with:
+          task_name: 'Compile_Ascend_ARM_950'
+          image_version: ${{ jobs.JOB_image.outputs.Compile_Ascend_ARM_950 }}
+      JOB_staticcheck_markdown:
+        name: staticcheck_markdown
+        uses: .gitcode/workflows/staticcheck_action.yml
+        with:
+          check_type: 'markdown'
+          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
+      JOB_staticcheck_codespell_check:
+        name: staticcheck_codespell_check
+        uses: .gitcode/workflows/staticcheck_action.yml
+        with:
+          check_type: 'codespell_check'
+          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
+      JOB_staticcheck_tag_closed_check:
+        name: staticcheck_tag_closed_check
+        uses: .gitcode/workflows/staticcheck_action.yml
+        with:
+          check_type: 'tag_closed_check'
+          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
+      JOB_staticcheck_resource_existence_check:
+        name: staticcheck_resource_existence_check
+        uses: .gitcode/workflows/staticcheck_action.yml
+        with:
+          check_type: 'resource_existence_check'
+          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
+      JOB_staticcheck_link_validity_check:
+        name: staticcheck_link_validity_check
+        uses: .gitcode/workflows/staticcheck_action.yml
+        with:
+          check_type: 'link_validity_check'
+          image_version: ${{ jobs.JOB_image.outputs.staticcheck }}
+    pre:
+    - type: auto
+    fail-fast: false
+  stage3: 
+    name: ut
+    jobs:
+      JOB_UT_Test_ophost:
+        name: UT_Test_ophost
+        uses: .gitcode/workflows/llt_action.yml
+        with:
+          ut_type: 'ophost'
+          ut_package: 'coverage_*.info'
+          image_version: ${{ jobs.JOB_image.outputs.UT_Test_ophost }}
+      JOB_UT_Test_opapi:
+        name: UT_Test_opapi
+        uses: .gitcode/workflows/llt_action.yml
+        with:
+          ut_type: 'opapi'
+          ut_package: 'coverage_*.info'
+          image_version: ${{ jobs.JOB_image.outputs.UT_Test_opapi }}
+      JOB_UT_Test_kernel:
+        name: UT_Test_kernel
+        uses: .gitcode/workflows/llt_action.yml
+        with:
+          ut_type: 'opkernel'
+          ut_package: 'coverage_*.info'
+          image_version: ${{ jobs.JOB_image.outputs.UT_Test_kernel }}
+      JOB_UT_Test_opgraph:
+        name: UT_Test_opgraph
+        uses: .gitcode/workflows/llt_action.yml
+        with:
+          ut_type: 'opgraph'
+          ut_package: 'coverage_*.info'
+          image_version: ${{ jobs.JOB_image.outputs.UT_Test_opgraph }}
+    pre:
+    - type: auto
+    fail-fast: false
