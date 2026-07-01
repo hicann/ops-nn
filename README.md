@@ -2,6 +2,9 @@
 
 ## 🔥Latest News
 
+- [2026/05] 优化kernel编译配置项，减少simplified_key和ascendc_config配置文件（[!3330](https://gitcode.com/cann/ops-nn/pull/3330)）。
+- [2026/05] 引入ops-tensor，基于分层结构优化Cube类算子，减少偏移量计算和简化指令参数（[!5036](https://gitcode.com/cann/ops-nn/pull/5036)）。
+- [2026/05] 发布生态算子的精度验收标准（[!4572](https://gitcode.com/cann/ops-nn/pull/4572)）。
 - [2026/03] 开源算子支持下一代芯片：Ascend950PR（[!450](https://gitcode.com/cann/ops-nn/pull/450)）。
 - [2026/03] 新增<<<>>>的算子开发样例（[!620](https://gitcode.com/cann/ops-nn/pull/620)）。
 - [2026/03] 低bit类算子和融合算子支持更多数据类型：fp8/mxfp8/hifp8/mxfp4等，并支持pertensor/perchannel/pertoken/pergroup/perblock等不同量化和组合方式：[全量化融合算子:quant_batch_matmul_v4](https://gitcode.com/cann/ops-nn/blob/9.0.0-beta.1/matmul/quant_batch_matmul_v4/README.md)，[伪量化融合算子:weight_quant_batch_matmul_v2](https://gitcode.com/cann/ops-nn/blob/9.0.0-beta.1/matmul/weight_quant_batch_matmul_v2/README.md)。
