@@ -54,6 +54,11 @@ static bool CheckDtypeValid(const aclTensor *self, const aclTensor *index, const
   // self和out数据类型必须一样
   OP_CHECK_DTYPE_NOT_SAME(self, out, return false);
 
+  if (self->GetViewShape().GetDimNum() > MAX_INPUT_DIM_NUM) {
+    OP_LOGW("self dim num is %zu, greater than %lu, may cause performance issue.",
+      self->GetViewShape().GetDimNum(), MAX_INPUT_DIM_NUM);
+  }
+
   // 检查index的数据类型是否在支持列表内
   OP_CHECK_DTYPE_NOT_SUPPORT(index, DTYPE_INDEX_LIST, return false);
 
