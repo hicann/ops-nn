@@ -115,7 +115,6 @@
 | [aclnnDequantSwigluQuant](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuant.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnDequantSwigluQuantV2](../../quant/dequant_swiglu_quant/docs/aclnnDequantSwigluQuantV2.md) | 在Swish门控线性单元激活函数前后添加dequant和quant操作，实现x的DequantSwigluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwigluGroup](../../activation/swiglu_group/docs/aclnnSwigluGroup.md) | 执行SwiGLU激活，实现x的SwiGlu计算，输出与x相同数据类型的激活结果。 | - | 默认确定性实现 |
-| [aclnnSwigluGroupQuant](../../quant/swiglu_group_quant/docs/aclnnSwigluGroupQuant.md) | 在Swish门控线性单元激活函数后执行分组低比特量化，支持FP8和FP4量化输出。 | - | 默认确定性实现 |
 | [aclnnSwigluMxQuant](../../quant/swiglu_mx_quant/docs/aclnnSwigluMxQuant.md) | 在Swish门控线性单元激活函数后添加DynamicMxQuant操作，实现x的SwigluMxQuant计算。 | - | 默认确定性实现 |
 | [aclnnSwigluMxQuantWithDualAxis](../../quant/swiglu_mx_quant_with_dual_axis/docs/aclnnSwigluMxQuantWithDualAxis.md) | 在Swish门控线性单元激活函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
 | [aclnnSwigluBackwardMxQuantWithDualAxis](../../quant/swiglu_backward_mx_quant_with_dual_axis/docs/aclnnSwigluBackwardMxQuantWithDualAxis.md) | 在Swish门控线性单元激活的反向计算函数后添加GroupDynamicMxQuant操作，根据传入的分组索引的起始值，对swiglu后的数据进行分组的-1轴和-2轴同时动态量化。 | - | 默认确定性实现 |
@@ -413,6 +412,7 @@
 | [aclnnSquaredRelu](../../activation/squared_relu/docs/aclnnSquaredRelu.md) | SquaredReLU函数是一个基于标准ReLU函数的变体，其主要特点是对ReLU函数的输出进行平方，常作为模型的激活函数。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGlu](../../activation/swi_glu/docs/aclnnSwiGlu.md) | Swish门控线性单元激活函数，实现x的SwiGlu计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGluGrad](../../activation/swi_glu_grad/docs/aclnnSwiGluGrad.md) | 完成aclnnSwiGlu的反向计算，完成x的SwiGlu反向梯度计算。 | 默认确定性实现 | 默认确定性实现 |
+| [aclnnSwigluGroupQuant](../../activation/swiglu_group_quant/docs/aclnnSwigluGroupQuant.md) | 在Swish门控线性单元激活函数后执行分组低比特量化，支持FP8和FP4量化输出。 | - | 默认确定性实现 |
 | [aclnnSwigluGroupQuantGrad](../../activation/swiglu_group_quant_grad/docs/aclnnSwigluGroupQuantGrad.md) | 完成SwiGLU激活函数分组量化的反向梯度计算。 | - | 默认确定性实现 |
 | [aclnnSwiGluQuant](../../quant/swi_glu_quant/docs/aclnnSwiGluQuant.md) | 在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算。 | 默认确定性实现 | 默认确定性实现 |
 | [aclnnSwiGluQuantV2](../../quant/swi_glu_quant/docs/aclnnSwiGluQuantV2.md) | 在SwiGlu激活函数后添加quant操作，实现输入x的SwiGluQuant计算，支持int8或int4量化输出。 | 默认确定性实现 | 默认确定性实现 |

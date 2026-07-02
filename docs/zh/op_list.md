@@ -709,6 +709,16 @@
   </tr>
   <tr>
     <td>activation</td>
+    <td><a href="../../activation/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>在SwiGlu激活函数后执行分组低比特量化，实现输入x的SwigluGroupQuant计算，支持FP8和FP4量化输出。</td>
+  </tr>
+  <tr>
+    <td>activation</td>
     <td><a href="../../activation/swiglu_group_quant_grad/README.md">swiglu_group_quant_grad</a></td>
     <td>✓</td>
     <td>✓</td>
@@ -4078,16 +4088,6 @@
     <td>✓</td>
     <td>AI Core</td>
     <td>在SwiGlu激活函数后添加mx_quant操作，实现输入x的SwigluMxQuant计算，支持FP8或FP4量化输出。</td>
-  </tr>
-  <tr>
-    <td>quant</td>
-    <td><a href="../../quant/swiglu_group_quant/README.md">swiglu_group_quant</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>在SwiGlu激活函数后执行分组低比特量化，实现输入x的SwigluGroupQuant计算，支持FP8和FP4量化输出。</td>
   </tr>
   <tr>
     <td>quant</td>
