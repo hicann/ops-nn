@@ -29,6 +29,10 @@ protected:
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convBpFilterNode) override;
 
 private:
+    bool IsDynamicShape() const;
+    bool GetOutputChannelDims(int64_t& cin, int64_t& cout) const;
+    bool GetInputDepthDim(int64_t& di) const;
+    bool IsShapeNeedTranspose() const;
     bool CreateOutputWithTranspose(
         ge::es::EsGraphBuilder& builder, 
         const ge::es::EsTensorHolder& conv3dBackpropFilterV2, 

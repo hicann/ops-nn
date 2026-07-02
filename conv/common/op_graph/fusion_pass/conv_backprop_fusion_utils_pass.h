@@ -119,6 +119,8 @@ public:
         const std::map<std::string, NpuArch>& supportSocList,
         NpuArch& npuArch);
 
+    static int64_t GetAiCoreCount();
+
     static bool IsSupportedDtype(
         ge::DataType dtype,
         const std::set<ge::DataType>& supportedDtypes);

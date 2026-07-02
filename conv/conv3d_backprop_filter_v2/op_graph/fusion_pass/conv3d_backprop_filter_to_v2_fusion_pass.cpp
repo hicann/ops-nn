@@ -21,13 +21,93 @@ using namespace fusion;
 using namespace ConvBackpropFusionUtils;
 
 // FilterV2特有的常量
-constexpr int64_t CONDICTION_DIVIDE_K = 16 * 32 * 32;
 const std::vector<int32_t> TRANSPOSE_PERM_NDHWC = {0, 2, 3, 4, 1};   // NCDHW -> NDHWC
 const std::vector<int32_t> TRANSPOSE_PERM_DHWCN = {2, 3, 4, 1, 0};   // NCDHW -> DHWCN
+
+// IsShapeNeedTranspose 计算量阈值相关常量
+const int64_t COMPUTE_SIZE_PER_ROUND = 32 * 32;       // 单核单轮次计算量
+const int64_t MAX_ROUND_COUNT = 4;          // 最大轮次数
 
 AscendString Conv3DBackpropFilterToV2FusionPass::GetNodeType() const
 {
     return CONV_BACKPROP_FILTER_V2_PASS;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::IsDynamicShape() const
+{
+    return input0Desc.GetShape().GetShapeSize() == -1 ||
+           input2Desc.GetShape().GetShapeSize() == -1 ||
+           outputDesc.GetShape().GetShapeSize() == -1;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::GetOutputChannelDims(int64_t& cin, int64_t& cout) const
+{
+    auto yShapeVec = outputDesc.GetShape().GetDims();
+    OP_CHECK_IF(yShapeVec.size() != CONV_DIM_LENGTH,
+                OP_LOGE(GetNodeType().GetString(), "y shape size %zu != %d", yShapeVec.size(), CONV_DIM_LENGTH),
+                return false);
+
+    auto outputOriginFormat = outputDesc.GetOriginFormat();
+    if (outputOriginFormat == Format::FORMAT_NDHWC) {
+        cin = yShapeVec[C_DIM_NDHWC_INDEX];
+        cout = yShapeVec[N_DIM_NDHWC_INDEX];
+    } else {
+        cin = yShapeVec[C_DIM_DHWCN_INDEX];
+        cout = yShapeVec[N_DIM_DHWCN_INDEX];
+    }
+    return true;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::GetInputDepthDim(int64_t& di) const
+{
+    auto xShapeVec = input0Desc.GetShape().GetDims();
+    OP_CHECK_IF(xShapeVec.size() != CONV_DIM_LENGTH,
+                OP_LOGE(GetNodeType().GetString(), "x shape size %zu != %d",
+                        xShapeVec.size(), CONV_DIM_LENGTH), return false);
+
+    auto xOriginFormat = input0Desc.GetOriginFormat();
+    if (xOriginFormat == Format::FORMAT_NDHWC) {
+        di = xShapeVec[D_DIM_NDHWC_INDEX];
+    } else if (xOriginFormat == Format::FORMAT_DHWCN) {
+        di = xShapeVec[D_DIM_DHWCN_INDEX];
+    } else {
+        di = xShapeVec[D_DIM_NCDHW_INDEX];
+    }
+    return true;
+}
+
+bool Conv3DBackpropFilterToV2FusionPass::IsShapeNeedTranspose() const
+{
+    if (IsDynamicShape()) {
+        OP_LOGD(GetNodeType().GetString(), "all shape must be specify.");
+        return false;
+    }
+
+    int64_t cin = 0, cout = 0, di = 0;
+    OP_CHECK_IF(!GetOutputChannelDims(cin, cout),
+                OP_LOGE(GetNodeType().GetString(), "GetOutputChannelDims failed"), return false);
+    OP_CHECK_IF(!GetInputDepthDim(di),
+                OP_LOGE(GetNodeType().GetString(), "GetInputDepthDim failed"), return false);
+
+    int64_t coreCount = ConvBackpropFusionUtilsPass::GetAiCoreCount();
+    if (coreCount <= 0) {
+        OP_LOGI(GetNodeType().GetString(), "coreCount=%lld is invalid, not meet divide k condition", coreCount);
+        return false;
+    }
+
+    int64_t totalCount = di * cin * cout;
+
+    // 3D场景总计算量估算不超过4个轮次，否则transpose代价大；2D场景保持原有逻辑，不超过一半的核参与计算
+    int64_t shapeLimit = coreCount * COMPUTE_SIZE_PER_ROUND * MAX_ROUND_COUNT;
+    if (di == 1) {
+        shapeLimit = (coreCount / 2) * COMPUTE_SIZE_PER_ROUND;
+    }
+
+    OP_LOGD(GetNodeType().GetString(),
+            "IsShapeNeedTranspose di=%lld, cin=%lld, cout=%lld, coreCount=%lld, totalCount=%lld, shapeLimit=%lld",
+            di, cin, cout, coreCount, totalCount, shapeLimit);
+
+    return totalCount <= shapeLimit;
 }
 
 bool Conv3DBackpropFilterToV2FusionPass::CheckTransposeNeeded()
@@ -38,40 +118,8 @@ bool Conv3DBackpropFilterToV2FusionPass::CheckTransposeNeeded()
         return false;
     }
 
-    bool isDynamic = input0Desc.GetShape().GetShapeSize() == -1 || 
-                input2Desc.GetShape().GetShapeSize() == -1 ||
-                outputDesc.GetShape().GetShapeSize() == -1;
-    if (isDynamic) {
-        OP_LOGD(GetNodeType().GetString(), "all shape must be specify.");
-        return false;
-    }
-
-    auto yShapeVec = outputDesc.GetShape().GetDims();
-    OP_CHECK_IF(yShapeVec.size() != CONV_DIM_LENGTH,
-                OP_LOGE(GetNodeType().GetString(), "y shape size %zu != %d", yShapeVec.size(), CONV_DIM_LENGTH),
-                return false);
-
-    int64_t cin = 0, cout = 0, di = 0;
-    if (outputOriginFormat == Format::FORMAT_NDHWC) {
-        cin = yShapeVec[C_DIM_NDHWC_INDEX];
-        cout = yShapeVec[N_DIM_NDHWC_INDEX];
-        auto xShapeVec = input0Desc.GetShape().GetDims();
-        OP_CHECK_IF(xShapeVec.size() != CONV_DIM_LENGTH,
-                    OP_LOGE(GetNodeType().GetString(), "x shape size %zu != %d for NDHWC format",
-                            xShapeVec.size(), CONV_DIM_LENGTH), return false);
-        di = xShapeVec[D_DIM_NDHWC_INDEX];
-    } else {
-        cin = yShapeVec[C_DIM_DHWCN_INDEX];
-        cout = yShapeVec[N_DIM_DHWCN_INDEX];
-        auto xShapeVec = input0Desc.GetShape().GetDims();
-        OP_CHECK_IF(xShapeVec.size() != CONV_DIM_LENGTH,
-                    OP_LOGE(GetNodeType().GetString(), "x shape size %zu != %d for DHWCN format",
-                            xShapeVec.size(), CONV_DIM_LENGTH), return false);
-        di = xShapeVec[D_DIM_NCDHW_INDEX];
-    } 
-    
-    if (di * cin * cout >= CONDICTION_DIVIDE_K) {
-        OP_LOGD(GetNodeType().GetString(), "need satisfy divide K condition.");
+    if (!IsShapeNeedTranspose()) {
+        OP_LOGD(GetNodeType().GetString(), "not divide k condition");
         return false;
     }
 

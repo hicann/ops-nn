@@ -60,6 +60,17 @@ bool ConvBackpropFusionUtilsPass::CheckSocAndIntrinsic(
     return true;
 }
 
+int64_t ConvBackpropFusionUtilsPass::GetAiCoreCount()
+{
+    fe::PlatformInfo platformInfo;
+    fe::OptionalInfo optionalInfo;
+    if (fe::PlatformInfoManager::Instance().GetPlatformInfoWithOutSocVersion(platformInfo, optionalInfo) != SUCCESS) {
+        OP_LOGE("ConvBackpropFusionUtilsPass", "GetPlatformInfoWithOutSocVersion failed, use default core count 0");
+        return 0;
+    }
+    return platformInfo.soc_info.ai_core_cnt;
+}
+
 bool ConvBackpropFusionUtilsPass::CreateTransposeNode(
     EsGraphBuilder& builder, const TransposeNodeConfig& config,
     EsTensorHolder& output, TensorDesc& outDesc, const AscendString& opType)
