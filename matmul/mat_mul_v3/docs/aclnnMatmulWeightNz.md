@@ -249,6 +249,7 @@ aclnnStatus aclnnMatmulWeightNz(
 - 不支持两个输入分别为BFLOAT16和FLOAT16的数据类型推导。
 - self只支持2维, mat2只支持昇腾私有格式，调用此接口之前，必须完成mat2从ND到昇腾私有格式的转换。
 - 不支持mat2最后两根轴其中一根轴为1，即k=1或者n=1。
+- <term>Atlas 推理系列产品</term>：aclnnMatmulWeightNz不支持输入数据类型为BFLOAT16。
 - 建议使用场景：建议在mte2 bound场景下使用，例如M轴较小，A矩阵存在重复搬运，B矩阵无重复搬运的情况。
 
 ## 调用示例
