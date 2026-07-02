@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,59 +10,66 @@
 
 /*!
  * \file swiglu_group_quant_proto.h
- * \brief Operator prototype definition for SwiGLU Group Dynamic Quant
+ * \brief SwiGLU activation followed by grouped low-bit quantization.
  */
-#ifndef OPS_BUILT_IN_OP_PROTO_INC_SWIGLU_GROUP_QUANT_PROTO_H_
-#define OPS_BUILT_IN_OP_PROTO_INC_SWIGLU_GROUP_QUANT_PROTO_H_
+
+#ifndef QUANT_SWIGLU_GROUP_QUANT_PROTO_H_
+#define QUANT_SWIGLU_GROUP_QUANT_PROTO_H_
 
 #include "graph/operator_reg.h"
 
-namespace ge{
-    /**
-    * @brief Fused SwiGLU activation with group dynamic quantization.
+namespace ge {
 
-    * @par Inputs:
-    * Four inputs, including:
-    * @li x: A tensor of shape [tokens, 2H] or [B, S, 2H]. Type is float32, float16, bfloat16.
-    * @li weight: An optional tensor of shape [tokens, 1]. Type is float32.
-    * @li group_index: An optional tensor of shape [num_groups]. Type is int64.
-    * @li scale: An optional tensor of shape [1] or [num_groups]. Type is float32.
+/**
+* @brief Performs SwiGLU activation followed by Block FP8, MX FP8, MX FP4, or HiFloat8 quantization.
+*
+* @par Inputs:
+* @li x: Required tensor of type float16 or bfloat16. quant_mode=3 also supports float32. The last dimension
+* is split into two equal parts for SwiGLU and must be divisible by 256.
+* @li weight: Optional float32 tensor. Per-token weight multiplied into the SwiGLU result before quantization.
+* @li group_index: Optional int64 tensor. Count-mode group token numbers.
+* @li scale: Optional float32 tensor. Reserved for static quantization modes.
+*
+* @par Attributes:
+* @li dst_type: Optional int. Target quantized dtype. Supports FLOAT8_E4M3FN, FLOAT8_E5M2,
+* FLOAT4_E2M1, FLOAT4_E1M2 and HIFLOAT8. Defaults to FLOAT8_E4M3FN.
+* @li quant_mode: Optional int. 0 means Block FP8 quantization, 1 means MX quantization,
+* 3 means HiFloat8 dynamic quantization. Defaults to 0.
+* @li block_size: Optional int. 0 selects the mode default. Supports 128 for Block FP8 and 32 for MX.
+* Defaults to 0.
+* @li round_scale: Optional bool. MX quantization requires true. Defaults to false.
+* @li clamp_limit: Optional float. Defaults to -1.0 for quant_mode 0/1 and 0.0 for quant_mode 3,
+* both of which disable clamp. If set to a positive value, clamps SwiGLU inputs before activation.
+* @li dst_type_max: Optional float. Maximum finite value used by quant_mode=3 scale calculation.
+* @li output_origin: Optional bool. Writes the pre-quantized SwiGLU result to y_origin when supported.
+* Defaults to false.
+*
+* @par Outputs:
+* @li y: Quantized output tensor. FP8 output shape is input shape with the last dimension halved.
+* FP4 output packs two values in one byte, so its last dimension is input_last_dim / 4.
+* @li y_scale: Scale tensor. float32 for Block FP8 and HiFloat8 dynamic quantization, float8_e8m0 for MX.
+* @li y_origin: SwiGLU result before quantization, with the same dtype as x and last dimension halved.
+*
+* @par Third-party framework compatibility
+* It is a custom operator. It has no corresponding operator in Caffe, ONNX, TensorFlow, or PyTorch.
+*/
+REG_OP(SwigluGroupQuant)
+    .INPUT(x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
+    .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT}))
+    .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
+    .OPTIONAL_INPUT(scale, TensorType({DT_FLOAT}))
+    .OUTPUT(y, TensorType({DT_FLOAT8_E4M3FN, DT_FLOAT8_E5M2, DT_FLOAT4_E2M1, DT_FLOAT4_E1M2, DT_HIFLOAT8}))
+    .OUTPUT(y_scale, TensorType({DT_FLOAT, DT_FLOAT8_E8M0}))
+    .OUTPUT(y_origin, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
+    .ATTR(dst_type, Int, DT_FLOAT8_E4M3FN)
+    .ATTR(quant_mode, Int, 0)
+    .ATTR(block_size, Int, 0)
+    .ATTR(round_scale, Bool, false)
+    .ATTR(clamp_limit, Float, -1.0f)
+    .ATTR(dst_type_max, Float, 15.0f)
+    .ATTR(output_origin, Bool, false)
+    .OP_END_FACTORY_REG(SwigluGroupQuant)
 
-    * @par Outputs:
-    * Three outputs, including:
-    * @li y: A tensor of shape [tokens, H]. Type is hifloat8.
-    * @li y_scale: A tensor of shape [1] or [num_groups]. Type is float32.
-    * @li y_origin: An optional tensor of shape [tokens, H]. Type matches x (output when output_origin=true).
+} // namespace ge
 
-    * @par Attributes:
-    * Seven attributes, including:
-    * @li dst_type: An int. Target quantization dtype, default 27 (hifloat8).
-    * @li quant_mode: An int. Quantization mode, default 0.
-    * @li block_size: An int. Block size, default 0.
-    * @li round_scale: A bool. Scale rounding optimization, default false.
-    * @li clamp_limit: A float. Clamp threshold, default 0.0 (no clamp).
-    * @li dst_type_max_finite: A float. Max finite value of target quantization type, default 448.0.
-    * @li output_origin: A bool. Whether to output y_origin, default false.
-
-    * @attention Constraints:
-    * The last dimension of x must be even (2H). The last dimension of y is H = 2H/2.
-    * y and y_scale are required outputs; y_origin is optional (output when output_origin=true).
-    */
-    REG_OP(SwigluGroupQuant)
-        .INPUT(x, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-        .OPTIONAL_INPUT(weight, TensorType({DT_FLOAT}))
-        .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
-        .OPTIONAL_INPUT(scale, TensorType({DT_FLOAT}))
-        .OUTPUT(y, TensorType({DT_HIFLOAT8}))
-        .OUTPUT(y_scale, TensorType({DT_FLOAT}))
-        .OUTPUT(y_origin, TensorType({DT_FLOAT, DT_FLOAT16, DT_BF16}))
-        .ATTR(dst_type, Int, 27)
-        .ATTR(quant_mode, Int, 0)
-        .ATTR(block_size, Int, 0)
-        .ATTR(round_scale, Bool, false)
-        .ATTR(clamp_limit, Float, 0.0)
-        .ATTR(dst_type_max_finite, Float, 448.0)
-        .ATTR(output_origin, Bool, false)
-        .OP_END_FACTORY_REG(SwigluGroupQuant)
-}
-#endif  // OPS_BUILT_IN_OP_PROTO_INC_SWIGLU_GROUP_QUANT_PROTO_H_
+#endif // QUANT_SWIGLU_GROUP_QUANT_PROTO_H_

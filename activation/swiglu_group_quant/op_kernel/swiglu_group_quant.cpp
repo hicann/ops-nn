@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,30 +10,64 @@
 
 /*!
  * \file swiglu_group_quant.cpp
- * \brief Kernel entry point for SwiGLU Group Quant operator
- *
- * Unified kernel: isGroup/outputOrigin branching is handled inside SwigluGroupQuantKernel::Process.
+ * \brief
  */
-#include "kernel_operator.h"
-#include "kernel_tiling/kernel_tiling.h"
-#include "swiglu_group_quant.h"
 
+#include "arch35/swiglu_group_quant_perf.h"
+#include "arch35/swiglu_mx_quant_perf.h"
+#include "arch35/swiglu_mxfp4_quant_perf.h"
+#include "arch35/swiglu_group_quant_hifp8.h"
+#define BLOCK_QUANT_TILING_KEY 1000
+#define BLOCK_QUANT_YORIGIN_TILING_KEY 1100
+#define MX_QUANT_TILING_KEY 2000
+#define MX_QUANT_YORIGIN_TILING_KEY 2100
+#define MXFP4_QUANT_TILING_KEY 3000
+#define HIFP8_QUANT_TILING_KEY 4000
 using namespace AscendC;
-using namespace SwigluGroupQuantOps;
 
-extern "C" __global__ __aicore__ void swiglu_group_quant(
-    GM_ADDR xGM, GM_ADDR weightGM, GM_ADDR groupIndexGM, GM_ADDR scaleGM,
-    GM_ADDR yGM, GM_ADDR yScaleGM, GM_ADDR yOriginGM,
-    GM_ADDR workspace, GM_ADDR tiling)
+extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale,
+    GM_ADDR y, GM_ADDR yScale, GM_ADDR yOrigin, GM_ADDR workspace, GM_ADDR tiling)
 {
     if (workspace == nullptr) {
         return;
     }
-    GM_ADDR userspace = GetUserWorkspace(workspace);
 
-    GET_TILING_DATA(tilingData, tiling);
-
-    SwigluGroupQuantKernel<DTYPE_X> op;
-    op.Init(xGM, weightGM, groupIndexGM, yGM, yScaleGM, yOriginGM, userspace, &tilingData);
-    op.Process();
+    GM_ADDR userWs = GetUserWorkspace(workspace);
+    if (userWs == nullptr) {
+        return;
+    }
+    TPipe pipe;
+    int64_t oriOverflowMode = AscendC::GetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>();
+    if (TILING_KEY_IS(BLOCK_QUANT_TILING_KEY)) {
+        GET_TILING_DATA(tilingData, tiling);
+        SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(BLOCK_QUANT_YORIGIN_TILING_KEY)) {
+        GET_TILING_DATA(tilingData, tiling);
+        SwigluGroupQuant::SwigluGroupQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(MX_QUANT_TILING_KEY)) {
+        GET_TILING_DATA(tilingData, tiling);
+        SwigluGroupQuant::SwigluMxQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, false> op;
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(MX_QUANT_YORIGIN_TILING_KEY)) {
+        GET_TILING_DATA(tilingData, tiling);
+        SwigluGroupQuant::SwigluMxQuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE, true> op;
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(MXFP4_QUANT_TILING_KEY)) {
+        GET_TILING_DATA(tilingData, tiling);
+        SwigluGroupQuant::SwigluMxFp4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE> op;
+        op.Init(x, weight, groupIndex, y, yScale, userWs, &tilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(HIFP8_QUANT_TILING_KEY)) {
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantHifp8TilingData, hifp8TilingData, tiling);
+        SwigluGroupQuantHifp8Ops::SwigluGroupQuantHifp8Kernel<DTYPE_X> op;
+        op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &hifp8TilingData, &pipe);
+        op.Process();
+    }
+    AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
 }

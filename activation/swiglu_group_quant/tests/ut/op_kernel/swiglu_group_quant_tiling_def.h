@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2026 Huawei Technologies
+ * Copyright (c) 2026 Huawei Technologies Co., Ltd.
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
@@ -10,38 +10,74 @@
 
 /*!
  * \file swiglu_group_quant_tiling_def.h
- * \brief Tiling data definition for kernel unit tests (must match op_host struct layout)
+ * \brief
  */
+
 #ifndef SWIGLU_GROUP_QUANT_TILING_DEF_H_
 #define SWIGLU_GROUP_QUANT_TILING_DEF_H_
 
-#include "register/tilingdata_base.h"
-#include "register/op_impl_registry.h"
-#include "tiling/tiling_api.h"
+#include <cstring>
+#include <cstdint>
+#include "kernel_tiling/kernel_tiling.h"
 
-namespace optiling {
+#define __CCE_UT_TEST__
 
-constexpr uint16_t MAX_CORE_COUNT = 64;
+struct SwigluGroupQuantTilingData {
+    int64_t bs;
+    int64_t d;
+    int64_t splitD;
+    int64_t scaleCol;
+    int64_t rowOfFormerBlock;
+    int64_t rowOfTailBlock;
+    int64_t rowLoopOfFormerBlock;
+    int64_t rowLoopOfTailBlock;
+    int64_t rowFactor;
+    int64_t tailRowFactorOfFormerBlock;
+    int64_t tailRowFactorOfTailBlock;
+    int64_t dLoop;
+    int64_t dFactor;
+    int64_t tailDFactor;
+    int64_t roundScale;
+    int64_t outputOrigin;
+    float clampLimit;
+    int64_t hasClampLimit;
+    int64_t g;
+    int64_t ubSize;
+    int64_t gLoop;
+    int64_t gFactor;
+    int64_t tailGFactor;
+    int64_t coreNum;
+};
 
-BEGIN_TILING_DATA_DEF(SwigluGroupQuantTilingData)
-    TILING_DATA_FIELD_DEF(uint32_t, totalTokens);
-    TILING_DATA_FIELD_DEF(uint32_t, dim2H);
-    TILING_DATA_FIELD_DEF(uint32_t, dimH);
-    TILING_DATA_FIELD_DEF(uint32_t, isGroup);
-    TILING_DATA_FIELD_DEF(uint32_t, hasWeight);
-    TILING_DATA_FIELD_DEF(uint32_t, hasClamp);
-    TILING_DATA_FIELD_DEF(uint32_t, outputOrigin);
-    TILING_DATA_FIELD_DEF(float, clampLimit);
-    TILING_DATA_FIELD_DEF(float, dstTypeMaxFinite);
-    TILING_DATA_FIELD_DEF(uint32_t, tileTokens);
-    TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-    TILING_DATA_FIELD_DEF(uint32_t, tokensPerCore);
-    TILING_DATA_FIELD_DEF(uint32_t, groupTokensSum);
-    TILING_DATA_FIELD_DEF(uint32_t, minLoadCoreIdx);
-    TILING_DATA_FIELD_DEF_ARR(uint32_t, MAX_CORE_COUNT, coreGroupStartArr);
-    TILING_DATA_FIELD_DEF_ARR(uint32_t, MAX_CORE_COUNT, coreGroupCountArr);
-END_TILING_DATA_DEF;
+struct SwigluGroupQuantHifp8TilingData {
+    int64_t totalTokens;
+    int64_t dim2H;
+    int64_t dimH;
+    int64_t isGroup;
+    int64_t hasWeight;
+    int64_t hasClamp;
+    int64_t outputOrigin;
+    float clampLimit;
+    float dstTypeMax;
+    int64_t tileTokens;
+    int64_t usedCoreNum;
+    int64_t tokensPerCore;
+    int64_t groupNum;
+    int64_t tileLength;
+};
 
-REGISTER_TILING_DATA_CLASS(SwigluGroupQuant, SwigluGroupQuantTilingData)
-} // namespace optiling
+template <typename T>
+inline void InitTilingData(uint8_t* tiling, T* tilingData)
+{
+    std::memcpy(tilingData, tiling, sizeof(T));
+}
+
+#define GET_TILING_DATA(tilingData, tilingArg) \
+    SwigluGroupQuantTilingData tilingData;     \
+    InitTilingData(tilingArg, &tilingData)
+
+#define GET_TILING_DATA_WITH_STRUCT(tilingStruct, tilingData, tilingArg) \
+    tilingStruct tilingData;                                             \
+    InitTilingData(tilingArg, &tilingData)
+
 #endif // SWIGLU_GROUP_QUANT_TILING_DEF_H_
