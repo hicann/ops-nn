@@ -150,6 +150,7 @@ aclnnStatus aclnnMatmulWeightNz(
     - 不支持 cubeMathType为1：ALLOW_FP32_DOWN_PRECISION 的选项
     - 不支持 cubeMathType为3：USE_HF32 的选项
     - 不支持 cubeMathType为4：USE_FP32_ADD 的选项
+    - 不支持 self，mat2 数据类型为 FLOAT32
 
 - **返回值**
 
