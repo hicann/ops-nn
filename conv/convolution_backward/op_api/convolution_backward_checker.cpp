@@ -45,6 +45,17 @@ bool CheckParamsValueAllZero(const aclIntArray *params) {
     return true;
 }
 
+bool CheckCubeMathTypeConvBackwardCommon(const op::DataType cubeTensorDtype, int8_t cubeMathType) {
+    if (cubeMathType <= USE_HF32 && cubeMathType >= 0) {
+        return CheckCubeMathType(cubeTensorDtype, cubeMathType);
+    }
+    OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+        "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
+        "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32}, but got %d",
+        cubeMathType);
+    return false;
+}
+
 bool CheckFormatValid(const aclTensor *inputTensor, const string &tensorName) {
     // API在输入Tensor的Format为ND时, 仅支持输入Tensor的维度是3, 并当做NCL格式处理
     op::Format inputFormat = inputTensor->GetStorageFormat();
@@ -504,7 +515,7 @@ inline DataType ConvolutionBackwardChecker::CalcPromoteType() {
 
 bool ConvolutionBackwardChecker::CheckCubeMathTypeConvBackward() {
   auto promoteType = CalcPromoteType();
-  return CheckCubeMathType(promoteType, params_.cubeMathType);
+  return CheckCubeMathTypeConvBackwardCommon(promoteType, params_.cubeMathType);
 }
 
 bool ConvolutionBackwardChecker::CheckConvShape() {

@@ -124,13 +124,20 @@ bool ConvTbcBackwardChecker::CheckTbcShape() {
 }
 
 bool ConvTbcBackwardChecker::CheckTbcCubeMathType() {
-  // 计算promote dtype
   auto gradOutputDtype = inputTensor_.self->GetDataType();
   auto inputDtype = inputTensor_.input->GetDataType();
   auto weightDtype = inputTensor_.weight->GetDataType();
   auto promoteType1 = op::PromoteType(gradOutputDtype, inputDtype);
   auto promoteTypeFinal = op::PromoteType(promoteType1, weightDtype);
-  return CheckCubeMathType(promoteTypeFinal, params_.cubeMathType);
+  if (params_.cubeMathType <= USE_HF32 && params_.cubeMathType >= 0) {
+      return CheckCubeMathType(promoteTypeFinal, params_.cubeMathType);
+  } 
+  OP_LOGE(
+      ACLNN_ERR_PARAM_INVALID,
+      "The value of cubeMathType only support {0: KEEP_DTYPE, 1: "
+      "ALLOW_FP32_DOWN_PRECISION, 2: USE_FP16, 3: USE_HF32}, but got %d",
+      params_.cubeMathType);
+  return false;
 }
 
 aclnnStatus ConvTbcBackwardChecker::CheckTbcParams() {
