@@ -4379,6 +4379,16 @@
     <td>AI Core</td>
     <td>实现带L1/L2正则化的近端梯度下降一步更新，常用于带稀疏正则的优化场景。</td>
   </tr>
+    <tr>
+    <td>optim</td>
+    <td><a href="../../optim/apply_adam_with_amsgrad_v2/README.md">apply_adam_with_amsgrad_v2</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>Adam AMSGrad变体单步原地更新，用vhat历史最大值替代二阶矩抑制学习率振荡，提升训练收敛稳定性。</td>
+  </tr>
   <tr>
     <td>optim</td>
     <td><a href="../../optim/sparse_apply_adagrad_v2/README.md">sparse_apply_adagrad_v2</a></td>
