@@ -94,8 +94,8 @@ struct AdaptiveAvgPool3dNCDHWGradSmallKernelTilingDataV35 {
     int64_t normalCoreProcessNum = 0;
     int64_t tailCoreProcessNum = 0;
     int64_t usedCoreNum = 0;
-    int64_t outputBufferSize = 0;
     int64_t gradInputBufferSize = 0;
+    int64_t outputBufferSize = 0;
     int64_t inputQueBufferSize = 0;
     int64_t transQueBufferSize = 0;
     int64_t transOutQueBufferSize = 0;

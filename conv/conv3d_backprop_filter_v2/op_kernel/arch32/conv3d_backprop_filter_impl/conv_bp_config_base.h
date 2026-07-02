@@ -59,7 +59,7 @@ struct GetDstType<bfloat16_t> {
     using Type = float;
 };
 
-// ConvType，定义卷积输入输出对象的属性
+// ConvType，定义卷积输入输出对象的属性。
 template <TPosition POSITION, CubeFormat FORMAT, typename T>
 struct ConvType {
     constexpr static TPosition pos = POSITION;    // Convolution输入或输出时的scope

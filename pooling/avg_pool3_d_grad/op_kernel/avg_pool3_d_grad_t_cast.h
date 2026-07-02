@@ -131,8 +131,8 @@ __aicore__ inline void KernelAvgPool3DGradTCast<T>::ProcessAndCopyout()
     SetFlag<HardEvent::V_MTE2>(this->eventIdV2Mte2);
     SetFlag<HardEvent::MTE3_V>(this->eventIdMte3ToV);
     for (auto index = processStart; index < processEnd; index += this->nLine) {
-        auto indexStart = index;
         auto indexEnd = this->min(index + this->nLine, processEnd);
+        auto indexStart = index;
         WaitFlag<HardEvent::V_MTE2>(this->eventIdV2Mte2);
         WaitFlag<HardEvent::MTE3_V>(this->eventIdMte3ToV);
         for (auto i = index; i < indexEnd; ++i) {

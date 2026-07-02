@@ -221,7 +221,7 @@ static bool GetConv3DPads(
     if (runtime_attrs->GetAttrNum() > padding_idx) {
         const auto padding = runtime_attrs->GetAttrPointer<char>(padding_idx);
         if (padding != nullptr && (strcmp(padding, "SAME") == 0)) {
-            OP_LOGD(context->GetNodeName(), "get padding SAME");
+            OP_LOGD(context->GetNodeName(), "get padding SAME.");
             int64_t tails_d = shapes.id % attrs.strd; // non zero, checked in shape range infer logic
             int64_t tails_h = shapes.ih % attrs.strh; // non zero, checked in shape range infer logic
             int64_t tails_w = shapes.iw % attrs.strw; // non zero, checked in shape range infer logic
