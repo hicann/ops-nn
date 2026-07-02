@@ -296,6 +296,7 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
 {
     const uint64_t smallInt32Key = GET_TPL_TILING_KEY(TPL_SMALL_KERNEL, TPL_INT32, 0);
     const uint64_t smallInt64Key = GET_TPL_TILING_KEY(TPL_SMALL_KERNEL, TPL_INT64, 0);
+    const uint64_t simtInt32Key = GET_TPL_TILING_KEY(TPL_SIMT_KERNEL, TPL_INT32, 0);
 
     std::vector<SmallKernelPositiveCase> cases = {
         // TrySplitNC success, fp32 branch, NC exactly aligned by highAxisInner.
@@ -344,7 +345,7 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
          {1, 128, 11, 29},
          ge::DT_FLOAT,
          ge::FORMAT_NCHW,
-         smallInt32Key},
+         simtInt32Key},
 
         // W dynamic adjustment, but final wOutputTail aligned.
         {"fp32_split_h_then_split_w_aligned_tail",
@@ -352,7 +353,7 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
          {1, 128, 11, 30},
          ge::DT_FLOAT,
          ge::FORMAT_NCHW,
-         smallInt32Key},
+         simtInt32Key},
 
         // Split W plus highAxisTail unaligned.
         {"fp32_split_w_high_axis_tail_unaligned",
@@ -363,7 +364,7 @@ TEST_F(AdaptiveAvgPool2dGradTilingTest, small_kernel_positive_branch_matrix)
          smallInt32Key},
 
         // Non-fp32 branch, SplitUnalignHW, W branch.
-        {"fp16_split_w_branch", {1, 257, 5, 16}, {1, 257, 11, 31}, ge::DT_FLOAT16, ge::FORMAT_NCHW, smallInt32Key},
+        {"fp16_split_w_branch", {1, 257, 5, 16}, {1, 257, 11, 31}, ge::DT_FLOAT16, ge::FORMAT_NCHW, simtInt32Key},
 
         // CHW / FORMAT_NCL small kernel path, fp32 branch.
         {"chw_fp32_small_kernel_split_hw", {257, 7, 19}, {257, 13, 29}, ge::DT_FLOAT, ge::FORMAT_NCL, smallInt32Key},
