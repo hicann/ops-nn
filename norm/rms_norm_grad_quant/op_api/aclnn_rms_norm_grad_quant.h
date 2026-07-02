@@ -41,7 +41,7 @@ extern "C" {
 ACLNN_API aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
     const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
     const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    char* quantMode, bool divMode,
+    const char* quantMode, bool divMode,
     aclTensor* dxOut, aclTensor* dgammaOut, uint64_t* workspaceSize, aclOpExecutor** executor);
 
 /**
