@@ -17,6 +17,7 @@
 #include "log/log.h"
 #include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
+#include "platform/soc_spec.h"
 #include "group_norm_swish_grad_tiling.h"
 
 using namespace std;
