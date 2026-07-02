@@ -553,7 +553,7 @@ static void ExecuteTestCase(
     ge::DataType dtype, int64_t index_dtype, bool ceil_mode, std::string data_format, uint64_t except_tilingkey,
     std::string expect)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -644,7 +644,7 @@ static void ExecuteTestCase(
     ASSERT_EQ(tiling_key, except_tilingkey);
     auto tilingData = tiling_context->GetRawTilingData();
     ASSERT_NE(tilingData, nullptr);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 static void ExecuteFailTestCase(
@@ -653,7 +653,7 @@ static void ExecuteFailTestCase(
     ge::DataType dtype, ge::DataType argmaxDtype, ge::DataType yDtype, bool ceil_mode, std::string data_format,
     int64_t index_dtype, ge::graphStatus expectResult)
 {
-    dlog_setlevel(0, 0, 0);
+    // dlog_setlevel(0, 0, 0);
 
     string compile_info_string = R"({
         "hardware_info": {"BT_SIZE": 0, "load3d_constraints": "1",
@@ -735,7 +735,7 @@ static void ExecuteFailTestCase(
 
     auto ret = tiling_func(tiling_context);
     ASSERT_EQ(ret, expectResult);
-    dlog_setlevel(0, 3, 0);
+    // dlog_setlevel(0, 3, 0);
 }
 
 TEST_F(MaxPool3dGradWithArgmaxTiling, tiling_invalid_format)
@@ -982,7 +982,7 @@ TEST_F(MaxPool3dGradWithArgmaxTiling, MaxPool3DGradWithArgmax_tiling_simd_test_0
     int64_t index_dtype = 3;
     bool ceil_mode = false;
     std::string data_format = "NCDHW";
-    uint64_t except_tilingkey = 1025;
+    uint64_t except_tilingkey = 1;
     std::string expect = " ";
     ExecuteTestCase(
         xShape, gradShape, argmaxShape, yShape, ksize, strides, pads, dilation, dtype, index_dtype, ceil_mode,

@@ -25,8 +25,7 @@ static constexpr int64_t INT64_SIZE = 8;
 static constexpr int64_t UB_RESVERVED_SIZE = 2048;
 static constexpr int64_t T3_INT64 = 10;
 static constexpr int64_t DOUBLE_BUFFER = 2;
-static constexpr int64_t THRESHOLD = 2;
-static constexpr int64_t HELP_BUFFER_SIZE = 2048;
+static constexpr int64_t KSIZE_STRIDE_RATIO_THRESHOLD = 16;
 
 void MaxPool3DGradWithArgmaxNCDHWTiling::InitializationVars()
 {
@@ -126,7 +125,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculate()
     splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
 
     int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
-    splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER + HELP_BUFFER_SIZE;
+    splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
 }
 
 void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculateNC()
@@ -153,7 +152,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::DoBufferCalculateNC()
     splitData.outputBufferSize = splitData.highAxisInner * outputPlaneSizeDHW * FLOAT32_SIZE;
 
     int64_t tmpTotalBufferSize = splitData.outputBufferSize + splitData.gradBufferSize + splitData.argmaxBufferSize;
-    splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER + HELP_BUFFER_SIZE;
+    splitData.totalBufferSize = tmpTotalBufferSize * DOUBLE_BUFFER;
 }
 
 bool MaxPool3DGradWithArgmaxNCDHWTiling::IsMeetTargetCoreNum() const
@@ -358,7 +357,9 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::SearchBestTiling()
         splitData.isFull = 1;
         return;
     }
-    splitData.isCheckRange = 1;
+    if (inputData.dDilation != 1 || inputData.hDilation != 1 || inputData.wDilation != 1) {
+        splitData.isCheckRange = 1;
+    }
     if (baseData.isPad == 0 && baseData.isOverlap == 0) {
         if (TrySplitAlignD()) {
             return;
@@ -372,6 +373,7 @@ void MaxPool3DGradWithArgmaxNCDHWTiling::SearchBestTiling()
             return;
         }
     }
+    splitData.isCheckRange = 1;
     SplitUnalignDHW();
     return;
 }
