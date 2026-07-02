@@ -4361,6 +4361,16 @@
   </tr>
   <tr>
     <td>optim</td>
+    <td><a href="../../optim/apply_keras_momentum/README.md">apply_keras_momentum</a></td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>✓</td>
+    <td>AI Core</td>
+    <td>执行Keras Momentum优化器的单步参数更新，根据动量系数momentum、学习率lr和梯度grad更新累积量accum，并按标准模式或Nesterov模式原地更新权重参数var。对标TensorFlow的ResourceApplyKerasMomentum接口。</td>
+  </tr>
+  <tr>
+    <td>optim</td>
     <td><a href="../../optim/apply_momentum/README.md">apply_momentum</a></td>
     <td>✓</td>
     <td>✓</td>
