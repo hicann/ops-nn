@@ -14,7 +14,6 @@
  */
 
 #include "fused_matmul_mergebatch_basic_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
@@ -32,8 +31,8 @@ bool FusedMatMulMergeBatchBasicApiTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
-        OP_LOGD(args_.opName, "MergeBatch model only supports add, mul, relu or empty op type in FusedMatMul");
+    if (opType != "relu" && !opType.empty()) {
+        OP_LOGD(args_.opName, "MergeBatch model only supports relu or empty op type in FusedMatMul");
         return false;
     }
     bool status = BatchMatMulV3MergeBatchBasicApiTiling::IsCapable();
@@ -49,16 +48,12 @@ uint64_t FusedMatMulMergeBatchBasicApiTiling::GetTilingKey() const
 {
     MatMulV3TilingKey tmp = MatMulV3TilingKey();
     MatMulV3TilingKey& tilingKey = tilingKeyObj == nullptr ? tmp : *tilingKeyObj;
-    auto attrs = context_->GetAttrs();
-    OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
-    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
     bool transA = args_.isATrans && args_.mValue > 1;
     return tilingKey.SetTrans(transA, args_.isBTrans)
         .SetBatchModel(MatMulV3BatchModel::MERGE_BATCH_MODEL)
         .SetModel(MatMulV3Model::BASIC)
         .SetFullLoad(MatMulV3FullLoad::NONE_FULL_LOAD)
-        .SetL0C2Out((opType == "add" || opType == "mul") ? MatMulV3L0C2Out::ND_FIXPIPE_1_2 :
-                                                            MatMulV3L0C2Out::ON_THE_FLY)
+        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }

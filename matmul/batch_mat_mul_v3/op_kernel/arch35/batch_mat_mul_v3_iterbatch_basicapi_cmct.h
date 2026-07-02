@@ -39,11 +39,6 @@ struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_
 };
 
 template <class OutType, class InType>
-struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_MUL> {
-    using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::FusionMul<OutType, InType>>;
-};
-
-template <class OutType, class InType>
 struct BlockEpilogueSelector<MatMulL0C2Out::ND_FIXPIPE_1_2, OutType, InType, OP_TYPE_RELU> {
     using type = Block::BlockEpilogueIterbatch<OutType, InType, Block::DefaultFusion<OutType, InType>>;
 };
@@ -94,8 +89,7 @@ __aicore__ inline void BatchMatMulActIterBatchKernel(
         {&tilingData}
     };
     if constexpr (FIXPIPE_OPT == MatMulL0C2Out::ND_FIXPIPE_1_2) {
-        if constexpr (FUSED_OPTYPE == OP_TYPE_ADD || FUSED_OPTYPE == OP_TYPE_MUL) {
-            // For fused Add/Mul IterBatch, this wrapper's fifth argument carries x3GM.
+        if constexpr (FUSED_OPTYPE == OP_TYPE_ADD) {
             params.epilogueParams = {cGM, {workspaceGM}};
         } else {
             params.epilogueParams = {cGM};

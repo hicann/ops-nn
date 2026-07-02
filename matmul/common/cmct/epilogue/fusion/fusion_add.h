@@ -21,7 +21,6 @@
 #endif
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
-#include "../../tile/x3_copy_utils.h"
 
 namespace Cmct {
 namespace Gemm {
@@ -39,11 +38,12 @@ public:
 
     struct Params {
         GM_ADDR inputGmAddr{nullptr};
-        bool x3BatchBroadcast{false};
-        int64_t x3M{0};
     };
 
     static constexpr uint16_t ZERO_FLAG = 0;
+    static const int32_t FIRST_DIM = 0;
+    static const int32_t SECOND_DIM = 1;
+    static const int32_t THIRD_DIM = 2;
     AscendC::LocalTensor<DataTypeIn> inputLocal_{AscendC::TPosition::VECIN, 0, AscendC::TOTAL_UB_SIZE};
     AscendC::GlobalTensor<DataTypeIn> inputGlobal_; // add的输入x3Gm
     int64_t stageSize_ = 0;
@@ -53,8 +53,6 @@ public:
     int64_t strideN_{0};
     bool needNdDma_{false};
     bool fixp1v2_{false};
-    bool x3BatchBroadcast_{false};
-    int64_t x3M_{0};
 
     template <class LocalTensor>
     __aicore__ inline void Init(
@@ -67,16 +65,8 @@ public:
         stageSize_ = AscendC::Std::min(
             static_cast<int64_t>(lastUBSize / stageNum / sizeof(DataTypeIn_) / ubCalcN * ubCalcN), ubCalcM * ubCalcN);
         needNdDma_ = needNdDma;
-        x3BatchBroadcast_ = params.x3BatchBroadcast;
-        x3M_ = params.x3M;
         if (needNdDma_) {
             int64_t batchSize = m * ubCalcN;
-            if (batchSize <= 0) {
-                stageSize_ = 0;
-                inputLocal_ = ubTensor[ubOffset];
-                stageSize = stageSize_;
-                return;
-            }
             stageSize_ = stageSize_ / batchSize * batchSize;
         }
         if (m > 0) {
@@ -91,11 +81,39 @@ public:
         const AscendC::LocalTensor<DataTypeIn>& srcLocal, AscendC::LocalTensor<DataTypeOut>& outputLocal,
         int64_t offset, int64_t curAivM, int64_t curAivN, int64_t strideN, int64_t stageSize)
     {
-        bool copyOk = Detail::CopyFusionX3<DataTypeIn, DataTypeOut>(
-            inputLocal_, inputGlobal_, offset, curAivM, curAivN, strideN, stageSize, needNdDma_, fixp1v2_,
-            x3BatchBroadcast_, x3M_, false);
-        if (!copyOk) {
-            return;
+        int64_t curAivNAlign = fixp1v2_? CeilAlign(curAivN, AscendC::BLOCK_CUBE) : AlignBlock<DataTypeIn>(curAivN);
+        if (!needNdDma_) {
+            AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+            AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+            uint16_t blockCount = static_cast<uint16_t>(stageSize / curAivNAlign);
+            uint16_t blockLen = static_cast<uint32_t>(curAivN * sizeof(DataTypeOut));
+            uint32_t srcStride = static_cast<uint32_t>((strideN - curAivN) * sizeof(DataTypeIn));
+            uint32_t dstSrtide =
+                fixp1v2_ ? static_cast<uint32_t>((curAivNAlign - curAivN) * sizeof(DataTypeOut) / UB_ALIGN_SIZE) : 0;
+            AscendC::DataCopyExtParams copyParams{blockCount, blockLen, srcStride, dstSrtide, 0};
+            AscendC::DataCopyPadExtParams<DataTypeIn> padParams{false, 0, 0, 0};
+            // x3Gm -> x3local
+            AscendC::DataCopyPad(inputLocal_, inputGlobal_[offset], copyParams, padParams);
+        } else {
+            // NDdma
+            int64_t curBatch = stageSize / curAivNAlign / curAivM;
+            AscendC::MultiCopyParams<DataTypeIn, DIM_SIZE_THREE> ndDmaParams;
+            ndDmaParams.loopInfo.loopSrcStride[FIRST_DIM] = 1;
+            ndDmaParams.loopInfo.loopSrcStride[SECOND_DIM] = static_cast<uint32_t>(strideN);
+            ndDmaParams.loopInfo.loopSrcStride[THIRD_DIM] = 0;
+            ndDmaParams.loopInfo.loopDstStride[FIRST_DIM] = 1;
+            ndDmaParams.loopInfo.loopDstStride[SECOND_DIM] = static_cast<uint32_t>(curAivNAlign);
+            ndDmaParams.loopInfo.loopDstStride[THIRD_DIM] = static_cast<uint32_t>(curAivNAlign * curAivM);
+            ndDmaParams.loopInfo.loopSize[FIRST_DIM] = static_cast<uint32_t>(strideN);
+            ndDmaParams.loopInfo.loopSize[SECOND_DIM] = static_cast<uint32_t>(curAivM);
+            ndDmaParams.loopInfo.loopSize[THIRD_DIM] = static_cast<uint32_t>(curBatch);
+            ndDmaParams.loopInfo.loopLpSize[FIRST_DIM] = 0;
+            ndDmaParams.loopInfo.loopLpSize[SECOND_DIM] = 0;
+            ndDmaParams.loopInfo.loopLpSize[THIRD_DIM] = 0;
+            ndDmaParams.loopInfo.loopRpSize[FIRST_DIM] = static_cast<uint8_t>(curAivNAlign - strideN);
+            ndDmaParams.loopInfo.loopRpSize[SECOND_DIM] = 0;
+            ndDmaParams.loopInfo.loopRpSize[THIRD_DIM] = 0;
+            AscendC::DataCopy(inputLocal_, inputGlobal_, ndDmaParams);
         }
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
@@ -107,7 +125,7 @@ public:
 
     __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR /* workspaceGm */)
     {
-        return {args.inputGmAddr, false, 0};
+        return {args.inputGmAddr};
     }
 };
 } // namespace Block

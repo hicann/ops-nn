@@ -14,18 +14,12 @@
  */
 #pragma once
 
-#include <string>
-#include "fused_matmul_common.h"
 #include "matmul/batch_mat_mul_v3/op_host/op_tiling/arch35/batch_matmul_v3_tiling_advanced.h"
 #include "platform/platform_ascendc.h"
 
 namespace optiling {
 namespace fused_matmul {
 using namespace batch_matmul_v3_advanced;
-
-bool IsFusedMatMulAddMulOp(const std::string& opType);
-
-
 class FusedMatMulBuiltInTiling : public BatchMatMulV3Tiling {
 public:
     explicit FusedMatMulBuiltInTiling(gert::TilingContext* context) : BatchMatMulV3Tiling(context){};

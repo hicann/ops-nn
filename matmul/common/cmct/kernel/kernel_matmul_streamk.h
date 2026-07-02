@@ -168,8 +168,6 @@ public:
         GM_ADDR cGmAddr{nullptr};
         GM_ADDR workspaceGmAddr{nullptr};
         GM_ADDR x3GmAddr{nullptr};
-        bool x3BatchBroadcast{false};
-        uint64_t x3M{0};
     };
 
     struct Arguments {
@@ -303,14 +301,9 @@ public:
             CrossCoreWaitFlag<AIC_SYNC_AIV_MODE_4, PIPE_MTE3>(AIC_SYNC_AIV_FLAG);
             SyncAll();
             BlockEpilogue epilogueOp;
-            BlockEpilogueParams skEpilogueParams{};
-            skEpilogueParams.cGmAddr = params.epilogueArgs.cGmAddr;
-            skEpilogueParams.workspaceGmAddr = params.epilogueArgs.workspaceGmAddr;
-            skEpilogueParams.x3GmAddr = params.epilogueArgs.x3GmAddr;
-            if constexpr (FUSED_OP_TYPE == OP_TYPE_ADD || FUSED_OP_TYPE == OP_TYPE_MUL) {
-                skEpilogueParams.x3BatchBroadcast = params.epilogueArgs.x3BatchBroadcast;
-                skEpilogueParams.x3M = params.epilogueArgs.x3M;
-            }
+            BlockEpilogueParams skEpilogueParams{params.epilogueArgs.cGmAddr,
+                                                  params.epilogueArgs.workspaceGmAddr,
+                                                  params.epilogueArgs.x3GmAddr};
             epilogueOp.Init(skEpilogueParams, problemShape_, tileL1, bs.GetMNKTileNum(), usedCoreNum_,
                             bs.CheckIsSkScene(0));
             epilogueOp();

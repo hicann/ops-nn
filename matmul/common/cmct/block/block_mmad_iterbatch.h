@@ -39,9 +39,7 @@ class BlockMmad<
         AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
             AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>, DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2,
-            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>, DispatchPolicy_>>> {
+            AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>, DispatchPolicy_>>> {
 public:
 // supportMmadS8S4平台L0c和biasBt的dtype为int32_t
     using L0cType = typename GetL0CAndBtType::Type;

@@ -65,7 +65,7 @@ template <class A_TYPE, class B_TYPE, class C_TYPE, class BIAS_TYPE, class A_LAY
           MatMulL0C2Out MATMUL_L0C2OUT, uint64_t FUSED_OP_TYPE = 0>
 __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR biasGM,
     GM_ADDR cGM, GM_ADDR workspaceGM, const MatMulV3BasicTilingData& tilingData,
-    int64_t batch = 1, GM_ADDR x3GM = nullptr, int64_t batchX3 = 1)
+    int64_t batch = 1, GM_ADDR x3GM = nullptr)
 {
     // 定义L1和L0的TileShape
     using L1TileShape = AscendC::Shape<_0, _0, _0>;
@@ -110,7 +110,7 @@ __aicore__ inline void MatMulStreamKActKernel(GM_ADDR aGM, GM_ADDR bGM, GM_ADDR 
     Params params = {
         {tilingData.m, tilingData.n, tilingData.k, batch}, // shape
         {aGM, bGM, cGM, biasGM, nullptr, workspaceGM}, // gm addr
-        {cGM, workspaceGM, x3GM, (x3GM != nullptr && batch > 1 && batchX3 == 1), static_cast<uint64_t>(tilingData.m)}, // epilogue args
+        {cGM, workspaceGM, x3GM}, // epilogue args
         {&tilingData}
     };
     MatmulKernel mm;

@@ -13,7 +13,6 @@
  * \brief
  */
 #include "fused_matmul_iterbatch_basic_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
@@ -73,6 +72,13 @@ bool FusedMatMulIterBatchApiTiling::IsCapable()
     if (!status) {
         OP_LOGD(args_.opName, "IterBatch model is not supported for this shape");
         return false;
+    }
+    if (opType == "add" || opType == "mul") {
+        // when optype is "add" or "mul", aivNum must == aicNum * 2
+        if (compileInfo_.aivNum != (compileInfo_.aicNum * NUM_TWO)) {
+            OP_LOGW(args_.opName, "FusedMatMul IterBatch model only support aivNum == aicNum *2");
+            return false;
+        }
     }
     OP_LOGI(args_.opName, "FusedMatMul tiling enable iterbatch basic api");
     return true;

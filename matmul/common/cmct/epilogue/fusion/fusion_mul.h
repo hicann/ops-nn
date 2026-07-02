@@ -21,7 +21,6 @@
 #endif
 #include "../../utils/common_utils.h"
 #include "../../utils/device_utils.h"
-#include "../../tile/x3_copy_utils.h"
 
 namespace Cmct {
 namespace Gemm {
@@ -39,8 +38,6 @@ public:
 
     struct Params {
         GM_ADDR inputGmAddr{nullptr};
-        bool x3BatchBroadcast{false};
-        int64_t x3M{0};
     };
 
     static constexpr uint16_t ZERO_FLAG = 0;
@@ -50,14 +47,10 @@ public:
     int64_t ubCalcM_{0};
     int64_t ubCalcN_{0};
     int64_t strideN_{0};
-    bool needNdDma_{false};
-    bool fixp1v2_{false};
-    bool x3BatchBroadcast_{false};
-    int64_t x3M_{0};
 
     template <class LocalTensor>
     __aicore__ inline void Init(Params const& params, LocalTensor ubTensor, int64_t ubCalcM, int64_t ubCalcN,
-                                int64_t& ubOffset, int64_t& stageSize, uint64_t m = 0, bool needNdDma = false)
+                                int64_t& ubOffset, int64_t& stageSize)
     {
         static constexpr int64_t stageNum = 2;
         inputGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ DataTypeIn*>(params.inputGmAddr));
@@ -67,22 +60,6 @@ public:
         });
         stageSize_ = AscendC::Std::min(
             static_cast<int64_t>(lastUBSize / stageNum / sizeof(DataTypeIn_) / ubCalcN * ubCalcN), ubCalcM * ubCalcN);
-        needNdDma_ = needNdDma;
-        x3BatchBroadcast_ = params.x3BatchBroadcast;
-        x3M_ = params.x3M;
-        if (needNdDma_) {
-            int64_t batchSize = m * ubCalcN;
-            if (batchSize <= 0) {
-                stageSize_ = 0;
-                inputLocal_ = ubTensor[ubOffset];
-                stageSize = stageSize_;
-                return;
-            }
-            stageSize_ = stageSize_ / batchSize * batchSize;
-        }
-        if (m > 0) {
-            fixp1v2_ = true;
-        }
         inputLocal_ = ubTensor[ubOffset];
         ubOffset += stageSize_;
         stageSize = stageSize_;
@@ -92,12 +69,15 @@ public:
                                       AscendC::LocalTensor<DataTypeOut>& outputLocal, int64_t offset, int64_t curAivM,
                                       int64_t curAivN, int strideN, int64_t stageSize)
     {
-        bool copyOk = Detail::CopyFusionX3<DataTypeIn, DataTypeOut>(
-            inputLocal_, inputGlobal_, offset, curAivM, curAivN, strideN, stageSize, needNdDma_, fixp1v2_,
-            x3BatchBroadcast_, x3M_, true);
-        if (!copyOk) {
-            return;
-        }
+        int64_t curAivNAlign = AlignBlock<DataTypeIn>(curAivN);
+
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(ZERO_FLAG);
+        AscendC::DataCopyExtParams copyParams{static_cast<uint16_t>(stageSize / curAivNAlign),
+                                     static_cast<uint32_t>(curAivN * sizeof(DataTypeOut)),
+                                     static_cast<uint32_t>((strideN - curAivN) * sizeof(DataTypeIn)), 0, 0};
+        AscendC::DataCopyPadExtParams<DataTypeIn> padParams{true, 0, 0, 0};
+        AscendC::DataCopyPad(inputLocal_, inputGlobal_[offset], copyParams, padParams);
 
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(ZERO_FLAG);
@@ -107,7 +87,7 @@ public:
 
     __host_aicore__ static Params InitParams(Arguments const& args, GM_ADDR /* workspaceGm */)
     {
-        return {args.inputGmAddr, false, 0};
+        return {args.inputGmAddr};
     }
 };
 } // namespace Block

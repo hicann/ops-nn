@@ -13,7 +13,6 @@
  * \brief
  */
 #include "fused_matmul_batch_asw_al1_full_load_basic_tiling.h"
-#include "fused_matmul_builtin_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
@@ -38,7 +37,7 @@ bool FusedMatMulBatchAswAL1FullLoadBasicTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
+    if (opType != "relu" && !opType.empty()) {
         return false;
     }
     return BatchMatMulV3AswAL1FullLoadBasicTiling::IsCapable();
@@ -52,7 +51,6 @@ uint64_t FusedMatMulBatchAswAL1FullLoadBasicTiling::GetTilingKey() const
         .SetModel(MatMulV3Model::BASIC)
         .SetBatchModel(MatMulV3BatchModel::FUSED_BATCH_MODEL)
         .SetFullLoad(MatMulV3FullLoad::A_FULL_LOAD)
-        .SetL0C2Out(MatMulV3L0C2Out::ON_THE_FLY)
         .SetApiLevel(MatMulV3ApiLevel::BASIC_LEVEL)
         .GetTilingKey();
 }

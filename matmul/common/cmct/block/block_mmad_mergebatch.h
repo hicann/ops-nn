@@ -30,10 +30,6 @@ class BlockMmad<
         AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_EMPTY>,
                                    DispatchPolicy_> ||
         AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
-                                   DispatchPolicy_> ||
-        AscendC::Std::is_base_of_v<MatmulMergeBatch<AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
                                    DispatchPolicy_>>> {
 public:
     using AType = AType_;
