@@ -67,77 +67,77 @@ aclnnStatus aclnnUniqueConsecutive(
     </tr></thead>
   <tbody>
     <tr>
-      <td>self</td>
+      <td>self（aclTensor*）</td>
       <td>输入</td>
-      <td>-</td>
-      <td>-</td>
+      <td>输入张量。</td>
+      <td>支持空Tensor场景</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16</td>
       <td>ND</td>
       <td>≤8</td>
-      <td>-</td>
+      <td>√</td>
     </tr>
     <tr>
-      <td>returnInverse</td>
+      <td>returnInverse（bool）</td>
       <td>输入</td>
       <td>表示是否返回self中各元素在valueOut中对应元素的位置下标，True时返回，False时不返回。</td>
       <td>-</td>
-      <td>-</td>
+      <td>bool</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>returnCounts</td>
+      <td>returnCounts（bool）</td>
       <td>输入</td>
       <td>表示是否返回valueOut中各元素在self中连续重复出现的次数，True时返回，False时不返回。</td>
       <td>-</td>
-      <td>-</td>
+      <td>bool</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>dim</td>
+      <td>dim（int64_t）</td>
       <td>输入</td>
-      <td>表示进行去重的维度。</td>
+      <td>表示进行去重的维度。取值范围为[-self.dim(), self.dim())，传入1000表示不指定维度（展平模式，将输入展平后去重）</td>
       <td>-</td>
-      <td>-</td>
+      <td>int64</td>
       <td>-</td>
       <td>-</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>valueOut</td>
+      <td>valueOut（aclTensor*）</td>
       <td>输出</td>
       <td>第一个输出张量，返回消除连续重复元素后的结果。</td>
-      <td>-</td>
+      <td>数据类型与self一致</td>
       <td>FLOAT、FLOAT16、DOUBLE、INT8、INT16、INT32、INT64、UINT8、UINT16、UINT32、UINT64、COMPLEX64、COMPLEX128、BOOL、BFLOAT16。</td>
-      <td>-</td>
-      <td>-</td>
+      <td>ND</td>
+      <td>与self保持一致</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>inverseOut</td>
+      <td>inverseOut（aclTensor*）</td>
       <td>输出</td>
       <td>第二个输出张量，当returnInverse为True时有意义，返回self中各元素在valueOut中对应元素的位置下标。</td>
-      <td>-</td>
-      <td>INT64</td>
+      <td>inverseOut和countsOut的数据类型须一致。</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
-      <td>-</td>
+      <td>与valueOut保持一致</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>countsOut</td>
+      <td>countsOut（aclTensor*）</td>
       <td>输出</td>
       <td>第三个输出张量，当returnCounts为True时有意义，返回valueOut中各元素在self中连续重复出现的次数。</td>
-      <td>-</td>
-      <td>INT64</td>
+      <td>inverseOut和countsOut的数据类型须一致。</td>
+      <td>INT32、INT64</td>
       <td>ND</td>
-      <td>-</td>
+      <td>与valueOut保持一致</td>
       <td>-</td>
     </tr>
     <tr>
-      <td>workspaceSize</td>
+      <td>workspaceSize（uint64_t*）</td>
       <td>输出</td>
       <td>返回需要在Device侧申请的workspace大小。</td>
       <td>-</td>
@@ -147,7 +147,7 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>-</td>
     </tr>
     <tr>
-      <td>executor</td>
+      <td>executor（aclOpExecutor**）</td>
       <td>输出</td>
       <td>返回op执行器，包含了算子计算流程。</td>
       <td>-</td>
@@ -157,6 +157,14 @@ aclnnStatus aclnnUniqueConsecutive(
       <td>-</td>
     </tr>
   </tbody></table>
+
+- <term>Ascend 950PR/Ascend 950DT</term>：
+
+  输入`self`不支持DOUBLE、COMPLEX64、COMPLEX128、BOOL类型
+  
+  输入`returnInverse`仅支持false
+  
+  输入`dim`仅支持1000。
 
 * **返回值**
 
