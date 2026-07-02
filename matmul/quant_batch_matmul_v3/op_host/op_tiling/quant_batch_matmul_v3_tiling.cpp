@@ -538,6 +538,29 @@ bool QuantBatchMatmulV3Tiling::CheckDtype() const
     return true;
 }
 
+bool QuantBatchMatmulV3Tiling::CheckInputInBoundary() const
+{
+    if (inputParams_.aDtype != ge::DT_INT8 || inputParams_.bDtype != ge::DT_INT8) {
+        return false;
+    }
+
+    if (inputParams_.scaleDtype != ge::DT_FLOAT && inputParams_.scaleDtype != ge::DT_BF16) {
+        return false;
+    }
+    auto scaleShape = context_->GetInputShape(SCALE_INDEX)->GetOriginShape();
+    auto pertokenShape = context_->GetOptionalInputShape(PERTOKEN_SCALE_INDEX);
+
+    if (pertokenShape == nullptr) {
+        return false;
+    }
+
+    if (scaleShape.GetDimNum() != 1 || pertokenShape->GetStorageShape().GetDimNum() != 1) {
+        return false;
+    }
+    
+    return true;
+}
+
 bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape &shape, uint32_t shapeIdx) const
 {
     int64_t mul = 1;
@@ -545,9 +568,10 @@ bool QuantBatchMatmulV3Tiling::CheckShapeInBoundary(const gert::Shape &shape, ui
     const char* dimName = shapeIdx == X1_INDEX ? "x1" : "x2";
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context_->GetPlatformInfo());
     auto npuArch = ascendcPlatform.GetCurNpuArch();
+    bool inputSupport = CheckInputInBoundary();
     for (size_t i = 0; i < shape.GetDimNum(); ++i) {
         int64_t curDim = shape.GetDim(i);
-        if (npuArch != NpuArch::DAV_2201) {
+        if (!(npuArch == NpuArch::DAV_2201 && inputSupport)) {
             OP_TILING_CHECK(i == shape.GetDimNum() - LAST_FIRST_DIM_INDEX && curDim > LAST_AXIS_LIMIT,
                             CUBE_INNER_ERR_REPORT(inputParams_.opName,
                                                 "Last dimension of %s should not be larger than 65535 \

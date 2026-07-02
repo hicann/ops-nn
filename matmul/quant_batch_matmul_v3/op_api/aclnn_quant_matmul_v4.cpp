@@ -758,6 +758,28 @@ static inline bool CheckShapeInt4(const aclTensor *x1, const aclTensor *x2, bool
     return true;
 }
 
+static inline bool IsValidForLargeInput(const aclTensor* x1, const aclTensor* x2, const aclTensor* scale,
+    const aclTensor* pertokenScale)
+{
+    if (x1->GetDataType() != op::DataType::DT_INT8 || x2->GetDataType() != op::DataType::DT_INT8) {
+        return false;
+    }
+
+    if (scale->GetDataType() != op::DataType::DT_FLOAT && scale->GetDataType() != op::DataType::DT_BF16) {
+        return false;
+    }
+
+    if (pertokenScale == nullptr) {
+        return false;
+    }
+
+    if (pertokenScale->GetViewShape().GetDimNum() != 1 || scale->GetViewShape().GetDimNum() != 1) {
+        return false;
+    }
+
+    return true;
+}
+
 static inline bool CheckShape(TupleTensor &mandatoryTensors, TupleOptional &optionalTensors,
                              TupleAttr &boolsTrans, bool isA4W4, const aclTensor *out) {
     auto transposeX1 = std::get<INDEX_X1_IN_MANDTORY_TUPLE>(boolsTrans);
@@ -785,7 +807,8 @@ static inline bool CheckShape(TupleTensor &mandatoryTensors, TupleOptional &opti
     OP_CHECK(x1KDim == x2KDim,
              OP_LOGE(ACLNN_ERR_PARAM_INVALID, "x1 k dim and x2 k dim should be same, but x1 is %ld, x2 is %ld.",
                      x1KDim, x2KDim), return false);
-    if (op::GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_2201) {
+    bool inputSupport = IsValidForLargeInput(x1, x2, scale, pertokenScaleOptional);
+    if (!(op::GetCurrentPlatformInfo().GetCurNpuArch() == NpuArch::DAV_2201 && inputSupport)) {
         CHECK_RET(MaxDimCheck(x1DimNum, x2DimNum, x1Shape, x2Shape), false);
     }
 
