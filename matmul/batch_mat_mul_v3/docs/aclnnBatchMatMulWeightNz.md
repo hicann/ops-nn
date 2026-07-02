@@ -100,7 +100,7 @@ aclnnStatus aclnnBatchMatMulWeightNz(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td><ul><li>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
+      <td><ul><li>数据类型需要与self与mat2推导之后的数据类型满足推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</li>
       <li>各个维度表示：（b, m，n），m与self的m一致，n与mat2的n1以及n0满足ceil(n / n0) = n1的关系，b要与self的b和mat2的b经过broadcast推导后一致。</li>
       </ul></td>
       <td>BFLOAT16、FLOAT16</td>

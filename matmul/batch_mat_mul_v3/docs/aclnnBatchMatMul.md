@@ -99,7 +99,7 @@ aclnnStatus aclnnBatchMatMul(
       <td>out</td>
       <td>输出</td>
       <td>表示矩阵乘的输出矩阵，公式中的out。</td>
-      <td>数据类型需要与self与mat2推导之后的数据类型保持一致（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
+      <td>数据类型需要与self与mat2推导之后的数据类型满足推导规则（参见<a href="../../../docs/zh/context/互推导关系.md">互推导关系</a>和<a href="#约束说明">约束说明</a>）。</td>
       <td>BFLOAT16、FLOAT16、FLOAT32</td>
       <td>ND</td>
       <td>3</td>
