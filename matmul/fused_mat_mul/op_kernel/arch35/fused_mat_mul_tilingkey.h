@@ -231,7 +231,7 @@ ASCENDC_TPL_SEL(
         ASCENDC_TPL_TILING_STRUCT_SEL(MatMulV3KEqZeroBasicTilingData)),
 
 #endif
-#if !defined(__CCE_AICORE__) || __FIXED_POINT_ONLY_CUBE_TO_L0C__
+#if !defined(__CCE_AICORE__) || (defined(__FIXED_POINT_ONLY_CUBE_TO_L0C__) && __FIXED_POINT_ONLY_CUBE_TO_L0C__)
     /*AIC_ONLY*/
     // high, aswt, from bmmv3
     ASCENDC_TPL_ARGS_SEL(
