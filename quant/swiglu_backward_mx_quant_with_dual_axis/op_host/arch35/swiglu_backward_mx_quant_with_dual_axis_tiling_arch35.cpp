@@ -480,7 +480,7 @@ ge::graphStatus SwigluBackwardMxQuantWithDualAxisTiling::ComputeTilingParams()
     int64_t y2Ub = y1Ub;
     int64_t scale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE * DB * DIGIT_TWO;
     int64_t scale2Ub = (tilingParams_.blockW * DIGIT_TWO) *
-        ((tilingParams_.splitBlockH / SPLIT_BLOCK_H) * DIGIT_TWO) * DB;
+        ((tilingParams_.splitBlockH / SPLIT_BLOCK_H) * DIGIT_THREE) * DB;
     int64_t tmpScale1Ub = tilingParams_.splitBlockH * BLOCK_SIZE;
     int64_t tmpScale2Ub = gradXTileSize / BLOCK_SIZE * DIGIT_TWO * tilingParams_.dtypeSize;
     int64_t allNeedUb = xUb + yGradUb + gradXUb + y1Ub + y2Ub + scale1Ub + scale2Ub + tmpScale1Ub + tmpScale2Ub;

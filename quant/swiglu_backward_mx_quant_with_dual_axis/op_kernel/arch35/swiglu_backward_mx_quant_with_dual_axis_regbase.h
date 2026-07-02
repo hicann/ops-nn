@@ -30,6 +30,7 @@ using namespace AscendC;
 
 constexpr int64_t DB_BUFFER = 2;
 constexpr int64_t DIGIT_TWO = 2;
+constexpr int64_t DIGIT_THREE = 3;
 constexpr int64_t OUT_ELE_NUM_ONE_BLK = 64;
 constexpr uint16_t NAN_CUSTOMIZATION = 0x7f81;
 
@@ -223,7 +224,7 @@ SwigluBackwardMxQuantWithDualAxisBase<xDtype, y1Dtype, mode, roundMode, scaleAlg
     inHalfSize_ = ubRowLen_ * ubRowCount_;
     int64_t inBufferSize = inHalfSize_ * static_cast<int64_t>(sizeof(xDtype));
     int64_t gradXBufferSize = inHalfSize_ * DIGIT_TWO * static_cast<int64_t>(sizeof(xDtype));
-    int64_t mxScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO);
+    int64_t mxScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_THREE);
     int64_t mxScale1BufferSize = ubRowCount_ * UB_BLOCK_SIZE;
     int64_t tmpScale2BufferSize = (ubRowLen_ * DIGIT_TWO) * ((ubRowCount_ / DOUBLE_BLOCK_SIZE) * DIGIT_TWO)
         * static_cast<int64_t>(sizeof(xDtype));
