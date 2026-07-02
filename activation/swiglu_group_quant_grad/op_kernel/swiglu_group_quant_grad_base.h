@@ -77,8 +77,12 @@ public:
                                                      tileLength * sizeof(float));
             pipe.InitBuffer(yOriginQueue, BUFFER_NUM, tileLength * sizeof(float));
         }
+    }
 
+    __aicore__ inline void InitZeroOutTruncBuffer()
+    {
         if (truncValue < totalTokens) {
+            pipe.Reset();
             uint32_t zeroOutBufSize = (AlignUp(dim2H, FP32_32B_ALIGN_NUM) + FP32_32B_ALIGN_NUM) * sizeof(float);
             pipe.InitBuffer(zeroQueue, BUFFER_NUM, zeroOutBufSize);
         }
