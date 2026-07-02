@@ -304,7 +304,8 @@ void MatMulV3BasicAswtTiling::CheckTensorApiSupport()
     }
 
     // Matmul非切K且连续场景下才允许切换tensor api实现
-    apiLevel_ = (isMatmul && !isSlice && !isSplitK) ? MatMulV3ApiLevel::TENSOR_LEVEL : MatMulV3ApiLevel::BASIC_LEVEL;
+    apiLevel_ = (isMatmul && !isSlice && !isSplitK && !args_.isAvoidTensorApi) ? MatMulV3ApiLevel::TENSOR_LEVEL :
+                                                                                  MatMulV3ApiLevel::BASIC_LEVEL;
     // 1952当前只支持基础API
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
         apiLevel_ = MatMulV3ApiLevel::BASIC_LEVEL;

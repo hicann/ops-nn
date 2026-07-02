@@ -111,6 +111,7 @@ struct MatMulV3Args {
     uint64_t batchX3 = 1UL;
     bool hasX3Input = false;
     bool isForceGrpAccForFp32 = false;
+    bool isAvoidTensorApi = false;
     MatMulV3BatchInfo *batchInfo = nullptr;
 };
 
