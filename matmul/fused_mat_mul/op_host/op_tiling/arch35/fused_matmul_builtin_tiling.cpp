@@ -171,6 +171,55 @@ ge::graphStatus CheckGeluShapeDim(const gert::TilingContext& context, const MatM
     return ge::GRAPH_FAILED;
 }
 
+ge::graphStatus CheckAddMulX3Input(const gert::TilingContext& context, const MatMulV3Args& args)
+{
+    auto attrs = context.GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (!IsFusedMatMulAddMulOp(opType)) {
+        return ge::GRAPH_SUCCESS;
+    }
+    if (!args.hasX3Input || context.GetOptionalInputDesc(INPUT_X3_IDX) == nullptr ||
+        context.GetOptionalInputShape(INPUT_X3_IDX) == nullptr) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            args.opName, "opType, x3", Ops::NN::FormatString("%s, null", opType.c_str()).c_str(),
+            "The input x3 is required for add/mul op type");
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
+ge::graphStatus CheckAddMulBasicApiCapability(
+    const gert::TilingContext& context, const MatMulV3Args& args, const MatmulV3CompileInfo& compileInfo)
+{
+    auto attrs = context.GetAttrs();
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, attrs);
+    std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
+    if (!IsFusedMatMulAddMulOp(opType)) {
+        return ge::GRAPH_SUCCESS;
+    }
+    if (compileInfo.aivNum != (compileInfo.aicNum * NUM_TWO)) {
+        OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
+            args.opName, "aivNum, aicNum",
+            Ops::NN::FormatString("%lu, %lu", compileInfo.aivNum, compileInfo.aicNum).c_str(),
+            "FusedMatMul add/mul basic API requires aivNum == aicNum * 2");
+        return ge::GRAPH_FAILED;
+    }
+    auto x3Desc = context.GetOptionalInputDesc(INPUT_X3_IDX);
+    OPS_CHECK_NULL_WITH_CONTEXT(&context, x3Desc);
+    if (args.aFormat == ge::FORMAT_ND && args.bFormat == ge::FORMAT_ND &&
+        x3Desc->GetStorageFormat() == ge::FORMAT_ND) {
+        return ge::GRAPH_SUCCESS;
+    }
+    OP_LOGE_FOR_INVALID_FORMATS_WITH_REASON(
+        args.opName, "x1, x2, x3",
+        Ops::NN::FormatString("%s, %s, %s", ge::TypeUtils::FormatToSerialString(args.aFormat).c_str(),
+            ge::TypeUtils::FormatToSerialString(args.bFormat).c_str(), ge::TypeUtils::FormatToSerialString(x3Desc->GetStorageFormat()).c_str())
+            .c_str(),
+        "The storage formats of x1, x2 and x3 must be ND for add/mul op type");
+    return ge::GRAPH_FAILED;
+}
+
 ge::graphStatus CheckX3Shape(const gert::TilingContext& context, MatMulV3Args& args)
 {
     if (!args.hasX3Input) {
@@ -232,9 +281,15 @@ ge::graphStatus CheckBiasShape(const gert::TilingContext& context, const MatMulV
 }
 
 ge::graphStatus OpSpecificCheck(
-    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch)
+    const gert::TilingContext& context, MatMulV3Args& args, NpuArch npuArch, const MatmulV3CompileInfo& compileInfo)
 {
     if (CheckGeluShapeDim(context, args) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckAddMulX3Input(context, args) != ge::GRAPH_SUCCESS) {
+        return ge::GRAPH_FAILED;
+    }
+    if (CheckAddMulBasicApiCapability(context, args, compileInfo) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     if (CheckX3Shape(context, args) != ge::GRAPH_SUCCESS) {
@@ -250,6 +305,12 @@ ge::graphStatus OpSpecificCheck(
 
 namespace optiling {
 namespace fused_matmul {
+
+bool IsFusedMatMulAddMulOp(const std::string& opType)
+{
+    return opType == "add" || opType == "mul";
+}
+
 
 ge::graphStatus FusedMatMulBuiltInTiling::GetBmmBiasInfo(const gert::TilingContext &context, MatMulV3Args& args,
                                                     MatMulV3BatchInfo& batchInfo)
@@ -376,7 +437,9 @@ ge::graphStatus FusedMatMulBuiltInTiling::DoTiling()
         CUBE_INNER_ERR_REPORT(args_.opName, "GetBatchInfo failed"), return ge::GRAPH_FAILED);
     args_.batchInfo = &tempBatchInfo;
     // 获取全部args信息(包括batchInfo)后进行算子特殊校验
-    if (OpSpecificCheck(*context_, args_, npuArch_) != ge::GRAPH_SUCCESS) {
+    auto compileInfo = reinterpret_cast<const MatmulV3CompileInfo*>(context_->GetCompileInfo());
+    OPS_CHECK_NULL_WITH_CONTEXT(context_, compileInfo);
+    if (OpSpecificCheck(*context_, args_, npuArch_, *compileInfo) != ge::GRAPH_SUCCESS) {
         return ge::GRAPH_FAILED;
     }
     FusedMatmulTilingKey fusedMatmulTilingKey;

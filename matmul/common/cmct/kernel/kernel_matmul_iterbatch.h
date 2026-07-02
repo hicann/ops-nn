@@ -70,14 +70,21 @@ class KernelMatMulIterBatch<
         ((AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionAdd<float, float>>> ||
           AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::FusionMul<float, float>>> ||
+          AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<float, float, Block::DefaultFusion<float, float>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionAdd<half, half>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::FusionMul<half, half>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<half, half, Block::DefaultFusion<half, half>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_,
               Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionAdd<bfloat16_t, bfloat16_t>>> ||
+          AscendC::Std::is_base_of_v<
+              BlockEpilogue_,
+              Block::BlockEpilogueIterbatch<bfloat16_t, bfloat16_t, Block::FusionMul<bfloat16_t, bfloat16_t>>> ||
           AscendC::Std::is_base_of_v<
               BlockEpilogue_, Block::BlockEpilogueIterbatch<
                                   bfloat16_t, bfloat16_t, Block::DefaultFusion<bfloat16_t, bfloat16_t>>>) && 
@@ -86,6 +93,9 @@ class KernelMatMulIterBatch<
                typename BlockMmadBuilder_::BlockMatmulPolicy> ||
            AscendC::Std::is_same_v<
                MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_ADD>,
+               typename BlockMmadBuilder_::BlockMatmulPolicy> ||
+           AscendC::Std::is_same_v<
+               MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_MUL>,
                typename BlockMmadBuilder_::BlockMatmulPolicy> ||
            AscendC::Std::is_same_v<
                MatmulIterBatch<MatMulL0C2Out::ND_FIXPIPE_1_2, AscendC::Shape<_0, _0, _0, _0>, OP_TYPE_RELU>,

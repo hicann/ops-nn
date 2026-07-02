@@ -202,6 +202,8 @@ struct MatmulMergeBatch {
     using SingleShape = SingleCoreShape;
     constexpr static bool enableInputDataLenCheck = false;
     constexpr static bool enableRelu = (FUSED_OPTYPE_ == OP_TYPE_RELU);
+    constexpr static bool enableAdd = (FUSED_OPTYPE_ == OP_TYPE_ADD);
+    constexpr static bool enableMul = (FUSED_OPTYPE_ == OP_TYPE_MUL);
 };
 
 template <class SingleCoreShape = AscendC::Shape<_0, _0, _0, _0>>

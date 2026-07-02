@@ -13,6 +13,7 @@
  * \brief
  */
 #include "fused_matmul_basic_streamk_tiling.h"
+#include "fused_matmul_builtin_tiling.h"
 #include "fused_matmul_builtin_tiling_strategy.h"
 #include "fused_matmul_common.h"
 #include "matmul/mat_mul_v3/op_host/op_tiling/arch35/matmul_tiling_registry.h"
@@ -63,9 +64,10 @@ bool FusedMatMulBatchStreamKTiling::IsCapable()
     auto attrs = context_->GetAttrs();
     OPS_CHECK_NULL_WITH_CONTEXT(context_, attrs);
     std::string opType = attrs->GetAttrPointer<char>(ATTR_OP_TYPE_IDX);
-    if (opType != "relu" && !opType.empty()) {
+    if (opType != "relu" && opType != "add" && opType != "mul" && !opType.empty()) {
         return false;
     }
+
     return BatchMatMulV3BasicStreamKTiling::IsCapable();
 }
 

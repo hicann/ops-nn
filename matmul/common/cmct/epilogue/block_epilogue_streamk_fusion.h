@@ -40,6 +40,8 @@ public:
         GM_ADDR cGmAddr{nullptr};
         GM_ADDR workspaceGmAddr{nullptr};
         GM_ADDR x3GmAddr{nullptr};
+        bool x3BatchBroadcast{false};
+        uint64_t x3M{0};
     };
 
     using Params = Arguments;
@@ -68,6 +70,8 @@ public:
     uint64_t round_ = 1;
     uint64_t aivMte2Num_ = 0;
     uint64_t usedCoreNum_ = 0;
+    bool x3BatchBroadcast_ = false;
+    uint64_t x3M_ = 0;
 
     constexpr static uint16_t FLAG_0 = 0;
 
@@ -115,6 +119,8 @@ public:
         cGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ OutType*>(params.cGmAddr));
         workspaceGlobal_.SetGlobalBuffer(reinterpret_cast<__gm__ WorkspaceType*>(params.workspaceGmAddr));
         x3Global_.SetGlobalBuffer(reinterpret_cast<__gm__ OutType*>(params.x3GmAddr));
+        x3BatchBroadcast_ = params.x3BatchBroadcast;
+        x3M_ = params.x3M;
         ICachePreLoad(NUM_TWO);
         if (!checkIsSkScene) {
             AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(FLAG_0);
@@ -188,7 +194,11 @@ public:
             DATABLOCK_SIZE)) / DATABLOCK_SIZE);
         DataCopyExtParams x3Params{static_cast<uint16_t>(copyGm2UbParams_.mBurst),
             x3RowBytes, x3SrcGap, x3DstGap, 0};
-        AscendC::DataCopyPad(ubX3, x3Global_[copyUb2GmParams_.offsetCGm],
+        uint64_t x3Offset = copyUb2GmParams_.offsetCGm;
+        if (x3BatchBroadcast_ && x3M_ > 0) {
+            x3Offset = x3Offset % (x3M_ * n_);
+        }
+        AscendC::DataCopyPad(ubX3, x3Global_[x3Offset],
                              x3Params, {false, 0, 0, 0});
         AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
         AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(FLAG_0);
