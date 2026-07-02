@@ -2910,16 +2910,6 @@
   </tr>
   <tr>
     <td>norm</td>
-    <td><a href="../../norm/bn_infer_grad/README.md">bn_infer_grad</a></td>
-    <td>✓</td>
-    <td>✓</td>
-    <td>✗</td>
-    <td>✓</td>
-    <td>AI Core</td>
-    <td>计算BatchNorm在推理模式（training=False）下输入数据关于损失函数的梯度，等价于PyTorch batch_norm_backward(..., training=false, ...)中grad_input的子计算。</td>
-  </tr>
-  <tr>
-    <td>norm</td>
     <td><a href="../../norm/bn_training_reduce/README.md">bn_training_reduce</a></td>
     <td>✗</td>
     <td>✗</td>
