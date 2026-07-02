@@ -1358,7 +1358,8 @@ matmul@ops-nn:
         - ops/ops-nn/matmul/batch_mat_mul_v3/op_kernel/arch35/
         - ops/ops-nn/matmul/common/
         - ops/ops-nn/matmul/fused_mat_mul/
-        - ops/ops-nn/matmul/gemm_v3/
+        - ops/ops-nn/matmul/gemm_v3/op_kernel/arch35/
+        - ops/ops-nn/matmul/gemm_v3/op_host/op_tiling/arch35/
         - ops/ops-nn/matmul/mat_mul_v3/op_graph/
         - ops/ops-nn/matmul/mat_mul_v3/op_host/op_api/
         - ops/ops-nn/matmul/mat_mul_v3/op_host/op_tiling/arch35/
