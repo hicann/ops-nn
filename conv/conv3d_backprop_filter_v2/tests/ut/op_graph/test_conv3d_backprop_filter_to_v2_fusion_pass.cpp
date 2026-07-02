@@ -30,7 +30,7 @@ void SetPlatform(const std::string& soc)
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
-    platformInfo.soc_info.ai_core_cnt = 64;
+    platformInfo.soc_info.ai_core_cnt = 32;
     platformInfo.str_info.short_soc_version = soc;
     optionalInfo.soc_version = soc;
     if (soc == "Ascend950" || soc == "MC62CM12A") {
@@ -256,19 +256,39 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, dhwcFormatCase)
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
 }
 
-// Test 10: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,256,32,32,32}: D=32; output NDHWC {2,1,8,8,256}: cin=256, cout=2;
-// totalCount=di*cin*cout=32*256*2=16384; 阈值=coreCount*32*32*6=393216; 16384<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, largeDivideKCase)
+// Test 10: shapeLimitExceededNoTranspose - 3D 大 shape，totalCount 超过阈值，不需要 Transpose
+// 32核: di=16, cin=256, cout=128, totalCount=524288 > shapeLimit=131072 (32*1024*4)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, shapeLimitExceededNoTranspose)
 {
-    auto builder = es::EsGraphBuilder("largeDivideKCase");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 256, 32, 32, 32});
+    auto builder = es::EsGraphBuilder("shapeLimitExceededNoTranspose");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 256, 16, 16, 16});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 16, 16, 512});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 256});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 256}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 256}, FORMAT_NDHWC);
+
+    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
+    CustomPassContext ctx;
+    ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
+    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
+    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
+    EXPECT_FALSE(CheckNodeExists(graph, "Transpose"));
+}
+
+// Test 11: diEqualsOneNeedTranspose - 2D 场景(di==1)，totalCount 未超阈值，需要 Transpose
+// 32核: di=1, cin=32, cout=2, totalCount=64 <= shapeLimit=16384 (16*1024)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, diEqualsOneNeedTranspose)
+{
+    auto builder = es::EsGraphBuilder("diEqualsOneNeedTranspose");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 1, 16, 16});
+    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 4, 4, 32});
+
+    auto y = CreateConv3dBpFilterNode(
+        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -278,107 +298,39 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, largeDivideKCase)
     EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 11: x DHWCN format, output NDHWC - x 为 DHWCN 格式，验证 GetInputDepthDim DHWCN 分支
-// coreCount=64; x DHWCN {4,8,8,16,2}: D=4; output NDHWC {2,1,4,4,16}: cin=16, cout=2;
-// totalCount=di*cin*cout=4*16*2=128; 阈值=coreCount*32*32*6=393216; 128<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, xDhwcnFormatNeedTranspose)
+// Test 12: diEqualsOneShapeLimitExceeded - 2D 场景(di==1)，totalCount 超过阈值，不需要 Transpose
+// 32核: di=1, cin=256, cout=256, totalCount=65536 > shapeLimit=16384 (16*1024)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, diEqualsOneShapeLimitExceeded)
 {
-    auto builder = es::EsGraphBuilder("xDhwcnFormatNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_DHWCN, {4, 8, 8, 16, 2});
+    auto builder = es::EsGraphBuilder("diEqualsOneShapeLimitExceeded");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {256, 256, 1, 16, 16});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 4, 4, 16});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {256, 1, 4, 4, 256});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 16}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {256, 1, 4, 4, 256}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
     ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
     EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
-    EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
+    EXPECT_FALSE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 12: x NDHWC format, output DHWCN - x 为 NDHWC 格式，验证 GetInputDepthDim NDHWC 分支
-// coreCount=64; x NDHWC {2,16,8,8,32}: D=16; output DHWCN {8,8,16,32,2}: cin=32, cout=2;
-// totalCount=di*cin*cout=16*32*2=1024; 阈值=coreCount*32*32*6=393216; 1024<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, xNdhwcFormatOutputDhwcn)
+// Test 13: xNdwhcFormatCase - x 输入为 NDHWC 格式，GetInputDepthDim 走 NDHWC 分支
+// 32核: x: NDHWC, di=x[1]=16; totalCount=16*32*2=1024 <= shapeLimit=131072 (32*1024*4)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, xNdwhcFormatCase)
 {
-    auto builder = es::EsGraphBuilder("xNdhwcFormatOutputDhwcn");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NDHWC, {2, 16, 8, 8, 32});
-    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 4, 4, 64});
-
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {8, 8, 16, 32, 2}, FORMAT_DHWCN);
-
-    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
-    CustomPassContext ctx;
-    ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
-    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
-    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
-    EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
-}
-
-// Test 13: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,512,16,16,16}: D=16; output NDHWC {2,1,8,8,512}: cin=512, cout=2;
-// totalCount=di*cin*cout=16*512*2=16384; 阈值=coreCount*32*32*6=393216; 16384<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, largeCinNeedTranspose)
-{
-    auto builder = es::EsGraphBuilder("largeCinNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 512, 16, 16, 16});
-    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 1024});
-
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 512}, FORMAT_NDHWC);
-
-    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
-    CustomPassContext ctx;
-    ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
-    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
-    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
-    EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
-}
-
-// Test 14: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NDHWC {2,256,16,16,16}: D=256; output NDHWC {2,1,8,8,64}: cin=64, cout=2;
-// totalCount=di*cin*cout=256*64*2=32768; 阈值=coreCount*32*32*6=393216; 32768<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, xNdhwcLargeDepthNeedTranspose)
-{
-    auto builder = es::EsGraphBuilder("xNdhwcLargeDepthNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NDHWC, {2, 256, 16, 16, 16});
-    auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 128});
-
-    auto y = CreateConv3dBpFilterNode(
-        builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 64}, FORMAT_NDHWC);
-
-    std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
-    CustomPassContext ctx;
-    ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
-    EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
-    EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
-    EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
-}
-
-// Test 15: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,32,96,16,16}: D=96; output NDHWC {2,1,8,8,32}: cin=32, cout=2;
-// totalCount=di*cin*cout=96*32*2=6144; 阈值=coreCount*32*32*6=393216; 6144<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, cond1BoundaryNeedTranspose)
-{
-    auto builder = es::EsGraphBuilder("cond1BoundaryNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 96, 16, 16});
+    auto builder = es::EsGraphBuilder("xNdwhcFormatCase");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NDHWC, {2, 16, 16, 16, 32});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 32}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -388,19 +340,18 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, cond1BoundaryNeedTranspose)
     EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 16: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,32,192,16,16}: D=192; output NDHWC {2,1,8,8,32}: cin=32, cout=2;
-// totalCount=di*cin*cout=192*32*2=12288; 阈值=coreCount*32*32*6=393216; 12288<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, cond2BoundaryNeedTranspose)
+// Test 14: xDhwhnFormatCase - x 输入为 DHWCN 格式，GetInputDepthDim 走 DHWCN 分支
+// 32核: x: DHWCN, di=x[0]=16; totalCount=16*32*2=1024 <= shapeLimit=131072 (32*1024*4)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, xDhwhnFormatCase)
 {
-    auto builder = es::EsGraphBuilder("cond2BoundaryNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 192, 16, 16});
+    auto builder = es::EsGraphBuilder("xDhwhnFormatCase");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_DHWCN, {16, 16, 16, 32, 2});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 32}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -410,19 +361,18 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, cond2BoundaryNeedTranspose)
     EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 17: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,32,193,16,16}: D=193; output NDHWC {2,1,8,8,32}: cin=32, cout=2;
-// totalCount=di*cin*cout=193*32*2=12352; 阈值=coreCount*32*32*6=393216; 12352<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, midDepthNeedTranspose)
+// Test 15: boundary3DNeedTranspose - 3D 边界值，totalCount 恰好等于 shapeLimit，需要 Transpose
+// 32核: di=32, cin=32, cout=128, totalCount=131072 == shapeLimit=131072 (32*1024*4)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, boundary3DNeedTranspose)
 {
-    auto builder = es::EsGraphBuilder("midDepthNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 193, 16, 16});
+    auto builder = es::EsGraphBuilder("boundary3DNeedTranspose");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {128, 32, 32, 16, 16});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 32});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 32}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 32}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -432,19 +382,18 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, midDepthNeedTranspose)
     EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 18: totalCount 在阈值内 - di>1 时 totalCount <= coreCount*32*32*6，需要 Transpose
-// coreCount=64; x NCDHW {2,32,33,16,16}: D=33; output NDHWC {2,1,8,8,32}: cin=32, cout=2;
-// totalCount=di*cin*cout=33*32*2=2112; 阈值=coreCount*32*32*6=393216; 2112<=393216 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, smallDepthNeedTranspose)
+// Test 16: boundary2DNeedTranspose - 2D 边界值，totalCount 恰好等于 shapeLimit，需要 Transpose
+// 32核: di=1, cin=128, cout=128, totalCount=16384 == shapeLimit=16384 (16*1024)
+TEST_F(Conv3dBpFilterToV2FusionPassTest, boundary2DNeedTranspose)
 {
-    auto builder = es::EsGraphBuilder("smallDepthNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 33, 16, 16});
+    auto builder = es::EsGraphBuilder("boundary2DNeedTranspose");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {128, 128, 1, 16, 16});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
-    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
+    auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {128, 1, 4, 4, 128});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 32}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {128, 1, 4, 4, 128}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
@@ -454,24 +403,24 @@ TEST_F(Conv3dBpFilterToV2FusionPassTest, smallDepthNeedTranspose)
     EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
 }
 
-// Test 19: totalCount 在阈值内 - di==1 时 totalCount <= coreCount*32*32/2，需要 Transpose
-// coreCount=64; x NCDHW {2,33,1,16,16}: D=1; output NDHWC {2,1,8,8,33}: cin=33, cout=2;
-// totalCount=di*cin*cout=1*33*2=66; 阈值=coreCount*32*32/2=32768; 66<=32768 → 需要Transpose
-TEST_F(Conv3dBpFilterToV2FusionPassTest, ceilRoundingNeedTranspose)
+// Test 17: coreCountZeroNoTranspose - coreCount 为 0，不需要 Transpose
+TEST_F(Conv3dBpFilterToV2FusionPassTest, coreCountZeroNoTranspose)
 {
-    auto builder = es::EsGraphBuilder("ceilRoundingNeedTranspose");
-    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 33, 1, 16, 16});
+    PlatformInfoManager::Instance().platform_info_map_["Ascend950"].soc_info.ai_core_cnt = 0;
+
+    auto builder = es::EsGraphBuilder("coreCountZeroNoTranspose");
+    auto x = builder.CreateInput(0, "x", DT_FLOAT16, FORMAT_NCDHW, {2, 32, 16, 16, 16});
     auto filterSize = builder.CreateInput(1, "filter_size", DT_INT64, FORMAT_ND, {5});
     auto outBackprop = builder.CreateInput(2, "out_backprop", DT_FLOAT16, FORMAT_NDHWC, {2, 1, 8, 8, 64});
 
     auto y = CreateConv3dBpFilterNode(
         builder, "Conv3DBackpropFilter", x, filterSize, outBackprop, {1, 1, 1, 1, 1}, {0, 0, 0, 0, 0, 0},
-        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 8, 8, 33}, FORMAT_NDHWC);
+        {1, 1, 1, 1, 1}, 1, "NCDHW", DT_FLOAT16, {2, 1, 4, 4, 32}, FORMAT_NDHWC);
 
     std::shared_ptr<Graph> graph = builder.BuildAndReset({y});
     CustomPassContext ctx;
     ops::Conv3DBackpropFilterToV2FusionPass pass({AscendString("Conv3DBackpropFilter")});
     EXPECT_EQ(pass.Run(graph, ctx), SUCCESS);
     EXPECT_TRUE(CheckNodeExists(graph, "Conv3DBackpropFilterV2"));
-    EXPECT_TRUE(CheckNodeExists(graph, "Transpose"));
+    EXPECT_FALSE(CheckNodeExists(graph, "Transpose"));
 }
