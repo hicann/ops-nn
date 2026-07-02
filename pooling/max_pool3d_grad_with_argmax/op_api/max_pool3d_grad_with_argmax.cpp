@@ -96,15 +96,15 @@ const aclTensor* MaxPool3DGradWithArgmax(
     const int64_t strideH = (strideRef.Size() == 0) ? kernelH : ((strideRef.Size() == 1) ? strideD : strideRef[1]);
     const int64_t strideW = (strideRef.Size() == 0) ? kernelW : ((strideRef.Size() == 1) ? strideD : strideRef[2]);
 
-    const aclIntArray& paddingRef = *padding;
-    const int64_t paddingD = paddingRef[0];
-    const int64_t paddingH = (paddingRef.Size() == 1) ? paddingD : paddingRef[1];
-    const int64_t paddingW = (paddingRef.Size() == 1) ? paddingD : paddingRef[2];
-
     const aclIntArray& dilationRef = *dilation;
     const int64_t dilationD = dilationRef[0];
     const int64_t dilationH = (dilationRef.Size() == 1) ? dilationD : dilationRef[1];
     const int64_t dilationW = (dilationRef.Size() == 1) ? dilationD : dilationRef[2];
+
+    const aclIntArray& paddingRef = *padding;
+    const int64_t paddingD = paddingRef[0];
+    const int64_t paddingH = (paddingRef.Size() == 1) ? paddingD : paddingRef[1];
+    const int64_t paddingW = (paddingRef.Size() == 1) ? paddingD : paddingRef[2];
 
     FVector<int64_t> kernelSizeData{kernelD, kernelH, kernelW};
     FVector<int64_t> strideSizeData{strideD, strideH, strideW};
