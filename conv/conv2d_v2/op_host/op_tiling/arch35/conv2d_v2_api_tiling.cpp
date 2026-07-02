@@ -1005,7 +1005,7 @@ bool Conv2dTiling::CheckFixpipeLimits()
     if (descInfo.fMapType.format == ConvFormat::NHWC && outputOrder == static_cast<int8_t>(OutputOrder::HW) &&
         fixpipeLoop3DstStride > fixpipeLoop3DstStrideLimit) {
         OP_LOGE(nodeType,
-            "Output shape does not satisfy Fixpipe's limits: wout(%lu)*cout(%lu)=%lu, which must <= %lu",
+            "Output shape does not satisfy Fixpipe's limits: wout(%ld)*cout(%ld)=%lu, which must <= %lu",
             shapeInfo.orgWo, shapeInfo.orgCo, fixpipeLoop3DstStride, fixpipeLoop3DstStrideLimit);
         return false;
     }

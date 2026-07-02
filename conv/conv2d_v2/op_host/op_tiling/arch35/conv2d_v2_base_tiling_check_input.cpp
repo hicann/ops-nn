@@ -269,8 +269,6 @@ ge::graphStatus Conv2dBaseTiling::ParseBiasShape()
         return ge::GRAPH_FAILED;
     }
 
-    auto weightShapePtr = context_->GetInputShape(INPUT_WEIGHT_INDEX);
-    auto weightShape = GetWeightShape(weightShapePtr);
     size_t idxC = 0;
     auto biasDesc = context_->GetOptionalInputDesc(INPUT_BIAS_INDEX);
     if (biasDesc == nullptr) {
