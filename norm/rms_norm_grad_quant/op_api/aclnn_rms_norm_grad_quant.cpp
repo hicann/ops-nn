@@ -62,7 +62,7 @@ static const aclTensor* GetTensorContiguous(const aclTensor* opt, aclOpExecutor*
 aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
     const aclTensor* dy, const aclTensor* x, const aclTensor* rstd, const aclTensor* gamma,
     const aclTensor* scalesX, const aclTensor* offsetXOptional,
-    char* quantMode, bool divMode,
+    const char* quantMode, bool divMode,
     aclTensor* dxOut, aclTensor* dgammaOut, uint64_t* workspaceSize, aclOpExecutor** executor)
 {
     OP_CHECK_COMM_INPUT(workspaceSize, executor);

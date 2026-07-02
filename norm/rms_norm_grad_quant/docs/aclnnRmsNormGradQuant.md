@@ -51,7 +51,7 @@ aclnnStatus aclnnRmsNormGradQuantGetWorkspaceSize(
   const aclTensor *scalesX,
   const aclTensor *offsetXOptional,
   const char      *quantMode,
-  const bool       divMode,
+  bool             divMode,
   aclTensor       *dxOut,
   aclTensor       *dgammaOut,
   uint64_t        *workspaceSize,
