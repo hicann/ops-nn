@@ -11,6 +11,7 @@
 - 算子功能：计算二元交叉熵损失函数对输入的梯度，用于反向传播
 
 - 计算公式：
+
 给定样本真实标签 (logits)、模型预测概率 (labels)、上游梯度 (grad) 及可选权重 (weight)，算子逐元素计算关于预测值的梯度 (Z)：
 $$
 z_i= weight_i * grad_i * （logits_i - labels_i）

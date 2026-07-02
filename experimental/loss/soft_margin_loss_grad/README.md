@@ -1,6 +1,6 @@
 # SoftMarginLossGrad
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -17,6 +17,7 @@ grad\_input = -target \times \frac{exp(-target \times self)}{1 + exp(-target \ti
 $$
 
 其中：
+
 - 当 `reduction="mean"` 时，`cof = 1.0 / (shape_size)`
 - 当 `reduction="none"` 时，`cof = 1.0`
 

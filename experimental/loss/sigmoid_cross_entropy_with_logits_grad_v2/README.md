@@ -55,71 +55,71 @@ $$
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
-	<col style="width: 190px">
-	<col style="width: 170px">
-	<col style="width: 360px">
-	<col style="width: 220px">
-	<col style="width: 110px">
-	</colgroup>
-	<thead>
-		<tr>
-			<th>参数名</th>
-			<th>输入/输出/属性</th>
-			<th>描述</th>
-			<th>数据类型</th>
-			<th>数据格式</th>
-		</tr></thead>
-	<tbody>
-		<tr>
-			<td>predict</td>
-			<td>输入</td>
-			<td>模型输出 logits。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>target</td>
-			<td>输入</td>
-			<td>标签张量。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>dout</td>
-			<td>输入</td>
-			<td>上游梯度输入。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>weight</td>
-			<td>可选输入</td>
-			<td>样本权重。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>pos_weight</td>
-			<td>可选输入</td>
-			<td>正样本权重。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>reduction</td>
-			<td>可选属性</td>
-			<td>支持 none、mean、sum。</td>
-			<td>STRING / INT64（接口映射）</td>
-			<td>-</td>
-		</tr>
-		<tr>
-			<td>gradient</td>
-			<td>输出</td>
-			<td>梯度输出。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-	</tbody></table>
+    <col style="width: 190px">
+    <col style="width: 170px">
+    <col style="width: 360px">
+    <col style="width: 220px">
+    <col style="width: 110px">
+    </colgroup>
+    <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      </tr></thead>
+    <tbody>
+      <tr>
+      <td>predict</td>
+      <td>输入</td>
+      <td>模型输出 logits。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>target</td>
+      <td>输入</td>
+      <td>标签张量。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>dout</td>
+      <td>输入</td>
+      <td>上游梯度输入。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>weight</td>
+      <td>可选输入</td>
+      <td>样本权重。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>pos_weight</td>
+      <td>可选输入</td>
+      <td>正样本权重。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>reduction</td>
+      <td>可选属性</td>
+      <td>支持 none、mean、sum。</td>
+      <td>STRING / INT64（接口映射）</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>gradient</td>
+      <td>输出</td>
+      <td>梯度输出。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+    </tbody></table>
 
 ## 约束说明
 
