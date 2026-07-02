@@ -574,7 +574,6 @@ private:
             if constexpr (isDynamic) {
                 And(vdMaxExpOnly, vdMaxExp, expMask, preMaskScale);
                 Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExpOnly, expMask, preMaskScale);
-                Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExpOnly, zeroRegTensor, preMaskScale);
                 Compare<uint16_t, CMPMODE::LT>(invalidDataMask, vdMaxExpOnly, maxExpValue, preMaskScale);
                 Add(vdMaxExpAdd, vdMaxExp, addValue, preMaskScale);
                 And(vdMaxExpAdd, vdMaxExpAdd, expMask, preMaskScale);
@@ -582,7 +581,6 @@ private:
                 Sub(sharedExp, vdMaxExpAdd, maxExpValue, preMaskScale);
             } else {
                 Compare<uint16_t, CMPMODE::NE>(cmpResult, vdMaxExp, expMask, preMaskScale);
-                Compare<uint16_t, CMPMODE::NE>(zeroMask, vdMaxExp, zeroRegTensor, preMaskScale);
                 Compare<uint16_t, CMPMODE::LE>(invalidDataMask, vdMaxExp, maxExpValue, preMaskScale);
                 Select<uint16_t>(vdMaxExp, maxExpValue, vdMaxExp, invalidDataMask);
                 Sub(sharedExp, vdMaxExp, maxExpValue, preMaskScale);
@@ -590,10 +588,9 @@ private:
 
             ShiftRights(scaleValue, sharedExp, SHR_NUM_FOR_BF16, preMaskScale);
             Select<uint16_t>(scaleValue, scaleValue, fp8NanRegTensor, cmpResult);
-            Select<uint16_t>(scaleValue, scaleValue, zeroRegTensor, zeroMask);
             StoreAlign<uint16_t, PostLiteral::POST_MODE_UPDATE, StoreDist::DIST_PACK_B16>(
                 dstPtr, scaleValue, vfLen32, preMaskScale);
-
+            Compare<uint16_t, CMPMODE::NE>(zeroMask, sharedExp, zeroRegTensor, preMaskScale);
             Compare<uint16_t, CMPMODE::EQ>(specialDataMask, sharedExp, scaleBias, preMaskScale);
             Sub(halfScale, scaleBias, sharedExp, preMaskScale);
             Select<uint16_t>(halfScale, halfScale, nanRegTensor, cmpResult);
