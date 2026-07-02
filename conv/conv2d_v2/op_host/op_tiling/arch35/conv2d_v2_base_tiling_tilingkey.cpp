@@ -208,6 +208,9 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
 
 bool Conv2dBaseTiling::IsSmallKernelBlocked()
 {
+    if (flagInfo_.disContinuousFlag) {
+        return true;
+    }
     // Not support weight ub, multi-batch, N-L0 mismatch, C04.
     if ((tilingData_.get_bUbNStep() > 0 && tilingData_.get_bUbKStep() > 0) ||
         static_cast<uint64_t>(tilingData_.get_singleCoreBatch()) != 1 ||
