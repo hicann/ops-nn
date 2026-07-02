@@ -24,4 +24,4 @@ $x1_i = x1_i \times x2_i$
 
 ## 约束说明
 
-无
+- inplace操作的输入/输出不支持非连续Tensor。

@@ -24,4 +24,4 @@ $x_i = x_i - scalar$
 
 ## 约束说明
 
-无
+- inplace操作的输入/输出不支持非连续Tensor。
