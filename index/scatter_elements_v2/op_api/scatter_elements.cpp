@@ -571,7 +571,6 @@ static bool NoTransposeShapeCheck(const aclTensor* data, const aclTensor* indice
     auto indicesShape = indices->GetViewShape();
     auto updatesShape = updates->GetViewShape();
     auto dataDimNum = dataShape.GetDimNum();
-    
     // 尾轴场景本就不需要transpose 走原有分支即可
     if (axis == dataDimNum - 1 && updatesShape.GetDimNum() != 0 && data->GetDataType() != op::DataType::DT_BOOL) {
         return false;

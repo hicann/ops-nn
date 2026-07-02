@@ -64,7 +64,7 @@ void IndexCheck(
         return;
     }
 
-    if (bounds->Size() != indices->Size()) {
+    if (static_cast<int64_t>(bounds->Size()) != static_cast<int64_t>(indices->Size())) {
         OP_LOGW("bounds size %d not equal indices size %d, skip IndexCheck.", bounds->Size(), indices->Size());
         return;
     }

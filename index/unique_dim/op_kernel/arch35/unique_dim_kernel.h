@@ -506,7 +506,6 @@ private:
         int64_t cntPerCore = CeilDiv64(numOut, coreNum_);
         int64_t cntStart = coreId_ * cntPerCore;
         int64_t cntEnd = Min64(cntStart + cntPerCore, numOut);
-
         if (cntStart < cntEnd) {
             asc_vf_call<SimtComputeCounts>(
                 dim3(blockDimX_),

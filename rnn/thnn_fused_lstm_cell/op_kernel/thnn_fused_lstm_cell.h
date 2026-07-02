@@ -416,7 +416,6 @@ __aicore__ inline void CopyOut(const LocalTensor<dtype>& ub, const GlobalTensor<
     DataCopyPad(gm, ub, copyParams);
 }
 
-
 public:
 const ThnnFusedLstmCellTilingData& tilingData;
 TPipe pipe;

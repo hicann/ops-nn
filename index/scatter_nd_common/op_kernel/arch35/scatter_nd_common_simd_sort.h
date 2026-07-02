@@ -51,7 +51,6 @@ template <typename T, typename U, typename CAST_T, typename OFFSET_T, uint32_t c
 __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType, Mode>::Init(
     GM_ADDR var, GM_ADDR indices, GM_ADDR updates, GM_ADDR y)
 {
-
     this->eachCoreAfterAxisCount_ = tilingData_.eachCoreAfterAxisCount;
     this->indexRankSize_ = tilingData_.indexRankSize;
     this->eachCoreIndexCount_ = tilingData_.eachCoreIndexCount;
@@ -167,7 +166,6 @@ __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType,
         }
     }
 }
-
 
 template <typename T, typename U, typename CAST_T, typename OFFSET_T, uint32_t castType, uint8_t Mode>
 __aicore__ inline void ScatterNdCommonSimdSort<T, U, CAST_T, OFFSET_T, castType, Mode>::ProcessSplitIndicesSingleCol()

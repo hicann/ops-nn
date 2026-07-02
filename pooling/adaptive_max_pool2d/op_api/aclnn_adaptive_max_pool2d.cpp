@@ -336,7 +336,8 @@ static aclnnStatus Handle910DCase(
     int64_t wValueRemainder = wiValue % (*outputSize)[1];
     bool ifTranMaxPool3D = hValueRemainder == 0 && wValueRemainder == 0;
     const aclTensor* inputContiguousReshape = inputContiguous;
-    if (inputDimNum == 3 && !ifTranMaxPool3D) { // 转ada 2d
+    constexpr int64_t DIM_1D = 3;
+    if (inputDimNum == DIM_1D && !ifTranMaxPool3D) { // 转ada 2d
         inputContiguousReshape = View3Das4D(inputContiguous, executor);
     } else if (ifTranMaxPool3D) { // 转max3d
         inputContiguousReshape = inputDimNum == 3 ? View3Das5D(inputContiguous, executor) :

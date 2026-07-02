@@ -1194,7 +1194,7 @@ bool IsSpecialScene(const aclTensor* selfRef, FVector<int64_t, DIMLIMIT> masks, 
     }
 
     int64_t selfDimNum = selfRef->GetViewShape().GetDimNum();
-    while(masks.size() < selfDimNum) {
+    while(masks.size() < static_cast<size_t>(selfDimNum)) {
         masks.emplace_back(0);
     }
     int64_t masksSize = static_cast<int64_t>(masks.size());
@@ -1258,7 +1258,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
   if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
     GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
     int64_t indicesSize = static_cast<int64_t>(indices->Size());
-    if (indicesSize <= MAX_SUPPORT_DIMS_NUMS) {
+    if (indicesSize <= static_cast<int64_t>(MAX_SUPPORT_DIMS_NUMS)) {
       FVector<const aclTensor*, MAX_SUPPORT_DIMS_NUMS> indicesTensors;
       FVector<bool, MAX_SUPPORT_DIMS_NUMS> dimMask;
       for (int64_t i = 0; i < indicesSize; ++i) {
@@ -1371,7 +1371,7 @@ aclnnStatus aclnnIndexPutImplGetWorkspaceSize(aclTensor *selfRef,
               valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_FLOAT, uniqueExecutor.get());
           }
           OP_LOGD("Begin cast int8, uint8 to int32");
-          if (selfRef->GetDataType() == op::DataType::DT_INT8 && !usePutV2SpeOpt || selfRef->GetDataType() == op::DataType::DT_UINT8) {
+          if ((selfRef->GetDataType() == op::DataType::DT_INT8 && !usePutV2SpeOpt) || selfRef->GetDataType() == op::DataType::DT_UINT8) {
               selfCast = l0op::Cast(selfRefContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
               valuesCast = l0op::Cast(valuesContiguous, op::DataType::DT_INT32, uniqueExecutor.get());
           }

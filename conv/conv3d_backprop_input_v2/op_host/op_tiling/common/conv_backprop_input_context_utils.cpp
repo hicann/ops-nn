@@ -493,7 +493,7 @@ static void GetNCDHWShape(const T &origin_shape, Shape &ncdhw_shape, const ge::F
   }
 }
 
-static bool CheckTransposeOutputdingRange(gert::TilingContext *context, Conv3dBpInputV2RunInfo& runInfoV2, OtherParams& otherParams)
+static bool CheckTransposeOutputdingRange(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo& runInfoV2, const OtherParams& otherParams)
 {
   // outputPadding值需要小于同维度dilation或stride
   OP_CHECK_IF(
@@ -931,7 +931,7 @@ static bool CheckAllZero(const T *tensor_data, size_t dim_size) {
   return true;
 }
 
-static bool CheckInputSizeAllZero(gert::TilingContext *context, bool &allzero) {
+static bool CheckInputSizeAllZero(const gert::TilingContext *context, bool &allzero) {
   auto input_size = context->GetInputTensor(INPUT_SIZE_INDEX);
   OP_CHECK_IF(input_size == nullptr, CUBE_INNER_ERR_REPORT(context->GetNodeName(), "get input size fail"), return false);
   size_t input_size_dim_num = static_cast<size_t>(input_size->GetOriginShape().GetShapeSize());
@@ -1068,7 +1068,7 @@ static bool CalPads(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInf
   return CheckCalPads(context, runInfoV2, op_type, otherParams);
 }
 
-static int32_t CalFmapH(gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams)
+static int32_t CalFmapH(const gert::TilingContext *context, const Conv3dBpInputV2RunInfo &runInfoV2, const OtherParams& otherParams)
 {
     int32_t minBaseM = 1024;
 
@@ -1214,7 +1214,7 @@ static inline bool CheckRange(int32_t value, int32_t value_low, int32_t value_up
   return true;
 }
 
-static bool CalModifyBackpropPadD(gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
+static bool CalModifyBackpropPadD(const gert::TilingContext *context, Conv3dBpInputV2RunInfo &runInfoV2, OtherParams& otherParams) {
   Shape &dedyShape = otherParams.a_shape;
   Shape &filterShape = otherParams.b_shape;
   Shape &dedxShape = otherParams.c_shape;
@@ -1381,6 +1381,9 @@ bool CheckParamsWithLog(Conv3dBpInputV2RunInfo &runInfoV2, gert::TilingContext *
 
 int64_t GetDfactorSdEqKd(const Conv3dBpInputV2RunInfo &runInfoV2, int32_t l0c_din, const OtherParams& otherParams) {
   // ----[该函数用于计算StrideD=KerneD时 由Din和Dk 反推的Dout的大小]----
+  if (otherParams.filter_d_dilation == 0 || l0c_din == 0) {
+    return 1;
+  }
   int64_t kernel_idx = runInfoV2.pad_h % otherParams.filter_d_dilation - 1;
   int64_t dedy_dout_used = 1;
   int64_t dedy_dout_used_max = 1;
@@ -2140,8 +2143,7 @@ bool CheckTranspose(const char* opName, const gert::TilingContext* context) {
     return true;
 }
 
-static bool CheckBiasParams(gert::TilingContext *context, const OtherParams& otherParams,
-                            optiling::OpTypeV2 opType) {
+static bool CheckBiasParams(gert::TilingContext *context, const OtherParams& otherParams) {
     if (!IsArchAfter35(context)) {
         return true;
     }
@@ -2242,7 +2244,7 @@ bool SetRunInfoToV2(gert::TilingContext* context, Conv3dBpInputV2RunInfo& runInf
     }
 
     if ((opType == optiling::OpTypeV2::kConv3DTransposeV2 || opType == optiling::OpTypeV2::kExtendConvTranspose) 
-        && (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams, opType))) {
+        && (!CheckTranspose(context->GetNodeName(), context) || !CheckBiasParams(context, otherParams))) {
         OP_LOGW(context, "params is invalid");
         return false;
     }

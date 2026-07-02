@@ -42,6 +42,7 @@ const uint32_t BUFFER_NUM = 2;
 const size_t INDEX_2 = 2;
 const uint32_t SIZE_UNIT_BYTE = 256;
 const uint32_t FP32CNT_UNIT = SIZE_UNIT_BYTE / sizeof(float);
+const uint32_t UB_RSV_SIZE = 8 * 1024;
 
 
 ge::graphStatus GetInfo(gert::TilingContext* context)
@@ -63,7 +64,7 @@ void FillTilingInfo()
     info.B = static_cast<uint64_t>(info.cxShape[0]);
     info.H = static_cast<uint64_t>(info.cxShape[1]);
     info.BH = info.B * info.H;
-    info.taskSize = (static_cast<uint32_t>(info.ubByteSize) / BUFFER_NUM - 8 * 1024) / bufCnt / SIZE_UNIT_BYTE * FP32CNT_UNIT;
+    info.taskSize = (static_cast<uint32_t>(info.ubByteSize) / BUFFER_NUM - UB_RSV_SIZE) / bufCnt / SIZE_UNIT_BYTE * FP32CNT_UNIT;
     info.col = (info.H + static_cast<uint64_t>(info.taskSize) - 1ULL) / static_cast<uint64_t>(info.taskSize);
     info.tailSize = static_cast<uint32_t>(info.H) % info.taskSize;
     info.tailSize = (info.tailSize != 0U) ? info.tailSize : info.taskSize;

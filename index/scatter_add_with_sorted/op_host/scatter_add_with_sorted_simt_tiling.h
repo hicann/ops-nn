@@ -45,7 +45,6 @@ private:
     int64_t tailBlockIndices_ = 0;
     int64_t usedCoreNum_ = 0;
     int64_t workspacesSize_ = 0;
-    
 };
 }
 #endif // SCATTER_ADD_WITH_SORTED_SIMT_TILING_H

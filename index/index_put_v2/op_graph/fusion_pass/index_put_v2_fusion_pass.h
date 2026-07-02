@@ -53,14 +53,14 @@ public:
     Status Run(GraphPtr &graph, CustomPassContext &passContext) override;
 
 private:
-    bool CheckPlatform();
-    bool CheckDeterministic(ge::CustomPassContext& passContext);
-    bool CheckDtypes(const GNode &node, int64_t indicesNum);
+    bool CheckPlatform() const;
+    bool CheckDeterministic(ge::CustomPassContext& passContext) const;
+    bool CheckDtypes(const GNode &node, int64_t indicesNum) const;
     bool CheckNode(const GNode &node);
-    bool CheckDynamic(const GNode &node, int64_t indicesNum);
-    IndexPutV2InputInfo GetInputInfo(const GNode &node);
+    bool CheckDynamic(const GNode &node, int64_t indicesNum) const;
+    IndexPutV2InputInfo GetInputInfo(const GNode &node) const;
     GraphUniqPtr CreateReplacement(const GNode &node);
-    std::unique_ptr<SubgraphBoundary> ConstructBoundary(const GNode &node);
+    std::unique_ptr<SubgraphBoundary> ConstructBoundary(const GNode &node) const;
 };
 
 } // namespace ge::fusion

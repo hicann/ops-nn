@@ -107,8 +107,8 @@ public:
     void TilingDataPrint() const;
 
 private:
-    inline bool IsSort(uint64_t totalLength);
-    inline bool IsLinearIndex(uint64_t totalLength);
+    inline bool IsSort(uint64_t totalLength) const;
+    inline bool IsLinearIndex(uint64_t totalLength) const;
     inline size_t CalcWorkSpaceSize(uint64_t indexRow);
     inline void SetTilingKeyMode();
     inline void GetDtypeSize();

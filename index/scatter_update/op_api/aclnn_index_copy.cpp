@@ -271,13 +271,13 @@ static aclnnStatus ContiguousAndReshapeParams(const aclTensor* selfRef, int64_t&
 }
 
 static const aclTensor* HandleIndexPutV2WithTypeConversion(
-    aclOpExecutor* executor, const aclTensor* selfView, const aclTensor* sourceView, const aclTensorList* indicesList,
+    aclOpExecutor* executor, aclTensor* selfView, aclTensor* sourceView, const aclTensorList* indicesList,
     const aclTensor* maskTensor, DataType originalDtype, DataType intermediateDtype)
 {
-    const_cast<aclTensor*>(selfView)->SetDataType(intermediateDtype);
-    const_cast<aclTensor*>(sourceView)->SetDataType(intermediateDtype);
+    selfView->SetDataType(intermediateDtype);
+    sourceView->SetDataType(intermediateDtype);
 
-    aclTensor* out = const_cast<aclTensor*>(selfView);
+    aclTensor* out = selfView;
     const aclTensor* kernelOut = l0op::IndexPutV2(selfView, indicesList, sourceView, maskTensor, false, out, executor);
     if (kernelOut != nullptr) {
         const_cast<aclTensor*>(kernelOut)->SetDataType(originalDtype);
@@ -311,7 +311,6 @@ static aclnnStatus ScatterToIndexPutV2(
         return ACLNN_ERR_INNER_NULLPTR);
 
     DataType originalDtype = selfRefReShape->GetDataType();
-    
 
     auto it = dtypeConversionMap.find(originalDtype);
     if (it != dtypeConversionMap.end()) {
@@ -345,7 +344,6 @@ static int64_t GetDeterministicValue()
 static bool IsUseIndexPutV2(const aclTensor* selfRefReShape)
 {
     bool isAscend950 = Ops::NN::AclnnUtil::IsRegbase();
-
     if (!isAscend950 || GetDeterministicValue() != 0 || selfRefReShape->GetDataType() == DataType::DT_COMPLEX128) {
         return false;
     }

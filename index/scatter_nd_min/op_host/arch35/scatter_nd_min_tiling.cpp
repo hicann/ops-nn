@@ -60,7 +60,6 @@ REGISTER_TILING_TEMPLATE("ScatterNdMin", ScatterNdMinSimdSortTiling, 2);
 REGISTER_TILING_TEMPLATE("ScatterNdMin", ScatterNdMinSimtSortTiling, 5);
 REGISTER_TILING_TEMPLATE("ScatterNdMin", ScatterNdMinSimtTiling, 8);
 
-
 } //namespace optiling
 
 

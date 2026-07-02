@@ -287,7 +287,6 @@ aclnnStatus aclnnIndexFillTensorGetWorkspaceSize(const aclTensor *self, int64_t 
     }
   }
 
-  auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (Ops::NN::AclnnUtil::IsRegbase() && CheckType(self->GetDataType(), DTYPE_950_SUPPORT_LIST)) {
     return IndexFillAiCore(self, dim, index, value, out, workspaceSize, executor, uniqueExecutor);
   }

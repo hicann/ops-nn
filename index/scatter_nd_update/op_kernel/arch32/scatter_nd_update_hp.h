@@ -21,6 +21,8 @@
 #include "scatter_nd_update_common.h"
 
 namespace ScatterNdUpdate {
+constexpr uint64_t LINEAR_INDEX_COEFF_OFFSET = 3;
+constexpr uint64_t INT64_TO_INT_SIZE_RATIO = 2;
 
 template <typename T, typename IndicesT = int, bool isViewStride0 = false>
 class ScatterNdUpdateHpKernel {
@@ -80,7 +82,7 @@ public:
 
     __aicore__ inline void InitBuffers(TPipe& pipe)
     {
-        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ? (2 * indexDim_ + 3) : (indexDim_ + 3);
+        uint64_t coeff = std::is_same_v<IndicesT, int64_t> ? (2 * indexDim_ + LINEAR_INDEX_COEFF_OFFSET) : (indexDim_ + LINEAR_INDEX_COEFF_OFFSET);
         uint64_t slotBytes = rowsPerBatch_ * rowBytesAligned_;
         pipe.InitBuffer(allUbBuf_, coeff * indexTileLength_ * sizeof(int));
         pipe.InitBuffer(slotBufA_, slotBytes);
@@ -93,7 +95,7 @@ public:
         if constexpr (std::is_same_v<IndicesT, int64_t>) {
             indicesInt64Local_ = allUbLocal_[off].ReinterpretCast<int64_t>();
             indicesOriginLocal_ = allUbLocal_[off];
-            off += indexTileLength_ * indexDim_ * 2;
+            off += indexTileLength_ * indexDim_ * INT64_TO_INT_SIZE_RATIO;
         } else {
             indicesOriginLocal_ = allUbLocal_[off];
             off += indexTileLength_ * indexDim_;

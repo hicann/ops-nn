@@ -134,7 +134,6 @@ static aclnnStatus CheckParams(
 
 static bool NeedTranspose(const aclTensor* self, int64_t dim)
 {
-    auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         // 950芯片不需要做转置操作
         return false;

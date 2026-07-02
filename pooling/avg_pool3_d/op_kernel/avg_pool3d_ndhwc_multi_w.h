@@ -43,7 +43,6 @@ private:
     __aicore__ inline void ReduceSumRowRepeat(
         const Index& startIndex, LocalTensor<float>& sumBufLocal, LocalTensor<T>& inputLocal, int64_t windowNum);
 
-
     int64_t windowWNum;
     PoolMem<T, QUEUE_DEPTH> poolMem;
 

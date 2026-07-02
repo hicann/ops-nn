@@ -470,7 +470,6 @@ static void CheckFormat(const aclTensor* self, const aclTensor* mask, const aclT
 {
     ge::Format selfStorageFormat = self->GetStorageFormat();
     ge::Format maskStorageFormat = mask->GetStorageFormat();
-    ge::Format sourceStorageFormat = source->GetStorageFormat();
     if (selfStorageFormat != ge::Format::FORMAT_ND || maskStorageFormat != ge::Format::FORMAT_ND ||
         maskStorageFormat != ge::Format::FORMAT_ND) {
         OP_LOGW("aclnnInplaceMaskedScatter only support format ND.");

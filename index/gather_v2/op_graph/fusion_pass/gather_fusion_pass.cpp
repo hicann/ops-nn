@@ -37,6 +37,7 @@ namespace {
 
 const std::string PASS_NAME = "GatherToGatherV2FusionPass";
 const int64_t CAPTURE_IDX_OUTPUT = 0l;
+constexpr int32_t GE_COMPILER_VERSION_9_0 = 90000000;
 // ---------------------------------------------------------------------------
 // 工具函数
 // ---------------------------------------------------------------------------

@@ -543,18 +543,22 @@ class ThnnFusedLstmCellGrad {
 
   __aicore__ inline void StoreDgatesResults(int64_t nShapeAligned, int64_t calcSizeAlign) {
     // ifjo
+    constexpr int32_t I_GATE_IDX = 0;
+    constexpr int32_t F_GATE_IDX = 1;
+    constexpr int32_t J_GATE_IDX = 2;
+    constexpr int32_t O_GATE_IDX = 3;
     if ((tiling.isBias == 1 && !std::is_same<T, float>::value)) {
       VToMTE3Sync();
-      CopyOutputGate(outputGm.dgatesTempGm, diTensor, 0, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesTempGm, dfTensor, 1, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesTempGm, djTensor, 2, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesTempGm, doTensor, 3, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesTempGm, diTensor, I_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesTempGm, dfTensor, F_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesTempGm, djTensor, J_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesTempGm, doTensor, O_GATE_IDX, nShapeAligned);
     } else if constexpr (std::is_same<T, float>::value) {
       VToMTE3Sync();
-      CopyOutputGate(outputGm.dgatesGm, diTensor, 0, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesGm, dfTensor, 1, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesGm, djTensor, 2, nShapeAligned);
-      CopyOutputGate(outputGm.dgatesGm, doTensor, 3, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesGm, diTensor, I_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesGm, dfTensor, F_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesGm, djTensor, J_GATE_IDX, nShapeAligned);
+      CopyOutputGate(outputGm.dgatesGm, doTensor, O_GATE_IDX, nShapeAligned);
     } else if (tiling.isBias != 1 && !std::is_same<T, float>::value) {
       auto roundMode = std::is_same<T, bfloat16_t>::value ? 
           RoundMode::CAST_RINT : RoundMode::CAST_NONE;

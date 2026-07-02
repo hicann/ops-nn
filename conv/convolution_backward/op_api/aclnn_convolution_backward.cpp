@@ -57,6 +57,9 @@ extern "C" {
 static constexpr const char* ACLNN_CONVOLUTION_BACKWARD_NAME = "aclnnConvolutionBackwardGetWorkspaceSize";
 static constexpr const char* ACLNN_CONV_TBC_BACKWARD_NAME = "aclnnConvTbcBackwardGetWorkspaceSize";
 constexpr int64_t DILATION_45 = 45;
+constexpr int64_t MIN_KL0_FP32 = 2;
+constexpr int64_t PAD_SIDE_MULTIPLIER = 2;
+constexpr int64_t PAD_DIM_SIMPLE = 2;
 const std::vector<DataType> REDUCESUM_SUPPORTED_DTYPES = {
   DataType::DT_FLOAT16, DataType::DT_FLOAT, DataType::DT_BF16
 };
@@ -134,10 +137,10 @@ static bool IsPaddingValidFor3D(const aclTensor *weight, const ConvolutionBackwa
     int64_t kernelDilationH = 0;
     int64_t kernelDilationW = 0;
 
-    if (params.padding->Size() == 4) {
+    if (params.padding->Size() == CONV2DINPUTDIM) {
         padH = std::max((*params.padding)[kPadding4UpIdx], (*params.padding)[kPadding4DownIdx]);
         padW = std::max((*params.padding)[kPadding4LeftIdx], (*params.padding)[kPadding4RightIdx]);
-    } else if (params.padding->Size() == 2) {
+    } else if (params.padding->Size() == PAD_DIM_SIMPLE) {
         padH = (*params.padding)[kPADDINGUPIdx];
         padW = (*params.padding)[kPADDINGLEFTIdx];
     }
@@ -185,7 +188,7 @@ static bool IsExceedL1For3DDw(const aclTensor *gradOutput, const aclTensor *inpu
     int32_t minKL0 = 1;
     if (inputDtype == DataType::DT_FLOAT) {
         k0 = kFp32BlockReduce;
-        minKL0 = 2;
+        minKL0 = MIN_KL0_FP32;
     }
 
     int32_t al1MinSize = kDefaultC0 * k0 * aDtypeBytes * minKL0;
@@ -953,8 +956,8 @@ static const aclTensor *PostDilation(const aclTensor *dxGradInputNC1HWC0, Convol
     postDilationPadLeft = -(*params.padding)[kPADDINGLEFTIdx];
     padUp = (*params.padding)[kPADDINGUPIdx];
     padLeft = (*params.padding)[kPADDINGLEFTIdx];
-    padH = 2 * (*params.padding)[kPADDINGUPIdx];
-    padW = 2 * (*params.padding)[kPADDINGLEFTIdx];
+    padH = PAD_SIDE_MULTIPLIER * (*params.padding)[kPADDINGUPIdx];
+    padW = PAD_SIDE_MULTIPLIER * (*params.padding)[kPADDINGLEFTIdx];
   }
   /* 当输出的h/w为1时，把传给Dilation算子的dilation值修正为fmap_h/w + pad，避免在dilation值超大时，Dilation算子超时 */
   if (inputTensor.gradOutput->GetViewShape().GetDim(kHDimNCHWIdx) == 1 &&
@@ -1399,13 +1402,12 @@ static aclnnStatus CalculateConv2DBackward(ConvolutionBackwardInputTensor &input
       auto inputDtype = inputTensor.input->GetDataType();
 
       int64_t deterministicValue = GetDeterministicValue();
-
       if (deterministicValue && curArch == NpuArch::DAV_2201 &&
         isConv3dDwV2Valid(inputTensor.gradOutput, inputTensor.input, inputTensor.weight, params)) {
           FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
           FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
           FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
-          if (params.padding->Size() == 4) {
+          if (params.padding->Size() == CONV2DINPUTDIM) {
               newPadding = {0, 0, (*params.padding)[0], (*params.padding)[1], (*params.padding)[2], (*params.padding)[3]};
           }
           auto stride3d = executor->AllocIntArray(newStride.data(), newStride.size());
@@ -1521,7 +1523,7 @@ static aclnnStatus CalculateConv2DTransposeBackward(ConvolutionBackwardInputTens
           FVector<int64_t> newStride = {1, (*params.stride)[0], (*params.stride)[1]};
           FVector<int64_t> newDilation = {1, (*params.dilation)[0], (*params.dilation)[1]};
           FVector<int64_t> newPadding = {0, 0, (*params.padding)[0], (*params.padding)[0], (*params.padding)[1], (*params.padding)[1]};
-          if (params.padding->Size() == 4) {
+          if (params.padding->Size() == CONV2DINPUTDIM) {
               newPadding = {0, 0, (*params.padding)[0], (*params.padding)[1], (*params.padding)[2], (*params.padding)[3]};
           }
           auto stride3d = executor->AllocIntArray(newStride.data(), newStride.size());
@@ -2798,19 +2800,19 @@ static const aclTensor *SwapDHDimensions(const aclTensor *input, aclOpExecutor *
 
 static const aclIntArray *SwapDHInArray3(const aclIntArray *arr, aclOpExecutor *executor)
 {
-  if (arr == nullptr || arr->Size() != 3) {
+  if (arr == nullptr || arr->Size() != CONV3D_ATTR_DIM) {
     return arr;
   }
   int64_t elemD = (*arr)[0]; // depth element
   int64_t elemH = (*arr)[1]; // height element
   int64_t elemW = (*arr)[2]; // width element
   int64_t newArray[] = {elemH, elemD, elemW}; // swap D and H
-  return executor->AllocIntArray(newArray, 3);
+  return executor->AllocIntArray(newArray, CONV3D_ATTR_DIM);
 }
 
 static const aclIntArray *SwapDHInPaddingArray6(const aclIntArray *arr, aclOpExecutor *executor)
 {
-  if (arr == nullptr || arr->Size() != 6) {
+  if (arr == nullptr || arr->Size() != CONV3D_PAD_DIM) {
     return arr;
   }
   int64_t padDHead = (*arr)[0];
@@ -2820,7 +2822,7 @@ static const aclIntArray *SwapDHInPaddingArray6(const aclIntArray *arr, aclOpExe
   int64_t padWLeft = (*arr)[4];
   int64_t padWRight = (*arr)[5];
   int64_t newArray[] = {padHTop, padHBottom, padDHead, padDTail, padWLeft, padWRight}; // swap D and H
-  return executor->AllocIntArray(newArray, 6);
+  return executor->AllocIntArray(newArray, CONV3D_PAD_DIM);
 }
 
 // Apply D-H swap on input tensors and parameters before calculation
@@ -2847,33 +2849,33 @@ static aclnnStatus ApplySwapDHBeforeCalculation(ConvolutionBackwardInputTensor &
            return ACLNN_ERR_INNER_NULLPTR);
   
   // Adjust stride, padding, dilation parameters by swapping D and H indices
-  if (params.stride->Size() == 3) {
+  if (params.stride->Size() == CONV3D_ATTR_DIM) {
     params.stride = SwapDHInArray3(params.stride, executor);
-    OP_CHECK(params.stride != nullptr, 
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for stride failed."), 
+    OP_CHECK(params.stride != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for stride failed."),
              return ACLNN_ERR_INNER_NULLPTR);
   }
-  
-  if (params.dilation->Size() == 3) {
+
+  if (params.dilation->Size() == CONV3D_ATTR_DIM) {
     params.dilation = SwapDHInArray3(params.dilation, executor);
-    OP_CHECK(params.dilation != nullptr, 
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for dilation failed."), 
+    OP_CHECK(params.dilation != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for dilation failed."),
              return ACLNN_ERR_INNER_NULLPTR);
   }
-  
-  if (params.padding->Size() == 6) {
+
+  if (params.padding->Size() == CONV3D_PAD_DIM) {
     params.padding = SwapDHInPaddingArray6(params.padding, executor);
-    OP_CHECK(params.padding != nullptr, 
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."), 
+    OP_CHECK(params.padding != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."),
              return ACLNN_ERR_INNER_NULLPTR);
-  } else if (params.padding->Size() == 3) {
+  } else if (params.padding->Size() == CONV3D_ATTR_DIM) {
     params.padding = SwapDHInArray3(params.padding, executor);
-    OP_CHECK(params.padding != nullptr, 
-             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."), 
+    OP_CHECK(params.padding != nullptr,
+             OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for padding failed."),
              return ACLNN_ERR_INNER_NULLPTR);
   }
-  
-  if (params.outputPadding->Size() == 3) {
+
+  if (params.outputPadding->Size() == CONV3D_ATTR_DIM) {
     params.outputPadding = SwapDHInArray3(params.outputPadding, executor);
     OP_CHECK(params.outputPadding != nullptr, 
              OP_LOGE(ACLNN_ERR_INNER_NULLPTR, "AllocIntArray for outputPadding failed."), 
@@ -2926,7 +2928,6 @@ static aclnnStatus CalculateConv3DBp(ConvolutionBackwardInputTensor &inputTensor
   
   // Check if need to swap D and H dimensions for Conv3D backward
   bool needSwapDH = l0op::NeedSwapDHForConv3DBackward(inputTensor, params);
-  
   // Apply D-H swap before calculation if needed
   if (needSwapDH) {
     ret = ApplySwapDHBeforeCalculation(inputTensor, params, executor);
@@ -3559,7 +3560,7 @@ static aclnnStatus CalculateDeformableConv2dBackward(
     FVector<int64_t> newOutputPadding = {0, 0};
     auto* bp_outputPadding = executor->AllocIntArray(newOutputPadding.data(), 2);
     OP_CHECK_NULL(bp_outputPadding, return ACLNN_ERR_INNER_NULLPTR);
-    const int64_t bp_groups = params.groups;
+    const int bp_groups = params.groups;
     FVector<bool> newOutputMask = {1, 1, 1};
     auto* bp_outputMask = executor->AllocBoolArray(newOutputMask.data(), 3);
     OP_CHECK_NULL(bp_outputMask, return ACLNN_ERR_INNER_NULLPTR);
@@ -3644,7 +3645,7 @@ aclnnStatus aclnnConvTbcBackward(void *workspace, uint64_t workspaceSize, aclOpE
 }
 
  aclnnStatus aclnnDeformableConv2dBackward(
- 	     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, aclrtStream stream)
+ 	     void* workspace, uint64_t workspaceSize, aclOpExecutor* executor, const aclrtStream stream)
  	 {
  	     L2_DFX_PHASE_2(aclnnDeformableConv2dBackward);
  	     return CommonOpExecutorRun(workspace, workspaceSize, executor, stream);

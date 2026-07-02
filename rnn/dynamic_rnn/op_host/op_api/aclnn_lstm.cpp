@@ -114,6 +114,10 @@ static const int64_t INDEX_2 = 2;
 static const int64_t INDEX_3 = 3;
 static const int64_t INDEX_4 = 4;
 static const size_t CONCAT_MAX_NUM = 32;
+static const int64_t BIDIRECTIONAL_NUM = 2;
+static const int64_t PARAM_MULTIPLIER_BIAS = 2;
+static const int64_t FEATURE_DIM = 2;
+static const int64_t HX_TENSOR_COUNT = 2;
 
 // 根据API定义，需要列出所能支持的所有dtype
 static const std::initializer_list<DataType> DTYPE_SUPPORT_LIST = {DataType::DT_FLOAT, DataType::DT_FLOAT16};
@@ -126,7 +130,7 @@ std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTen
     const char *direction,  bool bidirectional, bool train, int64_t num_layers, bool hasBias, aclOpExecutor* executor)
 {
     auto oneLayerParams = bidirectional == true ? 4 : 2;
-    oneLayerParams = hasBias == true ? oneLayerParams * 2 : oneLayerParams;
+    oneLayerParams = hasBias == true ? oneLayerParams * PARAM_MULTIPLIER_BIAS : oneLayerParams;
     auto weightStart = strcmp(direction, "UNIDIRECTIONAL") == 0 ? 0 : oneLayerParams / 2;
     auto paramsOffsets = oneLayerParams * num_layers + weightStart;
     op::FVector<const aclTensor*> weightConcatList;
@@ -143,7 +147,7 @@ std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTen
     auto weightTrans = l0op::Transpose(weightConcat, valuePerm, executor);
     OP_CHECK_NULL(weightTrans, return nullptrInner);
 
-    const aclTensor * bias = nullptr;
+    const aclTensor *bias = nullptr;
     if (hasBias) {
         bias = l0op::Add((*params)[paramsOffsets + 2], (*params)[paramsOffsets + 3], executor);
         OP_CHECK_NULL(bias, return nullptrInner);
@@ -155,8 +159,8 @@ std::tuple<const aclTensor *, const aclTensor *, const aclTensor *, const aclTen
         OP_CHECK_NULL(bias, return nullptrInner);
     }
 
-    const aclTensor * initH = nullptr;
-    const aclTensor * initC = nullptr;
+    const aclTensor *initH = nullptr;
+    const aclTensor *initC = nullptr;
     if (hx != nullptr && hx->Size() != 0) {
         auto batch = (*hx)[0]->GetViewShape().GetDim(1);
         auto hidden = (*hx)[0]->GetViewShape().GetDim(2);
@@ -318,7 +322,7 @@ static bool CheckDimsSize(const aclTensorList *params, const aclTensorList *hx, 
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the params lists should be %lu, but %lu was obtained.", param_nums, params->Size());
         return false;
     }
-    if (hx != nullptr && hx->Size() != 2 &&  hx->Size() != 0) {
+    if (hx != nullptr && hx->Size() != HX_TENSOR_COUNT &&  hx->Size() != 0) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The number of tensors required for the hx lists should be 2 or 0, but %lu was obtained.", hx->Size());
         return false;
     }
@@ -387,7 +391,6 @@ static bool CheckDims(const aclTensor *input,  const aclTensorList *params, cons
     OP_CHECK_WRONG_DIMENSION(cy, OUTPUT_DIMS, return false);
 
     if (train) {
-        
         for (uint64_t i = 0; i < iOut->Size(); i++) {
             OP_CHECK_WRONG_DIMENSION((*iOut)[i], OUTPUT_DIMS, return false);
         }
@@ -450,18 +453,18 @@ static bool CheckShape(const aclTensor *input,  const aclTensorList *params, con
 
     if (hx != nullptr) {
         for (uint64_t i = 0; i < hx->Size(); i++) {
-            op::Shape expShape = {numLayers * dScale, batchSize, hiddenSize};
+            op::Shape expShape = {static_cast<int64_t>(numLayers * dScale), batchSize, hiddenSize};
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hx)[i], expShape, return false);
         }
     }
 
-    op::Shape expOutputShape = {timeStep, batchSize, dScale * hiddenSize};
+    op::Shape expOutputShape = {timeStep, batchSize, static_cast<int64_t>(dScale * hiddenSize)};
     if (batch_first) {
-        expOutputShape = {batchSize, timeStep, dScale * hiddenSize};
+        expOutputShape = {batchSize, timeStep, static_cast<int64_t>(dScale * hiddenSize)};
     }
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(output, expOutputShape, return false);
 
-    op::Shape expHyShape = {numLayers * dScale, batchSize, hiddenSize};
+    op::Shape expHyShape = {static_cast<int64_t>(numLayers * dScale), batchSize, hiddenSize};
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(hy, expHyShape, return false);
     OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE(cy, expHyShape, return false);
 
@@ -475,7 +478,6 @@ static bool CheckShape(const aclTensor *input,  const aclTensorList *params, con
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*hOut)[i], expShape, return false);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*cOut)[i], expShape, return false);
             OP_CHECK_SHAPE_NOT_EQUAL_WITH_EXPECTED_SIZE((*tanhCOut)[i], expShape, return false);
-
         }
     } 
     return true;
@@ -912,7 +914,6 @@ static const aclTensor* SplitToConcat(std::vector<const aclTensor*> tensorListA,
 }
 
 static aclnnStatus ProcessViewCopyOutputHC(std::vector<const aclTensor*>& hOut, std::vector<const aclTensor*>& cOut, aclTensor *hy, aclTensor *cy, aclOpExecutor* executor) {
-
     auto outputHConcat = SplitToConcat(hOut, 0, executor);
     auto viewCopyResultOutputH = l0op::ViewCopy(outputHConcat, hy, executor); 
     CHECK_RET(viewCopyResultOutputH != nullptr, ACLNN_ERR_INNER_NULLPTR); 
@@ -1282,7 +1283,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
     } 
     
     int64_t hiddenSize = output->GetViewShape().GetDim(2);
-    hiddenSize = bidirectional == true ? hiddenSize / 2: hiddenSize;
+    hiddenSize = bidirectional == true ? hiddenSize / BIDIRECTIONAL_NUM : hiddenSize;
     op::Shape outShape = {curInput->GetViewShape().GetDim(0), curInput->GetViewShape().GetDim(1), hiddenSize};
 
     std::vector<const aclTensor*> hyVector= {};
@@ -1339,7 +1340,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
+                curInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, uniqueExecutor.get());
                 ProcessViewCopy(layerResultBackward, iOut, jOut, fOut, oOut, hOut, cOut, tanhCOut, i, bidirectional, "REDIRECTIONAL", uniqueExecutor.get());
                 ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
@@ -1414,7 +1415,7 @@ aclnnStatus aclnnLSTMGetWorkspaceSize(
                 inputConcat.emplace_back(std::get<0>(layerResultForward));
                 inputConcat.emplace_back(std::get<0>(layerResultBackward));
                 auto tensorListInput = uniqueExecutor.get()->AllocTensorList(inputConcat.data(), inputConcat.size());
-                curInput = l0op::ConcatD(tensorListInput, 2, uniqueExecutor.get());
+                curInput = l0op::ConcatD(tensorListInput, FEATURE_DIM, uniqueExecutor.get());
                 ProcessOutputHC(layerResultBackward, hyVector, cyVector, "REDIRECTIONAL", uniqueExecutor.get());
             } else {
                 curInput = std::get<0>(layerResultForward);

@@ -207,7 +207,6 @@ public:
         }
     }
 
-
     template <typename PARAM_T>
     __aicore__ inline void CopyIn(
         const LocalTensor<PARAM_T>& dstTensor, const GlobalTensor<PARAM_T>& srcTensor, int64_t dataLen)
@@ -265,8 +264,6 @@ public:
                 } else {
                     AscendC::MicroAPI::DataCopyGather(inReg, indicesLocalPtr, indexReg, pregLoop);
                 }
-                
-
                 AscendC::MicroAPI::CompareScalar<OFFSET_T, CMPMODE::LT>(cmpMask, inReg, static_cast<OFFSET_T>(0), pregLoop);
                 AscendC::MicroAPI::Or(invalidMask, invalidMask, cmpMask, pregLoop);
                 AscendC::MicroAPI::CompareScalar<OFFSET_T, CMPMODE::GE>(cmpMask, inReg, static_cast<OFFSET_T>(outputShapeValue), pregLoop);

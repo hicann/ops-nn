@@ -109,7 +109,7 @@ struct SubShapePara {
     SubShapePara(int st, int e, int str) : start(st), end(e), stride(str) {}
 };
 
-graphStatus SubShapeUpdateStartAndEnd(SubShapePara& para, int64_t s_rank, const std::string opName) {
+graphStatus SubShapeUpdateStartAndEnd(const SubShapePara& para, int64_t s_rank, const std::string opName) {
     int64_t start = para.start;
     int64_t end = para.end;
     int64_t stride = para.stride;
@@ -191,7 +191,7 @@ static graphStatus InferDtypeForSortedSparseSegmentMeanGrad(gert::InferDataTypeC
     return GRAPH_SUCCESS;
 }
 
-static ge::graphStatus CheckInputAndOutputNum(gert::InferShapeContext *context) {
+static ge::graphStatus CheckInputAndOutputNum(const gert::InferShapeContext *context) {
     OP_LOGI(context->GetNodeName(), "Begin to do CheckInputAndOutputNum");
     constexpr size_t INPUT_NUM = 5;
     constexpr size_t OUTPUT_NUM = 1;
@@ -210,7 +210,7 @@ static ge::graphStatus CheckInputAndOutputNum(gert::InferShapeContext *context) 
     return ge::GRAPH_SUCCESS;
 }
 
-static ge::graphStatus SortedSparseSegmentMeanGradCheck(gert::InferShapeContext *context) {
+static ge::graphStatus SortedSparseSegmentMeanGradCheck(const gert::InferShapeContext *context) {
     OP_LOGI(context->GetNodeName(), "Begin to do InferShapeForSortedSparseSegmentMeanGrad check");
     const gert::Shape *x_shape = context->GetInputShape(kInputIndex0);
     OPS_CHECK_NULL_WITH_CONTEXT(context, x_shape);

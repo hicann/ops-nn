@@ -60,7 +60,6 @@ REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimdSortTiling, 2);
 REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimtSortTiling, 5);
 REGISTER_TILING_TEMPLATE("ScatterNdMax", ScatterNdMaxSimtTiling, 8);
 
-
 } //namespace optiling
 
 

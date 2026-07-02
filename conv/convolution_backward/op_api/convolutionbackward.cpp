@@ -622,7 +622,6 @@ static void GetConv3DBackpropAdapterParam(const aclTensor *input, const aclIntAr
                                           const aclIntArray *padding, const aclIntArray *dilation,
                                           aclOpExecutor *executor, AdaptParam *params)
 {
-  SocVersion socVersion = GetCurrentPlatformInfo().GetSocVersion();
   if (stride->Size() == DIM_3) {
     FVector<int64_t> newStrides {1, 1, 1, 1, 1};
     FVector<int64_t> newDilation {1, 1, 1, 1, 1};
@@ -758,7 +757,6 @@ static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *o
   }
 
   auto xDataType = input->GetDataType();
-  auto dedyDataType = outBackprop->GetDataType();
   if (xDataType != op::DataType::DT_FLOAT) {
     OP_LOGD("unsupported dataType , NH transpose disable.");
     return false;
@@ -805,7 +803,7 @@ static bool CheckPreNHTransposeEnable(const aclTensor *input, const aclTensor *o
     }
   }
   auto padData = pad6->GetData();
-  for (int64_t i=0; i < pad6->Size(); i++) {
+  for (uint64_t i = 0; i < pad6->Size(); i++) {
     if (padData[i] != 0){
       OP_LOGD("pad[%d]=[%d] (must equal to 0), NH transpose disable.", i, padData[i]);
       return false;
@@ -1079,8 +1077,8 @@ static bool CheckN2HEnable(const aclTensor *weight, aclTensor *&output,
     return CheckN2HNativeAttrAvailable(weight, output);
 }
 
-static bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input, 
-                                          aclIntArray *stride5, int groups) {
+static bool CheckWeightPreTransposeEnable(const aclTensor *weight, const aclTensor *input,
+                                          const aclIntArray *stride5, int groups) {
     OP_LOGD("Enter CheckWeightPreTransposeEnable.");
     if (GetCurrentPlatformInfo().GetCurNpuArch() != NpuArch::DAV_3510) {
         return false;

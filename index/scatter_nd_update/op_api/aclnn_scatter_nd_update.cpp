@@ -108,7 +108,6 @@ static bool IsAxesContiguous(const aclTensor *tensor, int64_t startAxis, int64_t
   auto viewShape = tensor->GetViewShape();
   auto viewStrides = tensor->GetViewStrides();
   int64_t dimNum = viewShape.GetDimNum();
-
   if (endAxis > dimNum) {
     return false;
   }
@@ -159,7 +158,6 @@ static bool IsSupportNonContiguous(const aclTensor *varRef, int64_t indexAxisNum
   
   auto viewShape = varRef->GetViewShape();
   int64_t varRefDimNum = viewShape.GetDimNum();
-  
   if (indexAxisNum > varRefDimNum) {
     return false;
   }

@@ -37,7 +37,7 @@ static const std::initializer_list<op::DataType> X_DTYPE_SUPPORT_LIST_ASCEND950 
     op::DataType::DT_DOUBLE,     op::DataType::DT_FLOAT, op::DataType::DT_FLOAT16, op::DataType::DT_BF16,
     op::DataType::DT_BOOL};
 
-static bool CheckSupport4UniqueDim(const aclTensor* self, int64_t dim)
+static bool CheckSupport4UniqueDim(const aclTensor* self)
 {
     OP_CHECK(Ops::NN::AclnnUtil::IsRegbase(),
              OP_LOGW("UniqueDim AICore only support ASCEND950."),
@@ -73,7 +73,7 @@ aclnnStatus UniqueWithCountsExt2(const aclTensor* self, bool sorted, bool return
                                  aclTensor* inverseOut, aclTensor* countsOut, aclOpExecutor* executor) {
   L0_DFX(UniqueWithCountsExt2, self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut);
 
-  if (CheckSupport4UniqueDim(self, dim)) {
+  if (CheckSupport4UniqueDim(self)) {
     return UniqueDimAiCore(self, sorted, returnInverse, dim, valueOut, inverseOut, countsOut, executor);
   }
 
