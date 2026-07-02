@@ -89,10 +89,22 @@ inline static bool CheckWeightNzDtypeValid(
 {
     bool bf16flag = CheckNpuArchIsSupportBf16();
     auto socVersion = GetCurrentPlatformInfo().GetSocVersion();
+    auto curArch = GetCurrentPlatformInfo().GetCurNpuArch();
     auto dtypeList = bf16flag ? DTYPE_SUPPORT_LIST : DTYPE_SUPPORT_LIST_WITHOUT_BF16;
     OP_CHECK_DTYPE_NOT_SUPPORT(self, dtypeList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(mat2, dtypeList, return false);
     OP_CHECK_DTYPE_NOT_SUPPORT(out, dtypeList, return false);
+    // 目前仅A2,A3支持Float32 weight NZ
+    if (curArch != NpuArch::DAV_2201 && mat2->GetStorageFormat() == Format::FORMAT_FRACTAL_NZ && 
+       (self->GetDataType() == DataType::DT_FLOAT || mat2->GetDataType() == DataType::DT_FLOAT)) {
+        OP_LOGE( 
+            ACLNN_ERR_PARAM_INVALID, 
+            "Float32 weight NZ is unsupported by the current SOC version [%s], now self is %s, mat2 is %s .", 
+            op::ToString(socVersion).GetString(), op::ToString(self->GetDataType()).GetString(), 
+            op::ToString(mat2->GetDataType()).GetString()); 
+        return false; 
+    }
+
     if (!bf16flag && (self->GetDataType() == op::DataType::DT_BF16 || mat2->GetDataType() == op::DataType::DT_BF16 ||
                       out->GetDataType() == op::DataType::DT_BF16)) {
         OP_LOGE(
