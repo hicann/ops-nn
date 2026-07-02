@@ -77,7 +77,7 @@ aclnnStatus aclnnTake(
       <td>-</td>
       <td>UINT64、INT64、UINT32、FLOAT32、INT32、UINT16、INT16、FLOAT16、BFLOAT16、INT8、UINT8、DOUBLE、COMPLEX64、COMPLEX128、BOOL。</td>
       <td>ND</td>
-      <td>≥8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -87,7 +87,7 @@ aclnnStatus aclnnTake(
       <td>不支持负索引，取值范围在0 ~ self.shape[dim]内（包含0，不包含self.shape[dim]）。</td>
       <td>INT32、INT64。</td>
       <td>ND</td>
-      <td>≤8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
@@ -97,7 +97,7 @@ aclnnStatus aclnnTake(
       <td>数据类型同self，shape与index一致。</td>
       <td>UINT64、INT64、UINT32、FLOAT32、INT32、UINT16、INT16、FLOAT16、BFLOAT16、INT8、UINT8、DOUBLE、COMPLEX64、COMPLEX128、BOOL。</td>
       <td>ND</td>
-      <td>≥8</td>
+      <td>0-8</td>
       <td>√</td>
     </tr>
     <tr>
