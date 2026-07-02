@@ -386,6 +386,9 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::ZeroOutTrunc()
     }
     
     uint32_t zeroTokenStart = truncValue + blockIdx;
+    if (zeroTokenStart >= totalTokens) {
+        return;
+    }
     uint32_t zeroTokenStep = usedCoreNum;
 
     LocalTensor<T> zeroXLocal = zeroQueue.AllocTensor<T>();
@@ -540,6 +543,7 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::Process()
         tokenIdx += currentTileTokens;
     }
     SyncAll();
+    InitZeroOutTruncBuffer();
     ZeroOutTrunc();
 }
 
