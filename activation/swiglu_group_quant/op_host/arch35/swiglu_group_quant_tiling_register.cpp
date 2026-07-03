@@ -24,7 +24,8 @@ using namespace ge;
 namespace optiling {
 namespace {
 constexpr int64_t BLOCK_QUANT = 0;
-constexpr int64_t HIFP8_QUANT = 3;
+constexpr int64_t STATIC_HIFP8_QUANT = 2;
+constexpr int64_t DYNAMIC_HIFP8_QUANT = 3;
 constexpr size_t ATTR_INDEX_QUANT_MODE = 1;
 }
 
@@ -48,7 +49,7 @@ ge::graphStatus TilingForSwigluGroupQuant(gert::TilingContext *context)
         }
     }
 
-    if (quantMode == HIFP8_QUANT) {
+    if (quantMode == DYNAMIC_HIFP8_QUANT || quantMode == STATIC_HIFP8_QUANT) {
         SwigluGroupQuantHifp8Tiling tilingObj(context);
         return tilingObj.DoOpTiling();
     }

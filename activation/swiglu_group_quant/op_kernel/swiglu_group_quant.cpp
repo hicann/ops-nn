@@ -16,13 +16,15 @@
 #include "arch35/swiglu_group_quant_perf.h"
 #include "arch35/swiglu_mx_quant_perf.h"
 #include "arch35/swiglu_mxfp4_quant_perf.h"
-#include "arch35/swiglu_group_quant_hifp8.h"
+#include "arch35/swiglu_dynamic_group_quant_hifp8.h"
+#include "arch35/swiglu_static_group_quant_hifp8.h"
 #define BLOCK_QUANT_TILING_KEY 1000
 #define BLOCK_QUANT_YORIGIN_TILING_KEY 1100
 #define MX_QUANT_TILING_KEY 2000
 #define MX_QUANT_YORIGIN_TILING_KEY 2100
 #define MXFP4_QUANT_TILING_KEY 3000
-#define HIFP8_QUANT_TILING_KEY 4000
+#define DYNAMIC_HIFP8_QUANT_TILING_KEY 4000
+#define STATIC_HIFP8_QUANT_TILING_KEY 4100
 using namespace AscendC;
 
 extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weight, GM_ADDR groupIndex, GM_ADDR scale,
@@ -63,10 +65,15 @@ extern "C" __global__ __aicore__ void swiglu_group_quant(GM_ADDR x, GM_ADDR weig
         SwigluGroupQuant::SwigluMxFp4QuantPerf<DTYPE_X, DTYPE_Y, DTYPE_Y_SCALE> op;
         op.Init(x, weight, groupIndex, y, yScale, userWs, &tilingData, &pipe);
         op.Process();
-    } else if (TILING_KEY_IS(HIFP8_QUANT_TILING_KEY)) {
+    } else if (TILING_KEY_IS(DYNAMIC_HIFP8_QUANT_TILING_KEY)) {
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantHifp8TilingData, hifp8TilingData, tiling);
-        SwigluGroupQuantHifp8Ops::SwigluGroupQuantHifp8Kernel<DTYPE_X> op;
+        SwigluGroupQuantDynamicHifp8Ops::SwigluGroupQuantDynamicHifp8Kernel<DTYPE_X> op;
         op.Init(x, weight, groupIndex, y, yScale, yOrigin, userWs, &hifp8TilingData, &pipe);
+        op.Process();
+    } else if (TILING_KEY_IS(STATIC_HIFP8_QUANT_TILING_KEY)) {
+        GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantHifp8TilingData, hifp8TilingData, tiling);
+        SwigluGroupQuantStaticHifp8Ops::SwigluGroupQuantStaticHifp8Kernel<DTYPE_X> op;
+        op.Init(x, weight, groupIndex, scale, y, yOrigin, userWs, &hifp8TilingData, &pipe);
         op.Process();
     }
     AscendC::SetCtrlSpr<FLOAT_OVERFLOW_MODE_CTRL, FLOAT_OVERFLOW_MODE_CTRL>(oriOverflowMode);
