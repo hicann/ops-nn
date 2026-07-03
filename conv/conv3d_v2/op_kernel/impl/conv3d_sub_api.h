@@ -54,6 +54,7 @@ public:
             initConstValueParams.dstGap = 0;
             initConstValueParams.initValue = 0;
             InitConstValue<DataTypeT>(tensorL1, initConstValueParams);
+            AscendC::PipeBarrier<PIPE_MTE2>();
             ASC_OP_LOGD("[LoadChannelWiseL1] initConstValueParams.blockNum %d.\n", initConstValueParams.blockNum);
         }
         if (currentNL0_ <= MAX_UINT16) {
