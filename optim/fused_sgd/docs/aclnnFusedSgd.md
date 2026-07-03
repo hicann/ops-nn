@@ -53,27 +53,27 @@
 
 ```cpp
 aclnnStatus aclnnFusedSgdGetWorkspaceSize(
-    const aclTensorList 	*paramsRef,
-    const aclTensorList 	*gradsRef,
-    const aclTensorList 	*momentumBufferListOptionalRef,
-    const aclTensor 		*gradScaleOptional,
-    float 				     weightDecay,
-    float 					 momentum,
-    float 					 lr,
-	float 					 dampening,
-	bool 					 nesterov,
-	bool 					 maximize,
-	bool 					 isFirstStep,
-    uint64_t 				*workspaceSize,
-    aclOpExecutor 		   **executor);
+    const aclTensorList   *paramsRef,
+    const aclTensorList   *gradsRef,
+    const aclTensorList   *momentumBufferListOptionalRef,
+    const aclTensor       *gradScaleOptional,
+    float                  weightDecay,
+    float                  momentum,
+    float                  lr,
+    float                  dampening,
+    bool                   nesterov,
+    bool                   maximize,
+    bool                   isFirstStep,
+    uint64_t              *workspaceSize,
+    aclOpExecutor        **executor);
 ```
 
 ```cpp
 aclnnStatus aclnnFusedSgd(
-  void					*workspace, 
-  uint64_t	 			 workspace_size, 
-  aclOpExecutor			*executor, 
-  const aclrtStream 	 stream)
+  void              *workspace,
+  uint64_t           workspace_size,
+  aclOpExecutor     *executor,
+  const aclrtStream  stream)
 ```
 
 ## aclnnFusedSgdGetWorkspaceSize
@@ -93,145 +93,145 @@ aclnnStatus aclnnFusedSgd(
      </colgroup>
     <thead>
       <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
-        <th>使用说明</th>
-        <th>数据类型</th>
-        <th>数据格式</th>
-        <th>维度(shape)</th>
-        <th>非连续Tensor</th>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
+      <th>使用说明</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      <th>维度(shape)</th>
+      <th>非连续Tensor</th>
       </tr></thead>
     <tbody>
       <tr>
-        <td>paramsRef</td>
-        <td>输入/输出</td>
-        <td>更新参数。</td>
-        <td>不支持空Tensor。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>小于等于8维</td>
-        <td>√</td>
-      </tr>
-        <tr>
-        <td>gradsRef</td>
-        <td>输入/输出</td>
-        <td>更新梯度</td>
-        <td>不支持空Tensor。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>小于等于8维</td>
-        <td>√</td>
-      </tr>
-         <tr>
-        <td>momentumBufferListOptionalRef</td>
-        <td>输入/输出</td>
-        <td>更新动量</td>
-        <td>支持空Tensor。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>小于等于8维</td>
-        <td>√</td>
-      </tr>
-          <tr>
-        <td>gradScaleOptional</td>
-        <td>输入</td>
-        <td>梯度缩放值</td>
-        <td>支持空Tensor。</td>
-        <td>BFLOAT16、FLOAT16、FLOAT32</td>
-        <td>ND</td>
-        <td>shape等于[1]</td>
-        <td>√</td>
+      <td>paramsRef</td>
+      <td>输入/输出</td>
+      <td>更新参数。</td>
+      <td>不支持空Tensor。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>小于等于8维</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>weightDecay</td>
-        <td>属性</td>
-        <td>权重衰减值。</td>
-        <td>-</td>
-        <td>FLOAT</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-        <tr>
-        <td>momentum</td>
-        <td>属性</td>
-        <td>动量值。</td>
-        <td>-</td>
-        <td>FLOAT</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-        <tr>
-        <td>lr</td>
-        <td>属性</td>
-        <td>学习率。</td>
-        <td>-</td>
-        <td>FLOAT</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-        <tr>
-        <td>dampening</td>
-        <td>属性</td>
-        <td>动量的阻尼系数。</td>
-        <td>-</td>
-        <td>FLOAT</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-        <tr>
-        <td>nesterov</td>
-        <td>属性</td>
-        <td>是否启用 Nesterov 动量。</td>
-        <td>-</td>
-        <td>BOOL</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-        <tr>
-        <td>maximize</td>
-        <td>属性</td>
-        <td>是否为最大化目标函数。</td>
-        <td>-</td>
-        <td>BOOL</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-         <tr>
-        <td>isFirstStep</td>
-        <td>属性</td>
-        <td>是否第一步更新。</td>
-        <td>-</td>
-        <td>BOOL</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
+      <td>gradsRef</td>
+      <td>输入/输出</td>
+      <td>更新梯度</td>
+      <td>不支持空Tensor。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>小于等于8维</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
-        <td>输出</td>
-        <td>返回用户需要在Device侧申请的workspace大小。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>1</td>
-        <td>-</td>
+      <td>momentumBufferListOptionalRef</td>
+      <td>输入/输出</td>
+      <td>更新动量</td>
+      <td>支持空Tensor。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>小于等于8维</td>
+      <td>√</td>
       </tr>
       <tr>
-        <td>executor</td>
-        <td>输出</td>
-        <td>返回op执行器，包含了算子计算流程。</td>
-        <td>-</td>
-        <td>-</td>
-        <td>-</td>
-        <td>1</td>
-        <td>-</td>
+      <td>gradScaleOptional</td>
+      <td>输入</td>
+      <td>梯度缩放值</td>
+      <td>支持空Tensor。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT32</td>
+      <td>ND</td>
+      <td>shape等于[1]</td>
+      <td>√</td>
+      </tr>
+      <tr>
+      <td>weightDecay</td>
+      <td>属性</td>
+      <td>权重衰减值。</td>
+      <td>-</td>
+      <td>FLOAT</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>momentum</td>
+      <td>属性</td>
+      <td>动量值。</td>
+      <td>-</td>
+      <td>FLOAT</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>lr</td>
+      <td>属性</td>
+      <td>学习率。</td>
+      <td>-</td>
+      <td>FLOAT</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>dampening</td>
+      <td>属性</td>
+      <td>动量的阻尼系数。</td>
+      <td>-</td>
+      <td>FLOAT</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>nesterov</td>
+      <td>属性</td>
+      <td>是否启用 Nesterov 动量。</td>
+      <td>-</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>maximize</td>
+      <td>属性</td>
+      <td>是否为最大化目标函数。</td>
+      <td>-</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>isFirstStep</td>
+      <td>属性</td>
+      <td>是否第一步更新。</td>
+      <td>-</td>
+      <td>BOOL</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>workspaceSize</td>
+      <td>输出</td>
+      <td>返回用户需要在Device侧申请的workspace大小。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>1</td>
+      <td>-</td>
+      </tr>
+      <tr>
+      <td>executor</td>
+      <td>输出</td>
+      <td>返回op执行器，包含了算子计算流程。</td>
+      <td>-</td>
+      <td>-</td>
+      <td>-</td>
+      <td>1</td>
+      <td>-</td>
       </tr>
     </tbody></table>
     </div>
@@ -242,34 +242,34 @@ aclnnStatus aclnnFusedSgd(
   第一段接口完成入参校验，出现以下场景时报错：
   
   <div style="overflow-x: auto;">
-    <table style="undefined;table-layout: fixed; width: 1000px">	<colgroup>
+    <table style="undefined;table-layout: fixed; width: 1000px"><colgroup>
     <col style="width: 250px">
     <col style="width: 100px">
     <col style="width: 650px">
     </colgroup>
       <thead>
       <tr>
-        <th>返回值</th>
-        <th>错误码</th>
-        <th>描述</th>
+      <th>返回值</th>
+      <th>错误码</th>
+      <th>描述</th>
       </tr></thead>
     <tbody>
       <tr>
-        <td>ACLNN_ERR_PARAM_NULLPTR</td>
-        <td>161001</td>
-        <td>传入的paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale是空指针。</td>
+      <td>ACLNN_ERR_PARAM_NULLPTR</td>
+      <td>161001</td>
+      <td>传入的paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale是空指针。</td>
       </tr>
       <tr>
-        <td>ACLNN_ERR_PARAM_INVALID</td>
-        <td>161002</td>
-          <td><ul><li>paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale的数据类型不在支持的范围之内。</li>
-              <li>paramsRef、gradsRef与momentumBufferListOptionalRef及其中各个tensor的数据类型不同。</li>
-              <li>paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度小于等于8。</li>
-  			 <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape不同。</li>
-          <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中有空指针。</li>
-  	      <li>lr、momentum、weightDecay、dampening的值小于0。</li>
-          <li>gradScale等于0。</li>
-              </ul></td>
+      <td>ACLNN_ERR_PARAM_INVALID</td>
+      <td>161002</td>
+      <td><ul><li>paramsRef、gradsRef、momentumBufferListOptionalRef、grad_scale的数据类型不在支持的范围之内。</li>
+      <li>paramsRef、gradsRef与momentumBufferListOptionalRef及其中各个tensor的数据类型不同。</li>
+      <li>paramsRef、gradsRef与momentumBufferListOptionalRef中tensor的shape维度小于等于8。</li>
+      <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中相同索引tensor的shape不同。</li>
+      <li>paramsRef、gradsRef与momentumBufferListOptionalRef（momentumBufferListOptionalRef不为空时）中有空指针。</li>
+      <li>lr、momentum、weightDecay、dampening的值小于0。</li>
+      <li>gradScale等于0。</li>
+      </ul></td>
       </tr>
   </tbody>
     </table>
@@ -287,29 +287,29 @@ aclnnStatus aclnnFusedSgd(
     </colgroup>
     <thead>
       <tr>
-        <th>参数名</th>
-        <th>输入/输出</th>
-        <th>描述</th>
+      <th>参数名</th>
+      <th>输入/输出</th>
+      <th>描述</th>
       </tr></thead>
     <tbody>
       <tr>
-        <td>workspace</td>
-        <td>输入</td>
-        <td>在Device侧申请的workspace内存地址。</td>
+      <td>workspace</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace内存地址。</td>
       </tr>
       <tr>
-        <td>workspaceSize</td>
-        <td>输入</td>
-        <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedSgd获取。</td>
+      <td>workspaceSize</td>
+      <td>输入</td>
+      <td>在Device侧申请的workspace大小，由第一段接口aclnnFusedSgd获取。</td>
       </tr>
       <tr>
-        <td>executor</td>
-        <td>输入</td>
-        <td>op执行器，包含了算子计算流程。</td>
+      <td>executor</td>
+      <td>输入</td>
+      <td>op执行器，包含了算子计算流程。</td>
       </tr>
       <tr>
-        <td>stream</td>
-        <td>输入</td>
+      <td>stream</td>
+      <td>输入</td>
         <td>指定执行任务的Stream。</td>
       </tr>
     </tbody></table>

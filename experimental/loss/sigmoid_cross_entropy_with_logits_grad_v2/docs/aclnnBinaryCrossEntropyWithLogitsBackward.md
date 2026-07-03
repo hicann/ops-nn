@@ -14,6 +14,7 @@
   - `aclnnBinaryCrossEntropyWithLogitsBackward`
 
 参数映射关系：
+
 - `self` 对应算子输入 `predict`（logits）
 - `gradOutput` 对应算子输入 `dout`
 - `out` 对应算子输出 `gradient`
@@ -330,4 +331,5 @@ aclrtSynchronizeStream(stream);
 ```
 
 完整示例代码请参考：
+
 - [test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2](../examples/test_aclnn_sigmoid_cross_entropy_with_logits_grad_v2.cpp)

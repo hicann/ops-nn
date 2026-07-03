@@ -42,64 +42,64 @@
 
   reduction 说明：
 
-	- `none`：返回逐元素损失。
-	- `sum`：返回所有元素损失和。
-	- `mean`：返回所有元素损失均值。
+      - `none`：返回逐元素损失。
+      - `sum`：返回所有元素损失和。
+      - `mean`：返回所有元素损失均值。
 
 ## 参数说明
 
 <table style="undefined;table-layout: fixed; width: 1576px"><colgroup>
-	<col style="width: 170px">
-	<col style="width: 170px">
-	<col style="width: 310px">
-	<col style="width: 212px">
-	<col style="width: 100px">
-	</colgroup>
-	<thead>
-		<tr>
-			<th>参数名</th>
-			<th>输入/输出/属性</th>
-			<th>描述</th>
-			<th>数据类型</th>
-			<th>数据格式</th>
-		</tr></thead>
-	<tbody>
-		<tr>
-			<td>predict</td>
-			<td>输入</td>
-			<td>预测值张量，公式中的 predict。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>label</td>
-			<td>输入</td>
-			<td>标签张量，公式中的 label。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>sigma</td>
-			<td>可选属性</td>
-			<td>平滑阈值，控制二次段与一次段分界，默认值为 1.0。aclnn 接口参数名为 beta，与算子属性 sigma 语义一致。</td>
-			<td>FLOAT</td>
-			<td>ND</td>
-		</tr>
-		<tr>
-			<td>reduction</td>
-			<td>可选属性</td>
-			<td>支持 none、mean、sum。none 返回逐元素损失；mean/sum 返回标量。</td>
-			<td>STRING / INT64（接口映射）</td>
-			<td>ND</td>
-		</tr>
-		 <tr>
-			<td>loss</td>
-			<td>输出</td>
-			<td>公式中的输出 loss。</td>
-			<td>BFLOAT16、FLOAT16、FLOAT</td>
-			<td>ND</td>
-		</tr>
-	</tbody></table>
+      <col style="width: 170px">
+      <col style="width: 170px">
+      <col style="width: 310px">
+      <col style="width: 212px">
+      <col style="width: 100px">
+      </colgroup>
+      <thead>
+      <tr>
+      <th>参数名</th>
+      <th>输入/输出/属性</th>
+      <th>描述</th>
+      <th>数据类型</th>
+      <th>数据格式</th>
+      </tr></thead>
+      <tbody>
+      <tr>
+      <td>predict</td>
+      <td>输入</td>
+      <td>预测值张量，公式中的 predict。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>label</td>
+      <td>输入</td>
+      <td>标签张量，公式中的 label。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>sigma</td>
+      <td>可选属性</td>
+      <td>平滑阈值，控制二次段与一次段分界，默认值为 1.0。aclnn 接口参数名为 beta，与算子属性 sigma 语义一致。</td>
+      <td>FLOAT</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>reduction</td>
+      <td>可选属性</td>
+      <td>支持 none、mean、sum。none 返回逐元素损失；mean/sum 返回标量。</td>
+      <td>STRING / INT64（接口映射）</td>
+      <td>ND</td>
+      </tr>
+      <tr>
+      <td>loss</td>
+      <td>输出</td>
+      <td>公式中的输出 loss。</td>
+      <td>BFLOAT16、FLOAT16、FLOAT</td>
+      <td>ND</td>
+      </tr>
+      </tbody></table>
 
 ## 约束说明
 
