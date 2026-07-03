@@ -77,7 +77,7 @@ inline bool IsCubeBasicApiCapable(const QuantBatchMatmulInfo& inputParams)
         inputParams.isPerTensor &&
         ((aDtype == ge::DT_INT8 && inputParams.biasDtype == ge::DT_INT32 && !inputParams.isPertoken) ||
          ((aDtype == ge::DT_FLOAT8_E4M3FN || aDtype == ge::DT_FLOAT8_E5M2 || aDtype == ge::DT_HIFLOAT8) &&
-          inputParams.scaleDtype == ge::DT_UINT64));
+          (inputParams.scaleDtype == ge::DT_UINT64 || inputParams.scaleDtype == ge::DT_INT64)));
     bool isCubePerChannel =
         inputParams.isPerChannel && (inputParams.scaleDtype == ge::DT_UINT64 ||
                                      inputParams.scaleDtype == ge::DT_INT64 || inputParams.cDtype == ge::DT_INT32);

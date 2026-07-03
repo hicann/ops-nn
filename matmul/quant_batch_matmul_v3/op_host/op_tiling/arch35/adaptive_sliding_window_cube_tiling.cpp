@@ -66,7 +66,7 @@ bool AdaptiveSlidingWindowCubeTiling::IsCapable()
         ((inputParams_.aDtype == ge::DT_INT8 && inputParams_.biasDtype == ge::DT_INT32 && !inputParams_.isPertoken) ||
          ((inputParams_.aDtype == ge::DT_FLOAT8_E4M3FN || inputParams_.aDtype == ge::DT_FLOAT8_E5M2 ||
            inputParams_.aDtype == ge::DT_HIFLOAT8) &&
-          inputParams_.scaleDtype == ge::DT_UINT64));
+          (inputParams_.scaleDtype == ge::DT_UINT64 || inputParams_.scaleDtype == ge::DT_INT64)));
     bool isCubePerChannel =
         inputParams_.isPerChannel && (inputParams_.scaleDtype == ge::DT_UINT64 ||
                                       inputParams_.scaleDtype == ge::DT_INT64 || inputParams_.cDtype == ge::DT_INT32);
