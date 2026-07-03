@@ -195,11 +195,14 @@ uint64_t Conv2dBaseTiling::GetSmallKernelVal()
         return CONV_SMALL_KERNEL;
     }
 
-    // NCHW weight: extra dtype + nodeType + convGroup restrictions
+    // NCHW weight: extra format + dtype + nodeType + convGroup restrictions.
+    // Kernel side only implements NCHW weight for the non-NZ small-kernel path,
+    // so fmap format must be NCHW to keep tiling/kernel consistent.
     bool dtypeOk = (descInfo_.fMapDtype == ge::DataType::DT_FLOAT16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_BF16 ||
                     descInfo_.fMapDtype == ge::DataType::DT_FLOAT);
-    if (paramInfo_.nodeType == "Conv2DV2" &&
+    if (descInfo_.fMapFormat == ge::FORMAT_NCHW &&
+        paramInfo_.nodeType == "Conv2DV2" &&
         flagInfo_.convGroupType == ConvGroupType::NORMAL_CONV && dtypeOk) {
         return CONV_SMALL_KERNEL;
     }

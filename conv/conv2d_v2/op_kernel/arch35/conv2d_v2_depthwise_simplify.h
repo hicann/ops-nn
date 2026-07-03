@@ -20,7 +20,6 @@
 
 using namespace AscendC;
 
-constexpr uint32_t GK0_FP16 = 16;
 constexpr uint32_t BLOCK_BYTES = 32;
 constexpr uint8_t G_CV_ENHANCE_MODE = 4;
 constexpr uint8_t G_CV_SYNC_STRIDE = 16;
@@ -53,6 +52,13 @@ constexpr uint64_t G_MASK_8 = 0xff;
 constexpr uint64_t G_MASK_6 = 0x3f;
 constexpr uint64_t G_NINTH_BIT_MASK = 0x100;
 
+// L0 buffer half sizes (bytes) for ping-pong double buffering
+constexpr uint32_t G_L0A_HALF_BYTES = 32768;   // 32KB, L0A single buffer half
+constexpr uint32_t G_L0B_HALF_BYTES = 32768;   // 32KB, L0B single buffer half
+constexpr uint32_t G_L0C_HALF_BYTES = 131072;  // 128KB, L0C single buffer half
+// M_MTE1 event id base for L0A/L0B ping-pong (uses base and base+1)
+constexpr uint16_t G_MTE1_EVENT_BASE = 6;
+
 __aicore__ inline uint32_t GCeilDiv(uint32_t a, uint32_t b) { return (b == 0) ? 0 : (a + b - 1) / b; }
 __aicore__ inline uint32_t GAlignUp(uint32_t a, uint32_t b) { return GCeilDiv(a, b) * b; }
 
@@ -79,7 +85,7 @@ class DepthwiseConv2dSimplifiedKernel {
     static constexpr bool BL1_PINGPONG = (CONV_CFG::l1PingPong == 2 || CONV_CFG::l1PingPong == 3);
 
     using L0cT = float;
-    using IndexT = typename std::conditional<sizeof(DTYPE) == 2, uint16_t, uint32_t>::type;
+    using IndexT = typename std::conditional<sizeof(DTYPE) == sizeof(half), uint16_t, uint32_t>::type;
 
 public:
     __aicore__ inline DepthwiseConv2dSimplifiedKernel() : tiling_(nullptr) {}
@@ -295,8 +301,8 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Process
         }
 
         uint8_t syncBase = 0;
-        uint8_t syncMte3Mte1 = syncBase + 0;
-        uint8_t syncMte1Mte3 = syncBase + 1;
+        uint8_t syncMte3Mte1 = syncBase + G_CV_SYNC_ID_MTE3_MTE1;
+        uint8_t syncMte1Mte3 = syncBase + G_CV_SYNC_ID_MTE1_MTE3;
 
         for (uint32_t g = 0; g < singleGroupOpt; g++) {
             if constexpr (BL1_PINGPONG) {
@@ -613,7 +619,7 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
     const uint32_t maxLocalM = hoLocal * woLocal;
 
     uint16_t pingPongFlag = 0;
-    constexpr uint32_t L0C_HALF = 131072;
+    constexpr uint32_t L0C_HALF = G_L0C_HALF_BYTES;
 
     // Load bias: GM→L1 (MTE2) + L1→C2 (MTE1), with sync
     if (enableBias_) {
@@ -680,12 +686,12 @@ __aicore__ inline void DepthwiseConv2dSimplifiedKernel<CONV_CFG, DTYPE>::Compute
                 uint32_t curK = kL0;
                 if (kIt + curK > kTotal) curK = kTotal - kIt;
 
-                constexpr uint32_t L0A_HALF = 32768;
-                constexpr uint32_t L0B_HALF = 32768;
+                constexpr uint32_t L0A_HALF = G_L0A_HALF_BYTES;
+                constexpr uint32_t L0B_HALF = G_L0B_HALF_BYTES;
                 LocalTensor<DTYPE> al0(TPosition::A2, pingPongFlag * L0A_HALF, L0A_HALF / sizeof(DTYPE));
                 LocalTensor<DTYPE> bl0(TPosition::B2, pingPongFlag * L0B_HALF, L0B_HALF / sizeof(DTYPE));
 
-                uint16_t mte1Flag = pingPongFlag + 6;
+                uint16_t mte1Flag = pingPongFlag + G_MTE1_EVENT_BASE;
                 WaitFlag<HardEvent::M_MTE1>(static_cast<event_t>(mte1Flag));
 
                 DoLoadAL0(al1, al0, mL0Pos, kIt, loadMValue, safeMAlign, curK);
