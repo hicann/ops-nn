@@ -10,6 +10,7 @@
 
 #include "conv_fusion_utils_pass.h"
 #include "es_nn_ops.h"
+#include "ge/compliant_node_builder.h"
 #include "graph/utils/type_utils.h"
 #include "log/log.h"
 #include "platform/platform_info.h"
@@ -23,11 +24,6 @@ namespace ConvFusionUtils {
 using namespace ge;
 using namespace fe;
 using namespace fusion;
-
-namespace {
-constexpr int32_t BASE = 10;
-constexpr int32_t NPU_ARCH_VAL_MAX_LEN = 32;
-}
 
 bool ConvFusionUtilsPass::AddSubgraphInput(std::unique_ptr<SubgraphBoundary> &boundary, const GNode &node,
     const int64_t subgraphIndex, const int64_t boundaryIndex)
@@ -55,7 +51,7 @@ bool ConvFusionUtilsPass::AddSubgraphOutput(std::unique_ptr<SubgraphBoundary> &b
     return true;
 }
 
-bool ConvFusionUtilsPass::CheckSocSupport(const std::map<std::string, NpuArch> &supportSocList, NpuArch &npuArch)
+bool ConvFusionUtilsPass::CheckSocList(const std::map<std::string, NpuArch> &socList, NpuArch &npuArch)
 {
     PlatformInfo platformInfo;
     OptionalInfo optionalInfo;
@@ -64,10 +60,11 @@ bool ConvFusionUtilsPass::CheckSocSupport(const std::map<std::string, NpuArch> &
         OP_LOGW(UTIL_NAME, "Get platform_info failed."), return false);
     const std::string soc = platformInfo.str_info.short_soc_version;
 
-    FUSION_PASS_CHECK(supportSocList.find(soc) == supportSocList.end(),
-        OP_LOGD(UTIL_NAME, "Current soc %s not supported.", soc.c_str()), return false);
+    FUSION_PASS_CHECK(socList.find(soc) == socList.end(),
+        OP_LOGD(UTIL_NAME, "Current soc %s not in check list %s.", soc.c_str(), SocListToString(socList).c_str()),
+        return false);
 
-    npuArch = supportSocList.at(soc);
+    npuArch = socList.at(soc);
     OP_LOGD(UTIL_NAME, "Current NpuArch is DAV_%u.", npuArch);
 
     return true;
@@ -95,12 +92,11 @@ bool ConvFusionUtilsPass::GetConvBaseAttr(const GNode &convNode, ConvBaseAttrs &
     FUSION_PASS_CHECK(convNode.GetAttr(OFFSET_X, baseAttrs.offsetX) != GRAPH_SUCCESS,
         OP_LOGE(UTIL_NAME, "Get offset_x from %s failed.", convDescInfo.nodeNameStr.c_str()), return false);
 
-    AscendString attrPadding = "";
-    convNode.GetAttr(PADDING, attrPadding);
+    convNode.GetAttr(PADDING, baseAttrs.padding);
     AscendString attrAutoPad = "";
     convNode.GetAttr(AUTO_PAD, attrAutoPad);
 
-    AscendString tmpPadMode = attrPadding.GetLength() != 0 ? attrPadding :
+    AscendString tmpPadMode = baseAttrs.padding.GetLength() != 0 ? baseAttrs.padding :
         (attrAutoPad.GetLength() != 0 ? attrAutoPad : "NOTSET");
     baseAttrs.padMode = SPECIFIC_PAD_LIST.count(tmpPadMode) != 0 ? "SPECIFIC" : tmpPadMode;
 
@@ -258,6 +254,49 @@ bool ConvFusionUtilsPass::UpdateInputDesc(GNode *convNode, const ConvDescInfo &c
     if (convDescInfo.hasBias) {
         FUSION_PASS_CHECK(convNode->UpdateInputDesc(INPUT_BIAS_INDEX, convDescInfo.biasDesc) != GRAPH_SUCCESS,
             OP_LOGE(UTIL_NAME, "Update %s bias tensor desc failed.", nodeName.GetString()), return false);
+    }
+
+    return true;
+}
+
+bool ConvFusionUtilsPass::BuildConv2dNode(Graph *graph, const std::string &nodeName,
+    const std::vector<es::EsTensorHolder> &inputs, GNode &conv2dNode)
+{
+    const auto &fmap = inputs[INPUT_FMAP_INDEX];
+    const auto &filter = inputs[INPUT_FILTER_INDEX];
+
+    FUSION_PASS_CHECK(
+        fmap.GetProducer() == nullptr || filter.GetProducer() == nullptr ||
+            (inputs.size() == CONV_COUNT_PARAMS_BIAS && inputs[INPUT_BIAS_INDEX].GetProducer() == nullptr),
+        OP_LOGE(UTIL_NAME, "input producer is nullptr for node %s.", nodeName.c_str()), return false);
+
+    conv2dNode = es::CompliantNodeBuilder(graph)
+        .OpType(CONV2D.GetString())
+        .Name(nodeName.c_str())
+        .IrDefInputs({
+            {"x", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+            {"filter", es::CompliantNodeBuilder::kEsIrInputRequired, ""},
+            {"bias", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+            {"offset_w", es::CompliantNodeBuilder::kEsIrInputOptional, ""},
+        })
+        .IrDefOutputs({{"y", es::CompliantNodeBuilder::kEsIrOutputRequired, ""}})
+        .Build();
+
+    FUSION_PASS_CHECK(
+        graph->AddDataEdge(*fmap.GetProducer(), fmap.GetProducerOutIndex(), conv2dNode, INPUT_FMAP_INDEX) !=
+            GRAPH_SUCCESS,
+        OP_LOGE(UTIL_NAME, "Add fmap edge failed for node %s.", nodeName.c_str()), return false);
+    FUSION_PASS_CHECK(
+        graph->AddDataEdge(*filter.GetProducer(), filter.GetProducerOutIndex(), conv2dNode, INPUT_FILTER_INDEX) !=
+            GRAPH_SUCCESS,
+        OP_LOGE(UTIL_NAME, "Add filter edge failed for node %s.", nodeName.c_str()), return false);
+
+    if (inputs.size() == CONV_COUNT_PARAMS_BIAS) {
+        const auto &bias = inputs[INPUT_BIAS_INDEX];
+        FUSION_PASS_CHECK(
+            graph->AddDataEdge(*bias.GetProducer(), bias.GetProducerOutIndex(), conv2dNode, INPUT_BIAS_INDEX) !=
+                GRAPH_SUCCESS,
+            OP_LOGE(UTIL_NAME, "Add bias edge failed for node %s.", nodeName.c_str()), return false);
     }
 
     return true;

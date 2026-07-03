@@ -21,13 +21,28 @@ using namespace ConvFusionUtils;
 using namespace ge;
 using namespace fusion;
 
+bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode &node)
+{
+    auto boundary = ConstructBoundary(node);
+    FUSION_PASS_CHECK(boundary == nullptr,
+        OP_LOGE("ConvFusionBasePass", "Construct boundary for %s failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
+
+    auto replacement = Replacement(node);
+    FUSION_PASS_CHECK(replacement == nullptr,
+        OP_LOGE("ConvFusionBasePass", "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),
+        return false);
+
+    FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS,
+        OP_LOGE("ConvFusionBasePass", "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()), return false);
+
+    return true;
+}
+
 Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
 {
     std::string fusionName = "ConvFusionBasePass";
     OP_LOGD(fusionName, "Begin to do %s.", fusionName.c_str());
-
-    FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::CheckSocSupport(GetSocSupportList(), npuArch),
-        return GRAPH_NOT_CHANGED);
 
     std::vector<GNode> matchedNodes = {};
 
@@ -36,35 +51,29 @@ Status ConvFusionBasePass::Run(GraphPtr &graph, CustomPassContext &pass_context)
 
     int32_t effectTimes = 0;
     for (auto &node : matchedNodes) {
+        InitMember();
         FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(node, convDescInfo), return FAILED);
 
-        // Check fusion conditions.
         if (!MeetRequirements(node)) {
             OP_LOGD(fusionName, "%s is not meet requirements, skip.", convDescInfo.nodeNameStr.c_str());
             continue;
         }
 
-        InitMember();
-
-        // Transfer to PostCube node.
-        if (!PostCubeFusionImpl(graph, node, pass_context)) {
-            OP_LOGD(fusionName, "Transfer postcube for %s failed, skip.", convDescInfo.nodeNameStr.c_str());
+        Status preRes = ConvFusionPreImpl(graph, node, pass_context);
+        if (preRes == FAILED) {
+            OP_LOGE(fusionName, "ConvFusionPreImpl for %s get failed.", convDescInfo.nodeNameStr.c_str());
+            return FAILED;
+        }
+        if (preRes == CONV_NOT_CHANGED) {
+            OP_LOGD(fusionName, "ConvFusionPreImpl for %s get not changed.", convDescInfo.nodeNameStr.c_str());
             continue;
         }
 
-        // Create sup graph boundary to be replaced.
-        auto boundary = ConstructBoundary(node);
-        FUSION_PASS_CHECK(boundary == nullptr,
-            OP_LOGE(fusionName, "Construct boundary for %s failed.", convDescInfo.nodeNameStr.c_str()),
-            return FAILED);
+        if (!ConvFusionReplaceImpl(graph, node)) {
+            OP_LOGE(fusionName, "ConvFusionReplaceImpl for %s failed.", convDescInfo.nodeNameStr.c_str());
+            return FAILED;
+        }
 
-        auto replacement = Replacement(node);
-        FUSION_PASS_CHECK(replacement == nullptr,
-            OP_LOGE(fusionName, "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),
-            return FAILED);
-
-        FUSION_PASS_CHECK(SubgraphRewriter::Replace(*boundary, *replacement) != SUCCESS,
-            OP_LOGE(fusionName, "Replace for %s failed.", convDescInfo.nodeNameStr.c_str()), return FAILED);
         PrintGraphStructure();
 
         effectTimes++;

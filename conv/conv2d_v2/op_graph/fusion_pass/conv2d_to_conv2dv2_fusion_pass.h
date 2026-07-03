@@ -27,7 +27,7 @@ const std::string FUSION_NAME = "Conv2dToConv2dV2FusionPass";
 
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
     {"Ascend950", NpuArch::DAV_3510},
-    {"MC62CM12A", NpuArch::DAV_5102}
+    {"MC62", NpuArch::DAV_5102}
 };
 
 // Fmap Filter Output Bias

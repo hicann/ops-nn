@@ -34,7 +34,7 @@ public:
     {
         TestGraph builder(graphName);
         if (useDav5102) {
-            builder.SetSocMC62CM12A();
+            builder.SetSocMC62();
         } else {
             builder.SetSocAscend950();
         }

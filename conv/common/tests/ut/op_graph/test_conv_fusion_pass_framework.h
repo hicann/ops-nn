@@ -50,6 +50,8 @@ struct TensorInfo {
     TensorInfo& SetName(const std::string& tensorName) { name = tensorName; return *this; }
     TensorInfo& SetOptional(bool optional) { isOptional = optional; return *this; }
     TensorInfo& SetEnabled(bool isEnabled) { enabled = isEnabled; return *this; }
+    TensorInfo& SetSlot(int32_t portSlot) { slot = portSlot; return *this; }
+    TensorInfo& SetDesc(const TensorDesc& desc) { tensorDesc = desc; return *this; }
 
     DataType dtype = DT_FLOAT16;
     Format format = FORMAT_NCHW;
@@ -57,6 +59,7 @@ struct TensorInfo {
     std::string name = "";
     bool isOptional = false;
     bool enabled = false;
+    int32_t slot = -1;
     TensorDesc tensorDesc;
 };
 
@@ -155,6 +158,9 @@ struct NodeConfig {
     }
 
     std::string name;
+    std::string opType;
+    std::vector<CompliantNodeBuilder::IrInputDef> inputDefs;
+    std::vector<CompliantNodeBuilder::IrOutputDef> outputDefs;
     std::vector<TensorInfo> inputs;
     std::vector<TensorInfo> outputs;
     std::map<std::string, int64_t> intAttrs;
@@ -173,6 +179,12 @@ struct NodeConfig {
 struct Conv2DConfig : public NodeConfig {
     Conv2DConfig() {
         name = "Conv2D";
+        opType = "Conv2D";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("strides", std::vector<int64_t>{1, 1, 1, 1});
         SetAttr("pads", std::vector<int64_t>{1, 1, 1, 1});
         SetAttr("dilations", std::vector<int64_t>{1, 1, 1, 1});
@@ -210,6 +222,12 @@ struct Conv2DConfig : public NodeConfig {
 struct Conv3DConfig : public NodeConfig {
     Conv3DConfig() {
         name = "Conv3D";
+        opType = "Conv3D";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("strides", std::vector<int64_t>{1, 1, 1, 1, 1});
         SetAttr("pads", std::vector<int64_t>{1, 1, 1, 1, 1, 1});
         SetAttr("dilations", std::vector<int64_t>{1, 1, 1, 1, 1});
@@ -246,6 +264,10 @@ struct Conv3DConfig : public NodeConfig {
 struct AscendDequantConfig : public NodeConfig {
     AscendDequantConfig() {
         name = "AscendDequant";
+        opType = "AscendDequant";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"deq_scale", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("sqrt_mode", false);
         SetAttr("relu_flag", false);
         SetAttr("dtype", int64_t(DT_FLOAT));
@@ -267,6 +289,9 @@ struct AscendDequantConfig : public NodeConfig {
 struct AscendQuantConfig : public NodeConfig {
     AscendQuantConfig() {
         name = "AscendQuant";
+        opType = "AscendQuant";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("sqrt_mode", false);
         SetAttr("round_mode", std::string("Round"));
         SetAttr("dst_type", int64_t(DT_INT8));
@@ -288,6 +313,10 @@ struct AscendQuantConfig : public NodeConfig {
 struct AscendRequantConfig : public NodeConfig {
     AscendRequantConfig() {
         name = "AscendRequant";
+        opType = "AscendRequant";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"req_scale", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("relu_flag", false);
     }
 
@@ -305,6 +334,9 @@ struct AscendRequantConfig : public NodeConfig {
 struct ReluConfig : public NodeConfig {
     ReluConfig() {
         name = "Relu";
+        opType = "Relu";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
     }
 
     static ReluConfig Basic(std::string nodeName,
@@ -316,11 +348,59 @@ struct ReluConfig : public NodeConfig {
             .AddOutput(dataType, format, shape, nodeName + "_y");
         return config;
     }
+
+    static ReluConfig FromTensor(const std::string &nodeName, const TensorInfo &tensorInfo)
+    {
+        ReluConfig config;
+        config.SetName(nodeName)
+            .AddInput(tensorInfo)
+            .AddOutput(TensorInfo(tensorInfo.dtype, tensorInfo.format, tensorInfo.shape, nodeName + "_y")
+                .SetDesc(tensorInfo.tensorDesc));
+        return config;
+    }
+};
+
+struct DataConfig : public NodeConfig {
+    DataConfig()
+    {
+        name = "Data";
+        opType = "Data";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+    }
+
+    static DataConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT, Format format = FORMAT_NCHW,
+        const std::vector<int64_t> &shape = {})
+    {
+        DataConfig config;
+        config.SetName(nodeName)
+            .AddInput(dataType, format, shape, nodeName + "_src")
+            .AddOutput(dataType, format, shape, nodeName + "_y");
+        return config;
+    }
+
+    static DataConfig FromTensor(const std::string &nodeName, const TensorInfo &tensorInfo,
+        const std::string &inputName = "")
+    {
+        DataConfig config;
+        TensorInfo inputInfo = tensorInfo;
+        if (!inputName.empty()) {
+            inputInfo.name = inputName;
+        }
+        config.SetName(nodeName)
+            .AddInput(inputInfo)
+            .AddOutput(TensorInfo(tensorInfo.dtype, tensorInfo.format, tensorInfo.shape, nodeName + "_y")
+                .SetDesc(tensorInfo.tensorDesc));
+        return config;
+    }
 };
 
 struct LeakyReluConfig : public NodeConfig {
     LeakyReluConfig() {
         name = "LeakyRelu";
+        opType = "LeakyRelu";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("negative_slope", 0.0f);
     }
 
@@ -339,6 +419,18 @@ struct LeakyReluConfig : public NodeConfig {
 struct PostCubeConfig : public NodeConfig {
     PostCubeConfig() {
         name = "FixPipe";
+        opType = "FixPipe";
+        inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"quant_scale_0", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"relu_weight_0", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"clip_value_0", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"quant_scale_1", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"relu_weight_1", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"clip_value_1", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"anti_quant_scale", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"anti_quant_offset", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+        outputDefs = {{"output", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
     }
 
     static PostCubeConfig Basic(std::string nodeName,
@@ -356,6 +448,7 @@ struct PostCubeConfig : public NodeConfig {
     PostCubeConfig& WithScale0(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
         quantScale0Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_quant_scale_0");
         quantScale0Tensor.enabled = true;
+        quantScale0Tensor.slot = 2; // quant_scale_0 端口号
         this->AddInput(quantScale0Tensor);
         return *this;
     }
@@ -363,6 +456,7 @@ struct PostCubeConfig : public NodeConfig {
     PostCubeConfig& WithScale1(DataType dataType = DT_UINT64, const std::vector<int64_t>& shape = {1}) {
         quantScale1Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_quant_scale_1");
         quantScale1Tensor.enabled = true;
+        quantScale1Tensor.slot = 5; // quant_scale_1 端口号
         this->AddInput(quantScale1Tensor);
         return *this;
     }
@@ -370,6 +464,7 @@ struct PostCubeConfig : public NodeConfig {
     PostCubeConfig& WithRelu0(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
         reluWeight0Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_relu_weight_0");
         reluWeight0Tensor.enabled = true;
+        reluWeight0Tensor.slot = 3; // relu_weight_0 端口号
         this->AddInput(reluWeight0Tensor);
         return *this;
     }
@@ -377,6 +472,7 @@ struct PostCubeConfig : public NodeConfig {
     PostCubeConfig& WithRelu1(DataType dataType = DT_FLOAT, const std::vector<int64_t>& shape = {1}) {
         reluWeight1Tensor = TensorInfo(dataType, FORMAT_ND, shape, this->name + "_relu_weight_1");
         reluWeight1Tensor.enabled = true;
+        reluWeight1Tensor.slot = 6; // relu_weight_1 端口号
         this->AddInput(reluWeight1Tensor);
         return *this;
     }
@@ -404,9 +500,101 @@ inline TensorDesc BuildTensorDesc(DataType dtype, Format format, const std::vect
     return desc;
 }
 
+struct AscendWeightQuantConfig : public NodeConfig {
+    AscendWeightQuantConfig() {
+        name = "AscendWeightQuant";
+        opType = "AscendWeightQuant";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"offset", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+    }
+
+    static AscendWeightQuantConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT,
+        Format format = FORMAT_HWCN, const std::vector<int64_t> &shape = {1, 1, 16, 4}) {
+        AscendWeightQuantConfig config;
+        TensorInfo xInfo(dataType, format, shape, nodeName + "_x");
+        xInfo.SetDesc(BuildTensorDesc(dataType, format, shape, format, shape));
+        config.SetName(nodeName)
+            .AddInput(xInfo)
+            .AddOutput(dataType, format, shape, nodeName + "_y");
+        return config;
+    }
+};
+
+struct QuantBiasOptimizationConfig : public NodeConfig {
+    QuantBiasOptimizationConfig() {
+        name = "QuantBiasOptimization";
+        opType = "QuantBiasOptimization";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+    }
+
+    static QuantBiasOptimizationConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT,
+        Format format = FORMAT_HWCN, const std::vector<int64_t> &shape = {1, 1, 16, 4}) {
+        QuantBiasOptimizationConfig config;
+        TensorInfo filterInfo(dataType, format, shape, nodeName + "_filter");
+        filterInfo.SetDesc(BuildTensorDesc(dataType, format, shape, format, shape));
+        config.SetName(nodeName)
+            .AddInput(dataType, FORMAT_NCHW, {1, 16, 256, 256}, nodeName + "_x")
+            .AddInput(filterInfo)
+            .AddOutput(dataType, format, shape, nodeName + "_y");
+        return config;
+    }
+};
+
+struct DepthwiseConv2DConfig : public NodeConfig {
+    DepthwiseConv2DConfig() {
+        name = "DepthwiseConv2D";
+        opType = "DepthwiseConv2D";
+        inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"bias", CompliantNodeBuilder::kEsIrInputOptional, ""},
+                     {"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
+        SetAttr("strides", std::vector<int64_t>{1, 1, 1, 1});
+        SetAttr("pads", std::vector<int64_t>{0, 0, 0, 0});
+        SetAttr("dilations", std::vector<int64_t>{1, 1, 1, 1});
+        SetAttr("data_format", std::string("NCHW"));
+        SetAttr("offset_x", int64_t(0));
+    }
+
+    static DepthwiseConv2DConfig Basic(std::string nodeName, DataType dataType = DT_FLOAT,
+        Format format = FORMAT_NCHW, const std::vector<int64_t> &inputShape = {-1, 16, 256, 256},
+        const std::vector<int64_t> &filterShape = {1, 1, 1, 64},
+        const std::vector<int64_t> &outputShape = {-1, 4, 256, 256}) {
+        DepthwiseConv2DConfig config;
+        TensorInfo xInfo(dataType, format, inputShape, nodeName + "_x");
+        xInfo.SetDesc(BuildTensorDesc(dataType, format, inputShape, format, inputShape));
+        TensorInfo filterInfo(dataType, FORMAT_HWCN, filterShape, nodeName + "_filter");
+        filterInfo.SetDesc(BuildTensorDesc(dataType, FORMAT_HWCN, filterShape, FORMAT_HWCN, filterShape));
+        TensorInfo yInfo(dataType, format, outputShape, "y");
+        yInfo.SetDesc(BuildTensorDesc(dataType, format, outputShape, format, outputShape));
+        config.SetName(nodeName)
+            .AddInput(xInfo)
+            .AddInput(filterInfo)
+            .AddOutput(yInfo)
+            .SetAttr("data_format", format == FORMAT_NHWC ? "NHWC" : "NCHW");
+        return config;
+    }
+
+    DepthwiseConv2DConfig &WithBias(DataType dataType = DT_FLOAT, const std::vector<int64_t> &biasShape = {64}) {
+        biasTensor = TensorInfo(dataType, FORMAT_ND, biasShape, name + "_bias");
+        biasTensor.SetDesc(BuildTensorDesc(dataType, FORMAT_ND, biasShape, FORMAT_ND, biasShape));
+        biasTensor.enabled = true;
+        AddInput(biasTensor);
+        return *this;
+    }
+
+    TensorInfo biasTensor;
+};
+
 struct TransDataConfig : public NodeConfig {
     TransDataConfig() {
         name = "TransData";
+        opType = "TransData";
+        inputDefs = {{"src", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"dst", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("src_format", std::string("NDHWC"));
         SetAttr("dst_format", std::string("NDC1HWC0"));
         SetAttr("groups", int64_t(1));
@@ -421,6 +609,14 @@ struct TransDataConfig : public NodeConfig {
             FORMAT_NDHWC, {1, 32, 240, 352, originShapeC});
         config.dstDesc = BuildTensorDesc(dataType, FORMAT_NDC1HWC0, {1, 32, 1, 240, 352, 16},
             FORMAT_NDHWC, {1, 32, 240, 352, originShapeC});
+        // 把 src/dst 完整 desc 折进 inputs/outputs，统一走 Build() 的 slot 寻址
+        TensorInfo srcInfo(dataType, FORMAT_NDHWC, {}, nodeName + "_src");
+        srcInfo.SetDesc(config.srcDesc);
+        config.AddInput(srcInfo);
+        TensorInfo dstInfo;
+        dstInfo.name = "dst";
+        dstInfo.SetDesc(config.dstDesc);
+        config.AddOutput(dstInfo);
         return config;
     }
 
@@ -431,6 +627,13 @@ struct TransDataConfig : public NodeConfig {
 struct IFMRConfig : public NodeConfig {
     IFMRConfig() {
         name = "IFMR";
+        opType = "IFMR";
+        inputDefs = {{"data", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"data_min", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"data_max", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"cumsum", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"scale", CompliantNodeBuilder::kEsIrOutputRequired, ""},
+                      {"offset", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
         SetAttr("min_percentile", 0.01f);
         SetAttr("max_percentile", 0.99f);
         SetAttr("search_range", std::vector<float>{0.8f, 1.2f});
@@ -454,6 +657,10 @@ struct IFMRConfig : public NodeConfig {
 struct AddConfig : public NodeConfig {
     AddConfig() {
         name = "Add";
+        opType = "Add";
+        inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
+                     {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""}};
+        outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
     }
 
     static AddConfig Basic(const std::string &nodeName, DataType dataType = DT_FLOAT16,
@@ -468,24 +675,8 @@ struct AddConfig : public NodeConfig {
 };
 
 // ============================================================================
-// 待处理节点信息
+// 待处理连接信息
 // ============================================================================
-
-struct PendingNodeInfo {
-    std::string nodeName;
-    std::string opType;
-    std::vector<CompliantNodeBuilder::IrInputDef> inputDefs;
-    std::vector<CompliantNodeBuilder::IrOutputDef> outputDefs;
-    std::map<int32_t, TensorDesc> inputDesc;
-    std::map<int32_t, TensorDesc> outputDesc;
-    std::map<std::string, int64_t> intAttrs;
-    std::map<std::string, float> floatAttrs;
-    std::map<std::string, bool> boolAttrs;
-    std::map<std::string, std::string> strAttrs;
-    std::map<std::string, std::vector<int64_t>> listIntAttrs;
-    std::map<std::string, std::vector<std::string>> listStrAttrs;
-    std::map<std::string, std::vector<float>> listFloatAttrs;
-};
 
 struct PendingConnectionInfo {
     std::string fromNodeName;
@@ -493,6 +684,14 @@ struct PendingConnectionInfo {
     std::string toNodeName;
     int toInputIndex;
     es::EsTensorHolder graphInput;
+};
+
+struct FilterBranchOptions {
+    bool withRelu = true;
+    std::string filterNodeName = "filter";
+    std::string reluNodeName = "relu";
+    int32_t filterInputIndex = 1;
+    int32_t filterInputSlot = 1;
 };
 
 // ============================================================================
@@ -513,9 +712,8 @@ public:
         return *this;
     }
 
-    TestGraph& SetSocMC62CM12A() {
+    TestGraph& SetSocMC62() {
         SetSoc(SocConfig::MC62());
-        
         return *this;
     }
 
@@ -527,243 +725,118 @@ public:
         return input;
     }
 
+    TestGraph& AddNode(const NodeConfig& config, const std::vector<int>& autoInputPositions = {}) {
+        return AddNodeImpl(config, autoInputPositions);
+    }
+
     TestGraph& AddConv2D(const Conv2DConfig& conv2dConfig,
         bool autoFmap = true, bool autoFilter = true, bool autoBias = true) {
-        std::vector<es::EsTensorHolder> inputTensors;
-        PendingNodeInfo nodeInfo;
+        std::vector<int> autoInputs;
+        if (autoFmap) autoInputs.push_back(0);
+        if (autoFilter) autoInputs.push_back(1);
+        if (autoBias && conv2dConfig.biasTensor.enabled) autoInputs.push_back(2);
+        return AddNodeImpl(conv2dConfig, autoInputs);
+    }
 
-        if (autoFmap) {
-            auto fmap = CreateGraphInput(conv2dConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, conv2dConfig.name, 0, fmap});
-        }
-        nodeInfo.inputDesc[0] = conv2dConfig.inputs[0].tensorDesc;
-        if (autoFilter) {
-            auto filter = CreateGraphInput(conv2dConfig.inputs[1]);
-            pendingConnections.push_back({"", 0, conv2dConfig.name, 1, filter});
-        }
-        nodeInfo.inputDesc[1] = conv2dConfig.inputs[1].tensorDesc;
-        if (autoBias && conv2dConfig.inputs.size() >= 2) { // bias idx 2
-            if (conv2dConfig.biasTensor.enabled) {
-                auto bias = CreateGraphInput(conv2dConfig.biasTensor);
-                pendingConnections.push_back({"", 0, conv2dConfig.name, 2, bias}); // bias idx 2
-                nodeInfo.inputDesc[2] = conv2dConfig.inputs[2].tensorDesc; // bias idx 2
-            }
-        }
+    TestGraph& AddDepthwiseConv2D(const DepthwiseConv2DConfig& depthwiseConfig,
+        bool autoFmap = true, bool autoFilter = true, bool autoBias = true) {
+        std::vector<int> autoInputs;
+        if (autoFmap) autoInputs.push_back(0);
+        if (autoFilter) autoInputs.push_back(1);
+        if (autoBias && depthwiseConfig.biasTensor.enabled) autoInputs.push_back(2);
+        return AddNodeImpl(depthwiseConfig, autoInputs);
+    }
 
-        nodeInfo.outputDesc[0] = conv2dConfig.outputs[0].tensorDesc;
+    // filter_src -> Data(filter) -> [Relu] -> Conv.filter
+    TestGraph& AddConvWithFilterBranch(const NodeConfig &convConfig,
+        const FilterBranchOptions &options = FilterBranchOptions())
+    {
+        return AddConvWithFilterBranchImpl(convConfig, options);
+    }
 
-        nodeInfo.nodeName = conv2dConfig.name;
-        nodeInfo.opType = "Conv2D";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.inputDefs.push_back({"bias", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""});
+    TestGraph& AddConv2DWithFilterBranch(const Conv2DConfig &conv2dConfig, bool withRelu = true,
+        const std::string &filterNodeName = "filter", const std::string &reluNodeName = "relu")
+    {
+        FilterBranchOptions options;
+        options.withRelu = withRelu;
+        options.filterNodeName = filterNodeName;
+        options.reluNodeName = reluNodeName;
+        return AddConvWithFilterBranch(conv2dConfig, options);
+    }
 
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.intAttrs = conv2dConfig.intAttrs;
-        nodeInfo.strAttrs = conv2dConfig.strAttrs;
-        nodeInfo.listIntAttrs = conv2dConfig.listIntAttrs;
-        pendingNodes.push_back(nodeInfo);
+    TestGraph& AddConv3DWithFilterBranch(const Conv3DConfig &conv3dConfig, bool withRelu = true,
+        const std::string &filterNodeName = "filter", const std::string &reluNodeName = "relu")
+    {
+        FilterBranchOptions options;
+        options.withRelu = withRelu;
+        options.filterNodeName = filterNodeName;
+        options.reluNodeName = reluNodeName;
+        return AddConvWithFilterBranch(conv3dConfig, options);
+    }
 
-        return *this;
+    TestGraph& AddDepthwiseConv2DWithFilterBranch(const DepthwiseConv2DConfig &depthwiseConfig, bool withRelu = true,
+        const std::string &filterNodeName = "filter", const std::string &reluNodeName = "relu")
+    {
+        FilterBranchOptions options;
+        options.withRelu = withRelu;
+        options.filterNodeName = filterNodeName;
+        options.reluNodeName = reluNodeName;
+        return AddConvWithFilterBranch(depthwiseConfig, options);
     }
 
     TestGraph& AddConv3D(const Conv3DConfig& conv3dConfig,
         bool autoFmap = true, bool autoFilter = true, bool autoBias = true) {
-        PendingNodeInfo nodeInfo;
-
-        if (autoFmap) {
-            auto fmap = CreateGraphInput(conv3dConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, conv3dConfig.name, 0, fmap});
-        }
-        nodeInfo.inputDesc[0] = conv3dConfig.inputs[0].tensorDesc;
-        if (autoFilter) {
-            auto filter = CreateGraphInput(conv3dConfig.inputs[1]);
-            pendingConnections.push_back({"", 0, conv3dConfig.name, 1, filter});
-        }
-        nodeInfo.inputDesc[1] = conv3dConfig.inputs[1].tensorDesc;
-
-        if (autoBias && conv3dConfig.inputs.size() >= 2) { // bias idx 2
-            if (conv3dConfig.biasTensor.enabled) {
-                auto bias = CreateGraphInput(conv3dConfig.biasTensor);
-                pendingConnections.push_back({"", 0, conv3dConfig.name, 2, bias}); // bias idx 2
-                nodeInfo.inputDesc[2] = conv3dConfig.inputs[2].tensorDesc; // bias idx 2
-            }
-        }
-
-        nodeInfo.outputDesc[0] = conv3dConfig.outputs[0].tensorDesc;
-
-        nodeInfo.nodeName = conv3dConfig.name;
-        nodeInfo.opType = "Conv3D";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"filter", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.inputDefs.push_back({"bias", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"offset_w", CompliantNodeBuilder::kEsIrInputOptional, ""});
-
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.intAttrs = conv3dConfig.intAttrs;
-        nodeInfo.strAttrs = conv3dConfig.strAttrs;
-        nodeInfo.listIntAttrs = conv3dConfig.listIntAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        std::vector<int> autoInputs;
+        if (autoFmap) autoInputs.push_back(0);
+        if (autoFilter) autoInputs.push_back(1);
+        if (autoBias && conv3dConfig.biasTensor.enabled) autoInputs.push_back(2);
+        return AddNodeImpl(conv3dConfig, autoInputs);
     }
 
     TestGraph& AddAscendDequant(const AscendDequantConfig& ascendDequantConfig,
         bool autoX = false, bool autoScale = true) {
-        PendingNodeInfo nodeInfo;
-        if (autoX) {
-            auto x = CreateGraphInput(ascendDequantConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, ascendDequantConfig.name, 0, x});
-        }
-        nodeInfo.inputDesc[0] = ascendDequantConfig.inputs[0].tensorDesc;
-        if (autoScale) {
-            auto scale = CreateGraphInput(ascendDequantConfig.inputs[1]);
-            pendingConnections.push_back({"", 0, ascendDequantConfig.name, 1, scale});
-        }
-        nodeInfo.inputDesc[1] = ascendDequantConfig.inputs[1].tensorDesc;
-        nodeInfo.outputDesc[0] = ascendDequantConfig.outputs[0].tensorDesc;
-
-        nodeInfo.nodeName = ascendDequantConfig.name;
-        nodeInfo.opType = "AscendDequant";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"deq_scale", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.boolAttrs = ascendDequantConfig.boolAttrs;
-        nodeInfo.intAttrs = ascendDequantConfig.intAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        std::vector<int> autoInputs;
+        if (autoX) autoInputs.push_back(0);
+        if (autoScale) autoInputs.push_back(1);
+        return AddNodeImpl(ascendDequantConfig, autoInputs);
     }
 
     TestGraph& AddAscendRequant(const AscendRequantConfig& ascendRequantConfig,
         bool autoX = false, bool autoScale = true) {
-        PendingNodeInfo nodeInfo;
-        if (autoX) {
-            auto x = CreateGraphInput(ascendRequantConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, ascendRequantConfig.name, 0, x});
-        }
-        nodeInfo.inputDesc[0] = ascendRequantConfig.inputs[0].tensorDesc;
-        if (autoScale) {
-            auto scale = CreateGraphInput(ascendRequantConfig.inputs[1]);
-            pendingConnections.push_back({"", 0, ascendRequantConfig.name, 1, scale});
-        }
-        nodeInfo.inputDesc[1] = ascendRequantConfig.inputs[1].tensorDesc;
-        nodeInfo.outputDesc[0] = ascendRequantConfig.outputs[0].tensorDesc;
-
-        nodeInfo.nodeName = ascendRequantConfig.name;
-        nodeInfo.opType = "AscendRequant";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"req_scale", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.boolAttrs = ascendRequantConfig.boolAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        std::vector<int> autoInputs;
+        if (autoX) autoInputs.push_back(0);
+        if (autoScale) autoInputs.push_back(1);
+        return AddNodeImpl(ascendRequantConfig, autoInputs);
     }
 
     TestGraph& AddAscendQuant(const AscendQuantConfig& ascendQuantConfig, bool autoInputs = false) {
-        PendingNodeInfo nodeInfo;
-        if (autoInputs) {
-            auto x = CreateGraphInput(ascendQuantConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, ascendQuantConfig.name, 0, x});
-        }
-        nodeInfo.inputDesc[0] = ascendQuantConfig.inputs[0].tensorDesc;
-        nodeInfo.outputDesc[0] = ascendQuantConfig.outputs[0].tensorDesc;
-        nodeInfo.nodeName = ascendQuantConfig.name;
-        nodeInfo.opType = "AscendQuant";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.floatAttrs = ascendQuantConfig.floatAttrs;
-        nodeInfo.intAttrs = ascendQuantConfig.intAttrs;
-        nodeInfo.boolAttrs = ascendQuantConfig.boolAttrs;
-        nodeInfo.strAttrs = ascendQuantConfig.strAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        return AddNodeImpl(ascendQuantConfig, autoInputs ? std::vector<int>{0} : std::vector<int>{});
     }
 
     TestGraph& AddRelu(const ReluConfig& reluConfig, bool autoInputs = false) {
-        PendingNodeInfo nodeInfo;
-        if (autoInputs) {
-            auto x = CreateGraphInput(reluConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, reluConfig.name, 0, x});
-        }
-        nodeInfo.inputDesc[0] = reluConfig.inputs[0].tensorDesc;
-        nodeInfo.outputDesc[0] = reluConfig.outputs[0].tensorDesc;
-        nodeInfo.nodeName = reluConfig.name;
-        nodeInfo.opType = "Relu";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        pendingNodes.push_back(nodeInfo);
+        return AddNodeImpl(reluConfig, autoInputs ? std::vector<int>{0} : std::vector<int>{});
+    }
 
-        return *this;
+    TestGraph& AddData(const DataConfig &dataConfig, bool autoInput = true)
+    {
+        return AddNodeImpl(dataConfig, autoInput ? std::vector<int>{0} : std::vector<int>{});
     }
 
     TestGraph& AddLeakyRelu(const LeakyReluConfig& leakyReluConfig, bool autoInputs = false) {
-        PendingNodeInfo nodeInfo;
-        if (autoInputs) {
-            auto x = CreateGraphInput(leakyReluConfig.inputs[0]);
-            pendingConnections.push_back({"", 0, leakyReluConfig.name, 0, x});
-        }
-        nodeInfo.inputDesc[0] = leakyReluConfig.inputs[0].tensorDesc;
-        nodeInfo.outputDesc[0] = leakyReluConfig.outputs[0].tensorDesc;
-        nodeInfo.nodeName = leakyReluConfig.name;
-        nodeInfo.opType = "LeakyRelu";
-        nodeInfo.inputDefs = {{"x", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.floatAttrs = leakyReluConfig.floatAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        return AddNodeImpl(leakyReluConfig, autoInputs ? std::vector<int>{0} : std::vector<int>{});
     }
 
     TestGraph& AddPostCube(const PostCubeConfig& postCubeConfig, bool autoInputs = true) {
-        PendingNodeInfo nodeInfo;
-
+        std::vector<int> autoIdx;
         if (autoInputs) {
-            if (postCubeConfig.quantScale0Tensor.enabled) {
-                auto scale0 = CreateGraphInput(postCubeConfig.quantScale0Tensor);
-                pendingConnections.push_back({"", 0, postCubeConfig.name, 2, scale0});
-                nodeInfo.inputDesc[2] = postCubeConfig.quantScale0Tensor.tensorDesc; // quantScale0 idx 2
-            }
-            if (postCubeConfig.reluWeight0Tensor.enabled) {
-                auto relu0 = CreateGraphInput(postCubeConfig.reluWeight0Tensor);
-                pendingConnections.push_back({"", 0, postCubeConfig.name, 3, relu0});
-                nodeInfo.inputDesc[3] = postCubeConfig.reluWeight0Tensor.tensorDesc; // relu0 idx 3
-            }
-            if (postCubeConfig.quantScale1Tensor.enabled) {
-                auto scale1 = CreateGraphInput(postCubeConfig.quantScale0Tensor);
-                pendingConnections.push_back({"", 0, postCubeConfig.name, 5, scale1});
-                nodeInfo.inputDesc[5] = postCubeConfig.quantScale1Tensor.tensorDesc; // quantScale1 idx 5
-            }
-            if (postCubeConfig.reluWeight1Tensor.enabled) {
-                auto relu1 = CreateGraphInput(postCubeConfig.reluWeight1Tensor);
-                pendingConnections.push_back({"", 0, postCubeConfig.name, 6, relu1});
-                nodeInfo.inputDesc[6] = postCubeConfig.reluWeight1Tensor.tensorDesc; // relu1 idx 6
+            // 自动建图输入的是已使能的可选张量(scale/relu)，主输入 x1 由 Conv 经 Connect 提供
+            for (size_t i = 0; i < postCubeConfig.inputs.size(); ++i) {
+                if (postCubeConfig.inputs[i].enabled) {
+                    autoIdx.push_back(static_cast<int>(i));
+                }
             }
         }
-        nodeInfo.inputDesc[0] = postCubeConfig.inputs[0].tensorDesc;
-        nodeInfo.outputDesc[0] = postCubeConfig.outputs[0].tensorDesc;
-
-        nodeInfo.nodeName = postCubeConfig.name;
-        nodeInfo.opType = "FixPipe";
-        nodeInfo.inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.inputDefs = {{"x2", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.inputDefs.push_back({"quant_scale_0", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"relu_weight_0", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"clip_value_0", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"quant_scale_1", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"relu_weight_1", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"clip_value_1", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"anti_quant_scale", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.inputDefs.push_back({"anti_quant_offset", CompliantNodeBuilder::kEsIrInputOptional, ""});
-        nodeInfo.outputDefs = {{"output", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.strAttrs = postCubeConfig.strAttrs;
-        nodeInfo.listStrAttrs = postCubeConfig.listStrAttrs;
-        pendingNodes.push_back(nodeInfo);
-
-        return *this;
+        return AddNodeImpl(postCubeConfig, autoIdx);
     }
 
     TestGraph& Connect(const std::string& fromNodeName, int fromOutputIndex,
@@ -800,18 +873,24 @@ public:
         if (!graphBuilt) {
             geGraph = graphBuilder.BuildAndReset();
 
-            for (const auto& nodeInfo : pendingNodes) {
+            for (const auto& cfg : pendingEntries) {
                 auto node = CompliantNodeBuilder(geGraph.get())
-                    .OpType(nodeInfo.opType.c_str())
-                    .Name(nodeInfo.nodeName.c_str())
-                    .IrDefInputs(nodeInfo.inputDefs)
-                    .IrDefOutputs(nodeInfo.outputDefs)
+                    .OpType(cfg.opType.c_str())
+                    .Name(cfg.name.c_str())
+                    .IrDefInputs(cfg.inputDefs)
+                    .IrDefOutputs(cfg.outputDefs)
                     .IrDefAttrs({})
                     .Build();
 
-                SetNodeAttr(node, nodeInfo);
-                UpdateDesc(node, nodeInfo);
-                nodeMap[nodeInfo.nodeName] = node;
+                SetNodeAttrsFromConfig(node, cfg);
+                for (size_t i = 0; i < cfg.inputs.size(); ++i) {
+                    int32_t slot = cfg.inputs[i].slot >= 0 ? cfg.inputs[i].slot : static_cast<int32_t>(i);
+                    node.UpdateInputDesc(slot, cfg.inputs[i].tensorDesc);
+                }
+                for (size_t i = 0; i < cfg.outputs.size(); ++i) {
+                    node.UpdateOutputDesc(static_cast<int32_t>(i), cfg.outputs[i].tensorDesc);
+                }
+                nodeMap[cfg.name] = node;
             }
             AddNodeEdge();
             SetGraphOutput();
@@ -866,119 +945,95 @@ public:
 
     TestGraph &AddTransData(const TransDataConfig &transDataConfig, bool autoSrc = true)
     {
-        PendingNodeInfo nodeInfo;
-        if (autoSrc) {
-            TensorInfo srcInfo(transDataConfig.srcDesc.GetDataType(), transDataConfig.srcDesc.GetFormat(),
-                {}, transDataConfig.name + "_src");
-            auto src = CreateGraphInput(srcInfo);
-            pendingConnections.push_back({"", 0, transDataConfig.name, 0, src});
-        }
-        nodeInfo.inputDesc[0] = transDataConfig.srcDesc;
-        nodeInfo.outputDesc[0] = transDataConfig.dstDesc;
-        nodeInfo.nodeName = transDataConfig.name;
-        nodeInfo.opType = "TransData";
-        nodeInfo.inputDefs = {{"src", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"dst", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.strAttrs = transDataConfig.strAttrs;
-        nodeInfo.intAttrs = transDataConfig.intAttrs;
-        pendingNodes.push_back(nodeInfo);
-        return *this;
+        return AddNodeImpl(transDataConfig, autoSrc ? std::vector<int>{0} : std::vector<int>{});
     }
 
     TestGraph &AddIFMR(const IFMRConfig &ifmrConfig, bool autoInputs = true)
     {
-        PendingNodeInfo nodeInfo;
+        std::vector<int> autoIdx;
         if (autoInputs) {
             for (size_t i = 0; i < ifmrConfig.inputs.size(); ++i) {
-                auto input = CreateGraphInput(ifmrConfig.inputs[i]);
-                pendingConnections.push_back({"", 0, ifmrConfig.name, static_cast<int>(i), input});
+                autoIdx.push_back(static_cast<int>(i));
             }
         }
-        for (size_t i = 0; i < ifmrConfig.inputs.size(); ++i) {
-            nodeInfo.inputDesc[static_cast<int32_t>(i)] = ifmrConfig.inputs[i].tensorDesc;
-        }
-        for (size_t i = 0; i < ifmrConfig.outputs.size(); ++i) {
-            nodeInfo.outputDesc[static_cast<int32_t>(i)] = ifmrConfig.outputs[i].tensorDesc;
-        }
-        nodeInfo.nodeName = ifmrConfig.name;
-        nodeInfo.opType = "IFMR";
-        nodeInfo.inputDefs = {{"data", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"data_min", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"data_max", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"cumsum", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"scale", CompliantNodeBuilder::kEsIrOutputRequired, ""},
-                               {"offset", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        nodeInfo.floatAttrs = ifmrConfig.floatAttrs;
-        nodeInfo.boolAttrs = ifmrConfig.boolAttrs;
-        nodeInfo.listFloatAttrs = ifmrConfig.listFloatAttrs;
-        pendingNodes.push_back(nodeInfo);
-        return *this;
+        return AddNodeImpl(ifmrConfig, autoIdx);
     }
 
     TestGraph &AddAdd(const AddConfig &addConfig, bool autoInputs = false)
     {
-        PendingNodeInfo nodeInfo;
+        std::vector<int> autoIdx;
         if (autoInputs) {
             for (size_t i = 0; i < addConfig.inputs.size(); ++i) {
-                auto input = CreateGraphInput(addConfig.inputs[i]);
-                pendingConnections.push_back({"", 0, addConfig.name, static_cast<int>(i), input});
+                autoIdx.push_back(static_cast<int>(i));
             }
         }
-        for (size_t i = 0; i < addConfig.inputs.size(); ++i) {
-            nodeInfo.inputDesc[static_cast<int32_t>(i)] = addConfig.inputs[i].tensorDesc;
-        }
-        nodeInfo.outputDesc[0] = addConfig.outputs[0].tensorDesc;
-        nodeInfo.nodeName = addConfig.name;
-        nodeInfo.opType = "Add";
-        nodeInfo.inputDefs = {{"x1", CompliantNodeBuilder::kEsIrInputRequired, ""},
-                              {"x2", CompliantNodeBuilder::kEsIrInputRequired, ""}};
-        nodeInfo.outputDefs = {{"y", CompliantNodeBuilder::kEsIrOutputRequired, ""}};
-        pendingNodes.push_back(nodeInfo);
-        return *this;
+        return AddNodeImpl(addConfig, autoIdx);
     }
 
 private:
-    void SetNodeAttr(GNode &node, PendingNodeInfo nodeInfo) {
-        for (const auto& attr : nodeInfo.intAttrs) {
+    TestGraph& AddConvWithFilterBranchImpl(const NodeConfig &convConfig, const FilterBranchOptions &options)
+    {
+        const TensorInfo &filterInfo = convConfig.inputs[static_cast<size_t>(options.filterInputIndex)];
+        AddNodeImpl(convConfig, {0});
+
+        DataConfig filterCfg = DataConfig::FromTensor(options.filterNodeName, filterInfo,
+            options.filterNodeName + "_src");
+        AddData(filterCfg, true);
+
+        if (options.withRelu) {
+            AddRelu(ReluConfig::FromTensor(options.reluNodeName, filterInfo), false);
+            Connect(options.filterNodeName, 0, options.reluNodeName, 0);
+            Connect(options.reluNodeName, 0, convConfig.name, options.filterInputSlot);
+        } else {
+            Connect(options.filterNodeName, 0, convConfig.name, options.filterInputSlot);
+        }
+        return *this;
+    }
+
+    // 统一的节点登记：按 autoInputPositions 自动创建图输入，其余信息存入 pendingEntries(值拷贝，
+    // 切片到 NodeConfig 基类，Build() 时只读基类字段，避免悬空指针)。
+    TestGraph& AddNodeImpl(const NodeConfig& config, const std::vector<int>& autoInputPositions) {
+        for (int pos : autoInputPositions) {
+            const auto& info = config.inputs[pos];
+            int32_t slot = info.slot >= 0 ? info.slot : pos;
+            auto input = CreateGraphInput(info);
+            pendingConnections.push_back({"", 0, config.name, slot, input});
+        }
+        pendingEntries.push_back(config);
+        return *this;
+    }
+
+    void SetNodeAttrsFromConfig(GNode &node, const NodeConfig &cfg) {
+        for (const auto& attr : cfg.intAttrs) {
             int64_t attrValue = attr.second;
             node.SetAttr(AscendString(attr.first.c_str()), attrValue);
         }
-        for (const auto& attr : nodeInfo.strAttrs) {
-            AscendString strAttr = AscendString(attr.second.c_str());
-            node.SetAttr(AscendString(attr.first.c_str()), strAttr);
-        }
-        for (const auto& attr : nodeInfo.listIntAttrs) {
-            std::vector<int64_t> attrValue = attr.second;
-            node.SetAttr(AscendString(attr.first.c_str()), attrValue);
-        }
-        for (const auto& attr : nodeInfo.floatAttrs) {
+        for (const auto& attr : cfg.floatAttrs) {
             float attrValue = attr.second;
             node.SetAttr(AscendString(attr.first.c_str()), attrValue);
         }
-        for (const auto& attr : nodeInfo.boolAttrs) {
+        for (const auto& attr : cfg.boolAttrs) {
             bool attrValue = attr.second;
             node.SetAttr(AscendString(attr.first.c_str()), attrValue);
         }
-        for (const auto& attr : nodeInfo.listStrAttrs) {
+        for (const auto& attr : cfg.strAttrs) {
+            AscendString strAttr = AscendString(attr.second.c_str());
+            node.SetAttr(AscendString(attr.first.c_str()), strAttr);
+        }
+        for (const auto& attr : cfg.listIntAttrs) {
+            std::vector<int64_t> attrValue = attr.second;
+            node.SetAttr(AscendString(attr.first.c_str()), attrValue);
+        }
+        for (const auto& attr : cfg.listFloatAttrs) {
+            std::vector<float> attrValue = attr.second;
+            node.SetAttr(AscendString(attr.first.c_str()), attrValue);
+        }
+        for (const auto& attr : cfg.listStrAttrs) {
             std::vector<AscendString> attrValue;
             for (const auto& str : attr.second) {
                 attrValue.push_back(AscendString(str.c_str()));
             }
             node.SetAttr(AscendString(attr.first.c_str()), attrValue);
-        }
-        for (const auto& attr : nodeInfo.listFloatAttrs) {
-            std::vector<float> attrValue = attr.second;
-            node.SetAttr(AscendString(attr.first.c_str()), attrValue);
-        }
-    }
-
-    void UpdateDesc(GNode &node, PendingNodeInfo nodeInfo) {
-        for (auto desc : nodeInfo.inputDesc) {
-            node.UpdateInputDesc(desc.first, desc.second);
-        }
-
-        for (auto desc : nodeInfo.outputDesc) {
-            node.UpdateOutputDesc(desc.first, desc.second);
         }
     }
 
@@ -1018,7 +1073,7 @@ private:
     std::vector<es::EsTensorHolder> graphInputs = {};
     std::map<std::string, GNode> nodeMap;
     int inputIndex = 0;
-    std::vector<PendingNodeInfo> pendingNodes = {};
+    std::vector<NodeConfig> pendingEntries = {};
     std::vector<PendingConnectionInfo> pendingConnections = {};
     bool graphBuilt = false;
     std::vector<std::pair<std::string, int32_t>> outputs = {};
@@ -1063,6 +1118,37 @@ public:
             }
         }
         return false;
+    }
+
+    static bool FindNodeByNameSuffix(std::shared_ptr<Graph> &graph, const std::string &suffix, GNode &outNode)
+    {
+        for (auto node : graph->GetAllNodes()) {
+            AscendString nodeName;
+            if (node.GetName(nodeName) != GRAPH_SUCCESS) {
+                continue;
+            }
+            std::string nameStr = nodeName.GetString();
+            if (nameStr.size() >= suffix.size() &&
+                nameStr.compare(nameStr.size() - suffix.size(), suffix.size(), suffix) == 0) {
+                outNode = node;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static bool GetOriginShape(const GNode &node, int32_t index, bool isOutput, std::vector<int64_t> &dims)
+    {
+        TensorDesc desc;
+        if (isOutput) {
+            if (node.GetOutputDesc(index, desc) != GRAPH_SUCCESS) {
+                return false;
+            }
+        } else if (node.GetInputDesc(index, desc) != GRAPH_SUCCESS) {
+            return false;
+        }
+        dims = desc.GetOriginShape().GetDims();
+        return true;
     }
 
     static bool GetNodeBoolAttr(const GNode &node, const char *attrName, bool &value)

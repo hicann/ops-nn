@@ -33,10 +33,11 @@ bool Conv2dToConv2dV2FusionPass::MeetRequirements(const GNode &convNode)
 {
     InitMember();
 
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocSupport(SUPPORT_SOC_LIST, npuArch),
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
         OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
 
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvDescInfo(convNode, convDescInfo), return false);
+    OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv2dToConv2dV2FusionPass.");
 
     std::vector<DataType> convDtypes = {convDescInfo.fmapDtype, convDescInfo.filterDtype, convDescInfo.outputDtype};
     if (convDescInfo.hasBias) {

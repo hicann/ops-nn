@@ -185,7 +185,7 @@ GraphUniqPtr Conv3dToConv3dV2FusionPass::Replacement(const GNode &convNode)
         return nullptr);
 
     if (!supportOut2L1Dn2Nz) {
-        OP_LOGW(convDescInfo.nodeNameStr, "Current soc not supported Hf32, set enable_hf32 to false.");   
+        OP_LOGD(convDescInfo.nodeNameStr, "Current soc not supported Hf32, set enable_hf32 to false.");
         baseAttrs.enableHf32 = false;
     }
 

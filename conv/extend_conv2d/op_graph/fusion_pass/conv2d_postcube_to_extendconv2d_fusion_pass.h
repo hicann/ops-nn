@@ -13,12 +13,11 @@
 
 #include <map>
 #include <memory>
-#include <set>
 #include <sstream>
 #include <vector>
 
-#include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "../../common/graph_fusion/cube_utils/cube_utils.h"
+#include "../../conv/common/op_graph/fusion_pass/conv_fusion_base_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "platform/soc_spec.h"
 
@@ -26,30 +25,25 @@ namespace Ops {
 namespace NN {
 namespace Conv {
 namespace Conv2DPostCubeToExtendConv2DFusion {
-using ge::Status;
-using ge::AscendString;
-using ge::DataType;
-using ge::GNodePtr;
-using ge::GNode;
-using ge::Format;
 
-const AscendString ASCEND_REQUANT = "AscendRequant";
-const AscendString DUAL_OUTPUT = "dual_output";
-const AscendString ENABLE_RELU_0 = "enable_relu0";
-const AscendString ENABLE_RELU_1 = "enable_relu1";
-const AscendString FUSION_OP_LIST = "fusion_op_list";
-const AscendString LEAKY_RELU = "LeakyRelu";
-const AscendString RELU = "Relu";
-const AscendString RINT = "rint";
-const AscendString SCALE_0 = "scale0";
-const AscendString SCALE_1 = "scale1";
-const AscendString RELU_WEIGHT_0 = "relu_weight0";
-const AscendString RELU_WEIGHT_1 = "relu_weight1";
+const ge::AscendString ASCEND_REQUANT = "AscendRequant";
+const ge::AscendString DUAL_OUTPUT = "dual_output";
+const ge::AscendString ENABLE_RELU_0 = "enable_relu0";
+const ge::AscendString ENABLE_RELU_1 = "enable_relu1";
+const ge::AscendString FUSION_OP_LIST = "fusion_op_list";
+const ge::AscendString LEAKY_RELU = "LeakyRelu";
+const ge::AscendString RELU = "Relu";
+const ge::AscendString RINT = "rint";
+const ge::AscendString SCALE_0 = "scale0";
+const ge::AscendString SCALE_1 = "scale1";
+const ge::AscendString RELU_WEIGHT_0 = "relu_weight0";
+const ge::AscendString RELU_WEIGHT_1 = "relu_weight1";
 
 const std::map<std::string, NpuArch> SUPPORT_SOC_LIST = {
     {"Ascend950", NpuArch::DAV_3510},
     {"MC62", NpuArch::DAV_5102}
 };
+const std::string FUSION_NAME = "Conv2DPostCubeToExtendConv2DFusionPass";
 
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_0_INDEX = 4;
 constexpr int32_t EXTENDCONV2D_QUANT_SCALE_1_INDEX = 7;
@@ -62,21 +56,21 @@ constexpr int32_t OUTPUT_1_INDEX = 1;
 constexpr size_t DUAL_OUTPUTNUM = 2;
 
 // Fmap Filter Output Bias
-const std::vector<std::vector<DataType>> CONV_SUPPORT_DTYPES = {
-    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_INT32},
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_INT32, DataType::DT_FLOAT16},
-    {DataType::DT_FLOAT16, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_INT32},
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16}
+const std::vector<std::vector<ge::DataType>> CONV_SUPPORT_DTYPES = {
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT32},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16}
 };
 
 // Fmap Filter Output
-const std::vector<std::vector<Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
+const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_3510 = {
     {ge::FORMAT_NCHW, ge::FORMAT_NCHW, ge::FORMAT_NCHW},
     {ge::FORMAT_NHWC, ge::FORMAT_HWCN, ge::FORMAT_NHWC}
 };
 
 // Fmap Filter Output
-const std::vector<std::vector<Format>> CONV_SUPPORT_FORMATS_DAV_5102 = {
+const std::vector<std::vector<ge::Format>> CONV_SUPPORT_FORMATS_DAV_5102 = {
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NCHW},
     {ge::FORMAT_NCHW, ge::FORMAT_FRACTAL_Z_C04, ge::FORMAT_NCHW},
     {ge::FORMAT_NHWC, ge::FORMAT_FRACTAL_Z, ge::FORMAT_NHWC},
@@ -84,27 +78,27 @@ const std::vector<std::vector<Format>> CONV_SUPPORT_FORMATS_DAV_5102 = {
 };
 
 // Fmap Filter PostCubeIn PostCubeOut
-const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510 = {
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16},
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_INT8},
-    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_FLOAT16},
-    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_INT8}
+const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_3510 = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}
 };
 
 // Fmap Filter PostCubeIn PostCubeOut
-const std::vector<std::vector<DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 = {
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16},
-    {DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_FLOAT16, DataType::DT_INT8},
-    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_FLOAT16},
-    {DataType::DT_INT8, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_INT8},
-    {DataType::DT_FLOAT16, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_FLOAT16},
-    {DataType::DT_FLOAT16, DataType::DT_INT8, DataType::DT_INT32, DataType::DT_INT8}
+const std::vector<std::vector<ge::DataType>> SUPPORTED_DTYPES_WITH_POST_CUBE_DAV_5102 = {
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_INT8, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_FLOAT16},
+    {ge::DataType::DT_FLOAT16, ge::DataType::DT_INT8, ge::DataType::DT_INT32, ge::DataType::DT_INT8}
 };
 
-const std::vector<AscendString> SUPPORTED_NODE_TYPES = {
+const std::vector<ge::AscendString> SUPPORTED_NODE_TYPES = {
     "Conv2D", "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
 };
-const std::vector<AscendString> POST_CUBE_NODE_TYPES = {
+const std::vector<ge::AscendString> POST_CUBE_NODE_TYPES = {
     "AscendDequant", "AscendRequant", "AscendQuant", "Relu", "LeakyRelu"
 };
 enum class OutputCase : std::uint8_t {
@@ -117,14 +111,14 @@ enum class OutputCase : std::uint8_t {
 
 class __attribute__((visibility("default"))) Conv2DPostCubeToExtendConv2DFusionPass : public ConvFusionBasePass {
 protected:
-    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) override;
-    bool PostCubeFusionImpl(
-        ge::GraphPtr &graph, ge::GNode &convNode, const ge::CustomPassContext &pass_context) override;
     void InitMember() override;
     bool MeetRequirements(const ge::GNode &convNode) override;
     ge::AscendString GetNodeType() const override;
-    std::map<std::string, NpuArch> GetSocSupportList() const override;
     void PrintGraphStructure() const override;
+    ge::Status ConvFusionPreImpl(ge::GraphPtr &graph, ge::GNode &convNode,
+        const ge::CustomPassContext &pass_context) override;
+    bool ConvFusionReplaceImpl(ge::GraphPtr &graph, const ge::GNode &convNode) override;
+    std::unique_ptr<ge::fusion::SubgraphBoundary> ConstructBoundary(const ge::GNode &convNode) override;
     ge::fusion::GraphUniqPtr Replacement(const ge::GNode &convNode) override;
 
 private:

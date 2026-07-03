@@ -14,9 +14,12 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <type_traits>
 #include <vector>
 
+#include "ge/compliant_node_builder.h"
+#include "ge/es_tensor_holder.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "graph/operator.h"
 #include "platform/soc_spec.h"
@@ -29,6 +32,7 @@ const ge::AscendString ASCEND_DEQUANT = "AscendDequant";
 const ge::AscendString ASCEND_QUANT = "AscendQuant";
 const ge::AscendString CONV2D = "Conv2D";
 const ge::AscendString CONV3D = "Conv3D";
+const ge::AscendString DEPTHWISE_CONV2D = "DepthwiseConv2D";
 const ge::AscendString POST_CUBE_OP = "FixPipe";
 const ge::AscendString TRANS_DATA_OP = "TransData";
 const ge::AscendString IFMR_OP = "IFMR";
@@ -76,6 +80,19 @@ const std::vector<int64_t> HF32_PRECISION_MODES_INT = {0x1, 0x2, 0x40};
 std::string GeFormatToString(const ge::Format& geFormat);
 std::string GeDtypeToString(const ge::DataType& geDtype);
 
+inline std::string SocListToString(const std::map<std::string, NpuArch> &socList)
+{
+    std::string result = "[";
+    for (auto it = socList.begin(); it != socList.end(); ++it) {
+        result += it->first;
+        if (std::next(it) != socList.end()) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return result;
+}
+
 inline std::string VectorToString(const std::vector<ge::DataType>& dtypeVec)
 {
     std::string result = "[";
@@ -111,6 +128,7 @@ struct ConvBaseAttrs {
     int64_t opImplModeEnum = 0;
     ge::AscendString dataFormat = "";
     ge::AscendString padMode = "";
+    ge::AscendString padding = "";
     bool enableHf32 = false;
 };
 
@@ -144,7 +162,7 @@ public:
     template <typename T>
     static bool CheckSupportList(const std::vector<std::vector<T>> &supportLists,
         const std::vector<T> &curList);
-    static bool CheckSocSupport(const std::map<std::string, NpuArch> &supportSocList, NpuArch &npuArch);
+    static bool CheckSocList(const std::map<std::string, NpuArch> &socList, NpuArch &npuArch);
     static bool GetConvBaseAttr(const ge::GNode &convNode, ConvBaseAttrs &baseAttrs,
         const ConvDescInfo &convDescInfo);
     static bool GetConvDescInfo(const ge::GNode &convNode, ConvDescInfo &convDescInfo);
@@ -155,6 +173,8 @@ public:
     static ge::AscendString ListToAscendString(const std::vector<ge::AscendString> &strList);
     static void PrintConvDescInfo(const ConvDescInfo &convDescInfo);
     static bool UpdateInputDesc(ge::GNode *convNode, const ConvDescInfo &convDescInfo);
+    static bool BuildConv2dNode(ge::Graph *graph, const std::string &nodeName,
+        const std::vector<ge::es::EsTensorHolder> &inputs, ge::GNode &conv2dNode);
 };
 
 template <typename T>

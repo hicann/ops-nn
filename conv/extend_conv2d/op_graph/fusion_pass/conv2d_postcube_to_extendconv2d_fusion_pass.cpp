@@ -23,6 +23,109 @@ using namespace Conv2DPostCubeToExtendConv2DFusion;
 using namespace ge;
 using namespace fusion;
 
+void Conv2DPostCubeToExtendConv2DFusionPass::InitMember()
+{
+    npuArch = NpuArch::DAV_RESV;
+    convDescInfo = ConvDescInfo();
+    postCubeFusionOps.clear();
+    postCubeNodes.clear();
+    otherNodes.clear();
+    outputCase = OutputCase::SINGLE;
+    hasScale0 = false;
+    hasScale1 = false;
+    hasRelu0 = false;
+    hasRelu1 = false;
+    graphIndex = REQUIRED_INPUT_NUMS;
+}
+
+bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode &convNode)
+{
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSocList(SUPPORT_SOC_LIST, npuArch),
+        OP_LOGD(FUSION_NAME, "Current soc not supported, no fusion."), return false);
+
+    OP_LOGD(convDescInfo.nodeNameStr, "Begin to do Conv2DPostCubeToExtendConv2DFusionPass.");
+
+    FUSION_PASS_CHECK(convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX).empty(),
+        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D out nodes is empty, don't need fusion process."), return false);
+
+    // Check cur node's dtypes whether it is supported.
+    std::vector<DataType> convDtypes = {convDescInfo.fmapDtype, convDescInfo.filterDtype, convDescInfo.outputDtype};
+    if (convDescInfo.hasBias) {
+        convDtypes.emplace_back(convDescInfo.biasDtype);
+    }
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(CONV_SUPPORT_DTYPES, convDtypes),
+        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D dtype not supported, no fusion."), return false);
+
+    // Check cur node's formats whether it is supported.
+    std::vector<Format> convFormats = {convDescInfo.fmapFormat, convDescInfo.filterFormat, convDescInfo.outputFormat};
+    auto convSupportFormats = npuArch == NpuArch::DAV_5102 ?
+        CONV_SUPPORT_FORMATS_DAV_5102 : CONV_SUPPORT_FORMATS_DAV_3510;
+    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<Format>(convSupportFormats, convFormats),
+        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D format not supported, no fusion."), return false);
+
+    return true;
+}
+
+AscendString Conv2DPostCubeToExtendConv2DFusionPass::GetNodeType() const
+{
+    return ConvFusionUtils::CONV2D;
+}
+
+void Conv2DPostCubeToExtendConv2DFusionPass::PrintGraphStructure() const
+{
+    if (postCubeFusionOps.empty()) {
+        return;
+    }
+
+    auto fusionList0 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.front());
+    auto fusionList1 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.back());
+
+    std::stringstream logStr;
+    logStr << "graph structure: cube node name: [ " << convDescInfo.nodeNameStr << " ], ";
+    if (outputCase == OutputCase::SINGLE) {
+        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "].";
+    } else if (outputCase == OutputCase::DUAL_POST_CUBE) {
+        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
+        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
+    } else if (outputCase == OutputCase::POST_CUBE_OTHER) {
+        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << "], ";
+        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
+    } else if (outputCase == OutputCase::OTHER_POST_CUBE) {
+        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
+        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << "].";
+    }
+
+    OP_LOGI(convDescInfo.nodeNameStr, "%s", logStr.str().c_str());
+}
+
+Status Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionPreImpl(GraphPtr &graph, GNode &convNode,
+    const CustomPassContext &pass_context)
+{
+    GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
+    FUSION_PASS_CHECK(nodePtr == nullptr,
+        OP_LOGD(convDescInfo.nodeNameStr, "GetNodePtr failed, no fusion."), return CONV_NOT_CHANGED);
+
+    ops::PostCubeUtils postCubeUtils;
+    FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."), return CONV_NOT_CHANGED);
+
+    SelectPostCubePassByWhiteList(postCubeUtils.m_matchpasses_);
+
+    FUSION_PASS_CHECK(postCubeUtils.SelectPostCubeNodeList(true) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."), return CONV_NOT_CHANGED);
+
+    std::vector<GNodePtr> newNodes;
+    FUSION_PASS_CHECK(postCubeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
+        OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."), return CONV_NOT_CHANGED);
+
+    return SUCCESS;
+}
+
+bool Conv2DPostCubeToExtendConv2DFusionPass::ConvFusionReplaceImpl(GraphPtr &graph, const GNode &convNode)
+{
+    return DefaultConvFusionReplaceImpl(convNode);
+}
+
 std::unique_ptr<SubgraphBoundary> Conv2DPostCubeToExtendConv2DFusionPass::ConstructBoundary(const GNode &convNode)
 {
     FUSION_PASS_CHECK_NOLOG(!GetPostCubeNodes(convNode), return nullptr);
@@ -57,123 +160,24 @@ std::unique_ptr<SubgraphBoundary> Conv2DPostCubeToExtendConv2DFusionPass::Constr
     return boundary;
 }
 
-bool Conv2DPostCubeToExtendConv2DFusionPass::PostCubeFusionImpl(GraphPtr &graph, GNode &convNode,
-    const CustomPassContext &pass_context)
-{
-    GNodePtr nodePtr = ConvFusionUtilsPass::GetNodePtr(convNode, convDescInfo);
-    FUSION_PASS_CHECK_NOLOG(nodePtr == nullptr, return false);
-
-    ops::PostCubeUtils postCubeUtils;
-    // [Step 1] Determine which nodes in the subsequent nodes satisfy PostCube hardware unit
-    FUSION_PASS_CHECK(postCubeUtils.GetPostCubeNodeList(nodePtr, pass_context) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "GetPostCubeNodeList failed, no fusion."), return false);
-
-    // [Step 2] To customize the selection of the PostCube fusion range
-    SelectPostCubePassByWhiteList(postCubeUtils.m_matchpasses_);
-
-    // [Step 3] PostCube tool method selects 1~2 PostCube paths
-    FUSION_PASS_CHECK(postCubeUtils.SelectPostCubeNodeList(true) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "SelectPostCubeNodeList failed, no fusion."), return false);
-
-    // [Step 4] Create the PostCube operator node and modify the graph
-    std::vector<GNodePtr> newNodes;
-    FUSION_PASS_CHECK(postCubeUtils.CreatePostCubeNode(convDescInfo.nodeNameStr, *graph, newNodes) != GRAPH_SUCCESS,
-        OP_LOGD(convDescInfo.nodeNameStr, "CreatePostCubeNode failed, no fusion."), return false);
-
-    return true;
-}
-
-void Conv2DPostCubeToExtendConv2DFusionPass::InitMember()
-{
-    postCubeFusionOps.clear();
-    postCubeNodes.clear();
-    otherNodes.clear();
-    outputCase = OutputCase::SINGLE;
-    hasScale0 = false;
-    hasScale1 = false;
-    hasRelu0 = false;
-    hasRelu1 = false;
-    graphIndex = REQUIRED_INPUT_NUMS;
-}
-
-bool Conv2DPostCubeToExtendConv2DFusionPass::MeetRequirements(const GNode &convNode)
-{
-    FUSION_PASS_CHECK(convNode.GetOutDataNodesAndPortIndexs(OUTPUT_INDEX).empty(),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D out nodes is empty, don't need fusion process."), return false);
-
-    // Check cur node's dtypes whether it is supported.
-    std::vector<DataType> convDtypes = {convDescInfo.fmapDtype, convDescInfo.filterDtype, convDescInfo.outputDtype};
-    if (convDescInfo.hasBias) {
-        convDtypes.emplace_back(convDescInfo.biasDtype);
-    }
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<DataType>(CONV_SUPPORT_DTYPES, convDtypes),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D dtype not supported, no fusion."), return false);
-
-    // Check cur node's formats whether it is supported.
-    std::vector<Format> convFormats = {convDescInfo.fmapFormat, convDescInfo.filterFormat, convDescInfo.outputFormat};
-    auto convSupportFormats = npuArch == NpuArch::DAV_5102 ?
-        CONV_SUPPORT_FORMATS_DAV_5102 : CONV_SUPPORT_FORMATS_DAV_3510;
-    FUSION_PASS_CHECK(!ConvFusionUtilsPass::CheckSupportList<Format>(convSupportFormats, convFormats),
-        OP_LOGD(convDescInfo.nodeNameStr, "Conv2D format not supported, no fusion."), return false);
-
-    return true;
-}
-
-AscendString Conv2DPostCubeToExtendConv2DFusionPass::GetNodeType() const
-{
-    return ConvFusionUtils::CONV2D;
-}
-
-std::map<std::string, NpuArch> Conv2DPostCubeToExtendConv2DFusionPass::GetSocSupportList() const
-{
-    return SUPPORT_SOC_LIST;
-}
-
-void Conv2DPostCubeToExtendConv2DFusionPass::PrintGraphStructure() const
-{
-    if (postCubeFusionOps.empty()) {
-        return;
-    }
-
-    auto fusionList0 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.front());
-    auto fusionList1 = ConvFusionUtilsPass::ListToAscendString(postCubeFusionOps.back());
-
-    std::stringstream logStr;
-    logStr << "graph structure: cube node name: [ " << convDescInfo.nodeNameStr << " ], ";
-    if (outputCase == OutputCase::SINGLE) {
-        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "].";
-    } else if (outputCase == OutputCase::DUAL_POST_CUBE) {
-        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
-        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
-    } else if (outputCase == OutputCase::POST_CUBE_OTHER) {
-        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << "], ";
-        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList1.GetString() << "].";
-    } else if (outputCase == OutputCase::OTHER_POST_CUBE) {
-        logStr << "y0" << " output: [" << convDescInfo.nodeNameStr << ", " << fusionList0.GetString() << "], ";
-        logStr << "y1" << " output: [" << convDescInfo.nodeNameStr << "].";
-    }
-
-    OP_LOGI(convDescInfo.nodeNameStr, "%s", logStr.str().c_str());
-}
-
 GraphUniqPtr Conv2DPostCubeToExtendConv2DFusionPass::Replacement(const GNode &convNode)
 {
-    auto replace_graph_builder = es::EsGraphBuilder("replacement");
+    auto graphBuilder = es::EsGraphBuilder("replacement");
 
     ConvBaseAttrs baseAttrs;
     FUSION_PASS_CHECK_NOLOG(!ConvFusionUtilsPass::GetConvBaseAttr(convNode, baseAttrs, convDescInfo), return nullptr);
 
-    auto [fmap, filter] = replace_graph_builder.CreateInputs<REQUIRED_INPUT_NUMS>();
+    auto [fmap, filter] = graphBuilder.CreateInputs<REQUIRED_INPUT_NUMS>();
     auto bias = convDescInfo.hasBias ?
-        replace_graph_builder.CreateInput(graphIndex++) : nullptr;
+        graphBuilder.CreateInput(graphIndex++) : nullptr;
     auto scale0 = hasScale0 ?
-        replace_graph_builder.CreateInput(graphIndex++) : nullptr;
+        graphBuilder.CreateInput(graphIndex++) : nullptr;
     auto relu0 = hasRelu0 ?
-        replace_graph_builder.CreateInput(graphIndex++) : nullptr;
+        graphBuilder.CreateInput(graphIndex++) : nullptr;
     auto scale1 = hasScale1 ?
-        replace_graph_builder.CreateInput(graphIndex++) : nullptr;
+        graphBuilder.CreateInput(graphIndex++) : nullptr;
     auto relu1 = hasRelu1 ?
-        replace_graph_builder.CreateInput(graphIndex++) : nullptr;
+        graphBuilder.CreateInput(graphIndex++) : nullptr;
 
     bool enableRelu0 = outputCase != OutputCase::OTHER_POST_CUBE &&
         !postCubeFusionOps.empty() && IsReluEnable(postCubeFusionOps.front());
@@ -197,7 +201,7 @@ GraphUniqPtr Conv2DPostCubeToExtendConv2DFusionPass::Replacement(const GNode &co
     if (dualOutput) {
         replaceOutput.emplace_back(extendConv2D.y1);
     }
-    return replace_graph_builder.BuildAndReset(replaceOutput);
+    return graphBuilder.BuildAndReset(replaceOutput);
 }
 
 bool Conv2DPostCubeToExtendConv2DFusionPass::AddScaleReluToBoundAry(std::unique_ptr<SubgraphBoundary> &boundary)
@@ -366,7 +370,7 @@ bool Conv2DPostCubeToExtendConv2DFusionPass::GetPostCubeNodes(const GNode &convN
                << "the output node combination connected to this node can only be: "
                << "1. One postCube node and N non-postCube nodes; "
                << "2. Two postCube nodes. "
-               << "The postCube node types include: " << supportedPostCubeString; 
+               << "The postCube node types include: " << supportedPostCubeString;
         OP_LOGE_FOR_INVALID_GRAPH_NODE(convDescInfo.nodeNameStr.c_str(), reason.str());
         return false;
     }
