@@ -17,8 +17,8 @@
 #include "level0/squeeze.h"
 #include "aclnn_kernels/transdata.h"
 #include "aclnn_kernels/common/op_error_check.h"
-#include "opdev/op_log.h"
 #include "opdev/op_dfx.h"
+#include "opdev/op_log.h"
 #include "opdev/common_types.h"
 #include "opdev/data_type_utils.h"
 #include "opdev/format_utils.h"
@@ -212,6 +212,35 @@ static inline const aclIntArray* padsOps(const aclIntArray* pads, aclOpExecutor*
   return executor->AllocIntArray(vecpads.data(), SIZE_4);
 }
 
+// dilations目前算子只支持取值1
+static aclnnStatus CheckDilationsValue(const aclIntArray& dilationsRef) {
+  if (dilationsRef.Size() == SIZE_1) {
+    const int64_t dilationsHW = dilationsRef[0];
+    OP_CHECK((dilationsHW == 1),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation value along each spatial axis only support 1, but got %ld",
+                     dilationsHW),
+             return ACLNN_ERR_PARAM_INVALID);
+  } else if (dilationsRef.Size() == SIZE_2) {
+    const int64_t dilationsH = dilationsRef[0];
+    const int64_t dilationsW = dilationsRef[INDEX_1];
+    OP_CHECK(((dilationsH == 1) && (dilationsW == 1)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation value along each spatial axis only support 1, but got %ld, %ld",
+                     dilationsH, dilationsW),
+             return ACLNN_ERR_PARAM_INVALID);
+  } else if (dilationsRef.Size() == SIZE_4) {
+    const int64_t dilationsHL = dilationsRef[0];
+    const int64_t dilationsHR = dilationsRef[INDEX_1];
+    const int64_t dilationsWL = dilationsRef[INDEX_2];
+    const int64_t dilationsWR = dilationsRef[INDEX_3];
+    OP_CHECK(((dilationsHL == 1) && (dilationsHR == 1) && (dilationsWL == 1) && (dilationsWR == 1)),
+             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                     "dilation value along each spatial axis only support 1, but got %ld, %ld, %ld, %ld", dilationsHL,
+                     dilationsHR, dilationsWL, dilationsWR),
+             return ACLNN_ERR_PARAM_INVALID);
+  }
+  return ACLNN_SUCCESS;
+}
+
 // 检查参数列表长度和数值是否满足要求
 static aclnnStatus CheckParamsLogic(const aclIntArray* kernelShape, const aclIntArray* strides, const int64_t autoPad,
                                     const aclIntArray* pads, const aclIntArray* dilations) {
@@ -246,31 +275,10 @@ static aclnnStatus CheckParamsLogic(const aclIntArray* kernelShape, const aclInt
     return ACLNN_ERR_PARAM_INVALID;
   }
 
-  // dilations目前算子只支持取值1
   const aclIntArray& dilationsRef = *dilations;
-  if (dilationsRef.Size() == SIZE_1) {
-    const int64_t dilationsHW = dilationsRef[0];
-    OP_CHECK((dilationsHW == 1),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation value along each spatial axis only support 1, but got %ld",
-                     dilationsHW),
-             return ACLNN_ERR_PARAM_INVALID);
-  } else if (dilationsRef.Size() == SIZE_2) {
-    const int64_t dilationsH = dilationsRef[0];
-    const int64_t dilationsW = dilationsRef[INDEX_1];
-    OP_CHECK(((dilationsH == 1) && (dilationsW == 1)),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "dilation value along each spatial axis only support 1, but got %ld, %ld",
-                     dilationsH, dilationsW),
-             return ACLNN_ERR_PARAM_INVALID);
-  } else if (dilationsRef.Size() == SIZE_4) {
-    const int64_t dilationsHL = dilationsRef[0];
-    const int64_t dilationsHR = dilationsRef[INDEX_1];
-    const int64_t dilationsWL = dilationsRef[INDEX_2];
-    const int64_t dilationsWR = dilationsRef[INDEX_3];
-    OP_CHECK(((dilationsHL == 1) && (dilationsHR == 1) && (dilationsWL == 1) && (dilationsWR == 1)),
-             OP_LOGE(ACLNN_ERR_PARAM_INVALID,
-                     "dilation value along each spatial axis only support 1, but got %ld, %ld, %ld, %ld", dilationsHL,
-                     dilationsHR, dilationsWL, dilationsWR),
-             return ACLNN_ERR_PARAM_INVALID);
+  aclnnStatus ret = CheckDilationsValue(dilationsRef);
+  if (ret != ACLNN_SUCCESS) {
+    return ret;
   }
 
   return ACLNN_SUCCESS;
@@ -477,7 +485,7 @@ static const aclTensor* ExecMaxPoolV3(const aclTensor* self, const aclTensor* se
 static inline const aclTensor* View3Das5D(const aclTensor* input, aclOpExecutor* executor)
 {
     // CHW -> unsqueeze -> reformat -> 1C1HW(NCDHW, N=1, D=1)
-    // unsqueeze input into 5D
+    // unsqueeze input into 5D 
     FVector<int64_t> dimData{0, 2}; // Unsqueeze at dimension 0, 2
     const aclIntArray* dim2 = executor->AllocIntArray(dimData.data(), 2);
     auto unsqueezedInput = l0op::UnsqueezeNd(input, dim2, executor);

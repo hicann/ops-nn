@@ -21,8 +21,8 @@
 #include "opdev/shape_utils.h"
 #include "opdev/format_utils.h"
 #include "opdev/op_dfx.h"
-#include "opdev/op_executor.h"
 #include "opdev/op_log.h"
+#include "opdev/op_executor.h"
 #include "opdev/tensor_view_utils.h"
 #include "opdev/platform.h"
 #include "aclnn_kernels/common/op_error_check.h"
@@ -117,7 +117,6 @@ static bool CheckSingleTensorDtype(const aclTensor* tensor, const char* tensorNa
 {
     // 检查是否在支持的数据类型列表中
     OP_CHECK_DTYPE_NOT_SUPPORT(tensor, DTYPE_SUPPORT_LIST, return false);
-    
     // 检查数据类型一致性
     if (tensor->GetDataType() != baseDtype) {
         OP_LOGE(ACLNN_ERR_PARAM_INVALID, 
@@ -155,13 +154,13 @@ static bool CheckDtypeValid(const aclTensor *gradHyOptional,
 static bool ValidateInputShape(const aclTensor *input, const std::vector<int64_t>& expected_dims, const char* tensorName) {
   auto shape = input->GetViewShape();
   if (shape.GetDimNum() != expected_dims.size()) {
-      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count", tensorName);
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s has wrong dimension count.", tensorName);
       return false;
   }
 
   for (size_t i = 0; i < expected_dims.size(); ++i) {
       if (expected_dims[i] != shape.GetDim(i)) {
-        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s dim %zu mismatch", tensorName, i);
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "Input tensor %s dim %zu mismatch.", tensorName, i);
         return false;
       }
   }
