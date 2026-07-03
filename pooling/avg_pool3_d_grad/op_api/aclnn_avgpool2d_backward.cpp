@@ -72,10 +72,13 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
         return ACLNN_ERR_PARAM_INVALID;
         }
     }
-    
+
     for (uint64_t i = 0; i < kernelSize->Size(); i++) {
         auto halfKsize = (*kernelSize)[i] / 2;
         auto padSize = (*padding)[i];
+        if (padding->Size() == 1 && i == 1){
+            padSize = (*padding)[0];
+        }
         if (halfKsize < padSize) {
             OP_LOGE(
                 ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld]", i, padSize,
@@ -273,7 +276,7 @@ static const std::initializer_list<DataType>& GetDtypeSupportList()
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910B ||
         GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND910_93) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
-    } 
+    }
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return DTYPE_SUPPORT_LIST_WITH_BF16;
     }
@@ -1196,7 +1199,7 @@ aclnnStatus aclnnAvgPool2dBackwardGetWorkspaceSize(
             uniqueExecutor.ReleaseTo(executor);
             return ACLNN_SUCCESS;
         }
-    
+
         // 校验输入ksize、stride、pad
         auto arrayRet = CheckArrayDataAvgPoolBackWard(kernelSize, stride, padding);
         CHECK_RET(arrayRet == ACLNN_SUCCESS, ACLNN_ERR_PARAM_INVALID);
@@ -1205,7 +1208,7 @@ aclnnStatus aclnnAvgPool2dBackwardGetWorkspaceSize(
         static const std::string paddingMode = "CALCULATED";
         const bool globalPooling = false;
         auto avgPool2dBackwardResult = l0op::AvgPoolV2Grad(
-            self4d, shapeOrigInput, gradOutput4d, kernelSize, stride, paddingMode, padding, dataFormats, 
+            self4d, shapeOrigInput, gradOutput4d, kernelSize, stride, paddingMode, padding, dataFormats,
             globalPooling, ceilMode, !countIncludePad, divisorOverride, uniqueExecutor.get());
         CHECK_RET(avgPool2dBackwardResult != nullptr, ACLNN_ERR_INNER_NULLPTR);
         // 类型转换NCHW->NCL
