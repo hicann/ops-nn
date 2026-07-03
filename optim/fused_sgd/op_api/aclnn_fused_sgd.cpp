@@ -215,7 +215,6 @@ static aclnnStatus CheckParams(
     const aclTensorList *paramsRef,
     const aclTensorList *gradsRef,
     const aclTensorList *momentumBufferListOptionalRef,
-    const aclTensor *gradScaleOptional,
     float weightDecay, float momentum, float lr, float dampening, bool nesterov)
 {
     CHECK_RET(CheckAttr(momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening, nesterov), ACLNN_ERR_PARAM_INVALID);
@@ -306,7 +305,7 @@ aclnnStatus aclnnFusedSgdGetWorkspaceSize(
 
     CheckIsFirstStep(isFirstStep);
 
-    auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, gradScaleOptional, weightDecay, momentum, lr, dampening, nesterov);
+    auto ret = CheckParams(paramsRef, gradsRef, momentumBufferListOptionalRef, weightDecay, momentum, lr, dampening, nesterov);
     CHECK_RET(ret == ACLNN_SUCCESS, ret);
 
     if (gradScaleOptional != nullptr) {
