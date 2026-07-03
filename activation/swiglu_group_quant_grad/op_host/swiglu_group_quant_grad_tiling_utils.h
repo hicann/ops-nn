@@ -146,6 +146,14 @@ inline ge::graphStatus CheckAllAttrs(const gert::TilingContext *context, SwigluG
         auto clampLimitPtr = attrs->GetFloat(0);
         if (clampLimitPtr != nullptr) {
             compileInfo.clampLimit = *clampLimitPtr;
+            if (compileInfo.clampLimit != -1.0f) {
+                if (!(compileInfo.clampLimit > 0.0f)) {
+                    OP_LOGE(context->GetNodeName(),
+                            "attr clamp_limit must be -1 or > 0.0, got %f.", compileInfo.clampLimit);
+                    return ge::GRAPH_FAILED;
+                }
+                compileInfo.hasClampLimit = 1;
+            }
         }
     }
     return ge::GRAPH_SUCCESS;
@@ -380,33 +388,13 @@ inline uint32_t GetTotalTokens(const gert::StorageShape *shape, gert::TilingCont
     return totalTokens;
 }
 
-inline uint32_t GetTruncValue(const gert::TilingContext *context, uint32_t totalTokens)
-{
-    auto groupIndexTensor = context->GetOptionalInputTensor(INPUT_GROUP_INDEX_INDEX);
-    if (groupIndexTensor == nullptr) {
-        return totalTokens;
-    }
-    
-    uint32_t truncValue = 0;
-    const int64_t* groupIndexData = groupIndexTensor->GetData<int64_t>();
-    if (groupIndexData == nullptr) {
-        return totalTokens;
-    }
-    size_t groupNum = groupIndexTensor->GetStorageShape().GetDim(0);
-    for (size_t i = 0; i < groupNum; i++) {
-        truncValue += static_cast<uint32_t>(groupIndexData[i]);
-    }
-    return std::min(truncValue, totalTokens);
-}
-
 inline void CalculateTilingParams(const gert::TilingContext *context,
     SwigluGroupQuantGradCompileInfo &compileInfo,
     SwigluGroupQuantGradTilingData &tilingData)
 {
     uint32_t dimH = tilingData.get_dimH();
-    uint32_t truncValue = tilingData.get_truncValue();
     
-    uint32_t hasClampLimit = (compileInfo.clampLimit != 0.0f) ? 1 : 0;
+    uint32_t hasClampLimit = compileInfo.hasClampLimit;
     uint32_t hasWeight = compileInfo.hasWeight;
     
     uint32_t ubFactor = UB_BASE_FACTOR;
@@ -446,20 +434,11 @@ inline void CalculateTilingParams(const gert::TilingContext *context,
     
     uint32_t numHTiles = CeilDivT(dimH, tileH);
     
-    uint32_t usedCoreNum = std::min(truncValue, compileInfo.totalCore);
-    usedCoreNum = std::max(usedCoreNum, ONE);
-    
-    uint32_t tokensPerCore = CeilDivT(truncValue, usedCoreNum);
-    
-    uint32_t totalTiles = truncValue * numHTiles;
     OP_LOGD(context, "ubAvailable %u needSplitH %u tileTokens %u tileH %u compileInfo.totalCore %u \n", 
     ubAvailable, needSplitH, tileTokens, tileH, compileInfo.totalCore);
     tilingData.set_tileTokens(tileTokens);
     tilingData.set_tileH(tileH);
     tilingData.set_numHTiles(numHTiles);
-    tilingData.set_totalTiles(totalTiles);
-    tilingData.set_usedCoreNum(usedCoreNum);
-    tilingData.set_tokensPerCore(tokensPerCore);
 }
 
 inline ge::graphStatus SetTilingDataToContext(gert::TilingContext *context, SwigluGroupQuantGradTilingData &tilingData)
@@ -498,10 +477,9 @@ inline void SetBasicTilingData(gert::TilingContext *context,
     auto xShape = context->GetInputShape(INPUT_OP_X_INDEX);
     uint32_t totalTokens = GetTotalTokens(gradYShape, context);
     uint32_t dimH = static_cast<uint32_t>(gradYShape->GetStorageShape()
-                                                    .GetDim(gradYShape->GetStorageShape().GetDimNum() - 1));
+                                                     .GetDim(gradYShape->GetStorageShape().GetDimNum() - 1));
     uint32_t dim2H = static_cast<uint32_t>(xShape->GetStorageShape()
-                                                 .GetDim(xShape->GetStorageShape().GetDimNum() - 1));
-    uint32_t truncValue = GetTruncValue(context, totalTokens);
+                                                  .GetDim(xShape->GetStorageShape().GetDimNum() - 1));
     
     tilingData.set_coreNumAll(compileInfo.totalCore);
     tilingData.set_ubSize(compileInfo.ubSize);
@@ -511,9 +489,8 @@ inline void SetBasicTilingData(gert::TilingContext *context,
     tilingData.set_hasWeight(compileInfo.hasWeight);
     tilingData.set_hasYOrigin(compileInfo.hasYOrigin);
     tilingData.set_hasGroupIndex(compileInfo.hasGroupIndex);
-    tilingData.set_hasClampLimit(compileInfo.clampLimit != 0.0f ? 1 : 0);
+    tilingData.set_hasClampLimit(compileInfo.hasClampLimit);
     tilingData.set_clampLimit(compileInfo.clampLimit);
-    tilingData.set_truncValue(truncValue);
     
     auto groupIndexShape = context->GetOptionalInputShape(INPUT_GROUP_INDEX_INDEX);
     if (groupIndexShape != nullptr) {

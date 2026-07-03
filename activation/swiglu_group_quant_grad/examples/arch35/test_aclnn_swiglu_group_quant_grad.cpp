@@ -96,7 +96,7 @@ int main() {
   aclTensor* xTensor = nullptr;
   aclTensor* weightTensor = nullptr;
   aclTensor* yOriginTensor = nullptr;
-  aclIntArray* groupIndexArray = nullptr;
+  aclTensor* groupIndexTensor = nullptr;
   aclTensor* gradXTensor = nullptr;
   aclTensor* gradWeightTensor = nullptr;
 
@@ -143,8 +143,7 @@ int main() {
   ret = CreateAclTensor(yOriginHostData, yOriginShape, &yOriginDeviceAddr, aclDataType::ACL_FLOAT16, &yOriginTensor);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
-  std::vector<int64_t> groupArray = {256, 256};
-  groupIndexArray = aclCreateIntArray(groupArray.data(), groupArray.size());
+  ret = CreateAclTensor(groupIndexHostData, groupIndexShape, &groupIndexDeviceAddr, aclDataType::ACL_INT64, &groupIndexTensor);
   CHECK_RET(ret == ACL_SUCCESS, return ret);
 
   ret = CreateAclTensorWithValue<float>(gradXShape, &gradXDeviceAddr, aclDataType::ACL_FLOAT16, &gradXTensor, 0.0f);
@@ -159,7 +158,7 @@ int main() {
   aclOpExecutor* executor;
 
   ret = aclnnSwigluGroupQuantGradGetWorkspaceSize(gradYTensor, xTensor, weightTensor, yOriginTensor,
-                                                    groupIndexArray, clampLimit, gradXTensor, gradWeightTensor,
+                                                    groupIndexTensor, clampLimit, gradXTensor, gradWeightTensor,
                                                     &workspaceSize, &executor);
   CHECK_RET(ret == ACL_SUCCESS, LOG_PRINT("aclnnSwigluGroupQuantGradGetWorkspaceSize failed. ERROR: %d\n", ret); return ret);
 
@@ -201,6 +200,7 @@ int main() {
   aclDestroyTensor(xTensor);
   aclDestroyTensor(weightTensor);
   aclDestroyTensor(yOriginTensor);
+  aclDestroyTensor(groupIndexTensor);
   aclDestroyTensor(gradXTensor);
   aclDestroyTensor(gradWeightTensor);
 

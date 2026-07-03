@@ -37,16 +37,10 @@ BEGIN_TILING_DATA_DEF(SwigluGroupQuantGradTilingData)
     TILING_DATA_FIELD_DEF(float, clampLimit);
     
     TILING_DATA_FIELD_DEF(uint32_t, groupNum);
-    TILING_DATA_FIELD_DEF(uint32_t, truncValue);
     
     TILING_DATA_FIELD_DEF(uint32_t, tileTokens);
     TILING_DATA_FIELD_DEF(uint32_t, tileH);
     TILING_DATA_FIELD_DEF(uint32_t, numHTiles);
-    TILING_DATA_FIELD_DEF(uint32_t, totalTiles);
-    
-    TILING_DATA_FIELD_DEF(uint32_t, usedCoreNum);
-    TILING_DATA_FIELD_DEF(uint32_t, tokensPerCore);
-    TILING_DATA_FIELD_DEF(uint32_t, coreTokenStart);
 END_TILING_DATA_DEF;
 
 REGISTER_TILING_DATA_CLASS(SwigluGroupQuantGrad, SwigluGroupQuantGradTilingData)
@@ -58,7 +52,8 @@ struct SwigluGroupQuantGradCompileInfo {
     uint32_t totalCore = 1;
     uint32_t ubSize = 0;
     uint32_t inputDataByte = 4;
-    float clampLimit = 0.0f;
+    float clampLimit = -1.0f;
+    uint32_t hasClampLimit = 0;
     uint32_t hasWeight = 0;
     uint32_t hasYOrigin = 0;
     uint32_t hasGroupIndex = 0;

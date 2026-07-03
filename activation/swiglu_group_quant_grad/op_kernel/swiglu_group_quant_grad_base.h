@@ -41,26 +41,29 @@ public:
         GET_TILING_DATA_WITH_STRUCT(SwigluGroupQuantGradTilingData, tilingData, tiling);
         
         blockIdx = GetBlockIdx();
+        coreNumAll = tilingData.coreNumAll;
         totalTokens = tilingData.totalTokens;
         dimH = tilingData.dimH;
         dim2H = tilingData.dim2H;
         groupNum = tilingData.groupNum;
-        truncValue = tilingData.truncValue;
         tileTokens = tilingData.tileTokens;
         tileH = tilingData.tileH;
         numHTiles = tilingData.numHTiles;
-        usedCoreNum = tilingData.usedCoreNum;
-        tokensPerCore = tilingData.tokensPerCore;
         hasWeight = tilingData.hasWeight;
         hasYOrigin = tilingData.hasYOrigin;
         hasGroupIndex = tilingData.hasGroupIndex;
         hasClampLimit = tilingData.hasClampLimit;
         clampLimit = tilingData.clampLimit;
         
-        tokenStart = blockIdx * tokensPerCore;
-        
         tileLength = tileTokens * tileH;
         tileDataSize = tileLength * sizeof(float);
+    }
+
+    __aicore__ inline void ComputeTruncRelatedParams()
+    {
+        usedCoreNum = (truncValue < coreNumAll) ? truncValue : coreNumAll;
+        tokensPerCore = CeilDiv(truncValue, usedCoreNum);
+        tokenStart = blockIdx * tokensPerCore;
     }
 
     __aicore__ inline void InitBuffer()
@@ -116,6 +119,7 @@ protected:
     TQue<TPosition::VECIN, BUFFER_NUM> zeroQueue;
     
     uint32_t blockIdx = 0;
+    uint32_t coreNumAll = 0;
     uint32_t totalTokens = 0;
     uint32_t dimH = 0;
     uint32_t dim2H = 0;
@@ -131,7 +135,7 @@ protected:
     uint32_t hasYOrigin = 0;
     uint32_t hasGroupIndex = 0;
     uint32_t hasClampLimit = 0;
-    float clampLimit = 0.0f;
+    float clampLimit = -1.0f;
     
     uint32_t tileLength = 0;
     uint32_t tileDataSize = 0;

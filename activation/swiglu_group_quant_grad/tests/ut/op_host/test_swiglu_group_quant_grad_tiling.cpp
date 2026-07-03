@@ -102,7 +102,7 @@ TEST_F(SwigluGroupQuantGradTiling, swiglu_group_quant_grad_tiling_basic) {
                     .NodeInputTd(1, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(-1.0f)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
@@ -183,7 +183,7 @@ TEST_F(SwigluGroupQuantGradTiling, swiglu_group_quant_grad_tiling_with_weight) {
                     .NodeInputTd(3, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(0, ge::DT_FLOAT16, ge::FORMAT_ND, ge::FORMAT_ND)
                     .NodeOutputTd(1, ge::DT_FLOAT, ge::FORMAT_ND, ge::FORMAT_ND)
-                    .NodeAttrs({{"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(0.0)}})
+                    .NodeAttrs({{"clamp_limit", Ops::NN::AnyValue::CreateFrom<float>(-1.0f)}})
                     .TilingData(param.get())
                     .Workspace(ws_size)
                     .Build();
