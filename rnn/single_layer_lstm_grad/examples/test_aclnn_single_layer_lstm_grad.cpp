@@ -402,27 +402,10 @@ int main() {
 
   // 释放 aclTensor
   aclDestroyTensor(x);
-  aclDestroyTensor(wi);
-  aclDestroyTensor(wh);
-  aclDestroyTensor(bi);
-  aclDestroyTensor(bh);
   aclDestroyTensor(y);
-  aclDestroyTensor(initH);
-  aclDestroyTensor(initC);
-  aclDestroyTensor(h);
-  aclDestroyTensor(c);
   aclDestroyTensor(dy);
   aclDestroyTensor(dh);
   aclDestroyTensor(dc);
-  aclDestroyTensor(i);
-  aclDestroyTensor(j);
-  aclDestroyTensor(f);
-  aclDestroyTensor(o);
-  aclDestroyTensor(tanhCt);
-  aclDestroyTensor(dwi);
-  aclDestroyTensor(dwh);
-  aclDestroyTensor(dbi);
-  aclDestroyTensor(dbh);
   aclDestroyTensor(dx);
   aclDestroyTensor(dhPrev);
   aclDestroyTensor(dcPrev);
