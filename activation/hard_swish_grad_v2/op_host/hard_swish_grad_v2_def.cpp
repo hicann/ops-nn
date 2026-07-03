@@ -99,7 +99,7 @@ public:
         .DynamicShapeSupportFlag(true)
         .NeedCheckSupportFlag(false)
         .PrecisionReduceFlag(true)
-        .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2_apt");
+        .ExtendCfgInfo("opFile.value", "hard_swish_grad_v2");
     this->AICore().AddConfig("mc62", config950);    
     this->AICore().AddConfig("ascend950", config950);
   }

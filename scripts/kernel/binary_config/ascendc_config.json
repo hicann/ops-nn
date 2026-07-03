@@ -697,5 +697,16 @@
     {"name":"IFMR", "compute_units": ["ascend950"], "auto_sync" : true},
     {"name":"ThresholdV2", "compute_units": ["ascend950"], "auto_sync" : false},
     {"name":"ScatterNdSub", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
-    {"name":"SparseApplyAdadelta", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}}
+    {"name":"SparseApplyAdadelta", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambApplyOptimizerAssign", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambApplyWeightAssign", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambNextMV", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambNextMVWithDecay", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambNextRight", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambUpdateWithLr", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"LambUpdateWithLrV2", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"ScatterDiv", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"ScatterMax", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"ScatterMin", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}},
+    {"name":"ScatterMul", "compute_units": ["ascend950"], "auto_sync": false, "compile_options": {"ascend950": ["--cce-no-dcache-flush"]}}
 ]

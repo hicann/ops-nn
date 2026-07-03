@@ -9,4 +9,6 @@
 
 message(STATUS "=== Debug: start ops.norm.deep_norm.op_host.CMakeLists.txt ")
 
-add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE deep_norm ACLNNTYPE aclnn)
+set(SUPPORT_COMPUTE_UNIT "ascend910b" "ascend910_93" "ascend310p" "kirinx90" "kirin9030" "ascend950")
+set(SUPPORT_TILING_DIR "arch22" "arch22" "arch22" "arch22" "arch22" "arch35")
+add_modules_sources(HOSTNAME ${OPHOST_NAME} MODE PRIVATE DIR ${CMAKE_CURRENT_SOURCE_DIR} OPTYPE deep_norm ACLNNTYPE aclnn COMPUTE_UNIT ${SUPPORT_COMPUTE_UNIT} TILING_DIR ${SUPPORT_TILING_DIR} DISABLE_IN_OPP TRUE DEPENDENCIES norm_common)

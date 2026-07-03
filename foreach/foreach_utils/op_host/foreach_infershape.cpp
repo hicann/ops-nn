@@ -96,6 +96,10 @@ IMPL_OP_INFERSHAPE(ForeachAddList)
     .InferShape(ops::InferShape4ForeachCommon)
     .InferDataType(ops::InferDataType4ForeachCommon);
 
+IMPL_OP_INFERSHAPE(ForeachBinaryOp)
+    .InferShape(ops::InferShape4ForeachCommon)
+    .InferDataType(ops::InferDataType4ForeachCommon);
+
 IMPL_OP_INFERSHAPE(ForeachAddScalarList)
     .InferShape(ops::InferShape4ForeachCommon)
     .InferDataType(ops::InferDataType4ForeachCommon);

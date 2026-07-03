@@ -20,8 +20,8 @@
  #include "test_cube_util.h"
  #include "exe_graph/runtime/storage_format.h"
  #include "exe_graph/runtime/storage_shape.h"
- #include "../../../op_host/hard_swish_grad_v2_tiling_def.h"
- #include "../../../op_graph/hard_swish_grad_v2_proto.h"
+ #include "../../../../op_host/hard_swish_grad_v2_tiling_def.h"
+ #include "../../../../op_graph/hard_swish_grad_v2_proto.h"
  #include "tiling/platform/platform_ascendc.h"
 
 using namespace ut_util;
@@ -109,7 +109,7 @@ TEST_F(HardSwishGradV2Tiling, HardSwishGradV2Tiling_01)
                      .TilingData(param.get())
                      .Workspace(ws_size)
                      .Build();
-    
+
     gert::TilingContext* tiling_context = holder.GetContext<gert::TilingContext>();
    ASSERT_NE(tiling_context, nullptr);
    ASSERT_NE(tiling_context->GetPlatformInfo(), nullptr);
