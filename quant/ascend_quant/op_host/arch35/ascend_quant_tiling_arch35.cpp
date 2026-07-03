@@ -30,6 +30,7 @@ using namespace Ops::Base;
 namespace optiling {
 namespace ascendquantregbase {
 using namespace AscendQuantOp;
+constexpr float ZERO = 0.0f;
 constexpr size_t INPUT_X_INDEX = 0;
 constexpr size_t ATTR_SCALE_INDEX = 0;
 constexpr size_t ATTR_OFFSET_INDEX = 1;
@@ -340,7 +341,7 @@ void AscendQuantRegbase::CalcTiling()
 void AscendQuantRegbase::CalcTilingKey()
 {
     uint32_t roundModeKey = static_cast<uint32_t>(roundMode_) + 1;
-    uint32_t offsetZeroKey = (offset_ == 0.0f) ? TPL_OFFSET_ZERO : TPL_OFFSET_NON_ZERO;
+    uint32_t offsetZeroKey = IsFloatEqual(offset_, ZERO) ? TPL_OFFSET_ZERO : TPL_OFFSET_NON_ZERO;
     tilingKey_ = GET_TPL_TILING_KEY(roundModeKey, TPL_EXTRA_BIT_ONE, offsetZeroKey);
 }
 
