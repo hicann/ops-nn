@@ -3,8 +3,8 @@
  * This program is free software, you can redistribute it and/or modify it under the terms and conditions of
  * CANN Open Software License Agreement Version 2.0 (the "License").
  * Please refer to the License for details. You may not use this file except in compliance with the License.
- * THIS SOFTWARE IS PROVIDED ON AN "AS IS", BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+ * THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
  * See LICENSE in the root of the software repository for the full text of the License.
  */
 
@@ -56,10 +56,6 @@ public:
     __aicore__ inline void TransposeB32(LocalTensor<I> dst, LocalTensor<I> src, uint32_t rowNum, uint32_t colNum);
 
 private:
-    __aicore__ inline void CalcOutputRangeFromInputIndex(
-        int64_t inputIdxGlobal, int64_t outputSize, int64_t inputSize, int64_t axisTileIndex, int64_t axisInner,
-        int64_t axisOutputActual, int64_t& stLocal, int64_t& edLocal, int64_t& coverCount) const;
-
     __aicore__ inline void AccumulateOutputRowsForInputPointRegFp32(
         LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase, COMPUTE_TYPE scale,
         int64_t stH, int64_t edH, int64_t stW, int64_t edW);
@@ -76,6 +72,10 @@ private:
     TBuf<QuePosition::VECCALC> stWRegBuf_;
     TBuf<QuePosition::VECCALC> edWRegBuf_;
     TBuf<QuePosition::VECCALC> coverWRegBuf_;
+    TBuf<QuePosition::VECCALC> stHRegBuf_;
+    TBuf<QuePosition::VECCALC> edHRegBuf_;
+    TBuf<QuePosition::VECCALC> coverHRegBuf_;
+    TBuf<QuePosition::VECCALC> invCoverWRegBuf_;
 
     GlobalTensor<T> gradInputGm_;
     GlobalTensor<T> yGm_;
@@ -85,6 +85,7 @@ private:
     uint32_t blockIdx_ = 0;
 
     int64_t highAxisActual_ = 1;
+    int64_t highAxisLocalStride_ = 1;
     int64_t hOutputActual_ = 1;
     int64_t wOutputActual_ = 1;
     int64_t curCoreProcessNum_ = 1;
@@ -148,6 +149,10 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Init(
     pipe_.InitBuffer(stWRegBuf_, platform::GetVRegSize());
     pipe_.InitBuffer(edWRegBuf_, platform::GetVRegSize());
     pipe_.InitBuffer(coverWRegBuf_, platform::GetVRegSize());
+    pipe_.InitBuffer(stHRegBuf_, platform::GetVRegSize());
+    pipe_.InitBuffer(edHRegBuf_, platform::GetVRegSize());
+    pipe_.InitBuffer(coverHRegBuf_, platform::GetVRegSize());
+    pipe_.InitBuffer(invCoverWRegBuf_, platform::GetVRegSize());
 }
 
 template <typename T, typename INDEX>
@@ -157,6 +162,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ScalarCom
 
     highAxisIndex_ = baseBlockIdx / (tiling_->hOutputOuter * tiling_->wOutputOuter);
     highAxisActual_ = (highAxisIndex_ == (tiling_->highAxisOuter - 1)) ? tiling_->highAxisTail : tiling_->highAxisInner;
+    highAxisLocalStride_ = CeilAlign(highAxisActual_, static_cast<int64_t>(TRANS_ADDR_LEN));
 
     int64_t tempTail = baseBlockIdx % (tiling_->hOutputOuter * tiling_->wOutputOuter);
     hAxisIndex_ = tempTail / tiling_->wOutputOuter;
@@ -336,25 +342,6 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransInpu
 }
 
 template <typename T, typename INDEX>
-__aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::CalcOutputRangeFromInputIndex(
-    int64_t inputIdxGlobal, int64_t outputSize, int64_t inputSize, int64_t axisTileIndex, int64_t axisInner,
-    int64_t axisOutputActual, int64_t& stLocal, int64_t& edLocal, int64_t& coverCount) const
-{
-    const int64_t stGlobal = GetStartFromOutputInputSize(inputIdxGlobal, outputSize, inputSize);
-    const int64_t edGlobal = GetEndFromOutputInputSize(inputIdxGlobal, outputSize, inputSize);
-
-    const int64_t tileStart = axisTileIndex * axisInner;
-    const int64_t tileEnd = tileStart + axisOutputActual;
-
-    const int64_t stClamped = stGlobal > tileStart ? stGlobal : tileStart;
-    const int64_t edClamped = edGlobal < tileEnd ? edGlobal : tileEnd;
-
-    stLocal = stClamped - tileStart;
-    edLocal = edClamped - tileStart;
-    coverCount = edGlobal - stGlobal;
-}
-
-template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::AccumulateOutputRowsForInputPointRegFp32(
     LocalTensor<COMPUTE_TYPE> srcLocal, LocalTensor<COMPUTE_TYPE> dstLocal, int64_t inBase, COMPUTE_TYPE scale,
     int64_t stH, int64_t edH, int64_t stW, int64_t edW)
@@ -386,7 +373,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 const int64_t hRowBase = hRowBase0 + static_cast<int64_t>(oh) * wOutputAligned_;
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
-                    const int64_t outBase = outRow * tiling_->highAxisInner;
+                    const int64_t outBase = outRow * highAxisLocalStride_;
                     __local_mem__ COMPUTE_TYPE* dstAddr =
                         (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
@@ -417,7 +404,7 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Accumulat
                 const int64_t hRowBase = hRowBase0 + static_cast<int64_t>(oh) * wOutputAligned_;
                 for (uint16_t ow = 0; ow < wLoopCount; ++ow) {
                     const int64_t outRow = hRowBase + static_cast<int64_t>(stW + ow);
-                    const int64_t outBase = outRow * tiling_->highAxisInner;
+                    const int64_t outBase = outRow * highAxisLocalStride_;
                     __local_mem__ COMPUTE_TYPE* dstAddr =
                         (__local_mem__ COMPUTE_TYPE*)dstLocal[outBase + processed].GetPhyAddr();
 
@@ -445,92 +432,159 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ComputeFp
     __local_mem__ INDEX* edWAddr = reinterpret_cast<__local_mem__ INDEX*>(edWLocal.GetPhyAddr());
     __local_mem__ INDEX* coverWAddr = reinterpret_cast<__local_mem__ INDEX*>(coverWLocal.GetPhyAddr());
 
+    LocalTensor<INDEX> stHLocal = stHRegBuf_.Get<INDEX>();
+    LocalTensor<INDEX> edHLocal = edHRegBuf_.Get<INDEX>();
+    LocalTensor<INDEX> coverHLocal = coverHRegBuf_.Get<INDEX>();
+
+    __local_mem__ INDEX* stHAddr = reinterpret_cast<__local_mem__ INDEX*>(stHLocal.GetPhyAddr());
+    __local_mem__ INDEX* edHAddr = reinterpret_cast<__local_mem__ INDEX*>(edHLocal.GetPhyAddr());
+    __local_mem__ INDEX* coverHAddr = reinterpret_cast<__local_mem__ INDEX*>(coverHLocal.GetPhyAddr());
+
+    LocalTensor<COMPUTE_TYPE> invCoverWLocal = invCoverWRegBuf_.Get<COMPUTE_TYPE>();
+    __local_mem__ COMPUTE_TYPE* invCoverWAddr =
+        reinterpret_cast<__local_mem__ COMPUTE_TYPE*>(invCoverWLocal.GetPhyAddr());
+
     const INDEX wTileStart = static_cast<INDEX>(wAxisIndex_ * tiling_->wOutputInner);
     const INDEX wTileEnd = static_cast<INDEX>(wTileStart + wOutputActual_);
     const INDEX wOutput = static_cast<INDEX>(tiling_->wOutput);
     const INDEX wGradInput = static_cast<INDEX>(tiling_->wInput);
 
-    for (int64_t swLocalBatch = 0; swLocalBatch < wGradInputActual_; swLocalBatch += INDEX_VF_LEN) {
-        int64_t curBatchCount = wGradInputActual_ - swLocalBatch;
-        curBatchCount = curBatchCount > INDEX_VF_LEN ? INDEX_VF_LEN : curBatchCount;
+    const INDEX hTileStart = static_cast<INDEX>(hAxisIndex_ * tiling_->hOutputInner);
+    const INDEX hTileEnd = static_cast<INDEX>(hTileStart + hOutputActual_);
+    const INDEX hOutput = static_cast<INDEX>(tiling_->hOutput);
+    const INDEX hGradInput = static_cast<INDEX>(tiling_->hInput);
 
-        const INDEX wBaseIdx = static_cast<INDEX>(wStLeftCornerIdx_ + swLocalBatch);
-        uint32_t batchCountMask = static_cast<uint32_t>(curBatchCount);
+    for (int64_t shLocalBatch = 0; shLocalBatch < hGradInputActual_; shLocalBatch += INDEX_VF_LEN) {
+        int64_t curHBatchCount = hGradInputActual_ - shLocalBatch;
+        curHBatchCount = curHBatchCount > INDEX_VF_LEN ? INDEX_VF_LEN : curHBatchCount;
+
+        const INDEX hBaseIdx = static_cast<INDEX>(hStLeftCornerIdx_ + shLocalBatch);
+        uint32_t hBatchCountMask = static_cast<uint32_t>(curHBatchCount);
 
         __VEC_SCOPE__
         {
-            MicroAPI::RegTensor<INDEX> idx;
-            MicroAPI::Arange(idx, wBaseIdx);
+            MicroAPI::RegTensor<INDEX> hIdx;
+            MicroAPI::Arange(hIdx, hBaseIdx);
 
-            MicroAPI::MaskReg allMask = MicroAPI::CreateMask<INDEX, MicroAPI::MaskPattern::ALL>();
-            MicroAPI::MaskReg batchMask = MicroAPI::UpdateMask<INDEX>(batchCountMask);
+            MicroAPI::MaskReg hAllMask = MicroAPI::CreateMask<INDEX, MicroAPI::MaskPattern::ALL>();
+            MicroAPI::MaskReg hBatchMask = MicroAPI::UpdateMask<INDEX>(hBatchCountMask);
 
-            MicroAPI::RegTensor<INDEX> regConstOutput;
-            MicroAPI::Duplicate(regConstOutput, wOutput);
+            MicroAPI::RegTensor<INDEX> hRegOut;
+            MicroAPI::Duplicate(hRegOut, hOutput);
 
-            MicroAPI::RegTensor<INDEX> regConstInput;
-            MicroAPI::Duplicate(regConstInput, wGradInput);
+            MicroAPI::RegTensor<INDEX> hRegIn;
+            MicroAPI::Duplicate(hRegIn, hGradInput);
 
-            MicroAPI::RegTensor<INDEX> stGlobal;
-            MicroAPI::Mul(stGlobal, idx, regConstOutput, allMask);
-            MicroAPI::Div(stGlobal, stGlobal, regConstInput, allMask);
+            MicroAPI::RegTensor<INDEX> hStGlobal;
+            MicroAPI::Mul(hStGlobal, hIdx, hRegOut, hAllMask);
+            MicroAPI::Div(hStGlobal, hStGlobal, hRegIn, hAllMask);
 
-            MicroAPI::RegTensor<INDEX> edGlobal;
-            MicroAPI::Adds(edGlobal, idx, INDEX(1), allMask);
-            MicroAPI::Mul(edGlobal, edGlobal, regConstOutput, allMask);
-            MicroAPI::Add(edGlobal, edGlobal, regConstInput, allMask);
-            MicroAPI::Adds(edGlobal, edGlobal, INDEX(-1), allMask);
-            MicroAPI::Div(edGlobal, edGlobal, regConstInput, allMask);
+            MicroAPI::RegTensor<INDEX> hEdGlobal;
+            MicroAPI::Adds(hEdGlobal, hIdx, INDEX(1), hAllMask);
+            MicroAPI::Mul(hEdGlobal, hEdGlobal, hRegOut, hAllMask);
+            MicroAPI::Add(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
+            MicroAPI::Adds(hEdGlobal, hEdGlobal, INDEX(-1), hAllMask);
+            MicroAPI::Div(hEdGlobal, hEdGlobal, hRegIn, hAllMask);
 
-            MicroAPI::RegTensor<INDEX> cover;
-            MicroAPI::Sub(cover, edGlobal, stGlobal, allMask);
+            MicroAPI::RegTensor<INDEX> hCover;
+            MicroAPI::Sub(hCover, hEdGlobal, hStGlobal, hAllMask);
 
-            MicroAPI::Maxs(stGlobal, stGlobal, wTileStart, allMask);
-            MicroAPI::Adds(stGlobal, stGlobal, INDEX(-wTileStart), allMask);
+            MicroAPI::Maxs(hStGlobal, hStGlobal, hTileStart, hAllMask);
+            MicroAPI::Adds(hStGlobal, hStGlobal, INDEX(-hTileStart), hAllMask);
 
-            MicroAPI::Mins(edGlobal, edGlobal, wTileEnd, allMask);
-            MicroAPI::Adds(edGlobal, edGlobal, INDEX(-wTileStart), allMask);
+            MicroAPI::Mins(hEdGlobal, hEdGlobal, hTileEnd, hAllMask);
+            MicroAPI::Adds(hEdGlobal, hEdGlobal, INDEX(-hTileStart), hAllMask);
 
-            MicroAPI::DataCopy(stWAddr, stGlobal, batchMask);
-            MicroAPI::DataCopy(edWAddr, edGlobal, batchMask);
-            MicroAPI::DataCopy(coverWAddr, cover, batchMask);
+            MicroAPI::DataCopy(stHAddr, hStGlobal, hBatchMask);
+            MicroAPI::DataCopy(edHAddr, hEdGlobal, hBatchMask);
+            MicroAPI::DataCopy(coverHAddr, hCover, hBatchMask);
         }
 
-        PIPE_V_S();
+        for (int64_t swLocalBatch = 0; swLocalBatch < wGradInputActual_; swLocalBatch += INDEX_VF_LEN) {
+            int64_t curBatchCount = wGradInputActual_ - swLocalBatch;
+            curBatchCount = curBatchCount > INDEX_VF_LEN ? INDEX_VF_LEN : curBatchCount;
 
-        for (int64_t shLocal = 0; shLocal < hGradInputActual_; ++shLocal) {
-            int64_t stH = 0;
-            int64_t edH = 0;
-            int64_t coverH = 0;
-            CalcOutputRangeFromInputIndex(
-                hStLeftCornerIdx_ + shLocal, tiling_->hOutput, tiling_->hInput, hAxisIndex_, tiling_->hOutputInner,
-                hOutputActual_, stH, edH, coverH);
+            const INDEX wBaseIdx = static_cast<INDEX>(wStLeftCornerIdx_ + swLocalBatch);
+            uint32_t batchCountMask = static_cast<uint32_t>(curBatchCount);
 
-            if (edH <= stH || coverH <= 0) {
-                continue;
+            __VEC_SCOPE__
+            {
+                MicroAPI::RegTensor<INDEX> idx;
+                MicroAPI::Arange(idx, wBaseIdx);
+
+                MicroAPI::MaskReg allMask = MicroAPI::CreateMask<INDEX, MicroAPI::MaskPattern::ALL>();
+                MicroAPI::MaskReg batchMask = MicroAPI::UpdateMask<INDEX>(batchCountMask);
+
+                MicroAPI::RegTensor<INDEX> regConstOutput;
+                MicroAPI::Duplicate(regConstOutput, wOutput);
+
+                MicroAPI::RegTensor<INDEX> regConstInput;
+                MicroAPI::Duplicate(regConstInput, wGradInput);
+
+                MicroAPI::RegTensor<INDEX> stGlobal;
+                MicroAPI::Mul(stGlobal, idx, regConstOutput, allMask);
+                MicroAPI::Div(stGlobal, stGlobal, regConstInput, allMask);
+
+                MicroAPI::RegTensor<INDEX> edGlobal;
+                MicroAPI::Adds(edGlobal, idx, INDEX(1), allMask);
+                MicroAPI::Mul(edGlobal, edGlobal, regConstOutput, allMask);
+                MicroAPI::Add(edGlobal, edGlobal, regConstInput, allMask);
+                MicroAPI::Adds(edGlobal, edGlobal, INDEX(-1), allMask);
+                MicroAPI::Div(edGlobal, edGlobal, regConstInput, allMask);
+
+                MicroAPI::RegTensor<INDEX> cover;
+                MicroAPI::Sub(cover, edGlobal, stGlobal, allMask);
+
+                MicroAPI::Maxs(stGlobal, stGlobal, wTileStart, allMask);
+                MicroAPI::Adds(stGlobal, stGlobal, INDEX(-wTileStart), allMask);
+
+                MicroAPI::Mins(edGlobal, edGlobal, wTileEnd, allMask);
+                MicroAPI::Adds(edGlobal, edGlobal, INDEX(-wTileStart), allMask);
+
+                MicroAPI::DataCopy(stWAddr, stGlobal, batchMask);
+                MicroAPI::DataCopy(edWAddr, edGlobal, batchMask);
+                MicroAPI::DataCopy(coverWAddr, cover, batchMask);
             }
 
-            const int64_t hBase = shLocal * wGradInputAligned_;
+            PIPE_V_S();
 
-            for (int64_t wInBatch = 0; wInBatch < curBatchCount; ++wInBatch) {
-                const int64_t swLocal = swLocalBatch + wInBatch;
-                const int64_t stW = static_cast<int64_t>(stWAddr[wInBatch]);
-                const int64_t edW = static_cast<int64_t>(edWAddr[wInBatch]);
-                const int64_t coverW = static_cast<int64_t>(coverWAddr[wInBatch]);
+            for (int64_t wi = 0; wi < curBatchCount; ++wi) {
+                const int64_t cw = static_cast<int64_t>(coverWAddr[wi]);
+                invCoverWAddr[wi] = (cw > 0) ? static_cast<COMPUTE_TYPE>(1.0f / static_cast<float>(cw)) :
+                                                static_cast<COMPUTE_TYPE>(0.0f);
+            }
 
-                if (edW <= stW || coverW <= 0) {
+            for (int64_t shLocal = 0; shLocal < curHBatchCount; ++shLocal) {
+                const int64_t stH = static_cast<int64_t>(stHAddr[shLocal]);
+                const int64_t edH = static_cast<int64_t>(edHAddr[shLocal]);
+                const int64_t coverH = static_cast<int64_t>(coverHAddr[shLocal]);
+
+                if (edH <= stH || coverH <= 0) {
                     continue;
                 }
 
-                const int64_t kernelSize = coverH * coverW;
-                if (kernelSize <= 0) {
-                    continue;
+                const int64_t hIdxGlobal = shLocalBatch + shLocal;
+                const int64_t hBase = hIdxGlobal * wGradInputAligned_;
+                const COMPUTE_TYPE invCoverH = static_cast<COMPUTE_TYPE>(1.0f / static_cast<float>(coverH));
+
+                for (int64_t wInBatch = 0; wInBatch < curBatchCount; ++wInBatch) {
+                    const int64_t swLocal = swLocalBatch + wInBatch;
+                    const int64_t stW = static_cast<int64_t>(stWAddr[wInBatch]);
+                    const int64_t edW = static_cast<int64_t>(edWAddr[wInBatch]);
+
+                    if (edW <= stW) {
+                        continue;
+                    }
+
+                    const COMPUTE_TYPE iw = invCoverWAddr[wInBatch];
+                    if (iw <= static_cast<COMPUTE_TYPE>(0.0f)) {
+                        continue;
+                    }
+
+                    const int64_t inBase = (hBase + swLocal) * highAxisLocalStride_;
+                    const COMPUTE_TYPE scale = invCoverH * iw;
+                    AccumulateOutputRowsForInputPointRegFp32(srcLocal, dstLocal, inBase, scale, stH, edH, stW, edW);
                 }
-
-                const int64_t inBase = (hBase + swLocal) * tiling_->highAxisInner;
-                const COMPUTE_TYPE scale = static_cast<COMPUTE_TYPE>(1.0f / static_cast<float>(kernelSize));
-
-                AccumulateOutputRowsForInputPointRegFp32(srcLocal, dstLocal, inBase, scale, stH, edH, stW, edW);
             }
         }
     }
@@ -541,8 +595,8 @@ __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::Compute()
 {
     LocalTensor<T> srcLocalT = transQue_.DeQue<T>();
 
-    const uint32_t srcElemCount = static_cast<uint32_t>(tiling_->highAxisInner * inputColNum_);
-    const uint32_t dstElemCount = static_cast<uint32_t>(outputRowNumAligned_ * tiling_->highAxisInner);
+    const uint32_t srcElemCount = static_cast<uint32_t>(highAxisLocalStride_ * inputColNum_);
+    const uint32_t dstElemCount = static_cast<uint32_t>(outputRowNumAligned_ * highAxisLocalStride_);
 
     if constexpr (std::is_same_v<T, float>) {
         LocalTensor<T> dstLocalT = transOutQue_.AllocTensor<T>();
@@ -585,7 +639,7 @@ template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::TransOut()
 {
     const uint32_t rowNum = static_cast<uint32_t>(outputRowNumAligned_);
-    const uint32_t colNum = static_cast<uint32_t>(tiling_->highAxisInner);
+    const uint32_t colNum = static_cast<uint32_t>(highAxisLocalStride_);
 
     LocalTensor<T> srcLocal = transOutQue_.DeQue<T>();
     LocalTensor<T> dstLocal = transQue_.AllocTensor<T>();
@@ -643,7 +697,7 @@ template <typename T, typename INDEX>
 __aicore__ inline void AdaptiveAvgPool2dGradNCHWSmallKernel<T, INDEX>::ProcessPerLoop()
 {
     CopyIn();
-    TransInput(static_cast<uint32_t>(tiling_->highAxisInner), static_cast<uint32_t>(inputColNum_));
+    TransInput(static_cast<uint32_t>(highAxisLocalStride_), static_cast<uint32_t>(inputColNum_));
     Compute();
     TransOut();
     CopyOut();
