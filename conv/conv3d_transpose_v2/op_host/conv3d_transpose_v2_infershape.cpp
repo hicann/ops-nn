@@ -188,6 +188,25 @@ static bool GetConv3DStridesAndDilations(const InferShapeContext* context, Forma
     return true;
 }
 
+static void CalcSamePadding(const Conv3DInputShapes& shapes, Conv3DAttrs& attrs)
+{
+    int64_t tails_d = shapes.id % attrs.strd;
+    int64_t tails_h = shapes.ih % attrs.strh;
+    int64_t tails_w = shapes.iw % attrs.strw;
+    int64_t dilate_kernel_d = attrs.dild * (shapes.kd - 1) + 1;
+    int64_t dilate_kernel_h = attrs.dilh * (shapes.kh - 1) + 1;
+    int64_t dilate_kernel_w = attrs.dilw * (shapes.kw - 1) + 1;
+    int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
+    int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
+    int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
+    attrs.padf = pad_d / 2;
+    attrs.padb = pad_d - attrs.padf;
+    attrs.padu = pad_h / 2;
+    attrs.padd = pad_h - attrs.padu;
+    attrs.padl = pad_w / 2;
+    attrs.padr = pad_w - attrs.padl;
+}
+
 static bool GetConv3DPads(
     const InferShapeContext* context, const Conv3DInputShapes& shapes, size_t pads_idx, size_t padding_idx,
     Conv3DAttrs& attrs)
@@ -222,21 +241,7 @@ static bool GetConv3DPads(
         const auto padding = runtime_attrs->GetAttrPointer<char>(padding_idx);
         if (padding != nullptr && (strcmp(padding, "SAME") == 0)) {
             OP_LOGD(context->GetNodeName(), "get padding SAME.");
-            int64_t tails_d = shapes.id % attrs.strd; // non zero, checked in shape range infer logic
-            int64_t tails_h = shapes.ih % attrs.strh; // non zero, checked in shape range infer logic
-            int64_t tails_w = shapes.iw % attrs.strw; // non zero, checked in shape range infer logic
-            int64_t dilate_kernel_d = attrs.dild * (shapes.kd - 1) + 1;
-            int64_t dilate_kernel_h = attrs.dilh * (shapes.kh - 1) + 1;
-            int64_t dilate_kernel_w = attrs.dilw * (shapes.kw - 1) + 1;
-            int64_t pad_d = std::max((tails_d > 0 ? dilate_kernel_d - tails_d : dilate_kernel_d - attrs.strd), 0L);
-            int64_t pad_h = std::max((tails_h > 0 ? dilate_kernel_h - tails_h : dilate_kernel_h - attrs.strh), 0L);
-            int64_t pad_w = std::max((tails_w > 0 ? dilate_kernel_w - tails_w : dilate_kernel_w - attrs.strw), 0L);
-            attrs.padf = pad_d / 2; // 2 means pad_up is half size of pad_d
-            attrs.padb = pad_d - attrs.padf;
-            attrs.padu = pad_h / 2; // 2 means pad_up is half size of pad_h
-            attrs.padd = pad_h - attrs.padu;
-            attrs.padl = pad_w / 2; // 2 means pad_up is half size of pad_w
-            attrs.padr = pad_w - attrs.padl;
+            CalcSamePadding(shapes, attrs);
             return true;
         }
     }

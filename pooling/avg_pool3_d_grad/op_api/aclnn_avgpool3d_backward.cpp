@@ -76,7 +76,7 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
     for (uint64_t i = 0; i < kernelSize->Size(); i++) {
         auto size = (*kernelSize)[i];
         if (size <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize [%lu] data [%li] is less than or equal to 0", i, size);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "kernelSize [%lu] data [%li] is less than or equal to 0.", i, size);
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -84,7 +84,7 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
     for (uint64_t i = 0; i < stride->Size(); i++) {
         auto size = (*stride)[i];
         if (size <= 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride [%lu] data [%li] is less than or equal to 0", i, size);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "stride [%lu] data [%li] is less than or equal to 0.", i, size);
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
@@ -98,12 +98,12 @@ static aclnnStatus CheckArrayDataAvgPoolBackWard(
         auto padSize = (*padding)[i];
         if (halfKsize < padSize) {
             OP_LOGE(
-                ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld]", i, padSize,
+                ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] should less than kernelSize / 2 [%ld].", i, padSize,
                 halfKsize);
             return ACLNN_ERR_PARAM_INVALID;
         }
         if (padSize < 0) {
-            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] is less than 0", i, padSize);
+            OP_LOGE(ACLNN_ERR_PARAM_INVALID, "padding [%lu] data [%li] is less than 0.", i, padSize);
             return ACLNN_ERR_PARAM_INVALID;
         }
     }
