@@ -262,13 +262,12 @@ private:
             // 浮点: threshold(float) 直接转 T 原生比较 (含 NaN 透传: self<=th 置0)
             return static_cast<T>(threshold_);
         } else {
-            // 整型: float 阈值可能超出 T 范围; 范围内取 floor (self>floor(th) <=> self>th)
+            // 整型: float 阈值可能超出 T 范围; 范围内向零截断 (trunc) 与 PyTorch 整型 cast 对齐, 非 floor。
+            //   golden 先把 float 阈值 cast 成整型 T (C 截断) 再比 self<=(T)th; 对负非整阈值 trunc≠floor。
+            //   例: th=-0.13, int8 self=0 时 PyTorch 比 0<=(int8)(-0.13)=0 -> true 置0; floor 得 -1 会误透传。
             if (threshold_ < TypeMin()) { gateMode = 1; return static_cast<T>(0); }
             if (threshold_ >= TypeMax()) { gateMode = 2; return static_cast<T>(0); }
-            float f = threshold_;
-            int64_t fl = (int64_t)f;
-            if (f < (float)fl) fl -= 1;  // floor
-            return static_cast<T>(fl);
+            return static_cast<T>((int64_t)threshold_);  // 向零截断 (trunc)
         }
     }
 
