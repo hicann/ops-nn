@@ -146,7 +146,7 @@ aclnnStatus aclnnAddRmsNormQuantV2(
       <td>scales1（aclTensor*）</td>
       <td>输入</td>
       <td>表示量化过程中得到y1Out进行的scales张量，对应公式中的`scales1`。</td>
-      <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致，或者最后一维和`gamma`保持一致，其他维度为1。</li></ul></td>
+      <td><ul><li>支持空Tensor。</li><li>shape与`gamma`保持一致。</li></ul></td>
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
