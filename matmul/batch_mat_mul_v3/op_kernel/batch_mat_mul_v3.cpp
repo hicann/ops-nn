@@ -14,7 +14,9 @@
  */
 #include "batch_mat_mul_v3.h"
 #include "batch_mat_mul_v3_tiling_key.h"
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
 #include "batch_mat_mul_v3_vector.h"
+#endif
 
 using namespace AscendC;
 using namespace matmul;
@@ -207,11 +209,13 @@ __global__ __aicore__ void batch_mat_mul_v3(
         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_TRUE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_TRUE) {
         BMMV3_IMPL_CLASS(BatchMatMulUnalignedMultiBatchKernel, BatchMatMulUnalignedMultiBatchBaseBlock, MM_CFG_MULTI_BATCH_OUT);
 #if defined(ORIG_DTYPE_X1) && ORIG_DTYPE_X1 == DT_FLOAT
+#if defined(__CCE_AICORE__) && __CCE_AICORE__ == 220
     } else if constexpr (
         MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE &&
         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_VECTOR_FULLLOAD &&
         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_VECTOR_CLASS(BatchMatmulVectorKernel);
+#endif
     } else if constexpr (
         MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_TRUE &&
         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_FALSE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
