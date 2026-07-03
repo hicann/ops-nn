@@ -64,7 +64,6 @@ protected:
 
     virtual bool CheckTransposeNeeded() = 0;
 
-    virtual ge::fusion::GraphUniqPtr Replacement(const ge::GNode& convBpInputNode) = 0;
 
 protected:
     NpuArch npuArch = NpuArch::DAV_RESV;
