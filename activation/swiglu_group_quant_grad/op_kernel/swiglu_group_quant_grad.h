@@ -95,8 +95,16 @@ __aicore__ inline void SwigluGroupQuantGrad<T>::Init(GM_ADDR gradY, GM_ADDR x, G
     
     if (hasGroupIndex) {
         groupIndexGm.SetGlobalBuffer((__gm__ int64_t *)groupIndex, groupNum);
+        uint32_t groupTokenSum = 0;
+        for (uint32_t i = 0; i < groupNum; i++) {
+            groupTokenSum += static_cast<uint32_t>(groupIndexGm.GetValue(i));
+        }
+        truncValue = (groupTokenSum < totalTokens) ? groupTokenSum : totalTokens;
+    } else {
+        truncValue = totalTokens;
     }
-    
+    ComputeTruncRelatedParams();
+
     InitBuffer();
 }
 

@@ -40,17 +40,20 @@ static ge::graphStatus Tiling4SwigluGroupQuantGrad(gert::TilingContext *context)
         return ge::GRAPH_FAILED;
     }
     
-    context->SetBlockDim(tilingData.get_usedCoreNum());
+    uint32_t totalTokens = tilingData.get_totalTokens();
+    uint32_t coreNumAll = tilingData.get_coreNumAll();
+    uint32_t usedCoreNum = (totalTokens < coreNumAll) ? totalTokens : coreNumAll;
+    
+    context->SetBlockDim(usedCoreNum);
     
     size_t *workspaces = context->GetWorkspaceSizes(1);
     auto ascendcPlatform = platform_ascendc::PlatformAscendC(context->GetPlatformInfo());
     uint32_t sysWorkspaceSize = ascendcPlatform.GetLibApiWorkSpaceSize();
-    workspaces[0] = sysWorkspaceSize + tilingData.get_usedCoreNum() * BLOCK_SIZE;
+    workspaces[0] = sysWorkspaceSize + usedCoreNum * BLOCK_SIZE;
     
     OP_LOGD(context,
-            "Tiling4SwigluGroupQuantGrad end. usedCoreNum=%u, totalTokens=%u, truncValue=%u, tileH=%u, tileTokens=%u",
-            tilingData.get_usedCoreNum(), tilingData.get_totalTokens(), tilingData.get_truncValue(), 
-            tilingData.get_tileH(), tilingData.get_tileTokens());
+            "Tiling4SwigluGroupQuantGrad end. usedCoreNum=%u, totalTokens=%u, tileH=%u, tileTokens=%u",
+            usedCoreNum, totalTokens, tilingData.get_tileH(), tilingData.get_tileTokens());
     
     return ge::GRAPH_SUCCESS;
 }

@@ -30,7 +30,8 @@ namespace ge {
 * @li group_index: Optional tensor. Group index tensor for dynamic quantization. Type is int64, has format ND.
 
 * @par Attributes:
-* @li clamp_limit: Optional float. Clamp value for gradient mask, default is 0.0.
+* @li clamp_limit: Optional float. Clamp value for gradient mask, default is -1.0 (no clamp).
+*     If set to a positive value, clamps SwiGLU inputs before activation. Must be -1.0 or > 0.
 
 * @par Outputs:
 * @li grad_x: Gradient of x tensor. Same type as input x, has format ND.
@@ -44,7 +45,7 @@ REG_OP(SwigluGroupQuantGrad)
     .OPTIONAL_INPUT(group_index, TensorType({DT_INT64}))
     .OUTPUT(grad_x, TensorType({DT_FLOAT16, DT_BF16, DT_FLOAT}))
     .OUTPUT(grad_weight, TensorType({DT_FLOAT}))
-    .ATTR(clamp_limit, Float, 0.0)
+    .ATTR(clamp_limit, Float, -1.0f)
     .OP_END_FACTORY_REG(SwigluGroupQuantGrad)
 }  // namespace ge
 
