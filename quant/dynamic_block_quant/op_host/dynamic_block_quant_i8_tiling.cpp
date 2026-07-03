@@ -18,7 +18,6 @@
 #include "register/op_impl_registry.h"
 #include "log/log.h"
 #include "util/math_util.h"
-#include "tiling/platform/platform_ascendc.h"
 #include "platform/platform_infos_def.h"
 #include "error_util.h"
 
