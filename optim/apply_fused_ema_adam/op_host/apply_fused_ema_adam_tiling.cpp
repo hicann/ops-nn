@@ -91,7 +91,7 @@ static ge::graphStatus GetTilingAttr(const gert::TilingContext* context)
     OP_CHECK_NULL_WITH_CONTEXT(context, attrEps);
     fusedEmaAdamTiling.set_eps(static_cast<float>(*attrEps));
 
-    const uint64_t* attrMode = attrs->GetAttrPointer<uint64_t>(ATTR_MODE_IDX);
+    const int64_t* attrMode = attrs->GetAttrPointer<int64_t>(ATTR_MODE_IDX);
     OP_CHECK_NULL_WITH_CONTEXT(context, attrMode);
     fusedEmaAdamTiling.set_mode(static_cast<uint64_t>(*attrMode));
 
