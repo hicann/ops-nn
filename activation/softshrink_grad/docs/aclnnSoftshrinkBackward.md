@@ -32,7 +32,7 @@
     $$
     gradInput=
     \begin{cases}
-    gradOutput,	\ if \ x > \lambda \\
+    gradOutput, \ if \ x > \lambda \\
     gradOutput, \ if \ x <-\lambda \\
     0, \ otherwise
     \end{cases}

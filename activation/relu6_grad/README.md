@@ -117,6 +117,7 @@ In0/In1 ─CopyInBrc─ Cast(->fp32) ─+
 
 把fp16/bf16整体提升到fp32做cmp/and/sel，末端用`CAST_MODE_RINT`
 （round-to-nearest-even）回退到原dtype。原因：
+
 1. 与DSL `relu6_grad.py`在fp16vcmpsel不可用时fallback到fp32的行为一致；
 2. 上下界0.0和6.0在fp16/bf16中均能精确表达，但cmp走fp32路径更稳健，
    且dy是NaN/Inf时fp32中间不会被半精度范围截断。

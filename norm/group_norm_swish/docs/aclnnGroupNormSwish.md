@@ -85,145 +85,145 @@ aclnnStatus aclnnGroupNormSwish(
       </colgroup>
       <thead>
       <tr>
-          <th>参数名</th>
-          <th>输入/输出</th>
-          <th>描述</th>
-          <th>使用说明</th>
-          <th>数据类型</th>
-          <th>数据格式</th>
-          <th>维度(shape)</th>
-          <th>非连续Tensor</th>
+       <th>参数名</th>
+       <th>输入/输出</th>
+       <th>描述</th>
+       <th>使用说明</th>
+       <th>数据类型</th>
+       <th>数据格式</th>
+       <th>维度(shape)</th>
+       <th>非连续Tensor</th>
       </tr></thead>
       <tbody>
       <tr>
-          <td>x（aclTensor*）</td>
-          <td>输入</td>
-          <td>待组归一化的目标张量，yOut计算公式中的x。</td>
-          <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，1维为N，第2维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</li></ul></td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>2-8</td>
-          <td>√</td>
+       <td>x（aclTensor*）</td>
+       <td>输入</td>
+       <td>待组归一化的目标张量，yOut计算公式中的x。</td>
+       <td><ul><li>不支持空tensor。</li><li>维度支持2D到8D，第0维为N，第1维为C，要求x第0维和第1维大于0，第1维要求能被group整除。</li></ul></td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>2-8</td>
+       <td>√</td>
       </tr>
       <tr>
-          <td>gamma（aclTensor*）</td>
-          <td>输入</td>
-          <td>组归一化中的gamma参数，yOut计算公式中的γ。</td>
-          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>1</td>
-          <td>√</td>
+       <td>gamma（aclTensor*）</td>
+       <td>输入</td>
+       <td>组归一化中的gamma参数，yOut计算公式中的γ。</td>
+       <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>1</td>
+       <td>√</td>
       </tr>
       <tr>
-          <td>beta（aclTensor*）</td>
-          <td>输入</td>
-          <td>组归一化中的beta参数，yOut计算公式中的β。</td>
-          <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>2</td>
-          <td>√</td>
+       <td>beta（aclTensor*）</td>
+       <td>输入</td>
+       <td>组归一化中的beta参数，yOut计算公式中的β。</td>
+       <td><ul><li>不支持空tensor。</li><li>元素数量需与输入x的第1维度相同，gamma与beta的数据类型必须保持一致，且数据类型与x相同或者为FLOAT。</li></ul></td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>2</td>
+       <td>√</td>
       </tr>
       <tr>
-          <td>numGroups（int64_t）</td>
-          <td>输入</td>
-          <td>输入x的C维度分为group组。</td>
-          <td>group需大于0。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>numGroups（int64_t）</td>
+       <td>输入</td>
+       <td>输入x的C维度分为group组。</td>
+       <td>group需大于0。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>dataFormatOptional（char*）</td>
-          <td>输入</td>
-          <td>数据格式。</td>
-          <td>建议值NCHW。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>dataFormatOptional（char*）</td>
+       <td>输入</td>
+       <td>数据格式。</td>
+       <td>建议值NCHW。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>eps（double）</td>
-          <td>输入</td>
-          <td>防止产生除0的偏移，yOut和rstdOut计算公式中的eps值。</td>
-          <td>建议值1.0。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>eps（double）</td>
+       <td>输入</td>
+       <td>防止产生除0的偏移，yOut和rstdOut计算公式中的eps值。</td>
+       <td>建议值1.0。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>activateSwish（bool）</td>
-          <td>输入</td>
-          <td>是否支持swish计算。</td>
-          <td>如果设置为true，则表示groupnorm计算后继续swish计算。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>activateSwish（bool）</td>
+       <td>输入</td>
+       <td>是否支持swish计算。</td>
+       <td>如果设置为true，则表示groupnorm计算后继续swish计算。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>swishScale（double）</td>
-          <td>输入</td>
-          <td>Swish计算时的scale值。</td>
-          <td>建议值1.0。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>swishScale（double）</td>
+       <td>输入</td>
+       <td>Swish计算时的scale值。</td>
+       <td>建议值1.0。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>yOut（aclTensor*）</td>
-          <td>输出</td>
-          <td>组归一化结果。</td>
-          <td>数据类型和shape与x相同。</td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>2-8</td>
-          <td>x</td>
+       <td>yOut（aclTensor*）</td>
+       <td>输出</td>
+       <td>组归一化结果。</td>
+       <td>数据类型和shape与x相同。</td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>2-8</td>
+       <td>x</td>
       </tr>
       <tr>
-          <td>meanOut（aclTensor*）</td>
-          <td>x分组后的均值</td>
-          <td>公式中的meanOut。</td>
-          <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>2</td>
-          <td>x</td>
+       <td>meanOut（aclTensor*）</td>
+       <td>x分组后的均值</td>
+       <td>公式中的meanOut。</td>
+       <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>2</td>
+       <td>x</td>
       </tr>
       <tr>
-          <td>rstdOut（aclTensor*）</td>
-          <td>输出</td>
-          <td>x分组后的标准差的倒数。</td>
-          <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
-          <td>FLOAT16、FLOAT、BFLOAT16</td>
-          <td>ND</td>
-          <td>2</td>  
-          <td>x</td>
+       <td>rstdOut（aclTensor*）</td>
+       <td>输出</td>
+       <td>x分组后的标准差的倒数。</td>
+       <td>数据类型与gamma相同，shape为(N， numGroups)，其中N表示x第0维度的大小，numGroups为计算输入，表示将输入x的第1维度分为group组。</td>
+       <td>FLOAT16、FLOAT、BFLOAT16</td>
+       <td>ND</td>
+       <td>2</td>  
+       <td>x</td>
       </tr>
       <tr>
-          <td>workspaceSize（uint64_t*）</td>
-          <td>输出</td>
-          <td>返回需要在Device侧申请的workspace大小。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>workspaceSize（uint64_t*）</td>
+       <td>输出</td>
+       <td>返回需要在Device侧申请的workspace大小。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       <tr>
-          <td>executor（aclOpExecutor**）</td>
-          <td>输出</td>
-          <td>返回op执行器，包含了算子计算流程。</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
-          <td>-</td>
+       <td>executor（aclOpExecutor**）</td>
+       <td>输出</td>
+       <td>返回op执行器，包含了算子计算流程。</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
+       <td>-</td>
       </tr>
       </tbody></table>
 
@@ -264,31 +264,31 @@ aclnnStatus aclnnGroupNormSwish(
   <table>
   <thead>
       <tr>
-          <th>参数名</th>
-          <th>输入/输出</th>
-          <th>描述</th>
+       <th>参数名</th>
+       <th>输入/输出</th>
+       <th>描述</th>
       </tr>
   </thead>
   <tbody>
       <tr>
-          <td>workspace</td>
-          <td>输入</td>
-          <td>在Device侧申请的workspace内存地址。</td>
+       <td>workspace</td>
+       <td>输入</td>
+       <td>在Device侧申请的workspace内存地址。</td>
       </tr>
       <tr>
-          <td>workspaceSize</td>
-          <td>输入</td>
-          <td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGetWorkspaceSize获取。</td>
+       <td>workspaceSize</td>
+       <td>输入</td>
+       <td>在Device侧申请的workspace大小，由第一段接口aclnnGroupNormSwishGetWorkspaceSize获取。</td>
       </tr>
       <tr>
-          <td>executor</td>
-          <td>输入</td>
-          <td> op执行器，包含了算子计算流程。</td>
+       <td>executor</td>
+       <td>输入</td>
+       <td>op执行器，包含了算子计算流程。</td>
       </tr>
       <tr>
-          <td>stream</td>
-          <td>输入</td>
-          <td> 指定执行任务的Stream。</td>
+       <td>stream</td>
+       <td>输入</td>
+       <td>指定执行任务的Stream。</td>
       </tr>
   </tbody></table>
 
