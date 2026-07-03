@@ -178,8 +178,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 Duplicate(reg2, reg2, pFull);
 
                 Mul(reg1, reg0, reg1, pMask);
-                Neg(reg0, reg0, pMask);
-                MulAddDst(reg1, reg0, reg2, pMask);
+                Mul(reg0, reg0, reg2, pMask);
+                Sub(reg1, reg1, reg0, pMask);
 
                 StoreTensorForDtypeTOut(dst, reg1, pMask, i * rAligned);
             }
@@ -214,13 +214,13 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputeSmallR(const int64_t aSize)
                 Duplicate(reg2, reg2, pFull);
 
                 Mul(reg1, reg0, reg1, pFull);
-                Neg(reg0, reg0, pFull);
-                MulAddDst(reg1, reg0, reg2, pFull);
+                Mul(reg0, reg0, reg2, pFull);
+                Sub(reg1, reg1, reg0, pFull);
                 StoreTensorForDtypeTOut(dst, reg1, pFull, i * rAligned);
 
                 Mul(reg1_1, reg0_1, reg1_1, pMask);
-                Neg(reg0_1, reg0_1, pMask);
-                MulAddDst(reg1_1, reg0_1, reg2, pMask);
+                Mul(reg0_1, reg0_1, reg2, pMask);
+                Sub(reg1_1, reg1_1, reg0_1, pMask);
                 StoreTensorForDtypeTOut(dst, reg1_1, pMask, i * rAligned + VL_FP32);
             }
         }
@@ -377,8 +377,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
                     LoadTensorForDtypeTIn(x0, reg0, maskOri, offset);
                     LoadTensorForDtypeTIn(x1, reg1, maskOri, offset);
                     Mul(reg1, reg0, reg1, maskOri);
-                    Neg(reg0, reg0, maskOri);
-                    MulAddDst(reg1, reg0, reg2, maskOri);
+                    Mul(reg0, reg0, reg2, maskOri);
+                    Sub(reg1, reg1, reg0, maskOri);
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, offset);
                 }
             }
@@ -415,8 +415,8 @@ __aicore__ inline void SoftmaxGradAR<T>::NormComputePost(const LocalTensor<T>& d
                     LoadTensorForDtypeTIn(x1, reg1, maskOri, offset);
 
                     Mul(reg1, reg0, reg1, maskOri);
-                    Neg(reg0, reg0, maskOri);
-                    MulAddDst(reg1, reg0, reg2, maskOri);
+                    Mul(reg0, reg0, reg2, maskOri);
+                    Sub(reg1, reg1, reg0, maskOri);
                     StoreTensorForDtypeTOut(dst, reg1, maskOri, offset);
                 }
             }

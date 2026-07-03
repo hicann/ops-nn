@@ -279,15 +279,15 @@ private:
                     LoadTensorForDtypeT(x1Local, x1Reg, pregMask, xOffset);
 
                     Mul(x1Reg, x0Reg, x1Reg, pregMask);
-                    Neg(x0Reg, x0Reg, pregMask);
-                    MulAddDst(x1Reg, x0Reg, sumReg, pregMask);
+                    Mul(x0Reg, x0Reg, sumReg, pregMask);
+                    Sub(x0Reg, x1Reg, x0Reg, pregMask);
 
                     // copy out
                     if constexpr (IsSameType<T, float>::value) {
-                        DataCopy(((__local_mem__ float*)yLocal) + xOffset, x1Reg, pregMask);
+                        DataCopy(((__local_mem__ float*)yLocal) + xOffset, x0Reg, pregMask);
                     } else {  // fp16、bf16
                         RegTensor<T> xFp16;
-                        Cast<T, float, castTraitFp32ToFp16>(xFp16, x1Reg, pregMask);
+                        Cast<T, float, castTraitFp32ToFp16>(xFp16, x0Reg, pregMask);
                         DataCopy<T, StoreDist::DIST_PACK_B32>(((__local_mem__ T*)yLocal) + xOffset, xFp16, pregMask);
                     }
                 }
