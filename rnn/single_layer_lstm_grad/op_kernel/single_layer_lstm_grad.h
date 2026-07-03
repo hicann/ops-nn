@@ -1400,6 +1400,21 @@ class RNNGrad {
       (xhInputTiling.splitTaskPerCore + 1) : xhInputTiling.splitTaskPerCore;
     int64_t startTaskId = curBlockIdx < xhInputTiling.splitPreCore ?
       (curCoreTaskNum * curBlockIdx) : (curCoreTaskNum * curBlockIdx + xhInputTiling.splitPreCore);
+    InitConcatXhUb();
+
+    for (int64_t tIdx = 0; tIdx < tiling.timeStep; tIdx++) {
+      bool useInitCH = (tIdx == 0 && tiling.direction == DIRECTION_FORWARD) ||
+                       (tIdx == tiling.timeStep - 1 && tiling.direction == DIRECTION_BACKWARD);
+      for (int64_t taskLoopId = 0; taskLoopId < curCoreTaskNum; taskLoopId++) {
+        int64_t taskIdx = startTaskId + taskLoopId;
+        int64_t curMLines = (taskIdx == xhInputTiling.taskNum - 1) ?
+                            xhInputTiling.copyMLinesTail : xhInputTiling.copyMLines;
+        ProcessConcatXhTask(tIdx, taskIdx, curMLines, useInitCH);
+      }
+    }
+  }
+
+  __aicore__ inline void InitConcatXhUb() {
     totalUb = subDataBuf.Get<uint8_t>();
     xUb = totalUb.ReinterpretCast<T>();
     hUb = totalUb[xhInputTiling.copyMLines * tiling.inputSizeAligned * sizeof(T)].ReinterpretCast<T>();
@@ -1413,59 +1428,59 @@ class RNNGrad {
       outXUb = xUb;
       outHUb = hUb;
     }
+  }
 
-    for (int64_t tIdx = 0; tIdx < tiling.timeStep; tIdx++) {
-      bool useInitCH = (tIdx == 0 && tiling.direction == DIRECTION_FORWARD) ||
-                        (tIdx == tiling.timeStep - 1 && tiling.direction == DIRECTION_BACKWARD);
-      for (int64_t taskLoopId = 0; taskLoopId < curCoreTaskNum; taskLoopId++) {
-        int64_t taskIdx = startTaskId + taskLoopId;
-        int64_t curMLines = (taskIdx == xhInputTiling.taskNum - 1) ?
-                            xhInputTiling.copyMLinesTail : xhInputTiling.copyMLines;
-        // Need to implement loop for uint16 overflow protection.
-        DataCopyExtParams dataCopyXParams{static_cast<uint16_t>(curMLines),
-          static_cast<uint32_t>(tiling.inputSize * paraBytes), 0, 0, 0};
-        DataCopyExtParams dataCopyHParams{static_cast<uint16_t>(curMLines),
-          static_cast<uint32_t>(tiling.hiddenSize * paraBytes), 0, 0, 0};
-
-        GlobalTensor<T> srcHGm;
-        if (useInitCH) {
-          srcHGm = inputGm.initHGm[taskIdx * tiling.hiddenSize * xhInputTiling.copyMLines];
-        } else if (tiling.direction == DIRECTION_FORWARD) {
-          srcHGm = inputGm.hGm[((tIdx - 1) * tiling.batch + taskIdx * xhInputTiling.copyMLines) * tiling.hiddenSize];
-        } else {
-          srcHGm = inputGm.hGm[((tIdx + 1) * tiling.batch + taskIdx * xhInputTiling.copyMLines) * tiling.hiddenSize];
-        }
-        DataCopyPad(xUb, inputGm.xGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines)* tiling.inputSize],
-                    dataCopyXParams, padInTParams);
-        DataCopyPad(hUb, srcHGm, dataCopyHParams, padInTParams);
-
-        if constexpr (!std::is_same<T, float>::value) {
-          MTE2ToVSync();
-          Cast(xFp32Ub, xUb, RoundMode::CAST_NONE,
-                          curMLines * tiling.inputSizeAligned);
-          Cast(hFp32Ub, hUb, RoundMode::CAST_NONE,
-                          curMLines * tiling.hiddenSizeAligned);
-          VToMTE3Sync();
-          VToMTE2Sync();
-        } else {
-          MTE2ToMTE3Sync();
-        }
-        DataCopyExtParams dataCopyOutXParams{static_cast<uint16_t>(curMLines),
-          static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
-          static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / SRC_STRIDE_OFFSET_DIVISOR),
-          static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES), 0};
-        DataCopyExtParams dataCopyOutHParams{static_cast<uint16_t>(curMLines),
-          static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
-          static_cast<uint32_t>((tiling.hiddenSizeAligned - tiling.hiddenSize) / SRC_STRIDE_OFFSET_DIVISOR),
-          static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES), 0};
-        DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines) *
-                    (tiling.inputSize + tiling.hiddenSize)], outXUb, dataCopyOutXParams);
-        MTE3ToMTE2Sync();
-        DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines) *
-                    (tiling.inputSize + tiling.hiddenSize) + tiling.inputSize], outHUb, dataCopyOutHParams);
-        MTE3ToMTE2Sync();
-      }
+  __aicore__ inline void CopyInConcatXh(int64_t tIdx, int64_t taskIdx, int64_t curMLines, bool useInitCH) {
+    DataCopyExtParams dataCopyXParams{static_cast<uint16_t>(curMLines),
+      static_cast<uint32_t>(tiling.inputSize * paraBytes), 0, 0, 0};
+    DataCopyExtParams dataCopyHParams{static_cast<uint16_t>(curMLines),
+      static_cast<uint32_t>(tiling.hiddenSize * paraBytes), 0, 0, 0};
+    GlobalTensor<T> srcHGm;
+    if (useInitCH) {
+      srcHGm = inputGm.initHGm[taskIdx * tiling.hiddenSize * xhInputTiling.copyMLines];
+    } else if (tiling.direction == DIRECTION_FORWARD) {
+      srcHGm = inputGm.hGm[((tIdx - 1) * tiling.batch + taskIdx * xhInputTiling.copyMLines) * tiling.hiddenSize];
+    } else {
+      srcHGm = inputGm.hGm[((tIdx + 1) * tiling.batch + taskIdx * xhInputTiling.copyMLines) * tiling.hiddenSize];
     }
+    DataCopyPad(xUb, inputGm.xGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines) * tiling.inputSize],
+                dataCopyXParams, padInTParams);
+    DataCopyPad(hUb, srcHGm, dataCopyHParams, padInTParams);
+  }
+
+  __aicore__ inline void CastConcatXh(int64_t curMLines) {
+    if constexpr (!std::is_same<T, float>::value) {
+      MTE2ToVSync();
+      Cast(xFp32Ub, xUb, RoundMode::CAST_NONE, curMLines * tiling.inputSizeAligned);
+      Cast(hFp32Ub, hUb, RoundMode::CAST_NONE, curMLines * tiling.hiddenSizeAligned);
+      VToMTE3Sync();
+      VToMTE2Sync();
+    } else {
+      MTE2ToMTE3Sync();
+    }
+  }
+
+  __aicore__ inline void CopyOutConcatXh(int64_t tIdx, int64_t taskIdx, int64_t curMLines) {
+    DataCopyExtParams dataCopyOutXParams{static_cast<uint16_t>(curMLines),
+      static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES),
+      static_cast<uint32_t>((tiling.inputSizeAligned - tiling.inputSize) / SRC_STRIDE_OFFSET_DIVISOR),
+      static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES), 0};
+    DataCopyExtParams dataCopyOutHParams{static_cast<uint16_t>(curMLines),
+      static_cast<uint32_t>(tiling.hiddenSize * FLOAT_BYTES),
+      static_cast<uint32_t>((tiling.hiddenSizeAligned - tiling.hiddenSize) / SRC_STRIDE_OFFSET_DIVISOR),
+      static_cast<uint32_t>(tiling.inputSize * FLOAT_BYTES), 0};
+    DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines) *
+                (tiling.inputSize + tiling.hiddenSize)], outXUb, dataCopyOutXParams);
+    MTE3ToMTE2Sync();
+    DataCopyPad(outputGm.xhGm[(tIdx * tiling.batch + taskIdx * xhInputTiling.copyMLines) *
+                (tiling.inputSize + tiling.hiddenSize) + tiling.inputSize], outHUb, dataCopyOutHParams);
+    MTE3ToMTE2Sync();
+  }
+
+  __aicore__ inline void ProcessConcatXhTask(int64_t tIdx, int64_t taskIdx, int64_t curMLines, bool useInitCH) {
+    CopyInConcatXh(tIdx, taskIdx, curMLines, useInitCH);
+    CastConcatXh(curMLines);
+    CopyOutConcatXh(tIdx, taskIdx, curMLines);
   }
 
   __aicore__ inline void ProcessConcatXhLarge() {
