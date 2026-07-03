@@ -213,13 +213,13 @@ static inline bool isAddBmmProcessEmptyTensor(const aclTensor* batch1, const acl
     return (batch1->GetViewShape())[SECOND_DIM] == 0 || (batch2->GetViewShape())[THIRD_DIM] == 0;
 }
 
-static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const aclTensor* mat2, aclOpExecutor* executor)
+static const aclTensor* addBmmProcessEmptyTensor(const aclTensor* self, const aclTensor* batch1, const aclTensor* batch2, aclOpExecutor* executor)
 {
     // 获取shape信息
-    op::Shape selfShape = self->GetViewShape();
-    op::Shape mat2Shape = mat2->GetViewShape();
-    // 获取self的第2维度和mat2的最后1维度作为输出shape
-    op::Shape outShape = {selfShape.GetDim(1), mat2Shape.GetDim(2)};
+    op::Shape batch1Shape = batch1->GetViewShape();
+    op::Shape batch2Shape = batch2->GetViewShape();
+    // 获取batch1的第2维度和batch2的最后1维度作为输出shape
+    op::Shape outShape = {batch1Shape.GetDim(1), batch2Shape.GetDim(2)};
     auto out = executor->AllocTensor(outShape, self->GetDataType());
     OP_CHECK_NULL(out, return nullptr);
     OP_LOGI("Returning an empty tensor without actually doing calculation");
@@ -453,9 +453,9 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
     std::shared_ptr<MatmulGraphImpl> matmulGraph = nullptr;
 
     // alpha == 0    batch1和batch2不参与计算
-    if (std::abs(alpha->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+    if (std::abs(alpha->ToFloat()) == 0.0f) {
         // beta == 0    self不参与计算
-        if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+        if (std::abs(beta->ToFloat()) == 0.0f) {
             matmulGraph = std::make_shared<AddbmmAlpha0Beta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
             return matmulGraph;
         }
@@ -465,7 +465,7 @@ std::shared_ptr<MatmulGraphImpl> CreateAddbmmGraphImpl(
     }
 
     // alpha != 0 && beta == 0    self不参与计算，走计算图3，即不调用add算子
-    if (std::abs(beta->ToFloat() - 0.0f) <= std::numeric_limits<float>::epsilon()) {
+    if (std::abs(beta->ToFloat()) == 0.0f) {
         matmulGraph = std::make_shared<AddbmmBeta0Graph>(batch1, batch2, self, out, alpha, beta, cubeMathType, executor);
         return matmulGraph;
     }
@@ -505,7 +505,7 @@ aclnnStatus aclnnAddbmmGetWorkspaceSize(
     // 输入空Tensor处理方法，这种情况下addbmm算子的最终结果就是空Tensor，因此直接返回
     // 若batch1、batch2的第一维是空Tensor，在bmm接口内部会生成一个符合shape的空Tensor，继续参与计算
     if (isAddBmmProcessEmptyTensor(batch1, batch2)) {
-        auto emptyOut = addBmmProcessEmptyTensor(batch1, batch2, uniqueExecutor.get());
+        auto emptyOut = addBmmProcessEmptyTensor(self, batch1, batch2, uniqueExecutor.get());
         CHECK_RET(emptyOut != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
         auto viewCopyResult = l0op::ViewCopy(emptyOut, out, uniqueExecutor.get());
