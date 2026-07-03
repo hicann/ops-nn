@@ -174,11 +174,12 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_block_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_block_fp8_y_origin)
 {
     TilingCase tc;
     tc.outputOrigin = true;
     tc.roundScale = true;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 
@@ -199,7 +200,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8)
     ExecuteTilingCase(tc);
 }
 
-TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8_y_origin)
+TEST_F(SwigluGroupQuantTilingTest, tiling_error_mx_fp8_y_origin)
 {
     TilingCase tc;
     tc.scaleDtype = ge::DT_FLOAT8_E8M0;
@@ -207,6 +208,7 @@ TEST_F(SwigluGroupQuantTilingTest, tiling_mx_fp8_y_origin)
     tc.quantMode = 1;
     tc.roundScale = true;
     tc.outputOrigin = true;
+    tc.status = ge::GRAPH_FAILED;
     ExecuteTilingCase(tc);
 }
 
