@@ -106,6 +106,11 @@ static inline bool CheckDtypeConvertValid(const aclTensor* self, const op::DataT
 static inline bool CheckDtypeValid(const aclTensor* self, const op::DataType dtype, const aclTensor* out)
 {
     OP_CHECK_DTYPE_NOT_MATCH(out, dtype, return false);
+    if (IsComplexType(self->GetDataType()) || IsComplexType(out->GetDataType())) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID, "The operator does not support the complex number type.");
+        return false;
+    }
+
     if (Ops::NN::AclnnUtil::IsRegbase()) {
         return CheckDtypeConvertValid(self, dtype, out);
     }
