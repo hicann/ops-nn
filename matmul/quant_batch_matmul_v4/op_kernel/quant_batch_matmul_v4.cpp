@@ -62,7 +62,7 @@ __global__ __aicore__ void quant_batch_matmul_v4(GM_ADDR x1, GM_ADDR x2, GM_ADDR
     constexpr bool bTrans = (TRANS == QUANT_BATCH_MATMUL_V4_B_TRANS || TRANS == QUANT_BATCH_MATMUL_V4_ALL_TRANS) ? true : false;
 #if (defined(__CCE_AICORE__) && __CCE_AICORE__ == 220) || (defined(__NPU_ARCH__) && __NPU_ARCH__ == 3003)
 #if (defined(ORIG_DTYPE_X1) && ORIG_DTYPE_X1 == DT_INT8) && (defined(ORIG_DTYPE_X2) && ORIG_DTYPE_X2 == DT_INT4)
-#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_ND
+#if defined(FORMAT_X2) && FORMAT_X2 != FORMAT_FRACTAL_NZ
         if constexpr (
             TRANS == QUANT_BATCH_MATMUL_V4_NOT_TRANS && QUANT_TYPE == QUANT_BATCH_MATMUL_V4_K_C && OPTION_ATTRS == QUANT_BATCH_MATMUL_V4_OPTION_ATTR_NONE && 
             WEIGHTNZ == QUANT_BATCH_MATMUL_V4_NOT_WEIGHT_NZ && KERNEL_TEMPLATE_TYPE == QUANT_BATCH_MATMUL_V4_MSD_BASIS) {
