@@ -43,6 +43,7 @@ struct Conv3dIntf {
     constexpr static bool isExtendConv2d = false;
     constexpr static int8_t outputOrder = ConvParam::outputOrder;
     constexpr static int8_t groupType = ConvParam::groupType;
+    constexpr static bool bigKernelFlag = ConvParam::bigKernel == 1;
     constexpr static int8_t l0PingPong = ConvParam::l0PingPong;
     constexpr static int8_t l1PingPong = ConvParam::l1PingPong;
     constexpr static bool bL1DBFlag = ConvParam::l1PingPong == static_cast<int8_t>(ConvL1PingPong::BL1_OPEN) ||

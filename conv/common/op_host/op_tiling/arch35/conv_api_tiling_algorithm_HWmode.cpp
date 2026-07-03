@@ -29,8 +29,14 @@ void ConvTilingAlgorithmHWmode::InitPingPong()
 
     L1TilingParams inputTiling;
     inputTiling.kAL1 = tilingIns_->cubeInfo.k0;
-    inputTiling.kBL1 = tilingIns_->shapeInfo.singlekH *
-        tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
+    if (tilingIns_->isKernelSplit) {
+        inputTiling.khL1 = 1;
+        inputTiling.kwL1 = 1;
+    } else {
+        inputTiling.khL1 = tilingIns_->shapeInfo.singlekH;
+        inputTiling.kwL1 = tilingIns_->shapeInfo.singlekW;
+    }
+    inputTiling.kBL1 = inputTiling.khL1 * inputTiling.kwL1 * tilingIns_->cubeInfo.k0;
     inputTiling.nBL1 = tilingIns_->cubeInfo.n0;
     inputTiling.hoAL1 = 1;
     inputTiling.woAL1 = tilingIns_->cubeInfo.m0;
@@ -44,10 +50,8 @@ int64_t ConvTilingAlgorithmHWmode::Process()
 {
     InitPingPong();
     GetHoWoNL0Tiling();
-    GetDmaL1Tiling();
-    if (GetL1Tiling() == -1) {
-        return -1;
-    }
+    GetKhKwL1Tiling();
+    GetL1Tiling();
     GetKL0Tiling();
     SetL0TilingRes();
     GetUbTiling();
@@ -61,7 +65,9 @@ void ConvTilingAlgorithmHWmode::GetKL0Tiling()
     if (tilingIns_->isDmaFlag) {
         CalcCommFactorOfTwoNum(l1Params.kAL1, l1Params.kBL1,  l0TilingRange.kL0Range);
     } else {
-        uint64_t kAL1WithKhKw = l1Params.kAL1 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+        uint64_t khkw = tilingIns_->isKernelSplit ? l1Params.khL1 * l1Params.kwL1 :
+            tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+        uint64_t kAL1WithKhKw = l1Params.kAL1 * khkw;
         CalcCommFactorOfTwoNum(kAL1WithKhKw, l1Params.kBL1,  l0TilingRange.kL0Range);
     }
     uint64_t validKL0 = 0;
@@ -96,58 +102,74 @@ void ConvTilingAlgorithmHWmode::GetKL0Tiling()
     }
 }
 
-void ConvTilingAlgorithmHWmode::GetDmaL1Tiling()
+uint64_t ConvTilingAlgorithmHWmode::IterKwL1()
 {
-    if (!tilingIns_->isDmaFlag) {
-        return;
-    }
-    std::vector<uint64_t> kwL1Range;
-    std::vector<uint64_t> khL1Range;
-    CalcCommFactor(tilingIns_->shapeInfo.singlekW, tilingIns_->shapeInfo.singlekW, kwL1Range);
-    CalcCommFactor(tilingIns_->shapeInfo.singlekH, tilingIns_->shapeInfo.singlekH, khL1Range);
     uint32_t kwL1Idx = 0;
-    uint32_t khL1Idx = 0;
     L1TilingParams inputTiling;
     bool isExceedL1Size = false;
     uint64_t curKwL1Value = 0;
+    inputTiling.hoAL1 = l0Params.hoL0;
+    inputTiling.woAL1 = l0Params.woL0;
+    inputTiling.nBL1 = l0Params.nL0;
+    inputTiling.khL1 = 1;
+    while (kwL1Idx < this->l1TilingRange.kwL1Range.size()) {
+        curKwL1Value = this->l1TilingRange.kwL1Range[kwL1Idx];
+        inputTiling.kAL1 = tilingIns_->cubeInfo.k0 * curKwL1Value;
+        inputTiling.kBL1 = inputTiling.kAL1;
+        inputTiling.kwL1 = curKwL1Value;
+        isExceedL1Size = CalcCurL1Size(inputTiling, inputTiling.nBL1) > tilingIns_->platformInfo.l1Size;
+        if (kwL1Idx > 0 && isExceedL1Size) {
+            curKwL1Value = this->l1TilingRange.kwL1Range[kwL1Idx - 1];
+            break;
+        }
+        if (kwL1Idx == 0 && isExceedL1Size) {
+            return 0;
+        }
+        kwL1Idx++;
+    }
+    return curKwL1Value;
+}
+
+uint64_t ConvTilingAlgorithmHWmode::IterKhL1(uint64_t kwL1Res)
+{
+    uint32_t khL1Idx = 0;
+    L1TilingParams inputTiling;
+    bool isExceedL1Size = false;
     uint64_t curKhL1Value = 0;
     inputTiling.hoAL1 = l0Params.hoL0;
     inputTiling.woAL1 = l0Params.woL0;
     inputTiling.nBL1 = l0Params.nL0;
-    while (kwL1Idx < kwL1Range.size()) {
-        curKwL1Value = kwL1Range[kwL1Idx];
-        inputTiling.kAL1 = tilingIns_->cubeInfo.k0 * curKwL1Value;
+    inputTiling.kwL1 = kwL1Res;
+    while (khL1Idx < this->l1TilingRange.khL1Range.size()) {
+        curKhL1Value = this->l1TilingRange.khL1Range[khL1Idx];
+        inputTiling.kAL1 = tilingIns_->cubeInfo.k0 * kwL1Res * curKhL1Value;
         inputTiling.kBL1 = inputTiling.kAL1;
-        isExceedL1Size = CalcCurL1Size(inputTiling, inputTiling.nBL1) > tilingIns_->platformInfo.l1Size;
-        if (kwL1Idx > 0 && isExceedL1Size) {
-            curKwL1Value = kwL1Range[kwL1Idx - 1];
-            break;
-        }
-        if (kwL1Idx == 0 && isExceedL1Size) {
-            this->l1TilingCalc.kwL1 = 0;
-            return;
-        }
-        kwL1Idx++;
-    }
-    while (khL1Idx < khL1Range.size()) {
-        curKhL1Value = khL1Range[khL1Idx];
-        inputTiling.kAL1 = tilingIns_->cubeInfo.k0 * curKwL1Value * curKhL1Value;
-        inputTiling.kBL1 = inputTiling.kAL1;
+        inputTiling.khL1 = curKhL1Value;
         isExceedL1Size = CalcCurL1Size(inputTiling, inputTiling.nBL1) > tilingIns_->platformInfo.l1Size;
         if (khL1Idx > 0 && isExceedL1Size) {
-            curKhL1Value = khL1Range[khL1Idx - 1];
+            curKhL1Value = this->l1TilingRange.khL1Range[khL1Idx - 1];
             break;
         }
         if (khL1Idx == 0 && isExceedL1Size) {
-            this->l1TilingCalc.khL1 = 0;
-            return;
+            return 0;
         }
         khL1Idx++;
     }
-    this->l1TilingCalc.kwL1 = curKwL1Value;
-    this->l1TilingCalc.khL1 = curKhL1Value;
-    this->l1Flags.isKernelSplitFlag = this->l1TilingCalc.kwL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekW) ||
-                                      this->l1TilingCalc.khL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH);
+    return curKhL1Value;
+}
+
+void ConvTilingAlgorithmHWmode::GetKhKwL1Tiling()
+{
+    if (!tilingIns_->isDmaFlag && !tilingIns_->isKernelSplit) {
+        return;
+    }
+    CalcCommFactor(tilingIns_->shapeInfo.singlekW, tilingIns_->shapeInfo.singlekW, this->l1TilingRange.kwL1Range);
+    CalcCommFactor(tilingIns_->shapeInfo.singlekH, tilingIns_->shapeInfo.singlekH, this->l1TilingRange.khL1Range);
+    this->l1Params.kwL1 = IterKwL1();
+    this->l1Params.khL1 = IterKhL1(this->l1Params.kwL1);
+    this->l1Flags.isDMAKernelSplit = tilingIns_->isDmaFlag &&
+        (this->l1Params.kwL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekW) ||
+         this->l1Params.khL1 < static_cast<uint64_t>(tilingIns_->shapeInfo.singlekH));
 }
 
 void ConvTilingAlgorithmHWmode::GetHoWoNL0Tiling()
@@ -270,17 +292,18 @@ uint64_t ConvTilingAlgorithmHWmode::CalcL1SizeForL0Tiling(uint64_t currHoL0, uin
     uint64_t aL1Size = 0;
     uint64_t wiL1 = 0;
     uint64_t hiL1 = 0;
+    uint64_t tmpKhL1 = tilingIns_->isKernelSplit ? 1 : tilingIns_->shapeInfo.orgkH; // load3d split kh/kw
+    uint64_t tmpKwL1 = tilingIns_->isKernelSplit ? 1 : tilingIns_->shapeInfo.orgkW;
     if (tilingIns_->isDmaFlag) {
         aL1Size = tilingIns_->cubeInfo.k0 * currWoL0 * currHoL0 * this->fMapDTypeSize;
     } else {
-        wiL1 = InferWiL1(currWoL0, tilingIns_->shapeInfo.orgWi);
-        hiL1 = InferHiL1(currHoL0, tilingIns_->shapeInfo.orgHi);
+        wiL1 = InferWiL1(currWoL0, tmpKwL1, tilingIns_->shapeInfo.orgWi);
+        hiL1 = InferHiL1(currHoL0, tmpKhL1, tilingIns_->shapeInfo.orgHi);
         aL1Size = tilingIns_->cubeInfo.k0 * wiL1 * hiL1 * this->fMapDTypeSize;
     }
 
     uint64_t bL1Size = tilingIns_->isDmaFlag ? tilingIns_->cubeInfo.k0 * currNL0 * this->weightDTypeSize :
-            tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * tilingIns_->cubeInfo.k0 * currNL0 *
-                this->weightDTypeSize;
+            tmpKhL1 * tmpKwL1 * tilingIns_->cubeInfo.k0 * currNL0 * this->weightDTypeSize;
     uint64_t biasSize = tilingIns_->hasBias ? currNL0 * this->biasDTypeSize : 0;
     uint64_t scaleSize = currNL0 * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE;
     // C04 should be considered in L0Tiling Decision, to avoid fullload failure in K-direction of L1 tiling.
@@ -290,8 +313,7 @@ uint64_t ConvTilingAlgorithmHWmode::CalcL1SizeForL0Tiling(uint64_t currHoL0, uin
         }
         aL1Size = AlignB(hiL1 * wiL1, C0_SIZE / (this->fMapDTypeSize * C04_CIN_SIZE)) *
                     C04_CIN_SIZE * this->fMapDTypeSize;
-        bL1Size = AlignB(tilingIns_->shapeInfo.orgkH * tilingIns_->shapeInfo.orgkW * C04_CIN_SIZE,
-                    tilingIns_->cubeInfo.k0) * currNL0 * this->weightDTypeSize;
+        bL1Size = AlignB(tmpKhL1 * tmpKwL1 * C04_CIN_SIZE, tilingIns_->cubeInfo.k0) * currNL0 * this->weightDTypeSize;
     }
     uint64_t usedL1Size = aL1Size + bL1Size + biasSize + scaleSize;
     return usedL1Size;
@@ -307,11 +329,13 @@ void ConvTilingAlgorithmHWmode::SetL1TilingRes()
             tilingIns_->l1TilingInfo.kAL1 = l1Params.kAL1;
         } else {
         // No need to multiply kd，since kd is contained in kAL1
-        tilingIns_->l1TilingInfo.kAL1 = l1Params.kAL1 * tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+        uint64_t khkw = tilingIns_->isKernelSplit ? this->l1Params.khL1 * this->l1Params.kwL1 :
+            tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+        tilingIns_->l1TilingInfo.kAL1 = l1Params.kAL1 * khkw;
         }
     }
     tilingIns_->l1TilingInfo.kBL1 = l1Params.kBL1;
-    if (tilingIns_->isDmaFlag) {
+    if (tilingIns_->isDmaFlag || tilingIns_->isKernelSplit) {
         uint64_t minKL1 = std::min(tilingIns_->l1TilingInfo.kAL1, tilingIns_->l1TilingInfo.kBL1);
         tilingIns_->l1TilingInfo.kAL1 = minKL1;
         tilingIns_->l1TilingInfo.kBL1 = minKL1;
@@ -319,8 +343,8 @@ void ConvTilingAlgorithmHWmode::SetL1TilingRes()
     tilingIns_->l1TilingInfo.hoAL1 = l1Params.hoAL1;
     tilingIns_->l1TilingInfo.woAL1 = l1Params.woAL1;
     tilingIns_->l1TilingInfo.nBL1 = l1Params.nBL1;
-    tilingIns_->l1TilingInfo.khL1 = this->l1TilingCalc.khL1;
-    tilingIns_->l1TilingInfo.kwL1 = this->l1TilingCalc.kwL1;
+    tilingIns_->l1TilingInfo.khL1 = this->l1Params.khL1;
+    tilingIns_->l1TilingInfo.kwL1 = this->l1Params.kwL1;
     tilingIns_->l1TilingInfo.iterateMNOrder = l1Flags.iterateMNOrder;
     tilingIns_->l1TilingInfo.biasFullLoadFlag = l1Flags.isBiasFullLoad;
     tilingIns_->l1TilingInfo.fixpParamsFullLoadFlag = l1Flags.isFixpParamsFullLoad;
@@ -478,7 +502,8 @@ bool ConvTilingAlgorithmHWmode::CheckHinOverLoad3dv2Limit(uint64_t hout) const
         return false;
     }
     // load3dv2 hin limit: [0, 32767]
-    uint64_t hiAL1 = InferHiL1(hout, tilingIns_->shapeInfo.orgHi);
+    uint64_t kh = tilingIns_->isKernelSplit ? this->l1Params.khL1 : tilingIns_->shapeInfo.orgkH;
+    uint64_t hiAL1 = InferHiL1(hout, kh, tilingIns_->shapeInfo.orgHi);
     return hiAL1 > LOAD3DV2_HIN_WIN_LIMIT_VALUE;
 }
 
@@ -488,7 +513,8 @@ bool ConvTilingAlgorithmHWmode::CheckWinOverLoad3dv2Limit(uint64_t wout) const
         return false;
     }
     // load3dv2 win limit: [0, 32767]
-    uint64_t wiAL1 = static_cast<uint64_t>(InferWiL1(wout, tilingIns_->shapeInfo.orgWi));
+    uint64_t kw = tilingIns_->isKernelSplit ? this->l1Params.kwL1 : tilingIns_->shapeInfo.orgkW;
+    uint64_t wiAL1 = static_cast<uint64_t>(InferWiL1(wout, kw, tilingIns_->shapeInfo.orgWi));
     return wiAL1 > LOAD3DV2_HIN_WIN_LIMIT_VALUE;
 }
 
@@ -498,9 +524,10 @@ void ConvTilingAlgorithmHWmode::GetL1TilingRange()
         CalcCommFactor(tilingIns_->shapeInfo.singleCi1, tilingIns_->shapeInfo.singleCi1, this->l1TilingRange.kAL1Range);
         VectorElementMultip(this->l1TilingRange.kAL1Range, tilingIns_->cubeInfo.k0);
         if (tilingIns_->isDmaFlag) {
-            VectorElementMultip(this->l1TilingRange.kAL1Range, this->l1TilingCalc.kwL1 * this->l1TilingCalc.khL1);
+            VectorElementMultip(this->l1TilingRange.kAL1Range, this->l1Params.kwL1 * this->l1Params.khL1);
         }
-        uint64_t khkw = tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
+        uint64_t khkw = tilingIns_->isKernelSplit ? this->l1Params.khL1 * this->l1Params.kwL1 :
+            tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW;
         if (!tilingIns_->isDmaFlag) {
             auto effectiveCount = count_if(this->l1TilingRange.kAL1Range.begin(), this->l1TilingRange.kAL1Range.end(),
                                         [khkw](uint64_t x) { return x * khkw <= MAX_16_BIT_NUM; });
@@ -552,7 +579,10 @@ void ConvTilingAlgorithmHWmode::GetL1TilingRange()
 
 bool ConvTilingAlgorithmHWmode::CheckBL1FullLoad()
 {
-    if (tilingIns_->isDmaFlag && this->l1Flags.isKernelSplitFlag) {
+    if (tilingIns_->isDmaFlag && this->l1Flags.isDMAKernelSplit) {
+        return false;
+    }
+    if (tilingIns_->isKernelSplit) {
         return false;
     }
     // if weight is fullload, bias and fixpParams must be fulload
@@ -569,8 +599,10 @@ bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad() const
         return false;
     }
     // load3d hiL1 & wiL1 <= 32767
-    uint64_t hiAL1Full = InferHiL1(hoAL1Full, tilingIns_->shapeInfo.orgHi);
-    uint64_t wiAL1Full = InferWiL1(woAL1Full, tilingIns_->shapeInfo.orgWi);
+    uint64_t tmpKh = tilingIns_->isKernelSplit ? l1Params.khL1 : tilingIns_->shapeInfo.singlekH;
+    uint64_t tmpKw = tilingIns_->isKernelSplit ? l1Params.kwL1 : tilingIns_->shapeInfo.singlekW;
+    uint64_t hiAL1Full = InferHiL1(hoAL1Full, tmpKh, tilingIns_->shapeInfo.orgHi);
+    uint64_t wiAL1Full = InferWiL1(woAL1Full, tmpKw, tilingIns_->shapeInfo.orgWi);
     if (hiAL1Full > LOAD3D_HW_SIZE_LIMIT ||
         wiAL1Full > LOAD3D_HW_SIZE_LIMIT) {
         return false;
@@ -581,10 +613,14 @@ bool ConvTilingAlgorithmHWmode::CheckHoWoL1FullLoad() const
 bool ConvTilingAlgorithmHWmode::CheckAL1FullLoad()
 {
     if (tilingIns_->isDmaFlag &&
-        (this->l1TilingCalc.ubMaxSize > tilingIns_->platformInfo.ubSize || this->l1Flags.isKernelSplitFlag)) {
+        (this->l1TilingCalc.ubMaxSize > tilingIns_->platformInfo.ubSize || this->l1Flags.isDMAKernelSplit)) {
         return false;
     }
  
+    if (tilingIns_->isKernelSplit) {
+        return false; // if kernel is split, hiL1 and wiL1 must be not full load
+    }
+
     if (!CheckHoWoL1FullLoad()) {
         return false;
     }
@@ -600,10 +636,12 @@ bool ConvTilingAlgorithmHWmode::CheckAL1FullLoad()
 bool ConvTilingAlgorithmHWmode::CheckABL1FullLoad()
 {
     if (tilingIns_->isDmaFlag &&
-        (this->l1TilingCalc.ubMaxSize > tilingIns_->platformInfo.ubSize || this->l1Flags.isKernelSplitFlag)) {
+        (this->l1TilingCalc.ubMaxSize > tilingIns_->platformInfo.ubSize || this->l1Flags.isDMAKernelSplit)) {
         return false;
     }
- 
+    if (tilingIns_->isKernelSplit) {
+        return false;
+    }
     if (!CheckHoWoL1FullLoad()) {
         return false;
     }
@@ -668,9 +706,10 @@ uint64_t ConvTilingAlgorithmHWmode::CalcCurL1Size(const L1TilingParams &inputTil
     // when decide L1 tiling, biasFixpParamNB = nBL1
     auto biasL1Size = tilingIns_->hasBias ? AlignB(biasFixpParamNB * biasDTypeSize, C0_SIZE) : 0;
     auto fixpParamsSize = AlignB(biasFixpParamNB * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE, C0_SIZE);
-
-    auto hiAL1 = InferHiL1(inputTiling.hoAL1, tilingIns_->shapeInfo.orgHi);
-    auto wiAL1 = InferWiL1(inputTiling.woAL1, tilingIns_->shapeInfo.orgWi);
+    uint64_t tmpKh = tilingIns_->isKernelSplit ? inputTiling.khL1 : tilingIns_->shapeInfo.singlekH;
+    uint64_t tmpKw = tilingIns_->isKernelSplit ? inputTiling.kwL1 : tilingIns_->shapeInfo.singlekW;
+    auto hiAL1 = InferHiL1(inputTiling.hoAL1, tmpKh, tilingIns_->shapeInfo.orgHi);
+    auto wiAL1 = InferWiL1(inputTiling.woAL1, tmpKw, tilingIns_->shapeInfo.orgWi);
     uint64_t feaMapSize = 0;
     uint64_t weightSize = 0;
     if (tilingIns_->isC04Flag) {
@@ -712,6 +751,8 @@ void ConvTilingAlgorithmHWmode::IterKAL1(uint64_t &kAL1, uint64_t kBL1, uint64_t
     inputTiling.nBL1 = nBL1;
     inputTiling.hoAL1 = hoAL1;
     inputTiling.woAL1 = woAL1;
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     while (curIdx < l1TilingRange.kAL1StrictRange.size()) {
         curValue = l1TilingRange.kAL1StrictRange[curIdx];
         inputTiling.kAL1 = curValue;
@@ -727,6 +768,9 @@ void ConvTilingAlgorithmHWmode::IterKAL1(uint64_t &kAL1, uint64_t kBL1, uint64_t
         curIdx++;
     }
     kAL1 = curValue;
+    if (tilingIns_->isKernelSplit) {
+        return;
+    }
     if (curIdx == l1TilingRange.kAL1StrictRange.size()) {
         for (int64_t multi = 1; multi <= tilingIns_->shapeInfo.singlekD; ++multi) {
             kAL1 = multi * curValue;
@@ -754,6 +798,8 @@ void ConvTilingAlgorithmHWmode::IterKBL1(uint64_t kAL1, uint64_t &kBL1, uint64_t
     inputTiling.nBL1 = nBL1;
     inputTiling.hoAL1 = hoAL1;
     inputTiling.woAL1 = woAL1;
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     while (curIdx < l1TilingRange.kBL1StrictRange.size()) {
         curValue = l1TilingRange.kBL1StrictRange[curIdx];
         inputTiling.kBL1 = curValue;
@@ -769,6 +815,9 @@ void ConvTilingAlgorithmHWmode::IterKBL1(uint64_t kAL1, uint64_t &kBL1, uint64_t
         curIdx++;
     }
     kBL1 = curValue;
+    if (tilingIns_->isKernelSplit) {
+        return;
+    }
     if (curIdx == l1TilingRange.kBL1StrictRange.size()) {
         for (int64_t multi = 1; multi <= tilingIns_->shapeInfo.singlekD; ++multi) {
             kBL1 = multi * curValue;
@@ -788,7 +837,8 @@ void ConvTilingAlgorithmHWmode::IterNBL1(uint64_t kAL1, uint64_t kBL1, uint64_t 
     uint64_t curValue = 0;
     bool isExceedL1Size = false;
     L1TilingParams inputTiling;
-
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     while (curIdx < l1TilingRange.nBL1StrictRange.size()) {
         curValue = l1TilingRange.nBL1StrictRange[curIdx];
         inputTiling.kAL1 = kAL1;
@@ -879,6 +929,8 @@ void ConvTilingAlgorithmHWmode::IterHoWoAL1(uint64_t kAL1, uint64_t kBL1, uint64
     inputTiling.kAL1 = kAL1;
     inputTiling.kBL1 = kBL1;
     inputTiling.nBL1 = nBL1;
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     IterWoAL1(woAL1, l1TilingRange.woAL1StrictRange, inputTiling);
     inputTiling.woAL1 = woAL1;
     IterHoAL1(hoAL1, l1TilingRange.hoAL1StrictRange, inputTiling);
@@ -900,7 +952,8 @@ bool ConvTilingAlgorithmHWmode::CheckKL1FullLoad(uint64_t kAL1, uint64_t kBL1)
     inputTiling.nBL1 = l1TilingRange.nBL1StrictRange[0];
     inputTiling.kAL1 = kAL1;
     inputTiling.kBL1 = kBL1;
-
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     // check minHo minWo can make L1 fullLoad
     inputTiling.hoAL1 = l1TilingRange.hoAL1StrictRange[0];
     inputTiling.woAL1 = l1TilingRange.woAL1StrictRange[0];
@@ -926,6 +979,8 @@ void ConvTilingAlgorithmHWmode::IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, 
     inputTiling.nBL1 = tmpNBL1;
     inputTiling.hoAL1 = tmpHoAL1;
     inputTiling.woAL1 = tmpWoAL1;
+    inputTiling.khL1 = this->l1Params.khL1;
+    inputTiling.kwL1 = this->l1Params.kwL1;
     bool enlargeKAL1Tag = false;
     while (kAL1Idx < l1TilingRange.kAL1StrictRange.size() &&
            kBL1Idx < l1TilingRange.kBL1StrictRange.size()) {
@@ -1042,7 +1097,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingNoneFullLoadDecision()
         }
     }
     L1TilingParams tmpL1Params = {tmpKAL1, tmpKBL1, tmpHoAL1, tmpWoAL1, tmpNBL1,
-                                  this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
+                                  this->l1Params.khL1, this->l1Params.kwL1};
     bool isExceedL1Size = CalcCurL1Size(tmpL1Params, tmpNBL1) > tilingIns_->platformInfo.l1Size;
     if (tmpKAL1 == 0 || tmpKBL1 == 0 || tmpHoAL1 == 0 || tmpWoAL1 == 0 || tmpNBL1 == 0 || isExceedL1Size) {
         this->dbValue.pbAL1 = SINGLE_BUFFER_NUM;
@@ -1055,7 +1110,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingNoneFullLoadDecision()
         tmpNBL1 = l0Params.nL0;
         IterKABL1(tmpKAL1, tmpKBL1, tmpHoAL1, tmpWoAL1, tmpNBL1);
     }
-    l1Params = {tmpKAL1, tmpKBL1, tmpHoAL1, tmpWoAL1, tmpNBL1, this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
+    l1Params = {tmpKAL1, tmpKBL1, tmpHoAL1, tmpWoAL1, tmpNBL1, this->l1Params.khL1, this->l1Params.kwL1};
     if (IsAL1FullFload(tmpHoAL1, tmpWoAL1, tmpKAL1) && (!IsBL1FullFload(tmpNBL1, tmpKBL1))) {
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_N_FST;
     } else if ((!IsAL1FullFload(tmpHoAL1, tmpWoAL1, tmpKAL1)) && IsBL1FullFload(tmpNBL1, tmpKBL1)) {
@@ -1099,6 +1154,9 @@ void ConvTilingAlgorithmHWmode::UpdateAL1DoubleBufferSecond()
 {
     bool kAl1FullLoadFlag = tilingIns_->isC04Flag ? true :
         l1Params.kAL1 == this->l1TilingCalc.kAL1MaxSize ? true : false;
+    if (tilingIns_->isKernelSplit) {
+        kAl1FullLoadFlag = false; // kh/kw split -> hiL1/wiL1 split
+    }
     if (static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo) <= l1Params.hoAL1 &&
         static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) <= l1Params.woAL1 &&
         kAl1FullLoadFlag) {
@@ -1111,7 +1169,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
 {
     if (l1Flags.abL1Mode == L1TilingMode::ALL_FULL_LOAD) {
         l1Params = {l1TilingInit.kAL1Init, l1TilingInit.kBL1Init, l1TilingInit.hoAL1Init, l1TilingInit.woAL1Init,
-                    l1TilingInit.nBL1Init, this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
+                    l1TilingInit.nBL1Init, this->l1Params.khL1, this->l1Params.kwL1};
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_M_FST;
         l1Flags.isBiasFullLoad = true;
         l1Flags.isFixpParamsFullLoad = true;
@@ -1129,7 +1187,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
         IterKAL1(tmpKAL1, l1TilingInit.kBL1Init, inputHoAL1Range[0], inputWoAL1Range[0], l1TilingInit.nBL1Init);
         IterHoWoAL1(tmpKAL1, l1TilingInit.kBL1Init, tmpHoAL1, tmpWoAL1, l1TilingInit.nBL1Init);
         l1Params = {tmpKAL1, l1TilingInit.kBL1Init, tmpHoAL1, tmpWoAL1, l1TilingInit.nBL1Init,
-                    this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
+                    this->l1Params.khL1, this->l1Params.kwL1};
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_M_FST;
         l1Flags.isBiasFullLoad = true;
         l1Flags.isFixpParamsFullLoad = true;
@@ -1143,7 +1201,7 @@ void ConvTilingAlgorithmHWmode::CoreL1TilingDecision()
                  l1TilingRange.nBL1StrictRange[0]);
         IterNBL1(l1TilingInit.kAL1Init, tmpKBL1, l1TilingInit.hoAL1Init, l1TilingInit.woAL1Init, tmpNBL1);
         l1Params = {l1TilingInit.kAL1Init, tmpKBL1, l1TilingInit.hoAL1Init, l1TilingInit.woAL1Init,
-                    tmpNBL1, this->l1TilingCalc.khL1, this->l1TilingCalc.kwL1};
+                    tmpNBL1, this->l1Params.khL1, this->l1Params.kwL1};
         l1Flags.iterateMNOrder = IterateMNOrder::ITER_N_FST;
         l1Flags.isBiasFullLoad = false;
         l1Flags.isFixpParamsFullLoad = false;
@@ -1188,11 +1246,12 @@ void ConvTilingAlgorithmHWmode::InitL1TiLing()
 
 void ConvTilingAlgorithmHWmode::InitCalcL1Params()
 {
+    uint64_t tmpkh = tilingIns_->isKernelSplit ? this->l1Params.khL1 : tilingIns_->shapeInfo.singlekH;
+    uint64_t tmpkw = tilingIns_->isKernelSplit ? this->l1Params.kwL1 : tilingIns_->shapeInfo.singlekW;
     tilingIns_->shapeInfo.singleCi1 = CeilDiv(tilingIns_->shapeInfo.singleCi, tilingIns_->cubeInfo.k0);
     tilingIns_->shapeInfo.singleCo1 = CeilDiv(tilingIns_->shapeInfo.singleCo, tilingIns_->cubeInfo.n0);
-    this->l1TilingCalc.ci0HkWk = tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW *
-                                 tilingIns_->cubeInfo.k0;
-    this->l1TilingCalc.ci0KhL1KwL1 = tilingIns_->cubeInfo.k0 * this->l1TilingCalc.khL1 * this->l1TilingCalc.kwL1;
+    this->l1TilingCalc.ci0HkWk = tmpkh * tmpkw * tilingIns_->cubeInfo.k0;
+    this->l1TilingCalc.ci0KhL1KwL1 = tilingIns_->cubeInfo.k0 * this->l1Params.khL1 * this->l1Params.kwL1;
     this->l1TilingCalc.woAL1Min = AlignB(min(static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo), l0Params.woL0),
                                   tilingIns_->cubeInfo.m0);
     this->l1TilingCalc.hoAL1Min = min(static_cast<uint64_t>(tilingIns_->shapeInfo.singleHo), l0Params.hoL0);
@@ -1224,13 +1283,13 @@ void ConvTilingAlgorithmHWmode::InitCalcL1Params()
         this->l1TilingCalc.bL1Minsize = this->l1TilingCalc.ci0KhL1KwL1 * l0Params.nL0 * weightDTypeSize *
                                         this->dbValue.pbBL1;
     } else {
-        auto tmpSingleHi = InferHiL1(tilingIns_->shapeInfo.singleHo, tilingIns_->shapeInfo.orgHi);
-        auto tmpSingleWi = InferWiL1(AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0),
+        auto tmpSingleHi = InferHiL1(tilingIns_->shapeInfo.singleHo, tmpkh, tilingIns_->shapeInfo.orgHi);
+        auto tmpSingleWi = InferWiL1(AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0), tmpkw,
                             tilingIns_->shapeInfo.orgWi);
         this->l1TilingCalc.aL1MaxSize = tilingIns_->shapeInfo.singlekD * tmpSingleHi * tmpSingleWi *
                                         this->l1TilingCalc.kAL1MaxSize * fMapDTypeSize;
-        this->l1TilingCalc.wiAL1Min = InferWiL1(this->l1TilingCalc.woAL1Min, tilingIns_->shapeInfo.orgWi);
-        this->l1TilingCalc.hiAL1Min = InferHiL1(this->l1TilingCalc.hoAL1Min, tilingIns_->shapeInfo.orgHi);
+        this->l1TilingCalc.wiAL1Min = InferWiL1(this->l1TilingCalc.woAL1Min, tmpkw, tilingIns_->shapeInfo.orgWi);
+        this->l1TilingCalc.hiAL1Min = InferHiL1(this->l1TilingCalc.hoAL1Min, tmpkh, tilingIns_->shapeInfo.orgHi);
         this->l1TilingCalc.aL1Minsize = this->l1TilingCalc.wiAL1Min * this->l1TilingCalc.hiAL1Min *
                                         tilingIns_->cubeInfo.k0 * fMapDTypeSize * this->dbValue.pbAL1;
         this->l1TilingCalc.bL1Minsize = this->l1TilingCalc.ci0HkWk * l0Params.nL0 * weightDTypeSize *
@@ -1242,11 +1301,10 @@ void ConvTilingAlgorithmHWmode::InitCalcL1ParamsC04Mode()
 {
     tilingIns_->shapeInfo.singleCi1 = CONST_VALUE_1;
     tilingIns_->shapeInfo.singleCo1 = CeilDiv(tilingIns_->shapeInfo.singleCo, tilingIns_->cubeInfo.n0);
-    this->l1TilingCalc.ci0HkWk = tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW *
-                                 tilingIns_->cubeInfo.k0;
-    this->l1TilingCalc.c04KSizeAlign = AlignB(C04_CIN_SIZE * tilingIns_->shapeInfo.singlekH *
-                                              tilingIns_->shapeInfo.singlekW,
-                                              tilingIns_->cubeInfo.k0);
+    uint64_t tmpkh = tilingIns_->isKernelSplit ? this->l1Params.khL1 : tilingIns_->shapeInfo.singlekH;
+    uint64_t tmpkw = tilingIns_->isKernelSplit ? this->l1Params.kwL1 : tilingIns_->shapeInfo.singlekW;
+    this->l1TilingCalc.ci0HkWk = tmpkh * tmpkw * tilingIns_->cubeInfo.k0;
+    this->l1TilingCalc.c04KSizeAlign = AlignB(C04_CIN_SIZE * tmpkh * tmpkw, tilingIns_->cubeInfo.k0);
     auto tmpWoAL1Min = min(static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo), l0Params.woL0);
     tmpWoAL1Min = this->l1Flags.isWoL1MustFullLoadFlagC04 ? tilingIns_->shapeInfo.singleWo : tmpWoAL1Min;
     this->l1TilingCalc.woAL1Min = AlignB(tmpWoAL1Min, tilingIns_->cubeInfo.m0);
@@ -1254,9 +1312,9 @@ void ConvTilingAlgorithmHWmode::InitCalcL1ParamsC04Mode()
     this->l1TilingCalc.kAL1MaxSize = 1;
     this->l1TilingCalc.kBL1MaxSize = this->l1TilingCalc.c04KSizeAlign;
 
-    auto tmpSingleHi = InferHiL1(tilingIns_->shapeInfo.singleHo, tilingIns_->shapeInfo.orgHi);
+    auto tmpSingleHi = InferHiL1(tilingIns_->shapeInfo.singleHo, tmpkh, tilingIns_->shapeInfo.orgHi);
     auto tmpSingleWi = this->l1Flags.isWoL1MustFullLoadFlagC04 ? tilingIns_->shapeInfo.orgWi :
-         InferWiL1(AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0), tilingIns_->shapeInfo.orgWi);
+         InferWiL1(AlignB(tilingIns_->shapeInfo.singleWo, tilingIns_->cubeInfo.m0), tmpkw, tilingIns_->shapeInfo.orgWi);
     this->l1TilingCalc.aL1MaxSize = AlignB(tmpSingleHi * tmpSingleWi, C0_SIZE / (fMapDTypeSize * C04_CIN_SIZE)) *
                                     C04_CIN_SIZE * fMapDTypeSize;
     this->l1TilingCalc.biasL1MaxSize = tilingIns_->hasBias ?
@@ -1272,8 +1330,8 @@ void ConvTilingAlgorithmHWmode::InitCalcL1ParamsC04Mode()
     this->l1TilingCalc.fixpParamsL1MinSize = l0Params.nL0 * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE;
 
     this->l1TilingCalc.wiAL1Min = this->l1Flags.isWoL1MustFullLoadFlagC04 ?
-        tilingIns_->shapeInfo.orgWi : InferWiL1(this->l1TilingCalc.woAL1Min, tilingIns_->shapeInfo.orgWi);
-    this->l1TilingCalc.hiAL1Min = InferHiL1(this->l1TilingCalc.hoAL1Min, tilingIns_->shapeInfo.orgHi);
+        tilingIns_->shapeInfo.orgWi : InferWiL1(this->l1TilingCalc.woAL1Min, tmpkw, tilingIns_->shapeInfo.orgWi);
+    this->l1TilingCalc.hiAL1Min = InferHiL1(this->l1TilingCalc.hoAL1Min, tmpkh, tilingIns_->shapeInfo.orgHi);
     this->l1TilingCalc.aL1Minsize =
         AlignB(this->l1TilingCalc.hiAL1Min * this->l1TilingCalc.wiAL1Min, C0_SIZE / (fMapDTypeSize * C04_CIN_SIZE)) *
         C04_CIN_SIZE * fMapDTypeSize  * this->dbValue.pbAL1;
@@ -1311,7 +1369,7 @@ void ConvTilingAlgorithmHWmode::GetCaseStatus()
     }
 }
 
-int64_t ConvTilingAlgorithmHWmode::GetL1Tiling()
+void ConvTilingAlgorithmHWmode::GetL1Tiling()
 {
     GetCaseStatus();
     if (tilingIns_->isC04Flag) {
@@ -1326,7 +1384,6 @@ int64_t ConvTilingAlgorithmHWmode::GetL1Tiling()
     UpdateAL1DoubleBufferSecond();
     UpdateBiasFixpParamsL1Fullload();
     SetL1TilingRes();
-    return 0;
 }
 
 void ConvTilingAlgorithmHWmode::ScaleBiasUbTilingDecision()

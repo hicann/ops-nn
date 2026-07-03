@@ -41,7 +41,7 @@ bool ConvTilingAlgorithmMmode::CheckMinL1Tiling() const
     }
     uint64_t minHoAL1 = min(tilingIns_->cubeInfo.m0 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2,
                             tilingIns_->shapeInfo.orgHo);
-    uint64_t minHiAL1 = InferHiL1(minHoAL1, tilingIns_->shapeInfo.orgHi); // 2
+    uint64_t minHiAL1 = InferHiL1(minHoAL1, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi); // 2
     uint64_t minKAL1 = tilingIns_->isC04Flag ? C04_CIN_SIZE : tilingIns_->cubeInfo.k0;
     uint64_t minAL1Size = AlignB(
         tilingIns_->innerBatch * minHiAL1 * tilingIns_->shapeInfo.orgWi * minKAL1 * this->fMapDTypeSize, C0_SIZE);
@@ -108,7 +108,7 @@ bool ConvTilingAlgorithmMmode::CheckL1Buffer()
     // check if l1 buffer is overflow in current tiling decision
     uint64_t hoL1Load = min((this->l1TilingRange.mAL1ValueRange.at(this->l1TilingIdx.mAL1Idx) /
         tilingIns_->shapeInfo.orgWo) + 2, static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo));
-    uint64_t hiL1Load = InferHiL1(hoL1Load, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiL1Load = InferHiL1(hoL1Load, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     uint64_t tmpKAL1 = this->l1TilingRange.kAL1Range.at(this->l1TilingIdx.kAL1Idx) /
         (tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW);
     uint64_t currentFmL1Size = tmpKAL1 * hiL1Load * tilingIns_->shapeInfo.orgWi * this->fMapDTypeSize *
@@ -152,7 +152,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1FullLoadParams()
     // cal fmap weight full load in L1 size
     uint64_t hoL1FullLoad = min((tilingIns_->shapeInfo.singleM / tilingIns_->shapeInfo.orgWo) + 2,
         tilingIns_->shapeInfo.orgHo);
-    uint64_t hiL1FullLoad = InferHiL1(hoL1FullLoad, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiL1FullLoad = InferHiL1(hoL1FullLoad, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     if ((tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * hiL1FullLoad *
         tilingIns_->shapeInfo.orgWi * tilingIns_->cubeInfo.k0 * this->fMapDTypeSize) / this->fMapDTypeSize !=
         (tilingIns_->shapeInfo.singlekD * tilingIns_->shapeInfo.singleCi1 * hiL1FullLoad *
@@ -195,7 +195,7 @@ int64_t ConvTilingAlgorithmMmode::InitCalcL1Params()
     // cal min/kfullload fmap size in L1(mL0)
     uint64_t hoL1MinLoad = min((this->l0TilingParams.mL0 / tilingIns_->shapeInfo.orgWo) + 2,
         static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo));
-    uint64_t hiL1MinLoad = InferHiL1(hoL1MinLoad, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiL1MinLoad = InferHiL1(hoL1MinLoad, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     uint64_t kAL1MinLoad = tilingIns_->isC04Flag ? this->l1TilingCalc.kAL1FullLoadSize : tilingIns_->cubeInfo.k0;
     uint64_t kBL1MinLoad = tilingIns_->isC04Flag ? this->l1TilingCalc.kBL1FullLoadSize : this->l1TilingCalc.ci0HkWk;
     this->l1TilingCalc.fmapMinLoadL1Size = kAL1MinLoad * hiL1MinLoad * tilingIns_->shapeInfo.orgWi *
@@ -528,7 +528,7 @@ bool ConvTilingAlgorithmMmode::IsKAL1orKBL1FullLoad()
 {
     uint64_t hoL1SingleCore = min((tilingIns_->shapeInfo.singleM / tilingIns_->shapeInfo.orgWo) + 2,
         tilingIns_->shapeInfo.orgHo);
-    uint64_t hiL1SingleCore = InferHiL1(hoL1SingleCore, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiL1SingleCore = InferHiL1(hoL1SingleCore, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     uint64_t fmapSingleCoreL1Load = this->l1TilingCalc.kAL1FullLoadSize * hiL1SingleCore *
         tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.singlekD;
     uint64_t weightSingleCoreL1Load = this->l1TilingCalc.weightKL1FullLoadSize;
@@ -563,7 +563,7 @@ bool ConvTilingAlgorithmMmode::IsKAL1andKBL1FullLoad()
 {
     uint64_t hoL1SingleCore = min((tilingIns_->shapeInfo.singleM / tilingIns_->shapeInfo.orgWo) + 2,
         tilingIns_->shapeInfo.orgHo);
-    uint64_t hiL1SingleCore = InferHiL1(hoL1SingleCore, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiL1SingleCore = InferHiL1(hoL1SingleCore, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     uint64_t fmapSingleCoreL1Load = this->l1TilingCalc.kAL1FullLoadSize * hiL1SingleCore *
         tilingIns_->shapeInfo.orgWi * tilingIns_->shapeInfo.singlekD;
     uint64_t weightSingleCoreL1Load = this->l1TilingCalc.weightKL1FullLoadSize;
@@ -747,7 +747,7 @@ uint64_t ConvTilingAlgorithmMmode::CalcL1SizeForL0Tiling(uint64_t currmL0, uint6
         tilingIns_->shapeInfo.singlekH * tilingIns_->shapeInfo.singlekW * tilingIns_->cubeInfo.k0;
     uint64_t mAL1Min = currmL0;
     uint64_t hoAL1Min = mAL1Min / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2;
-    uint64_t hiAL1Min = InferHiL1(hoAL1Min, tilingIns_->shapeInfo.orgHi);
+    uint64_t hiAL1Min = InferHiL1(hoAL1Min, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
     uint64_t usedL1Size = hiAL1Min * tilingIns_->shapeInfo.orgWi * kAL1Min * fMapDTypeSize * this->dbValue.pbAL1;
     uint64_t weightSize = currnL0 * kBL1Min * weightDTypeSize * this->dbValue.pbBL1;
     usedL1Size += max(weightSize, reserveWeightSize);

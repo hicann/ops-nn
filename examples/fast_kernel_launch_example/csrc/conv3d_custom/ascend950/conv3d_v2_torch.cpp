@@ -227,6 +227,7 @@ static int32_t InitConvBase(const vector<int64_t>& oriInputShapeList,
     tilingInfo.flagInfo.mBasicBlockFlag = false; // M基本块标志
     tilingInfo.flagInfo.useTilingRepo  = false; // 使用tiling仓库标志
     tilingInfo.flagInfo.useTilingCache = false; // 使用tiling缓存标志
+    tilingInfo.flagInfo.isKernelSplit = false; // kernel切分标志
 
     return DEMO_RET_SUC;
 }

@@ -39,6 +39,9 @@ uint64_t Conv3dV2BaseTilingKey::GetFmpTilingVal()
     if (flagInfo_.convGroupType != ConvGroupType::NORMAL_CONV) {
         return FMP_OTHER;
     }
+    if (flagInfo_.isKernelSplit) {
+        return FMP_OTHER;
+    }
     bool kAL1FullloadFlag = false;
 
     uint64_t ci1 = CeilDiv(shapeInfo_.ci, convOpsConstParams_.k0);
@@ -177,6 +180,7 @@ void Conv3dV2BaseTilingKey::GetTemplateTilingKey(ConvTilingKeyPara& tilingKeyPar
     tilingKeyPara.outputOrder = GetOutputOrderVal();
     tilingKeyPara.iterOrder = static_cast<uint64_t>(tilingData_.iterateMNOrder);
     tilingKeyPara.groupType = static_cast<uint64_t>(flagInfo_.convGroupType);
+    tilingKeyPara.bigKernel = static_cast<uint64_t>(flagInfo_.isKernelSplit);
     ReSetTilingKeyPara(tilingKeyPara);
 }
 }

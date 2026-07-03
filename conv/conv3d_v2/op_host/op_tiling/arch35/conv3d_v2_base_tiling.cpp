@@ -260,8 +260,11 @@ ConvGroupType Conv3dBaseTilingV2::GetGroupsInfo()
     oriGroupInfo_.groups = attrInfo_.groups;
     oriGroupInfo_.weightDtype = dtypeMap.at(descInfo_.weightDtype);
     conv3dApiTiling_.CalcOptGroupParams(oriGroupInfo_, optGroupInfo_);
-
     convBase_.InitGroupInfo(oriGroupInfo_, optGroupInfo_);
+
+    if (flagInfo_.isKernelSplit) {
+        return ConvGroupType::ORI_GROUP_CONV;
+    }
 
     auto k0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_K_IDX);
     auto n0 = CUBE_MKN_MAP.GetMKN(dtypeMap.at(descInfo_.weightDtype), MKN_N_IDX);

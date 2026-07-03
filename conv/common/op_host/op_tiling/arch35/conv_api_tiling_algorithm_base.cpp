@@ -73,9 +73,9 @@ uint64_t ConvTilingAlgorithmBase::CalcFBSize(uint64_t nL0) const
     return AlignB(nL0, tilingIns_->cubeInfo.n0) * tilingIns_->shapeInfo.channelWiseCoeff * FP16_DTYPE_SIZE;
 }
 
-uint64_t ConvTilingAlgorithmBase::InferHiL1(uint64_t hoL1, int64_t hi) const
+uint64_t ConvTilingAlgorithmBase::InferHiL1(uint64_t hoL1, uint64_t kh, int64_t hi) const
 {
-    int64_t khDilated = (tilingIns_->shapeInfo.singlekH - 1) * tilingIns_->attrInfo.dilationH + 1;
+    int64_t khDilated = (kh - 1) * tilingIns_->attrInfo.dilationH + 1;
     int64_t tmpHiL1 = (hoL1 - 1) * tilingIns_->attrInfo.strideH + khDilated;
     if (tmpHiL1 > hi) {
         tmpHiL1 = hi;
@@ -84,13 +84,13 @@ uint64_t ConvTilingAlgorithmBase::InferHiL1(uint64_t hoL1, int64_t hi) const
     return tmpHiL1;
 }
 
-uint64_t ConvTilingAlgorithmBase::InferWiL1(uint64_t woL1, int64_t wi) const
+uint64_t ConvTilingAlgorithmBase::InferWiL1(uint64_t woL1, uint64_t kw, int64_t wi) const
 {
     if (woL1 >= static_cast<uint64_t>(tilingIns_->shapeInfo.singleWo) && tilingIns_->isC04Flag) {
         return tilingIns_->shapeInfo.orgWi;
     }
 
-    int64_t kwDilated = (tilingIns_->shapeInfo.singlekW - 1) * tilingIns_->attrInfo.dilationW + 1;
+    int64_t kwDilated = (kw - 1) * tilingIns_->attrInfo.dilationW + 1;
     int64_t tmpWiL1 = (woL1 - 1) * tilingIns_->attrInfo.strideW + kwDilated;
     if (tmpWiL1 > wi) {
         tmpWiL1 = wi;
@@ -106,12 +106,14 @@ void ConvTilingAlgorithmBase::ResetOptGroupDoubleBuffer(bool resetFlag)
         if (tilingIns_->outputOrder == static_cast<int8_t>(OutputOrder::M)) {
             uint64_t curHoAL1 = min(static_cast<uint64_t>(tilingIns_->shapeInfo.orgHo),
                 static_cast<uint64_t>(tilingIns_->l1TilingInfo.mAL1 / tilingIns_->shapeInfo.orgWo + CONST_VALUE_2));
-            uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgHi);
+            uint64_t curHiAL1 = InferHiL1(curHoAL1, tilingIns_->shapeInfo.orgkH, tilingIns_->shapeInfo.orgHi);
             curAL1Size = AlignB(curHiAL1 * tilingIns_->shapeInfo.orgWi * tilingIns_->l1TilingInfo.kAL1 /
                 tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
         } else {
-            uint64_t curHiAL1 = InferHiL1(tilingIns_->l1TilingInfo.hoAL1, tilingIns_->shapeInfo.orgHi);
-            uint64_t curWiAL1 = InferWiL1(tilingIns_->l1TilingInfo.woAL1, tilingIns_->shapeInfo.orgWi);
+            uint64_t curHiAL1 = InferHiL1(tilingIns_->l1TilingInfo.hoAL1, tilingIns_->shapeInfo.orgkH,
+                tilingIns_->shapeInfo.orgHi);
+            uint64_t curWiAL1 = InferWiL1(tilingIns_->l1TilingInfo.woAL1, tilingIns_->shapeInfo.orgkW,
+                tilingIns_->shapeInfo.orgWi);
             curAL1Size = AlignB(curHiAL1 * curWiAL1 * tilingIns_->l1TilingInfo.kAL1 /
                 tilingIns_->shapeInfo.orgkH / tilingIns_->shapeInfo.orgkW * this->fMapDTypeSize, C0_SIZE);
         }

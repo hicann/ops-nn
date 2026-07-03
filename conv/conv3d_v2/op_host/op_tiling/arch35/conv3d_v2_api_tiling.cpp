@@ -79,6 +79,11 @@ void Conv3dTiling::SetOutputOrder(int8_t outOrder)
     this->outputOrder = outOrder;
 }
 
+void Conv3dTiling::SetKernelSplit(bool isKernelSplitIn)
+{
+    this->isKernelSplit = isKernelSplitIn;
+}
+
 int64_t Conv3dTiling::Compute()
 {
     switch (outputOrder) {
@@ -128,8 +133,9 @@ uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2&
 {
     uint64_t aL1SpaceSize = 0;
     uint64_t fmapSize = DTYPE_SIZE_TAB.at(descInfo.fMapType.dtype);
-
-    uint64_t dilatedKernelH = (tiling.kernelH - 1) * tiling.dilationH + 1;
+    uint64_t tmpKh = isKernelSplit ? tiling.khL1 : tiling.kernelH;
+    uint64_t tmpKw = isKernelSplit ? tiling.kwL1 : tiling.kernelW;
+    uint64_t dilatedKernelH = (tmpKh - 1) * tiling.dilationH + 1;
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
         uint64_t mL1Max = tiling.hoL1 < tiling.singleCoreHo ? tiling.hoL1 : tiling.singleCoreHo;
         uint64_t hoL1Max = std::min(mL1Max / tiling.orgWo + CONST_VALUE_2, tiling.orgHo);
@@ -147,7 +153,7 @@ uint32_t Conv3dTiling::CalcAL1SpaceSize(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2&
 
             aL1SpaceSize = AlignB(hiAL1Max * wiAL1Max, C0_SIZE / (fmapSize * C04_CIN_SIZE)) * C04_CIN_SIZE;
         } else {
-            uint64_t dilatedKernelW = (tiling.kernelW - 1) * tiling.dilationW + 1;
+            uint64_t dilatedKernelW = (tmpKw - 1) * tiling.dilationW + 1;
             wiAL1Max = (tiling.woL1 - 1) * tiling.strideW + dilatedKernelW;
             wiAL1Max = wiAL1Max > tiling.orgWi ? tiling.orgWi : wiAL1Max;
 
@@ -163,16 +169,17 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
 {
     // calculate the follow params in tiling process, for scalar optimization in kernel
     uint32_t kernelHxkernelW = tiling.kernelH * tiling.kernelW;
-    uint32_t cinAInCore = tiling.kAL1 / kernelHxkernelW;
-    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelHxkernelW) %
+    uint32_t kernelValueInKSize = isKernelSplit ? tiling.khL1 * tiling.kwL1 : kernelHxkernelW;
+    uint32_t cinAInCore = tiling.kAL1 / kernelValueInKSize;
+    uint32_t kAL1Tail = (AlignB(tiling.singleCoreCi, cubeInfo.k0) * tiling.kernelD * kernelValueInKSize) %
                         tiling.kAL1;
     kAL1Tail = kAL1Tail == 0 ? tiling.kAL1 : kAL1Tail;
-    uint32_t kBL1Tail = (tiling.singleCoreCi * kernelHxkernelW) % tiling.kBL1;
+    uint32_t kBL1Tail = (tiling.singleCoreCi * kernelValueInKSize) % tiling.kBL1;
     kBL1Tail = kBL1Tail == 0 ? tiling.kBL1 : kBL1Tail;
-    uint32_t cinATailInCore = kAL1Tail / kernelHxkernelW;
-    uint32_t cinBTailInCore = kBL1Tail / kernelHxkernelW;
+    uint32_t cinATailInCore = kAL1Tail / kernelValueInKSize;
+    uint32_t cinBTailInCore = kBL1Tail / kernelValueInKSize;
     uint64_t orgHixWi = tiling.orgHi * tiling.orgWi;
-    uint32_t cinOffsetBlockInGM = tiling.kAL1 / kernelHxkernelW * orgHixWi;
+    uint32_t cinOffsetBlockInGM = tiling.kAL1 / kernelValueInKSize * orgHixWi;
     uint32_t mStep = 0;
     if (outputOrder == static_cast<int8_t>(OutputOrder::M)) {
         mStep = AlignB(tiling.hoL0, cubeInfo.m0);
@@ -184,7 +191,7 @@ void Conv3dTiling::SetScalarParams(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tili
     uint32_t kStep = tiling.kL0 / cubeInfo.k0;
     uint32_t weightKStride = CeilDiv(tiling.nBL1, cubeInfo.n0);
     uint32_t coutOffsetBlock = (tiling.orgCi / tiling.groups) * kernelHxkernelW;
-    uint32_t cinBInCore = tiling.kBL1 / kernelHxkernelW;
+    uint32_t cinBInCore = tiling.kBL1 / kernelValueInKSize;
     uint32_t nL1DivBlockSize = tiling.nBL1 / cubeInfo.n0;
 
     tiling.kernelHxkernelW  = kernelHxkernelW;
@@ -244,10 +251,14 @@ void Conv3dTiling::SetAttrsTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& t
 void Conv3dTiling::SetUnionDataXt(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling)
 {
     conv_tiling::UnionDataXt unionDataXt;
-    unionDataXt.bf.kernelW = static_cast<uint64_t>(this->shapeInfo.orgkW);
-    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkW) & 0x100) >> 8; // 8 kernelW lower 8 bit
-    unionDataXt.bf.kernelH = static_cast<uint64_t>(this->shapeInfo.orgkH);
-    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(this->shapeInfo.orgkH) & 0x100) >> 8; // 8 kernelH lower 8 bit
+    uint64_t tmpKh = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.khL1) :
+        static_cast<uint64_t>(shapeInfo.orgkH);
+    uint64_t tmpKw = isKernelSplit ? static_cast<uint64_t>(l1TilingInfo.kwL1) :
+        static_cast<uint64_t>(shapeInfo.orgkW);
+    unionDataXt.bf.kernelW = tmpKw;
+    unionDataXt.bf.kernelW_highest_bit = (tmpKw & 0x100) >> 8; // 8 kernelW lower 8 bit
+    unionDataXt.bf.kernelH = tmpKh;
+    unionDataXt.bf.kernelH_highest_bit = (tmpKh & 0x100) >> 8; // 8 kernelH lower 8 bit
     unionDataXt.bf.dilationH = static_cast<uint32_t>(this->attrInfo.dilationH);
     unionDataXt.bf.dilationW = static_cast<uint32_t>(this->attrInfo.dilationW);
     unionDataXt.bf.strideH = static_cast<uint32_t>(this->attrInfo.strideH);
@@ -295,6 +306,8 @@ void Conv3dTiling::SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling
     tiling.nBL1 = static_cast<uint32_t>(this->l1TilingInfo.nBL1);
     tiling.kL0 = static_cast<uint32_t>(this->l0TilingInfo.kL0);
     tiling.nL0 = static_cast<uint32_t>(this->l0TilingInfo.nL0);
+    tiling.khL1 = static_cast<uint32_t>(this->l1TilingInfo.khL1);
+    tiling.kwL1 = static_cast<uint32_t>(this->l1TilingInfo.kwL1);
     tiling.pBufferFlag = static_cast<uint32_t>(this->dbValue.pBufferFlag);
 
     tiling.iterateMNOrder = static_cast<uint8_t>(this->l1TilingInfo.iterateMNOrder);

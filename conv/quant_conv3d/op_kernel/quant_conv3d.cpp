@@ -25,7 +25,7 @@ constexpr ConvFormat biasFormat = ConvFormat::ND;
 constexpr ConvFormat scaleFormat = ConvFormat::ND;
 
 template<int8_t FmapTiling, int8_t WeightTiling, int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-         int8_t IterOrder, int8_t GroupType>
+         int8_t IterOrder, int8_t GroupType, int8_t BigKernel>
 __global__ __aicore__ void quant_conv3d(GM_ADDR x, GM_ADDR filter, GM_ADDR scale, GM_ADDR bias, GM_ADDR offset,
     GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling)
 {
@@ -54,11 +54,11 @@ __global__ __aicore__ void quant_conv3d(GM_ADDR x, GM_ADDR filter, GM_ADDR scale
 
     if constexpr (GroupType == CONV_GROUP_TYPE_NORMAL_CONV) {
         Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType>> baseConv3d;
+            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> baseConv3d;
         baseConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData, &extendParams);
     } else {
         GroupConv3dV2<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<
-            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType>> groupConv3d;
+            FmapTiling, WeightTiling, L1PingPong, L0PingPong, OutputOrder, IterOrder, GroupType, BigKernel>> groupConv3d;
         groupConv3d.RunConv3dV2Kernel(x, filter, bias, y, tilingData, &extendParams);
     }
 

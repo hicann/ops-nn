@@ -133,6 +133,7 @@ struct Conv2dIntf {
     constexpr static bool groupOptNZFlag = ConvParam::groupType == static_cast<int8_t>(ConvGroupType::OPT_GROUP_CONV) &&
                                            formatWeight == ConvFormat::FRACTAL_Z;
     constexpr static bool isConv3D = false;
+    constexpr static bool bigKernelFlag = false;
     constexpr static bool isDeQuantFlag = false;
     constexpr static bool disContinuousFlag =
         ConvParam::disContinuous == static_cast<int8_t>(ConvDisContinuous::INPUT_HWNC);

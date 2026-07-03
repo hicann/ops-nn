@@ -99,6 +99,9 @@ bool Conv3dBaseTilingV2::TranslateRepoTiling(tuningtiling::TuningTilingDefPtr &t
     TranslateApiTiling(convRepoTiling);
     TranslateRunInfo(convRepoTiling);
     flagInfo_.mSplitModeFlag = static_cast<bool>(convRepoTiling->mMode);
+    flagInfo_.isKernelSplit = (convRepoTiling->khL1 > 0 && convRepoTiling->khL1 < convRepoTiling->kernelH) ||
+                              (convRepoTiling->kwL1 > 0 && convRepoTiling->kwL1 < convRepoTiling->kernelW);
+    flagInfo_.convGroupType = GetGroupsInfo();
     TranslateApiTilingAux(convRepoTiling);
 
     return true;
@@ -150,6 +153,8 @@ void Conv3dBaseTilingV2::TranslateApiTiling(std::shared_ptr<tuningtiling::Conv3D
     tilingData_.biasFullLoadFlag = convRepoTiling->biasFullLoadFlag;
     tilingData_.fixpParamsFullLoadFlag = convRepoTiling->fixpParamsFullLoadFlag;
     tilingData_.enlarge = optGroupInfo_.enlarge;
+    tilingData_.khL1 = convRepoTiling->khL1;
+    tilingData_.kwL1 = convRepoTiling->kwL1;
 }
 
 void Conv3dBaseTilingV2::TranslateRunInfo(std::shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
@@ -216,18 +221,20 @@ uint32_t Conv3dBaseTilingV2::CalcAL1SpaceSize(shared_ptr<tuningtiling::Conv3DV2T
 
 void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling) {
     uint32_t kernelHxkernelW = convRepoTiling->kernelH * convRepoTiling->kernelW;
-    uint32_t cinAInCore = convRepoTiling->kAL1 / kernelHxkernelW;
+    uint32_t kernelValueInKSize = flagInfo_.isKernelSplit ? convRepoTiling->khL1 * convRepoTiling->kwL1 :
+        kernelHxkernelW;
+    uint32_t cinAInCore = convRepoTiling->kAL1 / kernelValueInKSize;
     uint32_t kAL1Tail =
         (ConvAlignB(convRepoTiling->singleCoreCi, convOpsConstParams_.k0) *
-            kernelHxkernelW * convRepoTiling->kernelD) %
+            kernelValueInKSize * convRepoTiling->kernelD) %
         convRepoTiling->kAL1;
     kAL1Tail = kAL1Tail == 0 ? convRepoTiling->kAL1 : kAL1Tail;
-    uint32_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelHxkernelW) % convRepoTiling->kBL1;
+    uint32_t kBL1Tail = (convRepoTiling->singleCoreCi * kernelValueInKSize) % convRepoTiling->kBL1;
     kBL1Tail = kBL1Tail == 0 ? convRepoTiling->kBL1 : kBL1Tail;
-    uint32_t cinATailInCore = kAL1Tail / kernelHxkernelW;
-    uint32_t cinBTailInCore = kBL1Tail / kernelHxkernelW;
+    uint32_t cinATailInCore = kAL1Tail / kernelValueInKSize;
+    uint32_t cinBTailInCore = kBL1Tail / kernelValueInKSize;
     uint32_t orgHixWi = convRepoTiling->orgHi * convRepoTiling->orgWi;
-    uint32_t cinOffsetBlockInGM = convRepoTiling->kAL1 / kernelHxkernelW * orgHixWi;
+    uint32_t cinOffsetBlockInGM = convRepoTiling->kAL1 / kernelValueInKSize * orgHixWi;
     uint32_t mStep = (!flagInfo_.mSplitModeFlag) ?
         ConvAlignB(convRepoTiling->hoL0 * convRepoTiling->woL0, convOpsConstParams_.m0):
         ConvAlignB(convRepoTiling->hoL0, convOpsConstParams_.m0);
@@ -242,7 +249,7 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
     tilingData_.multiNBL1 = ConvCeilDiv(convRepoTiling->nBL1, convRepoTiling->nL0);
     tilingData_.cinAInCore = cinAInCore;
     tilingData_.cinATailInCore = cinATailInCore;
-    tilingData_.cinBInCore = convRepoTiling->kBL1 / kernelHxkernelW;
+    tilingData_.cinBInCore = convRepoTiling->kBL1 / kernelValueInKSize;
     tilingData_.cinBTailInCore = cinBTailInCore;
     tilingData_.mStep = mStep;
     tilingData_.kStep = kStep;
@@ -271,10 +278,14 @@ void Conv3dBaseTilingV2::TranslateApiTilingAux(shared_ptr<tuningtiling::Conv3DV2
 void Conv3dBaseTilingV2::SetUnionDataXt(shared_ptr<tuningtiling::Conv3DV2TunnerTiling> convRepoTiling)
 {
     conv_tiling::UnionDataXt unionDataXt;
-    unionDataXt.bf.kernelW = static_cast<uint64_t>(convRepoTiling->kernelW);
-    unionDataXt.bf.kernelW_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelW) & 0x100) >> 8; // 8 kernelW lower 8 bit
-    unionDataXt.bf.kernelH = static_cast<uint64_t>(convRepoTiling->kernelH);
-    unionDataXt.bf.kernelH_highest_bit = (static_cast<uint64_t>(convRepoTiling->kernelH) & 0x100) >> 8; // 8 kernelH lower 8 bit
+    uint64_t tmpKh = flagInfo_.isKernelSplit ? static_cast<uint64_t>(convRepoTiling->khL1) :
+        static_cast<uint64_t>(convRepoTiling->kernelH);
+    uint64_t tmpKw = flagInfo_.isKernelSplit ? static_cast<uint64_t>(convRepoTiling->kwL1) :
+        static_cast<uint64_t>(convRepoTiling->kernelW);
+    unionDataXt.bf.kernelW = tmpKw;
+    unionDataXt.bf.kernelW_highest_bit = (tmpKw & 0x100) >> 8; // 8 kernelW lower 8 bit
+    unionDataXt.bf.kernelH = tmpKh;
+    unionDataXt.bf.kernelH_highest_bit = (tmpKh & 0x100) >> 8; // 8 kernelH lower 8 bit
     unionDataXt.bf.dilationH = static_cast<uint64_t>(convRepoTiling->dilationH);
     unionDataXt.bf.dilationW = static_cast<uint64_t>(convRepoTiling->dilationW);
     unionDataXt.bf.strideH = static_cast<uint64_t>(convRepoTiling->strideH) & 0x3f;

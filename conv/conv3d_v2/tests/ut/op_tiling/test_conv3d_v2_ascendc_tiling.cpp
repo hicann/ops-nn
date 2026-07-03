@@ -75,128 +75,129 @@ struct DtypeSize {
 };
 
 struct TilingParam {
-    uint64_t orgDo;
-    uint64_t orgHo;
-    uint64_t orgWo;
-    uint64_t orgDi;
-    uint64_t orgHi;
-    uint64_t orgWi;
-    uint64_t singleCoreBatch;
-    uint64_t singleCoreDo;
-    uint64_t singleCoreM;
-    uint64_t singleCoreWo;
-    uint64_t singleCoreHo;
-    uint64_t kL0xorgCoAlignN0;
-    uint64_t kernelHxkernelW;
-    uint64_t cin1xOriHixOriWixk0;
-    uint64_t oriHixOriWixk0;
-    uint64_t unionDataXt;
-    uint64_t oriWixk0;
-    uint64_t orgHixWi;
-    uint64_t orgHoxWo;
-    uint64_t hin;
-    uint64_t win;
-    uint64_t hout;
-    uint64_t wout;
+    uint64_t orgDo = 0;
+    uint64_t orgHo = 0;
+    uint64_t orgWo = 0;
+    uint64_t orgDi = 0;
+    uint64_t orgHi = 0;
+    uint64_t orgWi = 0;
+    uint64_t singleCoreBatch = 0;
+    uint64_t singleCoreDo = 0;
+    uint64_t singleCoreM = 0;
+    uint64_t singleCoreWo = 0;
+    uint64_t singleCoreHo = 0;
+    uint64_t kL0xorgCoAlignN0 = 0;
+    uint64_t kernelHxkernelW = 0;
+    uint64_t cin1xOriHixOriWixk0 = 0;
+    uint64_t oriHixOriWixk0 = 0;
+    uint64_t unionDataXt = 0;
+    uint64_t oriWixk0 = 0;
+    uint64_t orgHixWi = 0;
+    uint64_t orgHoxWo = 0;
+    uint64_t hin = 0;
+    uint64_t win = 0;
+    uint64_t hout = 0;
+    uint64_t wout = 0;
 
-    uint32_t orgCi;
-    uint32_t kernelD;
-    uint32_t kernelH;
-    uint32_t kernelW;
-    uint32_t singleCoreCo;
-    uint32_t orgCo;
-    uint32_t singleCoreCi;
-    uint32_t singleCoreGroups;
-    uint32_t singleCoreGroupOpt;
-    uint32_t groups;
-    uint32_t enlarge;
-    uint32_t strideH;
-    uint32_t strideW;
-    uint32_t strideD;
-    uint32_t dilationH;
-    uint32_t dilationW;
-    uint32_t dilationD;
-    uint32_t padHead;
-    uint32_t padTail;
-    uint32_t padTop;
-    uint32_t padBottom;
-    uint32_t padLeft;
-    uint32_t padRight;
-    uint32_t mL0;
-    uint32_t woL0;
-    uint32_t kL0;
-    uint32_t nL0;
-    uint32_t kAL1;
-    uint32_t kAL1Tail;
-    uint32_t kBL1;
-    uint32_t kBL1Tail;
-    uint32_t nBL1;
-    uint32_t mAL1;
-    uint32_t woL1;
-    uint32_t hoL0;
-    uint32_t hoL1;
-    uint32_t KBL1Divk0;
-    uint32_t KBL1TailDivk0;
-    uint32_t nBL1DivnL0;
-    uint32_t mAL1DivmL0;
-    uint32_t fmapKStride;
-    uint32_t weightKStride;
-    uint32_t cinOffsetBlockInGM;
-    uint32_t coutOffsetBlock;
-    uint32_t nL1DivBlockSize;
-    uint32_t cin1InAL1;
-    uint32_t cin1InAL1Tail;
-    uint32_t cinBInCore;
-    uint32_t cinBTailInCore;
-    uint32_t cinAInCore;
-    uint32_t cinATailInCore;
-    uint32_t nL0xk0;
-    uint32_t mStep;
-    uint32_t kStep;
-    uint32_t nStep;
-    uint32_t aL1SpaceSize;
-    uint32_t multiNBL1;
-    uint32_t pBufferFlag;
-    uint32_t groupOpt;
-    uint32_t cinOpt;
-    uint32_t coutOpt;
-    uint32_t mUB;
-    uint32_t nUB;
-    uint32_t scaleAndBiasLoadType;
-    uint32_t workspaceSize;
-    uint32_t kernelHxkernelWxkernelD;
-    uint32_t batch;
-    uint32_t cin;
-    uint32_t din;
-    uint32_t cout;
-    uint32_t kd;
-    uint32_t kh;
-    uint32_t kw;
-    uint32_t dout;
-    uint32_t batchDim;
-    uint32_t doDim;
-    uint32_t mDim;
-    uint32_t wDim;
-    uint32_t nDim;
-    uint32_t groupDim;
-    uint32_t hoDim;
-
-    int8_t offsetx;
-    int8_t roundMode;
-    uint8_t hasBias;
-    uint8_t hasScale;
-    uint8_t bl1FullLoad;
-    uint8_t al1FullLoad;
-    uint8_t bl1BypassFlag;
-    uint8_t iterateMNOrder;
-    uint8_t biasFullLoadFlag;
-    uint8_t fixpParamsFullLoadFlag;
-    uint8_t hf32Enable;
-    uint8_t hf32TransMode;
-    uint8_t quantType;
-    uint8_t outputOrder;
-    uint8_t resvered1;
-    uint8_t resvered2;
+    uint32_t orgCi = 0;
+    uint32_t kernelD = 0;
+    uint32_t kernelH = 0;
+    uint32_t kernelW = 0;
+    uint32_t singleCoreCo = 0;
+    uint32_t orgCo = 0;
+    uint32_t singleCoreCi = 0;
+    uint32_t singleCoreGroups = 0;
+    uint32_t singleCoreGroupOpt = 0;
+    uint32_t groups = 0;
+    uint32_t enlarge = 0;
+    uint32_t strideH = 0;
+    uint32_t strideW = 0;
+    uint32_t strideD = 0;
+    uint32_t dilationH = 0;
+    uint32_t dilationW = 0;
+    uint32_t dilationD = 0;
+    uint32_t padHead = 0;
+    uint32_t padTail = 0;
+    uint32_t padTop = 0;
+    uint32_t padBottom = 0;
+    uint32_t padLeft = 0;
+    uint32_t padRight = 0;
+    uint32_t mL0 = 0;
+    uint32_t woL0 = 0;
+    uint32_t kL0 = 0;
+    uint32_t nL0 = 0;
+    uint32_t kAL1 = 0;
+    uint32_t kAL1Tail = 0;
+    uint32_t kBL1 = 0;
+    uint32_t kBL1Tail = 0;
+    uint32_t nBL1 = 0;
+    uint32_t mAL1 = 0;
+    uint32_t woL1 = 0;
+    uint32_t hoL0 = 0;
+    uint32_t hoL1 = 0;
+    uint32_t KBL1Divk0 = 0;
+    uint32_t KBL1TailDivk0 = 0;
+    uint32_t nBL1DivnL0 = 0;
+    uint32_t mAL1DivmL0 = 0;
+    uint32_t fmapKStride = 0;
+    uint32_t weightKStride = 0;
+    uint32_t cinOffsetBlockInGM = 0;
+    uint32_t coutOffsetBlock = 0;
+    uint32_t nL1DivBlockSize = 0;
+    uint32_t cin1InAL1 = 0;
+    uint32_t cin1InAL1Tail = 0;
+    uint32_t cinBInCore = 0;
+    uint32_t cinBTailInCore = 0;
+    uint32_t cinAInCore = 0;
+    uint32_t cinATailInCore = 0;
+    uint32_t nL0xk0 = 0;
+    uint32_t mStep = 0;
+    uint32_t kStep = 0;
+    uint32_t nStep = 0;
+    uint32_t aL1SpaceSize = 0;
+    uint32_t multiNBL1 = 0;
+    uint32_t pBufferFlag = 0;
+    uint32_t groupOpt = 0;
+    uint32_t cinOpt = 0;
+    uint32_t coutOpt = 0;
+    uint32_t mUB = 0;
+    uint32_t nUB = 0;
+    uint32_t scaleAndBiasLoadType = 0;
+    uint32_t workspaceSize = 0;
+    uint32_t kernelHxkernelWxkernelD = 0;
+    uint32_t batch = 0;
+    uint32_t cin = 0;
+    uint32_t din = 0;
+    uint32_t cout = 0;
+    uint32_t kd = 0;
+    uint32_t kh = 0;
+    uint32_t kw = 0;
+    uint32_t dout = 0;
+    uint32_t batchDim = 0;
+    uint32_t doDim = 0;
+    uint32_t mDim = 0;
+    uint32_t wDim = 0;
+    uint32_t nDim = 0;
+    uint32_t groupDim = 0;
+    uint32_t hoDim = 0;
+    uint32_t khL1 = 0;
+    uint32_t kwL1 = 0;
+    int8_t offsetx = 0;
+    int8_t roundMode = 0;
+    uint8_t hasBias = 0;
+    uint8_t hasScale = 0;
+    uint8_t bl1FullLoad = 0;
+    uint8_t al1FullLoad = 0;
+    uint8_t bl1BypassFlag = 0;
+    uint8_t iterateMNOrder = 0;
+    uint8_t biasFullLoadFlag = 0;
+    uint8_t fixpParamsFullLoadFlag = 0;
+    uint8_t hf32Enable = 0;
+    uint8_t hf32TransMode = 0;
+    uint8_t quantType = 0;
+    uint8_t outputOrder = 0;
+    uint8_t resvered1 = 0;
+    uint8_t resvered2 = 0;
 };
 
 struct PadModeParams {
@@ -303,9 +304,11 @@ uint64_t CalcConv3dMmodeUsdL1Size(TilingParam &tilingData, DtypeSize dtypeSize, 
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL1 = (pBuffer & 0x08) >> NUM_3;
     int8_t pbBL1 = (pBuffer & 0x10) >> NUM_4;
+    uint64_t tmpkh = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.khL1 : tilingData.kernelH;
+    uint64_t tmpkw = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.kwL1 : tilingData.kernelW;
     uint64_t hoAL1Tmp = tilingData.hoL1 / tilingData.orgWo + NUM_2;
-    uint64_t hiL1Tmp = min((hoAL1Tmp - 1) * tilingData.strideH + (tilingData.kernelH - 1) / tilingData.dilationH + 1, tilingData.orgHi);
-    uint64_t al1Size = hiL1Tmp * tilingData.orgWi * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
+    uint64_t hiL1Tmp = min((hoAL1Tmp - 1) * tilingData.strideH + (tmpkh - 1) / tilingData.dilationH + 1, tilingData.orgHi);
+    uint64_t al1Size = hiL1Tmp * tilingData.orgWi * (tilingData.kAL1 / (tmpkh * tmpkw)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
     uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * (pbBL1 + 1) * dtypeSize.weightDtypeSize;
     if (hasBias) {
         if (tilingData.biasFullLoadFlag == 1) {
@@ -330,9 +333,11 @@ uint64_t CalcConv3dHWmodeUsdL1Size(TilingParam &tilingData, DtypeSize dtypeSize,
     uint64_t scaleL1Size = 0;
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL1 = (pBuffer & 0x08) >> NUM_3;
-    uint64_t hiL1 = InferWiL1ForConv3dV2(tilingData.hoL1, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH);
-    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW, tilingData.strideW);
-    uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
+    uint64_t tmpkh = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.khL1 : tilingData.kernelH;
+    uint64_t tmpkw = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.kwL1 : tilingData.kernelW;
+    uint64_t hiL1 = InferHiL1ForConv3dV2(tilingData.hoL1, tilingData.orgHi, tmpkh, tilingData.dilationH, tilingData.strideH);
+    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tmpkw, tilingData.dilationW, tilingData.strideW);
+    uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tmpkh * tmpkw)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
     uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * dtypeSize.weightDtypeSize;
     if (hasBias) {
         if (tilingData.biasFullLoadFlag) {
@@ -440,20 +445,31 @@ void CheckHWModeTilingDataValidForConv3dV2(TilingParam &tilingData, uint64_t k0)
         hoL1Check = 1;
     }
     EXPECT_EQ(hoL1Check, 1);
-
-    EXPECT_LE(tilingData.kAL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW * tilingData.kernelD);
-    EXPECT_LE(tilingData.kBL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW * tilingData.kernelD);
-    EXPECT_EQ(tilingData.kAL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
-    EXPECT_EQ(tilingData.kBL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
+    uint64_t tmpkh = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.khL1 : tilingData.kernelH;
+    uint64_t tmpkw = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.kwL1 : tilingData.kernelW;
+    EXPECT_LE(tilingData.kAL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw * tilingData.kernelD);
+    EXPECT_LE(tilingData.kBL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw * tilingData.kernelD);
+    EXPECT_EQ(tilingData.kAL1 % (k0 * tmpkh * tmpkw), 0);
+    EXPECT_EQ(tilingData.kBL1 % (k0 * tmpkh * tmpkw), 0);
+    if (tilingData.khL1 > 0) {
+        EXPECT_EQ(tilingData.kh % tilingData.khL1, 0);
+        EXPECT_LE(tilingData.khL1, tilingData.kh);
+        EXPECT_EQ(tilingData.kAL1, tilingData.kBL1);
+    }
+    if (tilingData.kwL1 > 0) {
+        EXPECT_EQ(tilingData.kw % tilingData.kwL1, 0);
+        EXPECT_LE(tilingData.kwL1, tilingData.kw);
+        EXPECT_EQ(tilingData.kAL1, tilingData.kBL1);
+    }
     uint32_t kAL1DivCheck = 0;
     if (tilingData.kAL1 % tilingData.kL0 == 0 ||
-        tilingData.kAL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW) {
+        tilingData.kAL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw) {
         kAL1DivCheck = 1;
     }
     EXPECT_EQ(kAL1DivCheck, 1);
     bool kBL1DivCheck = false;
     if (tilingData.kBL1 % tilingData.kL0 == 0 ||
-        tilingData.kBL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW) {
+        tilingData.kBL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw) {
         kBL1DivCheck = true;
     }
     EXPECT_EQ(kBL1DivCheck, true);
@@ -483,8 +499,12 @@ void CheckValidTilingData(TilingParam &tilingData,
     uint64_t multi_mAL1max = CeilDivForConv3dV2(CeilDivForConv3dV2(tilingData.singleCoreHo, M0_SIZE) * M0_SIZE, tilingData.hoL0);
     uint64_t mL0max = min(L0A_SIZE / (k0 * (pbAL0 + 1) * dtypeSize.fMapDtypeSize), L0C_SIZE / (N0_SIZE * (pbCL0 + 1) * DTYPESIZE_4));
     uint64_t nL0max = min(L0B_SIZE / (k0 * (pbBL0 + 1) * dtypeSize.weightDtypeSize), L0C_SIZE / (M0_SIZE * (pbCL0 + 1) * DTYPESIZE_4));
-
+    if (tilingData.khL1 > 0 || tilingData.kwL1 > 0) {
+        EXPECT_EQ(outputOrder, 0);
+    }
     if (outputOrder == 1) {
+      EXPECT_EQ(tilingData.khL1, 0);
+      EXPECT_EQ(tilingData.kwL1, 0);
       ASSERT_GT(tilingData.kAL1, 0);
       ASSERT_GT(tilingData.kBL1, 0);
       ASSERT_GT(tilingData.hoL1, 0);
@@ -704,9 +724,9 @@ void Conv3DV2TestCase(Conv3dTestParams conv3dTestParams) {
     GetPlatFormInfos(compile_info_string.c_str(), soc_infos, aicore_spec, intrinsics);
     map<string, string> soc_version_infos = {{"NpuArch", "3510"}};
     aicore_spec.insert({"fb0_size", "4096"});
-    fe::PlatFormInfos platform_info;
-    platform_info.Init();
-    optiling::conv_ops_tiling::ConvTilingParseInfo compile_info;
+    auto compile_info = std::make_shared<optiling::conv_ops_tiling::ConvTilingParseInfo>();
+    auto platform_info = std::make_shared<fe::PlatFormInfos>();
+    platform_info->Init();
 
     auto tilingDataPtr = gert::TilingData::CreateCap(SIZE_4096);
     auto workspace_size_holer = gert::ContinuousVector::Create<size_t>(SIZE_4096);
@@ -738,8 +758,8 @@ void Conv3DV2TestCase(Conv3dTestParams conv3dTestParams) {
                                             .IrInstanceNum({1, 1, 1, 1})
                                             .InputShapes(input_shape_ref)
                                             .OutputShapes(output_shapes_ref)
-                                            .CompileInfo(&compile_info)
-                                            .PlatformInfo(reinterpret_cast<char *>(&platform_info))
+                                            .CompileInfo(compile_info.get())
+                                            .PlatformInfo(reinterpret_cast<char *>(platform_info.get()))
                                             .NodeInputTd(0, fmapDype, fmapFormat, fmapFormat)
                                             .NodeInputTd(1, weightDtype, weightFormat, weightFormat)
                                             .NodeInputTd(DIM_2, biasDtype, ge::FORMAT_ND, ge::FORMAT_ND)
@@ -798,7 +818,18 @@ TEST_F(Conv3dv2Tiling, run_conv3dv2_case_cache_1) {
     }
 }
 
-class Conv3dParameterizedTest : public ::testing::TestWithParam<Conv3dTestParams> {};
+TEST_F(Conv3dv2Tiling, run_conv3dv2_case_cache_2) {
+    for (int i = 0; i < NUM_10; i++) {
+        Conv3DV2TestCase(Conv3dTestParams{{1,1,1,1,1}, {1,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT});
+    }
+}
+
+
+class Conv3dParameterizedTest : public ::testing::TestWithParam<Conv3dTestParams> {
+    protected:
+      static void SetUpTestCase() {}
+      static void TearDownTestCase() {}
+};
 TEST_P(Conv3dParameterizedTest, RunConv3DCase) {
     Conv3DV2TestCase(GetParam());
 }
@@ -1466,5 +1497,14 @@ INSTANTIATE_TEST_CASE_P(AllConv3dCases, Conv3dParameterizedTest, ::testing::Valu
     Conv3dTestParams{{1,6,87,3400,39}, {45,3,18,2}, {0,0,11,11,1,1}, {4,15,52}, {6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, true, true, ge::DT_BF16, ge::DT_BF16, ge::DT_FLOAT},
     Conv3dTestParams{{1,6,87,3400,39}, {45,3,18,2}, {0,0,11,11,1,1}, {4,15,52}, {6,9,6}, ge::DT_INT8, 1, 2, 0, 0, 0, 0, true, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT},
     Conv3dTestParams{{1,6,87,3400,39}, {45,3,18,2}, {0,0,11,11,1,1}, {4,15,52}, {6,9,6}, ge::DT_INT8, 0, 1, 0, 0, 0, 0, true, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT},
-    Conv3dTestParams{{1,6,87,3400,39}, {45,3,18,2}, {0,0,11,11,1,1}, {4,15,52}, {6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, false, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT})
+    Conv3dTestParams{{1,6,87,3400,39}, {45,3,18,2}, {0,0,11,11,1,1}, {4,15,52}, {6,9,6}, ge::DT_INT8, 1, 1, 0, 0, 0, 0, true, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, false, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT},
+    Conv3dTestParams{{22,19,3,48,44}, {409,1,28,36}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_FLOAT16, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_FLOAT16, ge::DT_FLOAT16, ge::DT_FLOAT16},
+    Conv3dTestParams{{37,35,18,32,246}, {288,1,4,246}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_BF16, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16},
+    Conv3dTestParams{{2,4,80,66,33}, {387,1,29,33}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_BF16, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16},
+    Conv3dTestParams{{40,100,86,31,132}, {107,1,7,132}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, ge::DT_BF16, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_BF16, ge::DT_BF16, ge::DT_BF16},
+    Conv3dTestParams{{1,1,1,1,1}, {1,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_FLOAT, 0, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    Conv3dTestParams{{1,2,1,1,1}, {2,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_FLOAT, 0, 2, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NCDHW, false, false, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    Conv3dTestParams{{1,2,1,1,1}, {2,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_FLOAT, 0, 2, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, false, false, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    Conv3dTestParams{{1,2,1,1,1}, {2,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_FLOAT, 0, 2, 0, 0, 0, 0, false, "SPECIFIC", true, ge::FORMAT_NDHWC, ge::FORMAT_NDHWC, false, false, ge::DT_FLOAT, ge::DT_FLOAT, ge::DT_FLOAT},
+    Conv3dTestParams{{1,2,1,1,1}, {2,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, ge::DT_INT8, 1, 1, 0, 0, 0, 0, false, "SPECIFIC", false, ge::FORMAT_NCDHW, ge::FORMAT_NDHWC, true, true, ge::DT_FLOAT, ge::DT_BF16, ge::DT_FLOAT})
 );

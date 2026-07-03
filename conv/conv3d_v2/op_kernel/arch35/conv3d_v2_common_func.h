@@ -83,10 +83,17 @@ struct Init {
         if ASCEND_IS_AIC_CONV {
             InitTilingData(self, tiling);
             InitL1LoadParams(self);
-            self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->kernelH - 1) *
-                                       self->ctx.convTilingData->dilationH;
-            self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->kernelW - 1) *
-                                       self->ctx.convTilingData->dilationW;
+            if constexpr (Intf::bigKernelFlag) {
+                self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->khL1 - 1) *
+                    self->ctx.convTilingData->dilationH;
+                self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->kwL1 - 1) *
+                    self->ctx.convTilingData->dilationW;
+            } else {
+                self->ctx.dilatedKernelH = 1 + (self->ctx.convTilingData->kernelH - 1) *
+                    self->ctx.convTilingData->dilationH;
+                self->ctx.dilatedKernelW = 1 + (self->ctx.convTilingData->kernelW - 1) *
+                    self->ctx.convTilingData->dilationW;
+            }
             self->ctx.dilatedKernelD = 1 + (self->ctx.convTilingData->kernelD - 1) *
                                        self->ctx.convTilingData->dilationD;
 
@@ -164,6 +171,11 @@ struct Init {
         self->ctx.bL1CinTail = self->ctx.bL1Dk > 1 ? self->ctx.bL1Cin : self->ctx.singleCoreCi % self->ctx.bL1Cin;
         self->ctx.bL1CinTail = self->ctx.bL1CinTail == 0 ? self->ctx.bL1Cin : self->ctx.bL1CinTail;
         self->ctx.bL1CinLoadNum = CeilDiv(self->ctx.singleCoreCi, self->ctx.bL1Cin);
+        if constexpr (Intf::bigKernelFlag) {
+            self->ctx.ddr2L1LoopKh = CeilDiv(self->ctx.convTilingData->kernelH, self->ctx.convTilingData->khL1);
+            self->ctx.ddr2L1LoopKw = CeilDiv(self->ctx.convTilingData->kernelW, self->ctx.convTilingData->kwL1);
+            self->ctx.cinBL1LoopTimes = self->ctx.bL1CinLoadNum;
+        }
     }
 };
 

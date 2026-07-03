@@ -240,6 +240,7 @@ public:
     std::string nodeType = "";
     bool hasBias = false;
     bool hasScale = false;
+    bool isKernelSplit = false;
     bool isScaleBiasInUb = false;
     int8_t outputOrder = static_cast<int8_t>(OutputOrder::M);
     int8_t tilingAlgorithmType = static_cast<int8_t>(TilingAlgorithmType::FORMULAS);

@@ -179,13 +179,25 @@ public:
     __aicore__ inline void CalcWiAL1Pad(uint64_t woAL1Iter)
     {
         paddingWiAL1 = (self_->ctx.currentWoL1 - 1) * self_->ctx.convTilingData->strideW + self_->ctx.dilatedKernelW;
-        if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
-            wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) *
-                self_->ctx.convTilingData->strideW - self_->ctx.convTilingData->padLeft;
+        if constexpr (Intf::bigKernelFlag) {
+            uint64_t kwOffset = self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 * self_->ctx.convTilingData->dilationW;
+            if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
+                wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) *
+                    self_->ctx.convTilingData->strideW - self_->ctx.convTilingData->padLeft + kwOffset;
+            } else {
+                wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->woL1 * self_->ctx.convTilingData->strideW -
+                    self_->ctx.convTilingData->padLeft + kwOffset;
+            }
         } else {
-            wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->woL1 * self_->ctx.convTilingData->strideW -
-                self_->ctx.convTilingData->padLeft;
+            if (unlikely(self_->ctx.woL1SmallTail != 0 && woAL1Iter == self_->ctx.maxWoL1Iter)) {
+                wiLeftPadIdx = ((woAL1Iter - 1) * self_->ctx.convTilingData->woL1 + self_->ctx.woAL1Tail) *
+                    self_->ctx.convTilingData->strideW - self_->ctx.convTilingData->padLeft;
+            } else {
+                wiLeftPadIdx = woAL1Iter * self_->ctx.convTilingData->woL1 * self_->ctx.convTilingData->strideW -
+                    self_->ctx.convTilingData->padLeft;
+            }
         }
+
         wiRightPadIdx = wiLeftPadIdx + paddingWiAL1;
         padLeftL1 = wiLeftPadIdx < 0 ? (0 - wiLeftPadIdx) : 0;
         padRightL1 = wiRightPadIdx > self_->ctx.convTilingData->orgWi ? (wiRightPadIdx - self_->ctx.convTilingData->orgWi) : 0;
@@ -201,7 +213,13 @@ public:
         paddingHiAL1 = (self_->ctx.currentHoL1 - 1) * self_->ctx.convTilingData->strideH + self_->ctx.dilatedKernelH;
         int64_t hiRealStartPos = self_->ctx.hiStartPos > 0 ? 0 : self_->ctx.hiStartPos;
         // hiTopPadIdx is inaccurate when hiStartPos > 0
-        hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->hoL1 * self_->ctx.convTilingData->strideH + hiRealStartPos;
+        if constexpr (Intf::bigKernelFlag) {
+            hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->hoL1 * self_->ctx.convTilingData->strideH +
+                hiRealStartPos + self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->dilationH;
+        } else {
+            hiTopPadIdx = hoAL1Iter * self_->ctx.convTilingData->hoL1 * self_->ctx.convTilingData->strideH +
+                hiRealStartPos;
+        }
         hiBottomPadIdx = hiTopPadIdx + paddingHiAL1;
         padTopL1 = hiTopPadIdx < 0 ? (0 - hiTopPadIdx) : 0;
         hiBottomPadIdx = self_->ctx.hiStartPos > 0 ? hiBottomPadIdx + self_->ctx.hiStartPos : hiBottomPadIdx;

@@ -334,6 +334,7 @@ public:
     void SetParams(uint64_t l2Rate);
     ge::graphStatus CheckC04L1SizeLimitsInMsplitMode();
     ge::graphStatus CheckC04L1SizeLimitsInHWSplitMode();
+    ge::graphStatus CheckKernelSplitL1SizeLimitsInHWSplitMode();
     bool IsFp32InputFp32Output();
     void SetBitsFromBool(uint64_t& number, const std::array<bool, UINT64_BIT_COUNT>& bits) const;
     void SetBytesFromUint8(uint64_t& number, const std::array<uint8_t, UINT64_BYTE_COUNT>& bytes) const;

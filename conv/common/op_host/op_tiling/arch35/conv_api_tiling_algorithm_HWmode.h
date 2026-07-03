@@ -53,6 +53,8 @@ struct L1TilingRange {
     std::vector<uint64_t> nBL1Range;
     std::vector<uint64_t> kAL1Range;
     std::vector<uint64_t> kBL1Range;
+    std::vector<uint64_t> khL1Range;
+    std::vector<uint64_t> kwL1Range;
 
     std::vector<uint64_t> hoAL1StrictRange;
     std::vector<uint64_t> woAL1StrictRange;
@@ -88,8 +90,6 @@ struct L1TilingCalc {
     uint64_t ci0HkWk = 0;
     uint64_t c04KSizeAlign = 0;
     uint64_t ubMaxSize = 0;
-    uint64_t khL1 = 0;
-    uint64_t kwL1 = 0;
     uint64_t ci0KhL1KwL1 = 0;
 };
 
@@ -110,7 +110,7 @@ struct L1TilingFlag {
     bool useWoAL1SpareRange = false;
     bool usehoAL1SpareRange = false;
     bool isWoL1MustFullLoadFlagC04 = true;
-    bool isKernelSplitFlag = false;
+    bool isDMAKernelSplit = false;
 };
 
 class ConvTilingAlgorithmHWmode : public ConvTilingAlgorithmBase {
@@ -128,7 +128,7 @@ private:
     void InitPingPong();
     uint64_t CalcCurL1Size(const L1TilingParams &inputTiling, uint64_t biasFixpParamNB);
     uint64_t CalcCurUbSize(uint64_t hoL1, uint64_t woL1, uint64_t curKh, uint64_t curKw) const;
-    int64_t GetL1Tiling();
+    void GetL1Tiling();
     void InitCalcL1Params();
     void InitCalcL1ParamsC04Mode();
     void GetL1TilingRange();
@@ -171,6 +171,8 @@ private:
     void IterWoAL1(uint64_t &woAL1Res, const std::vector<uint64_t> &inputWoAL1Range, L1TilingParams &inputTiling);
     void IterHoWoAL1(uint64_t kAL1, uint64_t kBL1, uint64_t &hoAL1, uint64_t &woAL1, uint64_t nBL1);
     void IterKABL1(uint64_t& tmpKAL1, uint64_t& tmpKBL1, uint64_t tmpHoAL1, uint64_t tmpWoAL1, uint64_t tmpNBL1);
+    uint64_t IterKwL1();
+    uint64_t IterKhL1(uint64_t kwL1Res);
     void GetCaseStatus();
     void GetHoWoNL0Tiling();
     void GetHoWoNL0TilingRange();
@@ -185,7 +187,7 @@ private:
                         uint64_t anotherValue);
     void L0TilingRest(bool kFullLoadFlag);
     void CheckL0DoubleBuffer();
-    void GetDmaL1Tiling();
+    void GetKhKwL1Tiling();
     void ScaleBiasUbTilingDecision();
     void GetUbTiling();
     L1TilingCalc l1TilingCalc;

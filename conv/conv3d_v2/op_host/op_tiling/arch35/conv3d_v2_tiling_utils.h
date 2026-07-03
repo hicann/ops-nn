@@ -102,6 +102,7 @@ constexpr uint32_t NUMBLOCKS_GROUP_IDX = 4;
 constexpr uint32_t PB_AL0_IDX = 0x01;
 constexpr uint32_t PB_BL0_IDX = 0x02;
 constexpr uint32_t PB_CL0_IDX = 0x04;
+constexpr uint32_t PB_AL1_IDX = 0x08;
 constexpr uint32_t PB_BL1_IDX = 0x10;
 constexpr uint32_t PB_BL0_OFFSET = 1;
 constexpr uint32_t PB_CL0_OFFSET = 2;

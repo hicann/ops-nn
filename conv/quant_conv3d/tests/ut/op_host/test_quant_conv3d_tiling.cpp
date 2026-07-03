@@ -185,7 +185,8 @@ struct TilingParam {
     uint32_t nDim = 0;
     uint32_t groupDim = 0;
     uint32_t hoDim = 0;
-
+    uint32_t khL1 = 0;
+    uint32_t kwL1 = 0;
     int8_t offsetx = 0;
     int8_t roundMode = 0;
     uint8_t hasBias = 0;
@@ -284,9 +285,11 @@ uint64_t CalcConv3dHWmodeUsdL1Size(TilingParam &tilingData, DtypeSize dtypeSize,
     uint64_t scaleL1Size = 0;
     uint64_t pBuffer = tilingData.pBufferFlag;
     int8_t pbAL1 = (pBuffer & 0x08) >> NUM_3;
-    uint64_t hiL1 = InferWiL1ForConv3dV2(tilingData.hoL1, tilingData.orgHi, tilingData.kernelH, tilingData.dilationH, tilingData.strideH);
-    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tilingData.kernelW, tilingData.dilationW, tilingData.strideW);
-    uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tilingData.kernelH * tilingData.kernelW)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
+    uint64_t tmpkh = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.khL1 : tilingData.kernelH;
+    uint64_t tmpkw = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.kwL1 : tilingData.kernelW;
+    uint64_t hiL1 = InferHiL1ForConv3dV2(tilingData.hoL1, tilingData.orgHi, tmpkh, tilingData.dilationH, tilingData.strideH);
+    uint64_t wiL1 = InferWiL1ForConv3dV2(tilingData.woL1, tilingData.orgWi, tmpkw, tilingData.dilationW, tilingData.strideW);
+    uint64_t al1Size = hiL1 * wiL1 * (tilingData.kAL1 / (tmpkh * tmpkw)) * (pbAL1 + 1) * dtypeSize.fMapDtypeSize;
     uint64_t bl1Size = tilingData.nBL1 * tilingData.kBL1 * dtypeSize.weightDtypeSize;
     if (hasBias) {
         if (tilingData.biasFullLoadFlag) {
@@ -389,20 +392,31 @@ void CheckHWModeTilingDataValidForConv3dV2(TilingParam &tilingData, uint64_t k0)
         hoL1Check = 1;
     }
     EXPECT_EQ(hoL1Check, 1);
-
-    EXPECT_LE(tilingData.kAL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW * tilingData.kernelD);
-    EXPECT_LE(tilingData.kBL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW * tilingData.kernelD);
-    EXPECT_EQ(tilingData.kAL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
-    EXPECT_EQ(tilingData.kBL1 % (k0 * tilingData.kernelH * tilingData.kernelW), 0);
+    uint64_t tmpkh = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.khL1 : tilingData.kernelH;
+    uint64_t tmpkw = (tilingData.khL1 > 0 || tilingData.kwL1 > 0) ? tilingData.kwL1 : tilingData.kernelW;
+    EXPECT_LE(tilingData.kAL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw * tilingData.kernelD);
+    EXPECT_LE(tilingData.kBL1, CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw * tilingData.kernelD);
+    EXPECT_EQ(tilingData.kAL1 % (k0 * tmpkh * tmpkw), 0);
+    EXPECT_EQ(tilingData.kBL1 % (k0 * tmpkh * tmpkw), 0);
+    if (tilingData.khL1 > 0) {
+        EXPECT_EQ(tilingData.kh % tilingData.khL1, 0);
+        EXPECT_LE(tilingData.khL1, tilingData.kh);
+        EXPECT_EQ(tilingData.kAL1, tilingData.kBL1);
+    }
+    if (tilingData.kwL1 > 0) {
+        EXPECT_EQ(tilingData.kw % tilingData.kwL1, 0);
+        EXPECT_LE(tilingData.kwL1, tilingData.kw);
+        EXPECT_EQ(tilingData.kAL1, tilingData.kBL1);
+    }
     uint32_t kAL1DivCheck = 0;
     if (tilingData.kAL1 % tilingData.kL0 == 0 ||
-        tilingData.kAL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW) {
+        tilingData.kAL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw) {
         kAL1DivCheck = 1;
     }
     EXPECT_EQ(kAL1DivCheck, 1);
     bool kBL1DivCheck = false;
     if (tilingData.kBL1 % tilingData.kL0 == 0 ||
-        tilingData.kBL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tilingData.kernelH * tilingData.kernelW) {
+        tilingData.kBL1 == CeilDivForConv3dV2(tilingData.singleCoreCi, k0) * k0 * tmpkh * tmpkw) {
         kBL1DivCheck = true;
     }
     EXPECT_EQ(kBL1DivCheck, true);
@@ -426,8 +440,12 @@ void CheckValidTilingData(TilingParam &tilingData, uint64_t k0, DtypeSize dtypeS
     uint64_t multi_mAL1max = CeilDivForConv3dV2(CeilDivForConv3dV2(tilingData.singleCoreHo, M0_SIZE) * M0_SIZE, tilingData.hoL0);
     uint64_t mL0max = min(L0A_SIZE / (k0 * (pbAL0 + 1) * featuremapDtypeSize), L0C_SIZE / (N0_SIZE * (pbCL0 + 1) * mmadDtypeSize));
     uint64_t nL0max = min(L0B_SIZE / (k0 * (pbBL0 + 1) * weightDtypeSize), L0C_SIZE / (M0_SIZE * (pbCL0 + 1) * mmadDtypeSize));
-
+    if (tilingData.khL1 > 0 || tilingData.kwL1 > 0) {
+        EXPECT_EQ(outputOrder, 0);
+    }
     if (outputOrder == 1) {
+        EXPECT_EQ(tilingData.khL1, 0);
+        EXPECT_EQ(tilingData.kwL1, 0);
         ASSERT_GT(tilingData.kAL1, 0);
         ASSERT_GT(tilingData.kBL1, 0);
         ASSERT_GT(tilingData.hoL1, 0);
@@ -667,4 +685,24 @@ TEST_F(QuantConv3dTiling, run_quantconv3d_pad_ge_kernel_case_2) {
 
 TEST_F(QuantConv3dTiling, run_quantconv3d_pad_ge_kernel_valid) {
   QuantConv3DTestCase({1,16,6,256,189}, {16,3,3,3}, {310,310,310,310,310,310}, {1,1,1}, {1,1,1}, 1, 1, "SPECIFIC", 0, 0, 0, 0, true);
+}
+
+TEST_F(QuantConv3dTiling, run_quantconv3d_kernelsplit_1) {
+  QuantConv3DTestCase({22,19,3,48,44}, {409,1,28,36}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 0, 1, "SPECIFIC", 0, 0, 0, 0, false);
+}
+
+TEST_F(QuantConv3dTiling, run_quantconv3d_kernelsplit_2) {
+  QuantConv3DTestCase({37,35,18,32,246}, {288,1,4,246}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 0, 1, "SPECIFIC", 0, 0, 0, 0, false);
+}
+
+TEST_F(QuantConv3dTiling, run_quantconv3d_kernelsplit_3) {
+  QuantConv3DTestCase({2,4,80,66,33}, {387,1,29,33}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 0, 1, "SPECIFIC", 0, 0, 0, 0, false);
+}
+
+TEST_F(QuantConv3dTiling, run_quantconv3d_kernelsplit_4) {
+  QuantConv3DTestCase({40,100,86,31,132}, {107,1,7,132}, {0,0,0,0,0,0}, {1,1,1}, {1,1,1}, 0, 1, "SPECIFIC", 0, 0, 0, 0, false);
+}
+
+TEST_F(QuantConv3dTiling, run_quantconv3d_kernelsplit_5) {
+  QuantConv3DTestCase({1,1,1,1,1}, {1,9,11,118}, {69,69,89,89,99,99}, {57,47,7}, {3,11,1}, 0, 1, "SPECIFIC", 0, 0, 0, 0, false);
 }

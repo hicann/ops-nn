@@ -266,7 +266,8 @@ struct Conv3DV2TilingDataV2 {
     uint32_t nDim = 0;
     uint32_t groupDim = 0;
     uint32_t hoDim = 0;
-
+    uint32_t khL1 = 0;
+    uint32_t kwL1 = 0;
     int8_t offsetx = 0;
     int8_t roundMode = 0;
     uint8_t hasBias = 0;

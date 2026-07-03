@@ -26,7 +26,7 @@ using namespace conv3d;
 #define mDim hoDim
 
 template<int8_t FmapTiling, int8_t WeightTiling,int8_t L1PingPong, int8_t L0PingPong, int8_t OutputOrder,
-         int8_t IterOrder, int8_t GroupType>
+         int8_t IterOrder, int8_t GroupType, int8_t BigKernel>
 struct Conv3DV2Param : public Conv3dParam {
     __aicore__ inline Conv3DV2Param() {}
     constexpr static int8_t fmapTiling = FmapTiling;
@@ -36,6 +36,7 @@ struct Conv3DV2Param : public Conv3dParam {
     constexpr static int8_t outputOrder = OutputOrder;
     constexpr static int8_t iterOrder = IterOrder;
     constexpr static int8_t groupType = GroupType;
+    constexpr static int8_t bigKernel = BigKernel;
     constexpr static int8_t isExtendConv2d = false;
     using Output1Dtype = half;
 };

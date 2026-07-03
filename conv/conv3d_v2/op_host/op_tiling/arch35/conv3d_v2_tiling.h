@@ -106,6 +106,8 @@ TILING_DATA_FIELD_DEF(uint32_t, nUB);
 TILING_DATA_FIELD_DEF(uint32_t, scaleAndBiasLoadType);
 TILING_DATA_FIELD_DEF(uint32_t, workspaceSize);
 TILING_DATA_FIELD_DEF(uint32_t, kernelHxkernelWxkernelD);
+TILING_DATA_FIELD_DEF(uint32_t, khL1);
+TILING_DATA_FIELD_DEF(uint32_t, kwL1);
 TILING_DATA_FIELD_DEF(int8_t, offsetx);
 TILING_DATA_FIELD_DEF(int8_t, roundMode);
 TILING_DATA_FIELD_DEF(uint8_t, hasBias);

@@ -101,7 +101,7 @@ public:
     bool CheckInstrLimitsHWmode();
     bool CheckInstrLimitsMmode();
     uint64_t CalcMinUsedL1SizeInMsplitMode(uint64_t kAL1min, uint64_t kBL1min);
-    uint64_t CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min);
+    uint64_t CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min, uint64_t hiAL1min);
     NumBlocksRes NumBlocksDecisionMsplitMode();
     NumBlocksRes NumBlocksDecisionHWsplitMode();
     ge::graphStatus CheckL1SizeLimitsInMSplitMode();

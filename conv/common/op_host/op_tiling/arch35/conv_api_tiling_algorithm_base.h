@@ -50,8 +50,8 @@ protected:
     uint64_t CalcCL0Size(uint64_t mL0, uint64_t nL0) const;
     uint64_t CalcBTSize(uint64_t nL0) const;
     uint64_t CalcFBSize(uint64_t nL0) const;
-    uint64_t InferHiL1(uint64_t hoL1, int64_t hi) const;
-    uint64_t InferWiL1(uint64_t woL1, int64_t wi) const;
+    uint64_t InferHiL1(uint64_t hoL1, uint64_t kh, int64_t hi) const;
+    uint64_t InferWiL1(uint64_t woL1, uint64_t kw, int64_t wi) const;
     void SetPBufferRes();
     void ResetOptGroupDoubleBuffer(bool resetFlag);
     bool CheckL0Buffer(uint64_t currmL0, uint64_t currkL0, uint64_t currnL0) const;

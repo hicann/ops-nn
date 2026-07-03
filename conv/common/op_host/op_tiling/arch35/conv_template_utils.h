@@ -356,6 +356,7 @@ struct ConvAscendcTilingFlag {
     bool isConv3dDequant = false;
     bool disContinuousFlag = false;
     ge::Format scaleFormat = ge::FORMAT_ND;
+    bool isKernelSplit = false;
 };
 
 struct ConvAscendcDescInfo {
@@ -439,6 +440,7 @@ struct ConvTilingKeyPara {
     uint64_t noPad = 0;
     uint64_t smallWeight = 0;
     uint64_t smallKernel = 0;
+    uint64_t bigKernel = 0;
 };
 
 static std::map<ge::DataType, uint32_t> dtypeSizeTab = {

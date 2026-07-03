@@ -43,7 +43,7 @@ __global__ __aicore__ void conv3dv2_template(GM_ADDR x, GM_ADDR filter, GM_ADDR 
     using scaleType = ConvType<TPosition::GM, scaleFormat, scaleT>;
  
     Conv3dV2Base<fmapType, weightType, outputType, biasType, scaleType, Conv3DV2Param<FmapTiling, WeightTiling, L1PingPong,
-        L0PingPong, OutputOrder, IterOrder, 0>> baseConv3d;
+        L0PingPong, OutputOrder, IterOrder, 0, 0>> baseConv3d;
         baseConv3d.RunConv3dV2Kernel(x, filter, bias, y, tiling);
     return;
 }

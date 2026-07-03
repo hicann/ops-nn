@@ -255,6 +255,10 @@ template <class Intf>
 __aicore__ inline void LoadAL1Module(Intf *self, const int64_t& kIter)
 {
     self->ctx.kAL1Iter = kIter / self->ctx.multiKAL1;
+    if constexpr (Intf::bigKernelFlag) {
+        self->ctx.kwBL1Iter = self->ctx.kAL1Iter % self->ctx.ddr2L1LoopKw;
+        self->ctx.khBL1Iter = (self->ctx.kAL1Iter / self->ctx.ddr2L1LoopKw) % self->ctx.ddr2L1LoopKh;
+    }
     LoadAL1BaseModule<Intf>(self);
 }
 
@@ -262,7 +266,7 @@ template <class Intf>
 __aicore__ inline void LoadBL1Module(Intf *self, const int64_t& kIter)
 {
     self->ctx.kBL1Iter = kIter / self->ctx.multiKBL1;
-    if constexpr (Intf::isDmaFlag) {
+    if constexpr (Intf::isDmaFlag || Intf::bigKernelFlag) {
         self->ctx.kwBL1Iter = self->ctx.kBL1Iter % self->ctx.ddr2L1LoopKw;
         self->ctx.khBL1Iter = (self->ctx.kBL1Iter / self->ctx.ddr2L1LoopKw) % self->ctx.ddr2L1LoopKh;
         self->ctx.cinBL1Iter = (self->ctx.kBL1Iter / (self->ctx.ddr2L1LoopKw * self->ctx.ddr2L1LoopKh)) %

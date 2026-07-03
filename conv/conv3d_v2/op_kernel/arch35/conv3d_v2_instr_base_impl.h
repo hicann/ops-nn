@@ -103,10 +103,21 @@ public:
         if (self_->ctx.aL1CinLoadNum == 1) {
             cinLoadL1 = self_->ctx.singleCoreCi;
             cinIdx = 0;
-            kdL1Idx = self_->ctx.kAL1Iter * self_->ctx.aL1Dk;
+            if constexpr (Intf::bigKernelFlag) {
+                kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKh / self_->ctx.ddr2L1LoopKw) * self_->ctx.aL1Dk;
+            } else {
+                kdL1Idx = self_->ctx.kAL1Iter * self_->ctx.aL1Dk;
+            }
         } else {
-            cinIdx = (self_->ctx.kAL1Iter % self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Cin;
-            kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Dk;
+            if constexpr (Intf::bigKernelFlag) {
+                cinIdx = ((self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKh / self_->ctx.ddr2L1LoopKw) %
+                    self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Cin;
+                kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKh / self_->ctx.ddr2L1LoopKw /
+                    self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Dk;
+            } else {
+                cinIdx = (self_->ctx.kAL1Iter % self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Cin;
+                kdL1Idx = (self_->ctx.kAL1Iter / self_->ctx.aL1CinLoadNum) * self_->ctx.aL1Dk;
+            }
         }
 
         uint64_t diStartWithPad = self_->ctx.diStartPos + self_->ctx.dOutIter * self_->ctx.convTilingData->strideD +
@@ -140,10 +151,14 @@ public:
 
     __aicore__ inline bool IsKAL1Tail()
     {
-        if (self_->ctx.aL1CinLoadNum == 1) {
-            return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter;
+        if constexpr (Intf::bigKernelFlag) {
+            return (self_->ctx.kAL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) == self_->ctx.aL1CinLoadNum - 1;
         } else {
-            return (self_->ctx.kAL1Iter + 1) % self_->ctx.aL1CinLoadNum == 0;
+            if (self_->ctx.aL1CinLoadNum == 1) {
+                return self_->ctx.kAL1Iter == self_->ctx.maxKAL1Iter;
+            } else {
+                return (self_->ctx.kAL1Iter + 1) % self_->ctx.aL1CinLoadNum == 0;
+            }
         }
     }
 
@@ -189,6 +204,15 @@ public:
 
     __aicore__ inline void LoadBL1()
     {
+        if constexpr (Intf::bigKernelFlag) {
+            LoadBigKernelToBL1();
+        } else {
+            LoadBL1Normal();
+        }
+    }
+
+    __aicore__ inline void LoadBL1Normal()
+    {
         uint64_t currentBL1Dk = IsKBL1Tail() ? self_->ctx.bL1DkTail : self_->ctx.bL1Dk;
 
         uint64_t dkIdx = 0;
@@ -233,6 +257,47 @@ public:
         }
     }
 
+    __aicore__ inline void LoadBigKernelToBL1()
+    {
+        uint64_t currentNBL1 = IsNBL1Tail() ? self_->ctx.nBL1Tail : self_->ctx.convTilingData->nBL1;
+        currentBL1Cin1 = IsBigKernelCiBL1Tail() ? self_->ctx.bL1CinTail : self_->ctx.bL1Cin;
+
+        Dn2NzParams intriParams;
+        SetDn2NzIntriParamsBigKernel(intriParams, currentNBL1);
+
+        uint64_t bL1GmPos = 0;
+        uint64_t bL1GmOffset = 0;
+        uint64_t dkIter = self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh / self_->ctx.cinBL1LoopTimes;
+        if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
+            bL1GmPos = self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1 * self_->ctx.singleCoreCi *
+                self_->ctx.convTilingData->kernelHxkernelWxkernelD +
+                self_->ctx.cinBL1Iter * self_->ctx.bL1Cin *
+                self_->ctx.convTilingData->kernelHxkernelWxkernelD +
+                dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW +
+                self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 * self_->ctx.convTilingData->kernelW +
+                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1;
+            bL1GmOffset = self_->ctx.convTilingData->kernelW;
+        } else {
+            bL1GmPos = dkIter * self_->ctx.bL1Dk * self_->ctx.convTilingData->kernelHxkernelW * self_->ctx.singleCoreCi *
+                self_->ctx.convTilingData->orgCo + self_->ctx.khBL1Iter * self_->ctx.convTilingData->khL1 *
+                self_->ctx.convTilingData->kernelW * self_->ctx.singleCoreCi * self_->ctx.convTilingData->orgCo +
+                self_->ctx.kwBL1Iter * self_->ctx.convTilingData->kwL1 * self_->ctx.singleCoreCi *
+                self_->ctx.convTilingData->orgCo + self_->ctx.cinBL1Iter *
+                self_->ctx.bL1Cin * self_->ctx.convTilingData->orgCo +
+                self_->ctx.nBL1Iter * self_->ctx.convTilingData->nBL1;
+            bL1GmOffset = self_->ctx.convTilingData->kernelW * self_->ctx.singleCoreCi *
+                self_->ctx.convTilingData->orgCo;
+        }
+        uint64_t bL1Pos = 0;
+        uint64_t bL1Offset = AlignB(currentBL1Cin1, Intf::k0) * self_->ctx.convTilingData->kwL1 *
+                             self_->ctx.convTilingData->nBL1;
+
+        for (uint64_t hkIter = 0; hkIter < self_->ctx.convTilingData->khL1; ++hkIter) {
+            DataCopy<typename Intf::WeightT>(self_->ctx.bl1[bL1Pos], self_->ctx.bgm[bL1GmPos], intriParams);
+            bL1Pos += bL1Offset;
+            bL1GmPos += bL1GmOffset;
+        }
+    }
 private:
     __aicore__ inline void SetDn2NzIntriParams(Dn2NzParams &intriParams, const uint64_t currentNBL1)
     {
@@ -255,6 +320,28 @@ private:
         }
     }
 
+    __aicore__ inline void SetDn2NzIntriParamsBigKernel(Dn2NzParams &intriParams, const uint64_t currentNBL1)
+    {
+        intriParams.dValue = currentBL1Cin1;
+        intriParams.dstNzC0Stride = self_->ctx.convTilingData->nBL1 * self_->ctx.convTilingData->khL1 *
+                self_->ctx.convTilingData->kwL1;
+        if constexpr (Intf::formatWeight == ConvFormat::NCDHW) {
+            intriParams.srcDValue = self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+            intriParams.dnNum = currentNBL1;
+            intriParams.nValue = self_->ctx.convTilingData->kwL1;
+            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi * self_->ctx.convTilingData->kernelHxkernelWxkernelD;
+            intriParams.dstNzNStride = self_->ctx.convTilingData->nBL1;
+            intriParams.dstNzMatrixStride = C0_SIZE / Intf::sizeOfWeight;
+        } else {
+            intriParams.dnNum = self_->ctx.convTilingData->kwL1;
+            intriParams.nValue = currentNBL1;
+            intriParams.srcDnMatrixStride = self_->ctx.singleCoreCi * self_->ctx.convTilingData->orgCo;
+            intriParams.srcDValue = self_->ctx.convTilingData->orgCo;
+            intriParams.dstNzNStride = 1;
+            intriParams.dstNzMatrixStride = self_->ctx.convTilingData->nBL1 * C0_SIZE / Intf::sizeOfWeight;
+        }
+    }
+
     __aicore__ inline bool IsNBL1Tail()
     {
         return self_->ctx.nBL1Iter == self_->ctx.maxNBL1Iter;
@@ -268,7 +355,10 @@ private:
             return (self_->ctx.kBL1Iter + 1) % self_->ctx.bL1CinLoadNum == 0;
         }
     }
-
+    __aicore__ inline bool IsBigKernelCiBL1Tail()
+    {
+        return (self_->ctx.kBL1Iter / self_->ctx.ddr2L1LoopKw / self_->ctx.ddr2L1LoopKh) == self_->ctx.cinBL1LoopTimes - 1;
+    }
 private:
     Intf *self_ = nullptr;
     uint64_t currentBL1Cin1 = 0;

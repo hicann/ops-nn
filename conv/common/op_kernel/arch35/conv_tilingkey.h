@@ -77,6 +77,9 @@ namespace ConvKey {
 #define CONV_FULLLOAD_KL1_NL0 1
 #define CONV_WEIGHT_SMALLER_THAN_BL0 2
 
+#define CONV_NORMAL_KERNEL 0
+#define CONV_BIG_KERNEL 1
+
 #define CONV_COMMON_ONLY_MN_FULLLOAD_SEL()                                                                           \
 ASCENDC_TPL_UINT_SEL(FmapTiling, ASCENDC_TPL_UI_LIST,                                                                \
     CONV_FMAP_TILING_ONLY_M_FULLLOAD_AL1_AL0),                                                                       \

@@ -289,13 +289,35 @@ void ConvBase::SetParams(uint64_t l2Rate)
     l2Rate_ = l2Rate;
 }
 
+ge::graphStatus ConvBase::CheckKernelSplitL1SizeLimitsInHWSplitMode()
+{
+    // require hiL1 * wiL1 >= m0
+    uint64_t woAL1min = convOpsConstParams_.m0;
+    uint64_t wiAL1min = ConvInferWiL1(woAL1min, shapeInfo_.wi, 1, attrInfo_.dilationW, attrInfo_.strideW);
+    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
+                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, 1, attrInfo_.dilationH, attrInfo_.strideH);
+    uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(convOpsConstParams_.k0,
+        convOpsConstParams_.k0, wiAL1min, hiAL1min);
+    if (usdL1SizeUnderMinHWtiling > platformInfo_.l1Size) {
+        OP_LOGE(nodeInfo_.nodeName,
+            "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
+                nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinHWtiling, platformInfo_.l1Size);
+        return ge::GRAPH_FAILED;
+    }
+    return ge::GRAPH_SUCCESS;
+}
+
 ge::graphStatus ConvBase::CheckC04L1SizeLimitsInHWSplitMode()
 {
     // c04 require wi fulload L1 if hi > 1
     uint64_t tempWi = shapeInfo_.hi > 1 ? shapeInfo_.wi : ConvInferWiL1(convOpsConstParams_.m0,
         shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
+    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
+                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
     uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(C04_CIN_SIZE, ConvAlignB(
-        C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), tempWi);
+        C04_CIN_SIZE * shapeInfo_.kh * shapeInfo_.kw, convOpsConstParams_.k0), tempWi, hiAL1min);
     if (usdL1SizeUnderMinHWtiling > opInfo_->l1Size) {
         OP_LOGD(context_->GetNodeName(),
             "%s AscendC: c04 minUsedL1SizeInHWmode: %lu > maxL1Size: %lu, c04 mode cannot be enabled.",

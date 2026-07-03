@@ -197,6 +197,8 @@ void SetQuantConv3dTiling(Conv3DV2TilingDataV2* tiling, const std::vector<uint64
     tiling->nUB = 0;
     tiling->scaleAndBiasLoadType = 0;
     tiling->workspaceSize = 0;
+    tiling->khL1 = 0;
+    tiling->kwL1 = 0;
 }
 
 void SetUnionDataXt(Conv3DV2TilingDataV2* tiling)
@@ -249,7 +251,7 @@ void TestSimpleKernel(const std::vector<uint64_t>& inputShape, const std::vector
 
     auto quant_conv3d_func = [](GM_ADDR x, GM_ADDR filter, GM_ADDR scale, GM_ADDR bias, GM_ADDR offset,
         GM_ADDR y, GM_ADDR workspace, GM_ADDR tiling) {
-        ::quant_conv3d<0, 0, 0, 0, 1, 0, 0>(
+        ::quant_conv3d<0, 0, 0, 0, 1, 0, 0, 0>(
             x, filter, scale, bias, offset, y, workspace, tiling);
     };
     ICPU_RUN_KF(quant_conv3d_func, numBlocks, input, weight, nullptr, nullptr, nullptr, output, workspace, tiling);

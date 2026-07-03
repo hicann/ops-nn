@@ -69,6 +69,7 @@ public:
     void SetOffsetx(int8_t offsetx);
     void SetRoundMode(int8_t roundMode);
     void InitFlag();
+    void SetKernelSplit(bool isKernelSplitIn);
 private:
     std::shared_ptr<ConvTilingAlgorithmBase> algoPtr;
     void SetTilingData(Ops::NN::Conv3dV2::Conv3DV2TilingDataV2& tiling);

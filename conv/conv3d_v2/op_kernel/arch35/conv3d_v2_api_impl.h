@@ -102,7 +102,12 @@ public:
         uint64_t dOutIter = 0;
         uint64_t maxDOutIter = 0;
         uint64_t ddr2l1LoopD = 0;
-
+        uint16_t ddr2L1LoopKw = 0;
+        uint16_t ddr2L1LoopKh = 0;
+        uint16_t kwBL1Iter = 0;
+        uint16_t khBL1Iter = 0;
+        uint16_t cinBL1Iter = 0;
+        uint16_t cinBL1LoopTimes = 0;
         uint64_t cin1xcin0 = 0;
         uint64_t aL1Dk = 0;
         uint64_t aL1DkTail = 0;
@@ -114,7 +119,6 @@ public:
         uint64_t bL1Cin = 0;
         uint64_t bL1CinTail = 0;
         uint64_t bL1CinLoadNum = 0;
-
         Conv3dFunc::DeQuantL0C2UBTools<Intf> dequantL0C2UBTools;
         Conv3dFunc::DeQuantLoadParamsTools<Intf> dequantLoadParamsTools;
         Conv3dFunc::DeQuantCalcTools<Intf> dequantCalcTools;

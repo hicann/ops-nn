@@ -89,6 +89,8 @@ void Conv3dBaseTilingV2::PrintLibApiTilingData()
        << ", woL1: " << tilingData_.woL1
        << ", mUB: " << tilingData_.mUB
        << ", nUB: " << tilingData_.nUB
+       << ", khL1: " << tilingData_.khL1
+       << ", kwL1: " << tilingData_.kwL1
        << ", pBufferFlag: " << tilingData_.pBufferFlag
        << ", offsetx: " << static_cast<int32_t>(tilingData_.offsetx)
        << ", iterateMNOrder: " << static_cast<uint32_t>(tilingData_.iterateMNOrder)
@@ -119,13 +121,14 @@ void Conv3dBaseTilingV2::PrintLibApiSpaceSize()
     uint32_t pbAL0 = (tilingData_.pBufferFlag & PB_AL0_IDX) + 1;
     uint32_t pbBL0 = ((tilingData_.pBufferFlag & PB_BL0_IDX) >> PB_BL0_IDX) + 1;
     uint32_t pbCL0 = ((tilingData_.pBufferFlag & PB_CL0_IDX) >> PB_CL0_IDX) + 1;
+    uint32_t pbAL1 = ((tilingData_.pBufferFlag & PB_AL1_IDX) >> PB_AL1_IDX) + 1;
     uint32_t pbBL1 = ((tilingData_.pBufferFlag & PB_BL1_IDX) >> PB_BL1_IDX) + 1;
     uint64_t biasL1Size = flagInfo_.hasBias ? ConvAlignB(tilingData_.nBL1 *
         static_cast<uint64_t>(descInfo_.biasDtype), C0_SIZE) : 0;
     uint64_t scaleL1Size = flagInfo_.quantFlag ?
         ConvAlignB(tilingData_.nBL1 * static_cast<uint64_t>(descInfo_.scaleDtype),
         C0_SIZE) : 0;
-    uint64_t apiL1Size = (tilingData_.aL1SpaceSize + tilingData_.kBL1 *
+    uint64_t apiL1Size = (tilingData_.aL1SpaceSize * pbAL1 + tilingData_.kBL1 *
         tilingData_.nBL1 * dtypeSizeTab.at(descInfo_.weightDtype) * pbBL1 +
         biasL1Size + scaleL1Size);
     uint64_t apiL0ASize = (tilingData_.kL0 * tilingData_.hoL0 *

@@ -301,7 +301,6 @@ ge::graphStatus Conv3dBaseTilingV2::ParseGroupLegal()
     }
 
     attrInfo_.groups = static_cast<uint32_t>(oriShapeAttrInfo_.oriGroups);
-    flagInfo_.convGroupType = GetGroupsInfo();
     return ge::GRAPH_SUCCESS;
 }
 

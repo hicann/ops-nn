@@ -71,6 +71,11 @@ struct Conv3DV2InputArgs {
 };
 #pragma pack(pop)
 
+#define TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(data_type, field_name, value)             \
+public:                                                                                       \
+    data_type field_name = value;                                                             \
+    FieldHandler field_name##_handler_ = FieldHandler(this, #data_type, #field_name)
+
 BEGIN_TUNING_TILING_DEF(Conv3DV2TunnerTiling)
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, groups);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, singleCoreDo);
@@ -111,6 +116,8 @@ TUNING_TILING_DATA_FIELD_DEF(uint64_t, nBL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, hoL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, woL1);
 TUNING_TILING_DATA_FIELD_DEF(uint64_t, pBufferFlag);
+TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(uint64_t, khL1, 0);
+TUNING_TILING_DATA_FIELD_DEF_WITH_INITVALUE(uint64_t, kwL1, 0);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, bl1FullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, al1FullLoad);
 TUNING_TILING_DATA_FIELD_DEF(uint8_t, bl1BypassFlag);
@@ -168,6 +175,8 @@ DECLARE_SCHEMA(Conv3DV2TunnerTiling,
     FIELD(Conv3DV2TunnerTiling, hoL1),
     FIELD(Conv3DV2TunnerTiling, woL1),
     FIELD(Conv3DV2TunnerTiling, pBufferFlag),
+    FIELD(Conv3DV2TunnerTiling, khL1),
+    FIELD(Conv3DV2TunnerTiling, kwL1),
     FIELD(Conv3DV2TunnerTiling, bl1FullLoad),
     FIELD(Conv3DV2TunnerTiling, al1FullLoad),
     FIELD(Conv3DV2TunnerTiling, bl1BypassFlag),

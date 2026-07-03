@@ -31,6 +31,7 @@ ge::graphStatus Conv3dBaseTilingV2::Conv3DInfoInitAndCheck()
     }
 
     convBase_.ConvBaseInitFeatureFlag(ConvAscendcFeatureFlag::IS_LOAD3D_FLAG);
+    flagInfo_.convGroupType = GetGroupsInfo();
     return ge::GRAPH_SUCCESS;
 }
 
@@ -62,6 +63,7 @@ ge::graphStatus Conv3dBaseTilingV2::PrepareTiling()
 ge::graphStatus Conv3dBaseTilingV2::CheckL1SizeLimits()
 {
     flagInfo_.mSplitModeFlag = false;
+    flagInfo_.isKernelSplit = false;
     // M split mode check
     if (convBase_.CheckL1SizeLimitsInMSplitMode() == ge::GRAPH_SUCCESS && convBase_.CheckInstrLimitsMmode()) {
         flagInfo_.mSplitModeFlag = true;
@@ -71,6 +73,14 @@ ge::graphStatus Conv3dBaseTilingV2::CheckL1SizeLimits()
     if (convBase_.CheckL1SizeLimitsInHWsplitMode() == ge::GRAPH_SUCCESS && convBase_.CheckInstrLimitsHWmode()) {
         return ge::GRAPH_SUCCESS;
     }
+    // HW split & khkw split mode check
+    if (descInfo_.weightFormat != ge::FORMAT_FRACTAL_Z_3D &&
+        convBase_.CheckKernelSplitL1SizeLimitsInHWSplitMode() == ge::GRAPH_SUCCESS &&
+        convBase_.CheckInstrLimitsHWmode()) {
+        flagInfo_.isKernelSplit = true;
+        return ge::GRAPH_SUCCESS;
+    }
+
     return ge::GRAPH_FAILED;
 }
 
@@ -154,6 +164,7 @@ ge::graphStatus Conv3dBaseTilingV2::GetConv3dApiTiling()
     Conv3dOpTilingSetShape();
     int8_t outputOrder = flagInfo_.mSplitModeFlag ? 1 : 0;
     conv3dApiTiling_.SetOutputOrder(outputOrder);
+    conv3dApiTiling_.SetKernelSplit(flagInfo_.isKernelSplit);
     conv3dApiTiling_.SetQuantConvFlag(flagInfo_.quantFlag);
     conv3dApiTiling_.SetPadding(static_cast<int64_t>(attrInfo_.padHead), static_cast<int64_t>(attrInfo_.padTail),
                                 static_cast<int64_t>(attrInfo_.padTop), static_cast<int64_t>(attrInfo_.padBottom),

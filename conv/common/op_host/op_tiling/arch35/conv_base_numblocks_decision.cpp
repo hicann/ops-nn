@@ -341,7 +341,7 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInMsplitMode(uint64_t kAL1min, uint64_t 
     return minL1LoadSize;
 }
 
-uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min)
+uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t kBL1min, uint64_t wiAL1min, uint64_t hiAL1min)
 {
     uint64_t fMapDtypeSize = dtypeSizeTab.at(descInfo_.fMapDtype);
     uint64_t biasDtypeSize = dtypeSizeTab.at(descInfo_.biasDtype);
@@ -352,12 +352,7 @@ uint64_t ConvBaseDeci::CalcMinUsedL1SizeInHWsplitMode(uint64_t kAL1min, uint64_t
     uint64_t scaleUsedL1Size = !SkipScaleBiasL1Size() ?
         ConvAlignB(static_cast<uint32_t>(nBL1min * fixpipeInfo_.channelWiseCoeff * FP16_DTYPE_SIZE), C0_SIZE) : 0;
     uint64_t weightUsedL1Size = ConvAlignB(kBL1min * nBL1min * weightDtypeSize, C0_SIZE);
-
-    uint64_t fmapUsedL1Size = 0;
-    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
-                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
-    uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
-    fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
+    uint64_t fmapUsedL1Size = ConvAlignB(hiAL1min * wiAL1min * kAL1min * fMapDtypeSize, C0_SIZE);
 
     uint64_t minL1LoadSize = biasUsedL1Size + scaleUsedL1Size + fmapUsedL1Size + weightUsedL1Size;
     return minL1LoadSize;
@@ -371,10 +366,13 @@ ge::graphStatus ConvBaseDeci::CheckL1SizeLimitsInHWsplitMode()
     }
     uint64_t woAL1min = convOpsConstParams_.m0;
     uint64_t wiAL1min = ConvInferWiL1(woAL1min, shapeInfo_.wi, shapeInfo_.kw, attrInfo_.dilationW, attrInfo_.strideW);
+    uint64_t hoAL1min = std::min(shapeInfo_.wo < convOpsConstParams_.m0 ?
+                                 ConvCeilDiv(convOpsConstParams_.m0, shapeInfo_.wo) : 1, shapeInfo_.ho);
+    uint64_t hiAL1min = ConvInferHiL1(hoAL1min, shapeInfo_.hi, shapeInfo_.kh, attrInfo_.dilationH, attrInfo_.strideH);
     uint64_t usdL1SizeUnderMinHWtiling = CalcMinUsedL1SizeInHWsplitMode(convOpsConstParams_.k0,
-        shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0, wiAL1min);
+        shapeInfo_.kh * shapeInfo_.kw * convOpsConstParams_.k0, wiAL1min, hiAL1min);
     if (usdL1SizeUnderMinHWtiling > platformInfo_.l1Size) {
-        OP_LOGE(nodeInfo_.nodeName,
+        OP_LOGD(nodeInfo_.nodeName,
             "%s AscendC: MinL1LoadSize > L1size, current L1size: %lu, maxL1Size: %lu",
                 nodeInfo_.nodeType.c_str(), usdL1SizeUnderMinHWtiling, platformInfo_.l1Size);
         return ge::GRAPH_FAILED;
