@@ -25,6 +25,7 @@ struct ConvBackpropAttrs {
     std::string dataFormat;
     int64_t opImplModeEnum = 0;
     bool hf32 = false;
+    bool from_depthwise = false;
 
     void Reset()
     {
@@ -35,6 +36,7 @@ struct ConvBackpropAttrs {
         dataFormat = "";
         opImplModeEnum = 0;
         hf32 = false;
+        from_depthwise = false;
     }
 };
 

@@ -194,6 +194,7 @@ GraphUniqPtr Conv3DBackpropFilterToV2FusionPass::Replacement(const GNode& convBp
                 OP_LOGE(GetNodeType().GetString(), "Create Conv3DBackpropFilterV2 node failed"), return nullptr);
 
     conv3dBackpropFilterV2Node->SetAttr("_op_impl_mode_enum", convBpAttr.opImplModeEnum);
+    conv3dBackpropFilterV2Node->SetAttr("from_depthwise", convBpAttr.from_depthwise);
     OP_CHECK_IF(!UpdateNodeInputDescInfo(conv3dBackpropFilterV2Node),
                 OP_LOGE(GetNodeType().GetString(), "Update conv3dBackpropFilterV2Node DescInfo failed"),
                 return nullptr);
