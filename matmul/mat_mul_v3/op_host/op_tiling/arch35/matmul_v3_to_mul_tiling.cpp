@@ -38,9 +38,6 @@ bool MatMulV3ToMulTiling::IsCapable()
     if (args_.aDtypeSize != sizeof(float) || args_.bDtypeSize != sizeof(float)) {
         return false;
     }
-    if (args_.kValue < LIMIT_K) {
-        return false;
-    }
     return true;
 }
 
