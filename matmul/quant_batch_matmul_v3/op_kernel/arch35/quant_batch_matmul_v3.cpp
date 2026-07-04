@@ -15,14 +15,6 @@
 
 #include "../../inc/macro.h"
 
-#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
-#define IS_BLAZE false
-#elif ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
-#define IS_BLAZE true
-#else
-#define IS_BLAZE false
-#endif
-
 #include "quant_batch_matmul_v3_tiling_data.h"
 #include "qbmm_cube_on_the_fly.h"
 #include "qbmm_cube_on_the_fly_al1_full_load.h"
@@ -776,44 +768,44 @@ UT_STATIC __global__ __aicore__ void quant_batch_matmul_v3(
 #else
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_WITH_MMAPI &&
                   TPL_APILEVEL == TPL_API_LEVEL_HIGH) { // Kernel Type = 0;
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
-        MatMulASWKernel< 
-            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
-            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
-            op; 
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
-        op.Process(); 
-    } 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        MatMulASWKernel<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOAL1_WITH_MMAPI &&
                   TPL_APILEVEL == TPL_API_LEVEL_HIGH) { // Kernel Type = 1;
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
-        QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad< 
-            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
-            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
-            op; 
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
-        op.Process(); 
-    } 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        QuantBatchMatmulV3::MatmulAswKernelAL1FullLoad<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOABL1_WITH_MMAPI &&
                   TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
-        QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad< 
-            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
-            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
-            op; 
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
-        op.Process(); 
-    } 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        QuantBatchMatmulV3::MatmulAswKernelABL1FullLoad<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
     if constexpr (TPL_KERNELTYPE == TPL_NO_VEC_EPILOGUE_CUSTOM_GMTOBL1_WITH_MMAPI &&
                   TPL_APILEVEL == TPL_API_LEVEL_HIGH) {
-        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling); 
-        QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad< 
-            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y, 
-            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)> 
-            op; 
-        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe); 
-        op.Process(); 
-    } 
+        GET_TILING_DATA_WITH_STRUCT(DequantBmm::QuantBatchMatmulV3TilingDataParams, tilingData, tiling);
+        QuantBatchMatmulV3::MatmulAswKernelBL1FullLoad<
+            DTYPE_X1, DTYPE_X2, DTYPE_SCALE, DTYPE_BIAS, DTYPE_Y, format_x1, format_x2, format_y,
+            static_cast<bool>(TPL_ATRANS), static_cast<bool>(TPL_BTRANS)>
+            op;
+        op.Init(x1, x2, bias, scale, pertokenScale, y, user1, &tilingData, &tPipe);
+        op.Process();
+    }
 #endif
     }
 #endif

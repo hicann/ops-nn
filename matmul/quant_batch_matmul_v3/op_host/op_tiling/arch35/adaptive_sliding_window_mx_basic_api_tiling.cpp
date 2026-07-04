@@ -92,7 +92,7 @@ const void* AdaptiveSlidingWindowMXBasicAPITiling::GetTilingData() const
                                         static_cast<const void*>(&tilingData_);
 }
 
-uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch) const
+uint64_t AdaptiveSlidingWindowMXBasicAPITiling::GetApiLevel(NpuArch npuArch) const
 {
     return IsTensorapiCapable() ? static_cast<uint64_t>(QMMApiLevel::BLAZE_LEVEL) :
                                   static_cast<uint64_t>(QMMApiLevel::BASIC_LEVEL);

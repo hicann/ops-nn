@@ -30,6 +30,14 @@
 #endif
 #endif
 
+#if __FIXED_POINT_ONLY_CUBE_TO_L0C__
+#define IS_BLAZE false
+#elif ASC_DEVKIT_MAJOR >= 9 && ASC_DEVKIT_MINOR > 0
+#define IS_BLAZE true
+#else
+#define IS_BLAZE false
+#endif
+
 #if !__CUBE_S8S4_S4S4__ && \
     defined(ORIG_DTYPE_X1) && defined(ORIG_DTYPE_X2) && defined(DT_INT4) && \
     ORIG_DTYPE_X1 == DT_INT4 && ORIG_DTYPE_X2 == DT_INT4
