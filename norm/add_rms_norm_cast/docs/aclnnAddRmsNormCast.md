@@ -90,7 +90,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>BFLOAT16、FLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>x2（aclTensor*）</td>
@@ -100,7 +100,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>gamma（aclTensor*）</td>
@@ -110,7 +110,7 @@ aclnnStatus aclnnAddRmsNormCast(
       <td>FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>×</td>
+      <td>√</td>
     </tr>
     <tr>
       <td>epsilon（double）</td>

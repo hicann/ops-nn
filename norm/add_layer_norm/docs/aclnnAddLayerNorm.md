@@ -165,7 +165,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>rstdOut（aclTensor*）</td>
@@ -175,7 +175,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>FLOAT32</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>yOut（aclTensor*）</td>
@@ -185,7 +185,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>xOut（aclTensor*）</td>
@@ -195,7 +195,7 @@ aclnnStatus aclnnAddLayerNorm(
       <td>FLOAT32、FLOAT16、BFLOAT16</td>
       <td>ND</td>
       <td>1-8</td>
-      <td>√</td>
+      <td>×</td>
     </tr>
     <tr>
       <td>workspaceSize（uint64_t*）</td>
