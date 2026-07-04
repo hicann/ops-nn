@@ -45,6 +45,7 @@ private:
     __aicore__ inline void SetupLoad3DForChunk(uint32_t curHi, uint32_t mOff,
                                                uint32_t curM, uint32_t padTop,
                                                uint32_t padBottom);
+    __aicore__ inline uint32_t CalcKL0();
 
     uint32_t n1Total_;
     uint32_t coutAligned_;
@@ -234,6 +235,24 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
 }
 
 template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
+__aicore__ inline uint32_t Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::
+    CalcKL0()
+    {
+        // kL0 is the largest factor of kL1OverK0 other than itself.
+        uint32_t kL1OverK0 = cinL1_ * this->tiling_->kernelHxkernelW / this->GK0;
+        uint32_t maxFactor = kL1OverK0 / 2;
+        uint32_t maxAllowedFactor = this->tiling_->kL0 / this->GK0;
+        uint32_t upperBound = (maxFactor < maxAllowedFactor) ? maxFactor : maxAllowedFactor;
+
+        for (uint32_t i = upperBound; i > 0; --i) {
+            if (kL1OverK0 % i == 0) {
+                return i * this->GK0;
+            }
+        }
+        return this->GK0;
+    }
+
+template <typename FmapType, typename weightType, typename biasType, typename out0Type, typename out1Type>
 __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasType, out0Type, out1Type>::
     Process(GM_ADDR x, GM_ADDR filter, GM_ADDR bias, GM_ADDR y, const ExtendParams* extendParams)
 {
@@ -246,7 +265,7 @@ __aicore__ inline void Conv2dSmallKernelParallelism<FmapType, weightType, biasTy
     SetFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
     WaitFlag<HardEvent::MTE2_FIX>(static_cast<event_t>(0));
 
-    uint32_t kL0 = this->GK0;
+    uint32_t kL0 = CalcKL0();
 
     uint32_t kL0Iters = CeilDiv(this->kTotal_, kL0);
     uint32_t kernelHxW = this->tiling_->kh * this->tiling_->kw;
