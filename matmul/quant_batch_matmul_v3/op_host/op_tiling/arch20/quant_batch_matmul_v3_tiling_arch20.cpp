@@ -124,7 +124,7 @@ ge::graphStatus QuantBatchMatmulPertokenArch20::PostTiling()
     size_t tilingDataSize = sizeof(QuantMatmulPertokenTilingDataArch20);
     errno_t ret = memcpy_s(
         context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(),
-        reinterpret_cast<void*>(&qbmmTilingDataArch20_), tilingDataSize);
+        static_cast<void*>(&qbmmTilingDataArch20_), tilingDataSize);
     if (ret != EOK) {
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

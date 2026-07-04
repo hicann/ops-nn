@@ -2779,7 +2779,7 @@ void MatmulV3BaseTiling::DoTilingKey()
     OP_LOGI(args_.opName, "Tiling Key is 0x%x", tilingKey_);
 }
 
-uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t alignedM, uint64_t alignedN)
+uint64_t MatmulV3BaseTiling::GetDeterministicSplitKWorkspaceSize(uint64_t /*alignedM*/, uint64_t /*alignedN*/)
 {
     const auto &tiling = tilingData_.matmulTiling;
     uint64_t singleSize = static_cast<uint64_t>(tiling.singleCoreN) * static_cast<uint64_t>(tiling.singleCoreM);

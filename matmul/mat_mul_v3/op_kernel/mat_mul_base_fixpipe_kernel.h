@@ -13,8 +13,8 @@
  * \brief Intermediate base class for fixpipe-based matmul kernels with AIC+AIV cooperation.
  *        Extracts common code from MatmulBaseVectorNz2NdKernel and MatmulBaseUnalignedNKernel.
  */
- #ifndef __OP_KERNEL_MATMUL_V3_BASE_FIXPIPE_KERNEL_H__
- #define __OP_KERNEL_MATMUL_V3_BASE_FIXPIPE_KERNEL_H__
+ #ifndef OP_KERNEL_MATMUL_V3_BASE_FIXPIPE_KERNEL_H
+ #define OP_KERNEL_MATMUL_V3_BASE_FIXPIPE_KERNEL_H
  
  #include "mat_mul_base_kernel.h"
  #include "mat_mul_nz2nd.h"

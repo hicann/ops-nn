@@ -406,12 +406,16 @@ static bool CheckPermValid(const aclIntArray* permX1, const aclIntArray* permX2,
         return false;
     }
     // 当前支持转置场景
-    auto allowedPermX1 = ((*permX1)[0] == 1 && (*permX1)[1] == 0 && (*permX1)[2] == 2); // 1 0 2
-    auto allowedPermX2 = ((*permX2)[0] == 0 && (*permX2)[1] == 1 && (*permX2)[2] == 2); // 0 1 2
-    auto allowedPermY = ((*permY)[0] == 1 && (*permY)[1] == 0 && (*permY)[2] == 2);     // 1 0 2
+    constexpr int64_t kDim0 = 0;
+    constexpr int64_t kDim1 = 1;
+    constexpr int64_t kDim2 = 2;
+
+    auto allowedPermX1 = ((*permX1)[kDim0] == 1 && (*permX1)[kDim1] == 0 && (*permX1)[kDim2] == 2); // 1 0 2
+    auto allowedPermX2 = ((*permX2)[kDim0] == 0 && (*permX2)[kDim1] == 1 && (*permX2)[kDim2] == 2); // 0 1 2
+    auto allowedPermY = ((*permY)[kDim0] == 1 && (*permY)[kDim1] == 0 && (*permY)[kDim2] == 2);     // 1 0 2    // 1 0 2
     std::string permX2ErrorInfo = "[0, 1, 2].";
     if (isMxFp || isHIFP8) {
-        allowedPermX2 = allowedPermX2 || ((*permX2)[0] == 0 && (*permX2)[1] == NUM_TWO && (*permX2)[NUM_TWO] == 1);
+        allowedPermX2 = allowedPermX2 || ((*permX2)[kDim0] == 0 && (*permX2)[kDim1] == NUM_TWO && (*permX2)[kDim2] == 1);
         permX2ErrorInfo = "[0, 1, 2] or [0, 2, 1].";
     }
 

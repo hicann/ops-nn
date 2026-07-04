@@ -15,8 +15,8 @@
  *        and NZ2ND utilities. Supports both aligned output (AivProcess) and NZ2ND unaligned output
  *        (AivNz2NdProcess) via FIXPIPE_OPT template parameter.
  */
- #ifndef __OP_KERNEL_MATMUL_V3_OPTIMIZED_FIXPIPE_ALGORITHM_H__
- #define __OP_KERNEL_MATMUL_V3_OPTIMIZED_FIXPIPE_ALGORITHM_H__
+ #ifndef OP_KERNEL_MATMUL_V3_OPTIMIZED_FIXPIPE_ALGORITHM_H
+ #define OP_KERNEL_MATMUL_V3_OPTIMIZED_FIXPIPE_ALGORITHM_H
  
  #include "mat_mul_base_fixpipe_kernel.h"
  #include "mat_mul_l1_full_load.h"

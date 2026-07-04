@@ -480,7 +480,7 @@ ge::graphStatus QuantBatchMatmulV4MsdTiling::DoLibApiTiling()
     size_t tilingDataSize = sizeof(QuantBatchMatmulV4MsdTilingData);
     context_->SetBlockDim(tilingData_->coreNum);
     context_->SetScheduleMode(1);   // 独占全核，设置以后会让所有核空闲以后才启动，有多核同步指令需要做此设置避免影响整网其他算子
-    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), reinterpret_cast<void *>(tilingData_), tilingDataSize);
+    errno_t ret = memcpy_s(context_->GetRawTilingData()->GetData(), context_->GetRawTilingData()->GetCapacity(), static_cast<void *>(tilingData_), tilingDataSize);
     if (ret != EOK){
         OP_LOGE(context_->GetNodeName(), "memcpy_s failed, ret=%d", ret);
         return ge::GRAPH_FAILED;

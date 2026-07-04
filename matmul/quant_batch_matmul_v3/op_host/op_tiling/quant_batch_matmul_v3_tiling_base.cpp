@@ -54,7 +54,7 @@ constexpr uint32_t PERTOKEN_SCALE_INDEX = 5;
 
 static optiling::QuantBatchMatmulInfoFactory g_quantBatchMatmulInfoFactory;
 
-const char *GetValidOpName(gert::TilingContext *context, const char *defaultOpName)
+const char *GetValidOpName(const gert::TilingContext *context, const char *defaultOpName)
 {
     const char *fallbackName = (defaultOpName != nullptr && defaultOpName[0] != '\0') ? defaultOpName : DEFAULT_OP_NAME;
     if (context == nullptr) {
@@ -125,7 +125,7 @@ uint32_t QuantBatchMatmulV3TilingBase::GetPertokenIdx() const
 }
 
 QuantBatchMatmulV3TilingBase::QuantBatchMatmulV3TilingBase(gert::TilingContext *context, bool isTilingOut)
-    : TilingBaseClass(context), inputParams_(*(g_quantBatchMatmulInfoFactory.Get())), isTilingOut_(isTilingOut)
+    : TilingBaseClass(context), inputParams_(*(g_quantBatchMatmulInfoFactory.Get())), compileInfo_(), isTilingOut_(isTilingOut)
 {
 }
 

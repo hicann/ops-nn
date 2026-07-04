@@ -120,8 +120,8 @@ void PpMatmulDefaultTilingData::End(const MatMulInfo &mmInfo, bool isAscend310P)
         opShape.k0 = k0Max < CUBE_BLOCK_SIZE ? k0Max / BLOCK_SIZE * BLOCK_SIZE : \
             k0Max / CUBE_BLOCK_SIZE * CUBE_BLOCK_SIZE; // k0Max less than 256, matrix 16
     }
-        // 删除
-        opShape.k0 = 512;
+        constexpr uint32_t kC0BlockSize = 512;
+        opShape.k0 = kC0BlockSize;
         kLoop = CeilDiv(opShape.k, opShape.k0);
 }
 
@@ -153,12 +153,13 @@ bool PpMatMulDefault::GetMatMulTilingData()
 {
     ppMatmulDefaultTilingData_.SetBaseShape(matMulInfo_.batchSize, matMulInfo_.m, matMulInfo_.k, matMulInfo_.n);
     OpShape opShape = ppMatmulDefaultTilingData_.opShape;
+    constexpr uint32_t kDefaultCoreSplitNum = 8;
     if (opShape.m < opShape.n) {
         TilingFunc<false, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape,
-            ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, true, 8);
+            ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, true, kDefaultCoreSplitNum);
     } else {
         TilingFunc<true, OpShape, PpMatmulDefaultTilingData, HardwareInfo, MatMulInfo>(opShape,
-            ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, true, 8);
+            ppMatmulDefaultTilingData_, hardwareInfo_, matMulInfo_, true, kDefaultCoreSplitNum);
     }
     Swizzl<PpMatmulDefaultTilingData>(ppMatmulDefaultTilingData_);
     ppMatmulDefaultTilingData_.End(matMulInfo_, hardwareInfo_.socVersion == platform_ascendc::SocVersion::ASCEND310P);

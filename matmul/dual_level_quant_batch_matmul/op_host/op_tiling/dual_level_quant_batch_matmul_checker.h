@@ -107,11 +107,11 @@ namespace Ops::NN::DLQBMMChecker {
 ge::graphStatus CheckContext(gert::TilingContext* context, uint64_t tilingDataSize);
 
 bool CheckAttrs(
-    [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
     const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
 bool CheckDtypes(
-    [[maybe_unused]] gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
+    [[maybe_unused]] const gert::TilingContext* context, [[maybe_unused]] NpuArch npuArch,
     const optiling::DualLevelQuantBatchMatmulInfo& inputParams);
 
 bool CheckInputs(
