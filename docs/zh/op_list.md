@@ -2580,6 +2580,16 @@
   </tr>
   <tr>
     <td>matmul</td>
+    <td><a href="../../matmul/matmul_compress/README.md">matmul_compress</a></td>
+    <td>✗</td>
+    <td>✗</td>
+    <td>✓</td>
+    <td>✗</td>
+    <td>AI Core</td>
+    <td>完成无损解压缩、矩阵乘计算。</td>
+  </tr>
+  <tr>
+    <td>matmul</td>
     <td><a href="../../matmul/matmul_v2_compress_dequant/README.md">matmul_v2_compress_dequant</a></td>
     <td>✗</td>
     <td>✗</td>
