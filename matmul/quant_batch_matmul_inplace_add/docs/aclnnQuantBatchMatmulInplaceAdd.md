@@ -714,4 +714,3 @@ aclnnStatus aclnnQuantBatchMatmulInplaceAdd(
       return 0;
   }
   ```
-  

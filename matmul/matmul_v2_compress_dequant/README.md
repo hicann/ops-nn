@@ -16,7 +16,7 @@
 - **算子功能**：进行矩阵乘计算时，可先通过msModelSlim工具对右矩阵进行无损压缩，减少内存占用，然后通过本接口完成无损解压缩、矩阵乘和反量化计算。
 - **计算公式**：
   
-  ```
+  ```text
   x2_unzip = unzip(x2, compressIndex, compressInfo)
   result = (x1 @ x2_unzip + bias) * deqScale
   ```
