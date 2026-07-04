@@ -15,25 +15,25 @@
 
 - 接口功能：对输入x进行量化，矩阵乘以及反量化。
 - 计算公式：  
-  1. 若输入smoothScaleOptional，则
+  1 若输入smoothScaleOptional，则
   
   $$
       x = x\cdot scale_{smooth}
   $$
 
-  2. 若不输入xScaleOptional，则为动态量化，需要计算x量化系数。
+  2 若不输入xScaleOptional，则为动态量化，需要计算x量化系数。
   
   $$
       scale_{x}=row\_max(abs(x))/max_{quantDataType}
   $$
 
-  3. 量化
+  3 量化
   
   $$
       x_{quantized}=round(x/scale_{x})
   $$
 
-  4. 矩阵乘+反量化
+  4 矩阵乘+反量化
   
   - 4.1若输入的$scale_{weight}$数据类型为FLOAT32,则：
 
