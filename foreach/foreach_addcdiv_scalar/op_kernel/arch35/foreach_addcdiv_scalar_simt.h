@@ -70,8 +70,16 @@ inline void ForeachAddcdivScalarSimtKernel(
     // TTK R2 fix: Process already splits data per-core, so VF kernel uses only
     // thread-level stride (GetThreadIdx/GetThreadNum), NOT block-level stride.
     // Using GetBlockIdx/GetBlockNum here caused non-zero cores to skip all data.
-    __gm__ T* scalarPtr = reinterpret_cast<__gm__ T*>(scalar);
-    float scalarVal = static_cast<float>(scalarPtr[0]);
+    // Scalar dtype note (DtypeScalarToTensor2): the scalar tensor dtype is
+    //   FP16 -> FP16, FP32 -> FP32, BF16 -> FP32.
+    float scalarVal;
+    if constexpr (std::is_same_v<T, bfloat16_t>) {
+        __gm__ float* scalarPtr = reinterpret_cast<__gm__ float*>(scalar);
+        scalarVal = scalarPtr[0];
+    } else {
+        __gm__ T* scalarPtr = reinterpret_cast<__gm__ T*>(scalar);
+        scalarVal = static_cast<float>(scalarPtr[0]);
+    }
 
     INDEX_T idx = static_cast<INDEX_T>(Simt::GetThreadIdx());
     INDEX_T step = static_cast<INDEX_T>(Simt::GetThreadNum());
