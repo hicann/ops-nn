@@ -18,7 +18,6 @@
 #include <map>
 #include <numeric>
 
-#include "arch35/adaptive_sliding_window_tiling.h"
 #include "arch35/quant_batch_matmul_v3_tiling_strategy.h"
 #include "op_host/tiling_templates_registry.h"
 #include "common/op_host/op_tiling/tiling_type.h"
@@ -1559,7 +1558,6 @@ static ge::graphStatus QuantBatchMatmulV3TilingFunc(gert::TilingContext* context
     auto npuArch = compileInfoPtr->supportMmadS8S4 ? NpuArch::DAV_RESV : compileInfoPtr->npuArch;
     if (PlatformUtil::IsAdvancedArch(npuArch)) {
         ResetQuantBatchMatmulV3InputParams();
-        ResetAdaptiveSlidingWindowPlatformInfoCache();
         const auto& priorities = strategy::GetQuantBatchMatmulV3Priorities(npuArch);
         return TilingRegistryArch::GetInstance().DoTilingImpl(context, priorities, static_cast<int32_t>(npuArch));
     } else if (IsSocVersionArch20Pertoken(context)) {

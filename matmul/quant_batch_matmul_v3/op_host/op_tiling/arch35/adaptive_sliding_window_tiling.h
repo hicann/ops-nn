@@ -21,8 +21,6 @@
 
 namespace optiling {
 
-void ResetAdaptiveSlidingWindowPlatformInfoCache();
-
 struct AdaptiveSlidingWindow {
     uint64_t baseM = 0;             // Base M block size for the main window.
     uint64_t baseN = 0;             // Base N block size for the main window.
@@ -74,7 +72,6 @@ protected:
     virtual uint64_t GetBatchCoreCnt() const;
     virtual const void* GetTilingData() const;
     bool CheckDtype() const override;
-    bool SetPlatformInfoForTiling() override;
     bool CheckShape(
         const std::vector<gert::Shape*>& mandtoryShape, const gert::StorageShape* biasShape,
         const gert::StorageShape* pertokenShape, const std::vector<int64_t>& dimValueOfMKN) const override;
@@ -109,7 +106,7 @@ protected:
     bool IsInValidWeighNzTailSplit(uint64_t splitCnt, bool isPreSplit) const;
 
     void LoadBalanceDataReset();
-    bool OptimizeEdgeBasicBlock();
+    void OptimizeEdgeBasicBlock();
     void CalculateCurrentPerf(uint64_t mergeLen, uint64_t nTail, uint64_t& newTailMain, uint64_t& curPerf);
     void GetOuterMAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);
     void GetOuterNAxisTailCnt(uint64_t& baseTailSplitCnt, uint64_t& tailMain);

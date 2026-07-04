@@ -16,24 +16,20 @@
 
 #include <algorithm>
 #include "error_util.h"
+#include "quant_batch_matmul_v3_tiling_util.h"
 #include "util/math_util.h"
 
 namespace {
-constexpr uint64_t CUBE_BLOCK = 16UL;
-constexpr uint64_t L1_ALIGN_SIZE = 32UL;
-constexpr uint64_t L2_ALIGN_SIZE = 128UL;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
-constexpr uint64_t MXFP_DIVISOR_SIZE = 64UL;
-constexpr uint64_t PER_BLOCK_SIZE = 128UL;
-constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
-constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
-constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
 constexpr uint64_t PER_BLOCK_BASE_SIZE_256 = 256UL;
+// If adjusted baseN loses 128B alignment and K is below this threshold, keep the original base block.
+constexpr uint64_t LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD = 2560UL;
+// Rebalance M/N split when one base dimension is at least twice the other.
 constexpr uint64_t BASEM_BASEN_RATIO = 2UL;
+// Oversized baseK candidates are halved above this supported tiling range.
 constexpr uint64_t BASEK_LIMIT = 4095UL;
-constexpr uint32_t DB_SIZE = 2U;
-constexpr uint32_t NUM_HALF = 2U;
 constexpr uint32_t DOUBLE_CORE_NUM = 2U;
+// Epsilon for comparing score ratios during base-block search.
+constexpr double SCORE_COMPARE_EPS = 1e-12;
 
 uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
 {
@@ -42,6 +38,31 @@ uint64_t GetShapeWithDataType(uint64_t size, ge::DataType dtype)
     }
     uint64_t dtypeSize = static_cast<uint64_t>(ge::GetSizeByDataType(dtype));
     return dtypeSize == 0UL ? 0UL : size / dtypeSize;
+}
+
+uint64_t GetNextLoadBalanceBase(uint64_t curBase, uint64_t baseAlign)
+{
+    if (curBase <= baseAlign) {
+        return 0UL;
+    }
+    return curBase - baseAlign;
+}
+
+bool IsScoreEqual(double lhs, double rhs)
+{
+    return lhs + SCORE_COMPARE_EPS >= rhs && rhs + SCORE_COMPARE_EPS >= lhs;
+}
+
+double GetBaseShapeScore(uint64_t baseM, uint64_t baseN)
+{
+    // Smaller ratio means the M/N split is closer to square.
+    return static_cast<double>(std::max(baseM, baseN)) / std::min(baseM, baseN);
+}
+
+double GetMemoryComputeScore(uint64_t baseM, uint64_t baseN)
+{
+    // This is (baseM + baseN) / (baseM * baseN); lower means smaller baseM + baseN for the same output area.
+    return (static_cast<double>(baseM) + baseN) / (static_cast<double>(baseM) * baseN);
 }
 } // namespace
 
@@ -72,10 +93,11 @@ bool BaseBlockCalculator::Compute(BaseBlockMode mode)
             ComputeBaseBlockDefault();
             break;
     }
-    if (!AdjustBaseBlock(mode)) {
+    if (!OptimizeBaseBlockForCoreUtilization(mode)) {
         OP_LOGE(inputParams_.opName, "Failed to adjust base block.");
         return false;
     }
+    OptimizeBaseBlockForLoadBalance();
     return ValidateBaseBlock();
 }
 
@@ -121,65 +143,67 @@ bool BaseBlockCalculator::ValidateBaseBlock() const
 
 void BaseBlockCalculator::ComputeBaseBlockDefault()
 {
-    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, BASIC_BLOCK_SIZE_256), GetBaseMAlignSize());
-    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, BASIC_BLOCK_SIZE_256), GetBaseNAlignSize());
+    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256), GetBaseMAlignSize());
+    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256), GetBaseNAlignSize());
 
-    uint64_t baseKDefaultSize = GetShapeWithDataType(BASIC_BLOCK_SIZE_128, inputParams_.aDtype);
+    uint64_t baseKDefaultSize = GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_128, inputParams_.aDtype);
     baseBlockRes_.baseK = ops::CeilAlign(std::min(baseKDefaultSize, inputParams_.kSize), GetBaseKAlignSize());
 }
 
 void BaseBlockCalculator::ComputeBaseBlockPerblock()
 {
-    if (inputParams_.mSize <= PER_BLOCK_SIZE || inputParams_.mSize % PER_BLOCK_SIZE != 0UL) {
-        baseBlockRes_.baseM = inputParams_.groupSizeM == 1UL && inputParams_.mSize < PER_BLOCK_SIZE ?
+    if (inputParams_.mSize <= qmmv3_tiling_const::PER_BLOCK_SIZE || inputParams_.mSize % qmmv3_tiling_const::PER_BLOCK_SIZE != 0UL) {
+        baseBlockRes_.baseM = inputParams_.groupSizeM == 1UL && inputParams_.mSize < qmmv3_tiling_const::PER_BLOCK_SIZE ?
                                   ops::CeilAlign(inputParams_.mSize, GetBaseMAlignSize()) :
-                                  PER_BLOCK_SIZE;
-        baseBlockRes_.baseN = inputParams_.nSize % PER_BLOCK_SIZE == 0UL ? PER_BLOCK_BASE_SIZE_256 : PER_BLOCK_SIZE;
+                                  qmmv3_tiling_const::PER_BLOCK_SIZE;
+        baseBlockRes_.baseN = inputParams_.nSize % qmmv3_tiling_const::PER_BLOCK_SIZE == 0UL ? PER_BLOCK_BASE_SIZE_256 : qmmv3_tiling_const::PER_BLOCK_SIZE;
     } else {
         baseBlockRes_.baseM = PER_BLOCK_BASE_SIZE_256;
-        baseBlockRes_.baseN = PER_BLOCK_SIZE;
+        baseBlockRes_.baseN = qmmv3_tiling_const::PER_BLOCK_SIZE;
     }
-    baseBlockRes_.baseK = PER_BLOCK_SIZE;
+    baseBlockRes_.baseK = qmmv3_tiling_const::PER_BLOCK_SIZE;
 }
 
 void BaseBlockCalculator::ComputeBaseBlockMmadS8S4()
 {
-    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, BASIC_BLOCK_SIZE_256), GetBaseMAlignSize());
-    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, BASIC_BLOCK_SIZE_256), GetBaseNAlignSize());
+    baseBlockRes_.baseM = ops::CeilAlign(std::min(inputParams_.mSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256), GetBaseMAlignSize());
+    baseBlockRes_.baseN = ops::CeilAlign(std::min(inputParams_.nSize, qmmv3_tiling_const::BASIC_BLOCK_SIZE_256), GetBaseNAlignSize());
 
-    uint64_t basicBlockSizeA = BASIC_BLOCK_SIZE_128;
-    uint64_t basicBlockSizeB = BASIC_BLOCK_SIZE_128;
-    if (baseBlockRes_.baseM != 0UL && compileInfo_.l0aSize / DB_SIZE / baseBlockRes_.baseM >= BASIC_BLOCK_SIZE_256) {
-        basicBlockSizeA = BASIC_BLOCK_SIZE_256;
+    uint64_t basicBlockSizeA = qmmv3_tiling_const::BASIC_BLOCK_SIZE_128;
+    uint64_t basicBlockSizeB = qmmv3_tiling_const::BASIC_BLOCK_SIZE_128;
+    if (baseBlockRes_.baseM != 0UL &&
+        compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM / baseBlockRes_.baseM >= qmmv3_tiling_const::BASIC_BLOCK_SIZE_256) {
+        basicBlockSizeA = qmmv3_tiling_const::BASIC_BLOCK_SIZE_256;
     }
-    if (baseBlockRes_.baseN != 0UL && compileInfo_.l0bSize / DB_SIZE / baseBlockRes_.baseN >= BASIC_BLOCK_SIZE_256) {
-        basicBlockSizeB = BASIC_BLOCK_SIZE_256;
+    if (baseBlockRes_.baseN != 0UL &&
+        compileInfo_.l0bSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM / baseBlockRes_.baseN >= qmmv3_tiling_const::BASIC_BLOCK_SIZE_256) {
+        basicBlockSizeB = qmmv3_tiling_const::BASIC_BLOCK_SIZE_256;
     }
     uint64_t minBaseK = std::min(
         std::min(
             GetShapeWithDataType(basicBlockSizeA, inputParams_.aDtype),
             GetShapeWithDataType(basicBlockSizeB, inputParams_.bDtype)),
         inputParams_.kSize);
-    uint64_t maxAlignSize = std::max(GetBaseKAlignSize(), GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.bDtype));
+    uint64_t maxAlignSize = std::max(GetBaseKAlignSize(), GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.bDtype));
     baseBlockRes_.baseK = ops::CeilAlign(minBaseK, maxAlignSize);
 }
 
 uint64_t BaseBlockCalculator::GetBaseMAlignSize() const
 {
-    return inputParams_.transA ? GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
+    return inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
 }
 
 uint64_t BaseBlockCalculator::GetBaseNAlignSize() const
 {
-    return inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L1_ALIGN_SIZE, inputParams_.bDtype);
+    return inputParams_.transB ? qmmv3_tiling_const::CUBE_BLOCK : GetShapeWithDataType(qmmv3_tiling_const::L1_ALIGN_SIZE, inputParams_.bDtype);
 }
 
 uint64_t BaseBlockCalculator::GetBaseKAlignSize() const
 {
-    return inputParams_.isMxPerGroup ? MXFP_DIVISOR_SIZE : GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.aDtype);
+    return inputParams_.isMxPerGroup ? qmmv3_tiling_const::MXFP_DIVISOR_SIZE : GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype);
 }
 
-bool BaseBlockCalculator::AdjustBaseBlock(BaseBlockMode mode)
+bool BaseBlockCalculator::OptimizeBaseBlockForCoreUtilization(BaseBlockMode mode)
 {
     uint64_t oriBlock = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, baseBlockRes_.baseM) *
                         ops::CeilDiv(inputParams_.nSize, baseBlockRes_.baseN);
@@ -197,17 +221,139 @@ bool BaseBlockCalculator::AdjustBaseBlock(BaseBlockMode mode)
     }
 }
 
+void BaseBlockCalculator::OptimizeBaseBlockForLoadBalance()
+{
+    if (!inputParams_.isMxPerGroup || compileInfo_.npuArch != NpuArch::DAV_3510) {
+        return;
+    }
+    uint64_t roundLimit = GetSingleCoreMaxRound(baseBlockRes_.baseM, baseBlockRes_.baseN);
+    // Rebalance only two- or three-round cases; keep the default block otherwise.
+    if (roundLimit == 1UL || roundLimit > 3UL) {
+        return;
+    }
+    uint64_t originLastRoundBlockCnt = GetLastRoundBlockCnt(baseBlockRes_.baseM, baseBlockRes_.baseN);
+    if (originLastRoundBlockCnt == 0UL) {
+        return;
+    }
+    const uint64_t originLastRoundUsedCore =
+        originLastRoundBlockCnt * (static_cast<uint64_t>(compileInfo_.aicNum) / originLastRoundBlockCnt);
+    const double originMemoryComputeScore = GetMemoryComputeScore(baseBlockRes_.baseM, baseBlockRes_.baseN);
+    uint64_t bestBaseM = baseBlockRes_.baseM;
+    uint64_t bestBaseN = baseBlockRes_.baseN;
+    SearchLoadBalanceBaseBlock(roundLimit, originLastRoundUsedCore, originMemoryComputeScore, bestBaseM, bestBaseN);
+    TryApplyLoadBalanceBase(bestBaseM, bestBaseN);
+}
+
+void BaseBlockCalculator::SearchLoadBalanceBaseBlock(
+    uint64_t roundLimit, uint64_t originLastRoundUsedCore, double originMemoryComputeScore,
+    uint64_t& bestBaseM, uint64_t& bestBaseN) const
+{
+    double balanceRate = 0.0;
+    double memoryComputeScore = 0.0;
+    uint64_t baseMAlignNum =
+        inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
+    uint64_t baseNAlignNum =
+        inputParams_.transB ? qmmv3_tiling_const::CUBE_BLOCK : GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.bDtype);
+    uint64_t searchBaseM = ops::CeilAlign(baseBlockRes_.baseM, baseMAlignNum);
+    uint64_t searchBaseN = ops::CeilAlign(baseBlockRes_.baseN, baseNAlignNum);
+    bool hasCandidate = false;
+    for (uint64_t curBaseM = searchBaseM; curBaseM != 0UL;
+         curBaseM = GetNextLoadBalanceBase(curBaseM, baseMAlignNum)) {
+        for (uint64_t curBaseN = searchBaseN; curBaseN != 0UL;
+             curBaseN = GetNextLoadBalanceBase(curBaseN, baseNAlignNum)) {
+            uint64_t curRound = GetSingleCoreMaxRound(curBaseM, curBaseN);
+            // Decreasing baseN only increases tile count in this loop, so later candidates will not recover.
+            if (curRound > roundLimit) {
+                break;
+            }
+            if (ShouldSkipLoadBalanceCandidate(
+                    curBaseM, curBaseN, originLastRoundUsedCore, originMemoryComputeScore)) {
+                continue;
+            }
+            double curBalanceRate = GetBalanceRate(curBaseM, curBaseN);
+            double curMemoryComputeScore = GetMemoryComputeScore(curBaseM, curBaseN);
+            // Pick higher curBalanceRate first; use memory-compute score only as a tie-breaker.
+            bool balanceBetter = curBalanceRate > balanceRate + SCORE_COMPARE_EPS;
+            bool memoryComputeBetter = IsScoreEqual(curBalanceRate, balanceRate) &&
+                                       curMemoryComputeScore + SCORE_COMPARE_EPS < memoryComputeScore;
+            if (!hasCandidate || balanceBetter || memoryComputeBetter) {
+                bestBaseM = curBaseM;
+                bestBaseN = curBaseN;
+                balanceRate = curBalanceRate;
+                memoryComputeScore = curMemoryComputeScore;
+                hasCandidate = true;
+            }
+        }
+    }
+}
+
+bool BaseBlockCalculator::ShouldSkipLoadBalanceCandidate(
+    uint64_t curBaseM, uint64_t curBaseN, uint64_t originLastRoundUsedCore,
+    double originMemoryComputeScore) const
+{
+    bool isOriginBase = curBaseM == baseBlockRes_.baseM && curBaseN == baseBlockRes_.baseN;
+    uint64_t curLastRoundBlockCnt = GetLastRoundBlockCnt(curBaseM, curBaseN);
+    double curMemoryComputeScore = GetMemoryComputeScore(curBaseM, curBaseN);
+    bool lastRoundBlockCntLess = curLastRoundBlockCnt < originLastRoundUsedCore;
+    bool memoryComputeWorseWithoutCoreGain = curLastRoundBlockCnt == originLastRoundUsedCore &&
+                                             curMemoryComputeScore > originMemoryComputeScore + SCORE_COMPARE_EPS;
+    return isOriginBase || lastRoundBlockCntLess || memoryComputeWorseWithoutCoreGain;
+}
+
+void BaseBlockCalculator::TryApplyLoadBalanceBase(uint64_t bestBaseM, uint64_t bestBaseN)
+{
+    uint64_t baseN128AlignFallbackKThreshold =
+        GetShapeWithDataType(LOAD_BALANCE_BASE_N_128_ALIGN_K_THRESHOLD, inputParams_.aDtype);
+    // For small K, keep the original base if the candidate baseN is not 128-aligned.
+    bool shouldFallbackToOriginBase =
+        bestBaseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 != 0UL && inputParams_.kSize < baseN128AlignFallbackKThreshold;
+    if (shouldFallbackToOriginBase) {
+        return;
+    }
+    baseBlockRes_.baseM = bestBaseM;
+    baseBlockRes_.baseN = bestBaseN;
+    if (baseBlockRes_.baseM > inputParams_.mSize) {
+        baseBlockRes_.baseM = ops::CeilAlign(inputParams_.mSize, GetBaseMAlignSize());
+    }
+    if (baseBlockRes_.baseN > inputParams_.nSize) {
+        baseBlockRes_.baseN = ops::CeilAlign(inputParams_.nSize, GetBaseNAlignSize());
+    }
+}
+
+uint64_t BaseBlockCalculator::GetSingleCoreMaxRound(uint64_t baseM, uint64_t baseN) const
+{
+    uint64_t blockCnt = batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, baseM) *
+                        ops::CeilDiv(inputParams_.nSize, baseN);
+    return ops::CeilDiv(blockCnt, static_cast<uint64_t>(compileInfo_.aicNum));
+}
+
+double BaseBlockCalculator::GetBalanceRate(uint64_t baseM, uint64_t baseN) const
+{
+    uint64_t round = GetSingleCoreMaxRound(baseM, baseN);
+    return static_cast<double>(batchCoreCnt_) * inputParams_.mSize * inputParams_.nSize / compileInfo_.aicNum /
+           (static_cast<double>(round) * baseM * baseN);
+}
+
+uint64_t BaseBlockCalculator::GetLastRoundBlockCnt(uint64_t baseM, uint64_t baseN) const
+{
+    uint64_t aicNum = static_cast<uint64_t>(compileInfo_.aicNum);
+    uint64_t blockCnt =
+        batchCoreCnt_ * ops::CeilDiv(inputParams_.mSize, baseM) * ops::CeilDiv(inputParams_.nSize, baseN);
+    uint64_t tailBlockCnt = blockCnt % aicNum;
+    return tailBlockCnt == 0UL ? aicNum : tailBlockCnt;
+}
+
 bool BaseBlockCalculator::AdjustBaseBlockDefault()
 {
     uint64_t baseMAlignNum =
-        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
+        inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
     uint64_t baseNAlignNum =
-        inputParams_.transB ? CUBE_BLOCK : GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype);
+        inputParams_.transB ? qmmv3_tiling_const::CUBE_BLOCK : GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.bDtype);
     uint64_t baseKAlignNum = (inputParams_.transA && !inputParams_.transB) ?
-                                 GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
-                                 GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype);
+                                 GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
+                                 GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype);
     if (IsMxBackwardTrans()) {
-        baseKAlignNum = GetShapeWithDataType(MXFP_DIVISOR_SIZE, inputParams_.aDtype);
+        baseKAlignNum = GetShapeWithDataType(qmmv3_tiling_const::MXFP_DIVISOR_SIZE, inputParams_.aDtype);
     }
     OP_TILING_CHECK(
         baseMAlignNum == 0UL || baseNAlignNum == 0UL || baseKAlignNum == 0UL,
@@ -228,7 +374,7 @@ bool BaseBlockCalculator::AdjustBaseBlockDefault()
 
     uint64_t mCore = MathUtil::CeilDivision(inputParams_.mSize, baseBlockRes_.baseM);
     uint64_t nCore = MathUtil::CeilDivision(inputParams_.nSize, baseBlockRes_.baseN);
-    if (mMaxtile < nMaxtile || (mMaxtile == nMaxtile && baseNAlignNum == CUBE_BLOCK)) {
+    if (mMaxtile < nMaxtile || (mMaxtile == nMaxtile && baseNAlignNum == qmmv3_tiling_const::CUBE_BLOCK)) {
         tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
         mCore = MathUtil::CeilDivision(inputParams_.mSize, tempBaseM);
         nCore = coreNumMN / mCore;
@@ -240,7 +386,7 @@ bool BaseBlockCalculator::AdjustBaseBlockDefault()
         tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
     }
 
-    while (tempBaseN >= tempBaseM * BASEM_BASEN_RATIO && nCore < coreNumMN / NUM_HALF && tempBaseN != baseNAlignNum) {
+    while (tempBaseN >= tempBaseM * BASEM_BASEN_RATIO && nCore < coreNumMN / qmmv3_tiling_const::NUM_HALF && tempBaseN != baseNAlignNum) {
         nCore = nCore * DOUBLE_CORE_NUM;
         mCore = coreNumMN / nCore;
         tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
@@ -248,7 +394,7 @@ bool BaseBlockCalculator::AdjustBaseBlockDefault()
         mCore = MathUtil::CeilDivision(inputParams_.mSize, tempBaseM);
         nCore = MathUtil::CeilDivision(inputParams_.nSize, tempBaseN);
     }
-    while (tempBaseM >= tempBaseN * BASEM_BASEN_RATIO && mCore < coreNumMN / NUM_HALF && tempBaseM != baseMAlignNum) {
+    while (tempBaseM >= tempBaseN * BASEM_BASEN_RATIO && mCore < coreNumMN / qmmv3_tiling_const::NUM_HALF && tempBaseM != baseMAlignNum) {
         mCore = mCore * DOUBLE_CORE_NUM;
         nCore = coreNumMN / mCore;
         tempBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, mCore), baseMAlignNum);
@@ -256,20 +402,53 @@ bool BaseBlockCalculator::AdjustBaseBlockDefault()
         mCore = MathUtil::CeilDivision(inputParams_.mSize, tempBaseM);
         nCore = MathUtil::CeilDivision(inputParams_.nSize, tempBaseN);
     }
+    TrySwapBaseMNForMxFalseTrue(tempBaseM, tempBaseN);
     uint64_t kValueAlign = ops::CeilAlign(inputParams_.kSize, baseKAlignNum);
-    uint64_t kValueMax =
-        GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, inputParams_.aDtype) / std::max(tempBaseM, tempBaseN);
+    uint64_t kValueMax = GetShapeWithDataType(compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM, inputParams_.aDtype) /
+                         std::max(tempBaseM, tempBaseN);
     if (kValueMax >= baseKAlignNum) {
         baseBlockRes_.baseM = tempBaseM;
         baseBlockRes_.baseN = tempBaseN;
         kValueMax = ops::FloorAlign(kValueMax, baseKAlignNum);
         baseBlockRes_.baseK = std::min(kValueAlign, kValueMax);
         baseBlockRes_.baseK = baseBlockRes_.baseK > BASEK_LIMIT ?
-                                  ops::CeilAlign(baseBlockRes_.baseK / NUM_HALF, baseKAlignNum) :
+                                  ops::CeilAlign(baseBlockRes_.baseK / qmmv3_tiling_const::NUM_HALF, baseKAlignNum) :
                                   baseBlockRes_.baseK;
         baseBlockRes_.useTailWinLogic = false;
     }
     return true;
+}
+
+void BaseBlockCalculator::TrySwapBaseMNForMxFalseTrue(uint64_t& baseM, uint64_t& baseN) const
+{
+    // MX false/true can end up with a narrow unaligned N tile. In single-round cases, try swapping M/N so baseN
+    // becomes 128-aligned without reducing core utilization.
+    if (!inputParams_.isMxPerGroup || inputParams_.transA || !inputParams_.transB ||
+        baseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 == 0UL) {
+        return;
+    }
+    uint64_t swapBaseM = baseN;
+    uint64_t swapBaseN = baseM;
+    uint64_t swapRound = GetSingleCoreMaxRound(swapBaseM, swapBaseN);
+    // Only adjust single-round cases here; multi-round shapes are handled by load-balance search.
+    if (swapRound != 1UL) {
+        return;
+    }
+    uint64_t curMCore = MathUtil::CeilDivision(inputParams_.mSize, baseM);
+    uint64_t curNCore = MathUtil::CeilDivision(inputParams_.nSize, baseN);
+    uint64_t swapMCore = MathUtil::CeilDivision(inputParams_.mSize, swapBaseM);
+    uint64_t swapNCore = MathUtil::CeilDivision(inputParams_.nSize, swapBaseN);
+    uint64_t curUsedCore = curMCore * curNCore;
+    uint64_t swapUsedCore = swapMCore * swapNCore;
+    double curCoreShapeScore = GetBaseShapeScore(curMCore, curNCore);
+    double swapCoreShapeScore = GetBaseShapeScore(swapMCore, swapNCore);
+    bool swapCoreShapeBetter = swapCoreShapeScore + SCORE_COMPARE_EPS < curCoreShapeScore;
+    bool swapBaseNIsFriendly = IsScoreEqual(swapCoreShapeScore, curCoreShapeScore) &&
+                               swapBaseN % qmmv3_tiling_const::BASIC_BLOCK_SIZE_128 == 0UL;
+    if (swapUsedCore >= curUsedCore && (swapCoreShapeBetter || swapBaseNIsFriendly)) {
+        baseM = swapBaseM;
+        baseN = swapBaseN;
+    }
 }
 
 bool BaseBlockCalculator::AdjustBaseBlockPerblock()
@@ -279,14 +458,14 @@ bool BaseBlockCalculator::AdjustBaseBlockPerblock()
         return AdjustBaseBlockPertile(coreNumMN);
     } else if (
         baseBlockRes_.baseM == PER_BLOCK_BASE_SIZE_256 &&
-        ops::CeilDiv(inputParams_.mSize, PER_BLOCK_SIZE) * ops::CeilDiv(inputParams_.nSize, baseBlockRes_.baseN) <=
+        ops::CeilDiv(inputParams_.mSize, qmmv3_tiling_const::PER_BLOCK_SIZE) * ops::CeilDiv(inputParams_.nSize, baseBlockRes_.baseN) <=
             coreNumMN) {
-        baseBlockRes_.baseM = PER_BLOCK_SIZE;
+        baseBlockRes_.baseM = qmmv3_tiling_const::PER_BLOCK_SIZE;
     } else if (
         baseBlockRes_.baseN == PER_BLOCK_BASE_SIZE_256 &&
-        ops::CeilDiv(inputParams_.mSize, baseBlockRes_.baseM) * ops::CeilDiv(inputParams_.nSize, PER_BLOCK_SIZE) <=
+        ops::CeilDiv(inputParams_.mSize, baseBlockRes_.baseM) * ops::CeilDiv(inputParams_.nSize, qmmv3_tiling_const::PER_BLOCK_SIZE) <=
             coreNumMN) {
-        baseBlockRes_.baseN = PER_BLOCK_SIZE;
+        baseBlockRes_.baseN = qmmv3_tiling_const::PER_BLOCK_SIZE;
     }
     return true;
 }
@@ -294,9 +473,9 @@ bool BaseBlockCalculator::AdjustBaseBlockPerblock()
 bool BaseBlockCalculator::AdjustBaseBlockPertile(uint64_t coreNumMN)
 {
     uint64_t baseMAlignNum =
-        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
+        inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
     uint64_t baseNAlignNum =
-        !inputParams_.transB ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.bDtype) : CUBE_BLOCK;
+        !inputParams_.transB ? GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.bDtype) : qmmv3_tiling_const::CUBE_BLOCK;
     uint64_t adjustBaseM = baseBlockRes_.baseM;
     uint64_t adjustBaseN = baseBlockRes_.baseN;
     uint64_t adjustMCore = MathUtil::CeilDivision(inputParams_.mSize, adjustBaseM);
@@ -306,14 +485,14 @@ bool BaseBlockCalculator::AdjustBaseBlockPertile(uint64_t coreNumMN)
     adjustBaseM = ops::CeilAlign(MathUtil::CeilDivision(inputParams_.mSize, adjustMCore), baseMAlignNum);
     adjustMCore = MathUtil::CeilDivision(inputParams_.mSize, adjustBaseM);
 
-    while (adjustBaseN / NUM_HALF >= baseNAlignNum &&
-           adjustMCore * MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN / NUM_HALF) <= coreNumMN) {
-        adjustBaseN = adjustBaseN / NUM_HALF;
+    while (adjustBaseN / qmmv3_tiling_const::NUM_HALF >= baseNAlignNum &&
+           adjustMCore * MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN / qmmv3_tiling_const::NUM_HALF) <= coreNumMN) {
+        adjustBaseN = adjustBaseN / qmmv3_tiling_const::NUM_HALF;
         adjustNCore = MathUtil::CeilDivision(inputParams_.nSize, adjustBaseN);
     }
 
-    while (adjustBaseN > adjustBaseM * BASEM_BASEN_RATIO && adjustBaseN / NUM_HALF >= baseNAlignNum) {
-        uint64_t tempBaseN = adjustBaseN / NUM_HALF;
+    while (adjustBaseN > adjustBaseM * BASEM_BASEN_RATIO && adjustBaseN / qmmv3_tiling_const::NUM_HALF >= baseNAlignNum) {
+        uint64_t tempBaseN = adjustBaseN / qmmv3_tiling_const::NUM_HALF;
         uint64_t tempNCore = MathUtil::CeilDivision(inputParams_.nSize, tempBaseN);
         if (tempNCore == 0UL || tempNCore > coreNumMN) {
             break;
@@ -340,11 +519,11 @@ bool BaseBlockCalculator::AdjustBaseBlockPertile(uint64_t coreNumMN)
 bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(uint64_t oriBlock)
 {
     uint64_t baseMAlignNum =
-        inputParams_.transA ? GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype) : CUBE_BLOCK;
-    uint64_t baseNAlignNum = L2_ALIGN_SIZE;
+        inputParams_.transA ? GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype) : qmmv3_tiling_const::CUBE_BLOCK;
+    uint64_t baseNAlignNum = qmmv3_tiling_const::L2_ALIGN_SIZE;
     uint64_t baseKAlignNum = (inputParams_.transA && !inputParams_.transB) ?
-                                 GetShapeWithDataType(BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
-                                 GetShapeWithDataType(L2_ALIGN_SIZE, inputParams_.aDtype);
+                                 GetShapeWithDataType(qmmv3_tiling_const::BASIC_BLOCK_SIZE_32, inputParams_.aDtype) :
+                                 GetShapeWithDataType(qmmv3_tiling_const::L2_ALIGN_SIZE, inputParams_.aDtype);
     baseKAlignNum = std::min(baseKAlignNum, inputParams_.kSize);
     OP_TILING_CHECK(
         baseMAlignNum == 0UL || baseNAlignNum == 0UL || baseKAlignNum == 0UL,
@@ -379,17 +558,17 @@ bool BaseBlockCalculator::AdjustBaseBlockMmadS8S4(uint64_t oriBlock)
         optimalFound = CalculateOptimalSplit(tempBaseM, tempBaseN, baseMAlignNum, baseNAlignNum, baseKAlignNum);
     }
     uint64_t kValueAlign = ops::CeilAlign(inputParams_.kSize, baseKAlignNum);
-    uint64_t kValueMax =
-        GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, inputParams_.aDtype) / std::max(tempBaseM, tempBaseN);
+    uint64_t kValueMax = GetShapeWithDataType(compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM, inputParams_.aDtype) /
+                         std::max(tempBaseM, tempBaseN);
     if (kValueMax >= baseKAlignNum && optimalFound) {
         baseBlockRes_.baseM = tempBaseM;
         baseBlockRes_.baseN = tempBaseN;
         kValueMax = ops::FloorAlign(kValueMax, baseKAlignNum);
         baseBlockRes_.baseK = std::min(kValueAlign, kValueMax);
-        baseBlockRes_.baseK = baseBlockRes_.baseK > BASEK_LIMIT ? baseBlockRes_.baseK / NUM_HALF : baseBlockRes_.baseK;
+        baseBlockRes_.baseK = baseBlockRes_.baseK > BASEK_LIMIT ? baseBlockRes_.baseK / qmmv3_tiling_const::NUM_HALF : baseBlockRes_.baseK;
         uint64_t maxAlignSize = std::max(
-            GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.aDtype),
-            GetShapeWithDataType(CUBE_REDUCE_BLOCK, inputParams_.bDtype));
+            GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.aDtype),
+            GetShapeWithDataType(qmmv3_tiling_const::CUBE_REDUCE_BLOCK, inputParams_.bDtype));
         OP_TILING_CHECK(
             maxAlignSize == 0UL,
             CUBE_INNER_ERR_REPORT(
@@ -412,7 +591,7 @@ bool BaseBlockCalculator::CalculateOptimalSplit(
     uint64_t maxDiff = UINT64_MAX;
     uint64_t iterMSplite = std::min(mMaxtile, static_cast<uint64_t>(compileInfo_.aicNum / batchCoreCnt_));
     uint64_t iterNSplite = std::min(nMaxtile, static_cast<uint64_t>(compileInfo_.aicNum / batchCoreCnt_));
-    uint64_t l0aHalfShape = GetShapeWithDataType(compileInfo_.l0aSize / DB_SIZE, inputParams_.aDtype);
+    uint64_t l0aHalfShape = GetShapeWithDataType(compileInfo_.l0aSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM, inputParams_.aDtype);
     bool optimalFound = false;
     for (uint64_t mFactor = 1UL; mFactor <= iterMSplite; ++mFactor) {
         for (uint64_t nFactor = 1UL; nFactor <= iterNSplite; ++nFactor) {

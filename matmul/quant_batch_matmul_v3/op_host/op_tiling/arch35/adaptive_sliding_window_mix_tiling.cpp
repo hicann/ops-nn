@@ -24,12 +24,6 @@
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 
 namespace {
-constexpr uint64_t CUBE_BLOCK = 16;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32;
-constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
-constexpr uint32_t DB_SIZE = 2;
-constexpr uint32_t DATA_SIZE_L0C = 4;
-constexpr uint32_t CORE_RATIO = 2U;
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::MIX_ASW;
@@ -81,7 +75,7 @@ bool AdaptiveSlidingWindowMixTiling::IsCapable()
 
 bool AdaptiveSlidingWindowMixTiling::CheckCoreNum() const
 {
-    if (compileInfo_.aivNum != CORE_RATIO * compileInfo_.aicNum) {
+    if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
         OP_LOGE(
             inputParams_.opName, "For mix template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
             compileInfo_.aicNum, compileInfo_.aivNum);
@@ -96,8 +90,8 @@ ge::graphStatus AdaptiveSlidingWindowMixTiling::GetWorkspaceSize()
     if (isSupportS4S4_) {
         uint64_t aInt8Size = inputParams_.batchC * inputParams_.mSize * inputParams_.kSize;
         uint64_t bInt8Size = inputParams_.kSize * inputParams_.nSize;
-        workspaceSize_ += ops::CeilAlign(aInt8Size, BASIC_BLOCK_SIZE_128) +
-                          ops::CeilAlign(bInt8Size, BASIC_BLOCK_SIZE_128);
+        workspaceSize_ += ops::CeilAlign(aInt8Size, qmmv3_tiling_const::BASIC_BLOCK_SIZE_128) +
+                          ops::CeilAlign(bInt8Size, qmmv3_tiling_const::BASIC_BLOCK_SIZE_128);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -127,8 +121,9 @@ void AdaptiveSlidingWindowMixTiling::UpdateAFullLoadStatus()
     uint64_t singleCoreASizeWithFullLoad =
         realBaseMSize *
         (inputParams_.transA ?
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.aDtype) :
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
+    // Empirical A full-load cap: keep A under 256KB so L1 still has room for B-side data and auxiliary buffers.
     constexpr uint64_t A_L1_LOAD_THRESHOLD = 256 * 1024UL;
     bool blockCntCmp = (adaptiveWin_.mBlockCnt <= adaptiveWin_.nBlockCnt);
     isAFullLoad_ =
@@ -177,9 +172,9 @@ bool AdaptiveSlidingWindowMixTiling::CalL1Tiling()
 
     basicTiling_.iterateOrder = 0U;
     basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
+        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
+         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
             1U;
 
     L1TilingMode mode = isAFullLoad_ ? L1TilingMode::A_L1_FULL_LOAD : L1TilingMode::DEFAULT;

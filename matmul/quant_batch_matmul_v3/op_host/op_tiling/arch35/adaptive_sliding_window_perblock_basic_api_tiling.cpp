@@ -23,12 +23,6 @@
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 
 namespace {
-constexpr uint32_t DB_SIZE = 2;
-constexpr uint32_t DATA_SIZE_L0C = 4;
-constexpr uint32_t CORE_RATIO = 2U;
-
-constexpr uint8_t L1_TWO_BUFFER = 2;
-constexpr uint8_t L1_FOUR_BUFFER = 4;
 
 const std::vector<int32_t> supportedNpuArch = {static_cast<int32_t>(NpuArch::DAV_3510)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::PERBLOCK_BASIC_API_ASW;
@@ -67,7 +61,7 @@ bool AdaptiveSlidingWindowPerblockBasicAPITiling::IsCapable()
 
 bool AdaptiveSlidingWindowPerblockBasicAPITiling::CheckCoreNum() const
 {
-    if (compileInfo_.aivNum != CORE_RATIO * compileInfo_.aicNum) {
+    if (compileInfo_.aivNum != qmmv3_tiling_const::CORE_RATIO * compileInfo_.aicNum) {
         OP_LOGE(
             inputParams_.opName, "For perblock template, aicNum:aivNum should be 1:2, actual aicNum: %u, aivNum: %u.",
             compileInfo_.aicNum, compileInfo_.aivNum);
@@ -120,9 +114,9 @@ bool AdaptiveSlidingWindowPerblockBasicAPITiling::CalL1Tiling()
 
     basicTiling_.iterateOrder = 0U;
     basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
+        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
+         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
             1U;
 
     L1TilingDataCalculator l1Calculator(
@@ -171,12 +165,12 @@ void AdaptiveSlidingWindowPerblockBasicAPITiling::CalculateNBufferNum4Perblock()
     tilingData_.matmulTiling.stepKb = basicTiling_.stepKb;
     uint64_t kAL1 = tilingData_.matmulTiling.stepKa * tilingData_.matmulTiling.baseK;
     uint64_t fourBufUsedL1Size =
-        GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1, inputParams_.aDtype) * L1_FOUR_BUFFER;
+        GetSizeWithDataType((basicTiling_.baseM + basicTiling_.baseN) * kAL1, inputParams_.aDtype) * qmmv3_tiling_const::L1_FOUR_BUFFER;
     if (tilingData_.matmulTiling.stepKa == tilingData_.matmulTiling.stepKb &&
-        fourBufUsedL1Size <= aicoreParams_.l1Size && kAL1 * L1_TWO_BUFFER < inputParams_.kSize) {
-        tilingData_.matmulTiling.nBufferNum = L1_FOUR_BUFFER;
+        fourBufUsedL1Size <= aicoreParams_.l1Size && kAL1 * qmmv3_tiling_const::L1_TWO_BUFFER < inputParams_.kSize) {
+        tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_FOUR_BUFFER;
     } else {
-        tilingData_.matmulTiling.nBufferNum = L1_TWO_BUFFER;
+        tilingData_.matmulTiling.nBufferNum = qmmv3_tiling_const::L1_TWO_BUFFER;
     }
 }
 

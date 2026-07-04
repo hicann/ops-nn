@@ -27,7 +27,6 @@ public:
     explicit AdaptiveSlidingWindowTilingV4(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
     {
         inputParams_.Reset();
-        ResetAdaptiveSlidingWindowPlatformInfoCache();
     }
     ~AdaptiveSlidingWindowTilingV4() override = default;
     uint64_t GetTilingKey() const override;

@@ -22,7 +22,6 @@
 #include "register/op_impl_registry.h"
 #include "op_host/tiling_templates_registry.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/platform_util.h"
-#include "../../../quant_batch_matmul_v3/op_host/op_tiling/arch35/adaptive_sliding_window_tiling.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_compile_info.h"
 #include "../../../quant_batch_matmul_v3/op_host/op_tiling/quant_batch_matmul_v3_tiling_base.h"
 
@@ -67,7 +66,6 @@ static ge::graphStatus QuantBatchMatmulInplaceAddTilingFunc(gert::TilingContext*
 
     OP_LOGD("QuantBatchMatmulInplaceAddTilingFunc", "Using the basic api tiling strategy.");
     ResetQuantBatchMatmulV3InputParams();
-    ResetAdaptiveSlidingWindowPlatformInfoCache();
     return TilingRegistryArch::GetInstance().DoTilingImpl(
         context, INPLACE_ADD_TILING_PRIORITIES, static_cast<int32_t>(compileInfoPtr->npuArch));
 }

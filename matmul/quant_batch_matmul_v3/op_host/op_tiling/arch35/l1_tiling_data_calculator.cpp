@@ -16,25 +16,15 @@
 
 #include <algorithm>
 #include "error_util.h"
+#include "quant_batch_matmul_v3_tiling_util.h"
 
 namespace {
-constexpr uint64_t CUBE_BLOCK = 16UL;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
-constexpr uint64_t L1_ALIGN_SIZE = 32UL;
-constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
-constexpr uint64_t BASIC_BLOCK_SIZE_512 = 512UL;
+
 constexpr uint64_t MTE2_MIN_LOAD_SIZE = 32768UL;
-constexpr uint64_t L2_ALIGN_SIZE = 128UL;
-constexpr uint64_t MX_GROUP_SIZE = 32UL;
-constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2UL;
-constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32 * 1024UL;
-constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64 * 1024UL;
+constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32UL * 1024UL;
+constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64UL * 1024UL;
 constexpr uint64_t CACHE_LINE_512B = 512UL;
 constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
-constexpr uint32_t DB_SIZE = 2U;
-constexpr uint32_t NUM_HALF = 2U;
-constexpr uint32_t SCALER_FACTOR_MAX = 127U;
-constexpr uint32_t SCALER_FACTOR_MIN = 1U;
 
 uint64_t GetSizeWithDataType(uint64_t shape, ge::DataType dtype)
 {
@@ -133,22 +123,22 @@ bool L1TilingDataCalculator::InitLeftL1Size()
     if (inputParams_.cDtype == ge::DT_INT32) {
         scaleDtypeSize = 0UL;
     }
-    uint64_t singleCoreBiasSize = inputParams_.hasBias ? baseN_ * biasDtypeSize : 0UL;
-    uint64_t singleCoreScaleSize = inputParams_.isPerChannel ? baseN_ * scaleDtypeSize : 0UL;
+    uint64_t biasL1Size = inputParams_.hasBias ? baseN_ * biasDtypeSize * qmmv3_tiling_const::DOUBLE_BUFFER_NUM : 0UL;
+    uint64_t scaleL1Size = inputParams_.isPerChannel ? baseN_ * scaleDtypeSize * qmmv3_tiling_const::DOUBLE_BUFFER_NUM : 0UL;
     OP_TILING_CHECK(
-        compileInfo_.l1Size < singleCoreBiasSize,
+        compileInfo_.l1Size < biasL1Size,
         CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Subtraction underflow: l1Size(%lu) - singleCoreBiasSize(%lu).", compileInfo_.l1Size,
-            singleCoreBiasSize),
+            inputParams_.opName, "Subtraction underflow: l1Size(%lu) - biasL1Size(%lu).", compileInfo_.l1Size,
+            biasL1Size),
         return false);
-    uint64_t leftL1SizeAfterBias = compileInfo_.l1Size - singleCoreBiasSize;
+    uint64_t leftL1SizeAfterBias = compileInfo_.l1Size - biasL1Size;
     OP_TILING_CHECK(
-        leftL1SizeAfterBias < singleCoreScaleSize,
+        leftL1SizeAfterBias < scaleL1Size,
         CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Subtraction underflow: leftL1SizeAfterBias(%lu) - singleCoreScaleSize(%lu).",
-            leftL1SizeAfterBias, singleCoreScaleSize),
+            inputParams_.opName, "Subtraction underflow: leftL1SizeAfterBias(%lu) - scaleL1Size(%lu).",
+            leftL1SizeAfterBias, scaleL1Size),
         return false);
-    leftL1Size_ = leftL1SizeAfterBias - singleCoreScaleSize;
+    leftL1Size_ = leftL1SizeAfterBias - scaleL1Size;
     return true;
 }
 
@@ -157,7 +147,7 @@ bool L1TilingDataCalculator::ComputeL1TilingDefault()
     if (inputParams_.isMxPerGroup) {
         uint64_t baseASize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype);
         uint64_t baseBSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
-        uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE);
+        uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE), qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
         uint64_t baseScaleASize = GetSizeWithDataType(scaleBaseK * baseM_, inputParams_.perTokenScaleDtype);
         uint64_t baseScaleBSize = GetSizeWithDataType(scaleBaseK * baseN_, inputParams_.scaleDtype);
         uint64_t baseL1Size = baseASize + baseBSize + baseScaleASize + baseScaleBSize;
@@ -166,24 +156,10 @@ bool L1TilingDataCalculator::ComputeL1TilingDefault()
             CUBE_INNER_ERR_REPORT(
                 inputParams_.opName, "Invalid MX L1 divisor: baseL1Size(%lu) should be greater than 0.", baseL1Size),
             return false);
-        uint64_t depthInit = GetDepthA1B1(leftL1Size_, baseL1Size, 1UL);
-        OP_TILING_CHECK(
-            baseL1Size > leftL1Size_ / depthInit,
-            CUBE_INNER_ERR_REPORT(
-                inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - depthInit(%lu) * baseL1Size(%lu).",
-                leftL1Size_, depthInit, baseL1Size),
-            return false);
-        uint64_t usedL1SizeByDepthInit = depthInit * baseL1Size;
-        uint64_t leftL1SizeByDepthInit = leftL1Size_ - usedL1SizeByDepthInit;
-        uint64_t depthASec = GetDepthA1B1(leftL1SizeByDepthInit, (baseASize + baseScaleASize) * depthInit, depthInit);
-        uint64_t depthBSec = GetDepthA1B1(leftL1SizeByDepthInit, (baseBSize + baseScaleBSize) * depthInit, depthInit);
-        l1TilingData_.depthKa_ = std::max(depthASec, depthBSec);
-        l1TilingData_.depthKb_ = l1TilingData_.depthKa_;
-        if (l1TilingData_.depthKa_ * baseL1Size > leftL1Size_) {
-            l1TilingData_.depthKa_ = depthASec >= depthBSec ? depthASec : depthInit;
-            l1TilingData_.depthKb_ = depthASec < depthBSec ? depthBSec : depthInit;
-        }
-        if (!CalStepKs() || !CalScaleFactors(baseASize, baseBSize, baseScaleASize, baseScaleBSize)) {
+        uint64_t depthInit = GetDepthA1B1();
+        l1TilingData_.depthKa_ = depthInit;
+        l1TilingData_.depthKb_ = depthInit;
+        if (!CalStepKs() || !CalScaleFactors(baseASize, baseBSize)) {
             return false;
         }
     } else {
@@ -198,8 +174,8 @@ bool L1TilingDataCalculator::ComputeL1TilingDefault()
                 "Invalid L1 base size: baseASize(%lu) and baseBSize(%lu) should be greater than 0.", baseASize,
                 baseBSize),
             return false);
-        l1TilingData_.depthKa_ = leftL1Size_ / NUM_HALF / baseASize;
-        l1TilingData_.depthKb_ = leftL1Size_ / NUM_HALF / baseBSize;
+        l1TilingData_.depthKa_ = leftL1Size_ / qmmv3_tiling_const::NUM_HALF / baseASize;
+        l1TilingData_.depthKb_ = leftL1Size_ / qmmv3_tiling_const::NUM_HALF / baseBSize;
         if (!CalStepKs()) {
             return false;
         }
@@ -224,9 +200,9 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
     if (inputParams_.isMxPerGroup) {
         uint64_t singleCoreScaleASize = GetSizeWithDataType(
             std::min(inputParams_.mSize, baseM_) *
-                ops::CeilAlign(ops::CeilDiv(inputParams_.kSize, MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE),
+                ops::CeilAlign(ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MX_GROUP_SIZE), qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE),
             inputParams_.perTokenScaleDtype);
-        uint64_t alignedSingleCoreScaleASize = ops::CeilAlign(singleCoreScaleASize, L1_ALIGN_SIZE);
+        uint64_t alignedSingleCoreScaleASize = ops::CeilAlign(singleCoreScaleASize, qmmv3_tiling_const::L1_ALIGN_SIZE);
         l1TilingData_.scaleFactorA_ = 1UL;
         OP_TILING_CHECK(
             leftL1SizeAfterFullA < alignedSingleCoreScaleASize,
@@ -238,8 +214,8 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
         leftL1SizeAfterFullA -= alignedSingleCoreScaleASize;
         l1TilingData_.depthKb_ = GetDepthB1AfullLoad(leftL1SizeAfterFullA);
         l1TilingData_.stepKb_ =
-            l1TilingData_.depthKb_ == 1UL ? l1TilingData_.depthKb_ : l1TilingData_.depthKb_ / DB_SIZE;
-        uint64_t alignedBSize = ops::CeilAlign(l1TilingData_.depthKb_ * baseBSize, L1_ALIGN_SIZE);
+            l1TilingData_.depthKb_ == 1UL ? l1TilingData_.depthKb_ : l1TilingData_.depthKb_ / qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+        uint64_t alignedBSize = ops::CeilAlign(l1TilingData_.depthKb_ * baseBSize, qmmv3_tiling_const::L1_ALIGN_SIZE);
         OP_TILING_CHECK(
             leftL1SizeAfterFullA < alignedBSize,
             CUBE_INNER_ERR_REPORT(
@@ -250,7 +226,7 @@ bool L1TilingDataCalculator::ComputeL1TilingAL1FullLoad()
     } else {
         l1TilingData_.depthKb_ = GetDepthB1AfullLoad(leftL1SizeAfterFullA);
         l1TilingData_.stepKb_ =
-            l1TilingData_.depthKb_ == 1UL ? l1TilingData_.depthKb_ : l1TilingData_.depthKb_ / DB_SIZE;
+            l1TilingData_.depthKb_ == 1UL ? l1TilingData_.depthKb_ : l1TilingData_.depthKb_ / qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     }
     return true;
 }
@@ -270,14 +246,14 @@ bool L1TilingDataCalculator::ComputeL1TilingBL1FullLoad()
     uint64_t leftL1SizeAfterFullB = leftL1Size_ - alignedSingleCoreBSize;
     l1TilingData_.depthKa_ = GetDepthA1BfullLoad(leftL1SizeAfterFullB);
     l1TilingData_.stepKa_ =
-            l1TilingData_.depthKa_ == 1UL ? l1TilingData_.depthKa_ : l1TilingData_.depthKa_ / DB_SIZE;
+            l1TilingData_.depthKa_ == 1UL ? l1TilingData_.depthKa_ : l1TilingData_.depthKa_ / qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     return true;
 }
 
 bool L1TilingDataCalculator::CalStepKs()
 {
-    l1TilingData_.stepKa_ = l1TilingData_.depthKa_ / DB_SIZE;
-    l1TilingData_.stepKb_ = l1TilingData_.depthKb_ / DB_SIZE;
+    l1TilingData_.stepKa_ = l1TilingData_.depthKa_ / qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    l1TilingData_.stepKb_ = l1TilingData_.depthKb_ / qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
 
     if (l1TilingData_.stepKa_ * baseK_ > inputParams_.kSize) {
         l1TilingData_.stepKa_ = ops::CeilDiv(inputParams_.kSize, baseK_);
@@ -304,117 +280,77 @@ bool L1TilingDataCalculator::CalStepKs()
         l1TilingData_.stepKb_ = std::min(l1TilingData_.stepKb_, 4UL);
     }
     if (inputParams_.isPerBlock && inputParams_.hasBias) {
-        l1TilingData_.stepKa_ = (l1TilingData_.stepKa_ + l1TilingData_.stepKb_) / NUM_HALF;
+        // The current pertile/perblock tiling constraints keep the averaged stepK within L1 capacity.
+        l1TilingData_.stepKa_ = (l1TilingData_.stepKa_ + l1TilingData_.stepKb_) / qmmv3_tiling_const::NUM_HALF;
         l1TilingData_.stepKb_ = l1TilingData_.stepKa_;
     }
-    l1TilingData_.depthKa_ = l1TilingData_.stepKa_ * DB_SIZE;
-    l1TilingData_.depthKb_ = l1TilingData_.stepKb_ * DB_SIZE;
+    l1TilingData_.depthKa_ = l1TilingData_.stepKa_ * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    l1TilingData_.depthKb_ = l1TilingData_.stepKb_ * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     return true;
 }
 
-bool L1TilingDataCalculator::CalScaleFactors(
-    uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize)
+bool L1TilingDataCalculator::CalScaleFactors(uint64_t baseASize, uint64_t baseBSize)
 {
-    uint64_t biasDtypeSize = ge::GetSizeByDataType(inputParams_.biasDtype);
-    uint64_t baseBiasSize = inputParams_.hasBias ? baseN_ * biasDtypeSize : 0UL;
+    uint64_t usedABSize = l1TilingData_.depthKa_ * baseASize + l1TilingData_.depthKb_ * baseBSize;
     OP_TILING_CHECK(
-        baseScaleASize == 0UL || baseScaleBSize == 0UL,
+        leftL1Size_ < usedABSize,
         CUBE_INNER_ERR_REPORT(
-            inputParams_.opName,
-            "Invalid scale factor divisor: baseScaleASize(%lu) and baseScaleBSize(%lu) should be greater than 0.",
-            baseScaleASize, baseScaleBSize),
+            inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - usedABSize(%lu).", leftL1Size_,
+            usedABSize),
+        return false);
+    uint64_t leftL1Size = leftL1Size_ - usedABSize;
+
+    uint64_t stepK = std::min(l1TilingData_.stepKa_, l1TilingData_.stepKb_);
+    uint64_t kL1 = stepK * baseK_;
+
+    // One MX scale group covers 64 K elements and stores two scale values. A/B scale buffers are double-buffered,
+    // so this is the L1 cost for extending scaleKL1 by one 64-element group.
+    uint64_t scaleGroupL1Size =
+        (GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
+            GetSizeWithDataType(baseN_, inputParams_.scaleDtype)) *
+        qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    uint64_t maxScaleKL1ByL1 = leftL1Size / scaleGroupL1Size * qmmv3_tiling_const::MXFP_DIVISOR_SIZE;
+    uint64_t maxScaleKL1 = ops::CeilAlign(inputParams_.kSize, kL1);
+    uint64_t scaleKL1 = std::min(maxScaleKL1ByL1, maxScaleKL1);
+    // Libapi scaleFactor is scaleKL1 / kL1, so scaleKL1 must be rounded down to a kL1 multiple.
+    scaleKL1 = scaleKL1 / kL1 * kL1;
+
+    OP_TILING_CHECK(
+        scaleKL1 == 0UL,
+        CUBE_INNER_ERR_REPORT(
+            inputParams_.opName, "Insufficient L1 for MX scale buffer. leftL1Size(%lu), kL1(%lu).", leftL1Size,
+            kL1),
         return false);
 
-    // Compute scaleFactorA/scaleFactorB from K-axis constraints first.
-    uint64_t scaleFactorAMax = std::min(MTE2_MIN_LOAD_SIZE / baseScaleASize, static_cast<uint64_t>(SCALER_FACTOR_MAX));
-    uint64_t scaleFactorBMax = std::min(MTE2_MIN_LOAD_SIZE / baseScaleBSize, static_cast<uint64_t>(SCALER_FACTOR_MAX));
-    uint64_t scaleFactorA = inputParams_.kSize / (l1TilingData_.stepKa_ * baseK_);
-    uint64_t scaleFactorB = inputParams_.kSize / (l1TilingData_.stepKb_ * baseK_);
-    l1TilingData_.scaleFactorA_ = std::max(static_cast<uint64_t>(SCALER_FACTOR_MIN), scaleFactorA);
-    l1TilingData_.scaleFactorB_ = std::max(static_cast<uint64_t>(SCALER_FACTOR_MIN), scaleFactorB);
-    l1TilingData_.scaleFactorA_ = std::min(scaleFactorAMax, l1TilingData_.scaleFactorA_);
-    l1TilingData_.scaleFactorB_ = std::min(scaleFactorBMax, l1TilingData_.scaleFactorB_);
-
-    // Then apply the L1 size constraint.
-    uint64_t usedASize = l1TilingData_.depthKa_ * baseASize;
-    uint64_t usedBSize = l1TilingData_.depthKb_ * baseBSize;
-    OP_TILING_CHECK(
-        compileInfo_.l1Size < usedASize,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Subtraction underflow: l1Size(%lu) - usedASize(%lu).", compileInfo_.l1Size,
-            usedASize),
-        return false);
-    uint64_t leftL1Size = compileInfo_.l1Size - usedASize;
-    OP_TILING_CHECK(
-        leftL1Size < usedBSize,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - usedBSize(%lu).", leftL1Size, usedBSize),
-        return false);
-    leftL1Size -= usedBSize;
-    OP_TILING_CHECK(
-        leftL1Size < baseBiasSize,
-        CUBE_INNER_ERR_REPORT(
-            inputParams_.opName, "Subtraction underflow: leftL1Size(%lu) - baseBiasSize(%lu).", leftL1Size,
-            baseBiasSize),
-        return false);
-    leftL1Size -= baseBiasSize;
-    uint64_t scaleADivisor = l1TilingData_.depthKa_ * baseScaleASize;
-    uint64_t scaleBDivisor = l1TilingData_.depthKb_ * baseScaleBSize;
-    uint64_t scaleInitDivisor = scaleADivisor + scaleBDivisor;
-    uint64_t scaleInit = leftL1Size / scaleInitDivisor;
-    if (l1TilingData_.scaleFactorA_ <= scaleInit && l1TilingData_.scaleFactorB_ > scaleInit) {
-        uint64_t usedScaleASize = l1TilingData_.scaleFactorA_ * l1TilingData_.depthKa_ * baseScaleASize;
-        leftL1Size -= usedScaleASize;
-        l1TilingData_.scaleFactorB_ = std::min(leftL1Size / scaleBDivisor, l1TilingData_.scaleFactorB_);
-    } else if (l1TilingData_.scaleFactorB_ <= scaleInit && l1TilingData_.scaleFactorA_ > scaleInit) {
-        uint64_t usedScaleBSize = l1TilingData_.scaleFactorB_ * l1TilingData_.depthKb_ * baseScaleBSize;
-        leftL1Size -= usedScaleBSize;
-        l1TilingData_.scaleFactorA_ = std::min(leftL1Size / scaleADivisor, l1TilingData_.scaleFactorA_);
-    } else if (l1TilingData_.scaleFactorA_ > scaleInit && l1TilingData_.scaleFactorB_ > scaleInit) {
-        uint64_t usedScaleInitSize =
-            scaleInit * l1TilingData_.depthKb_ * baseScaleBSize + scaleInit * l1TilingData_.depthKa_ * baseScaleASize;
-        leftL1Size -= usedScaleInitSize;
-        uint64_t scaleASec = std::min(leftL1Size / scaleADivisor, l1TilingData_.scaleFactorA_ - scaleInit);
-        uint64_t scaleBSec = std::min(leftL1Size / scaleBDivisor, l1TilingData_.scaleFactorB_ - scaleInit);
-        l1TilingData_.scaleFactorA_ = scaleASec >= scaleBSec ? scaleASec + scaleInit : scaleInit;
-        l1TilingData_.scaleFactorB_ = scaleASec < scaleBSec ? scaleBSec + scaleInit : scaleInit;
-    }
+    uint64_t scaleFactor = scaleKL1 / kL1;
+    l1TilingData_.scaleFactorA_ = scaleFactor;
+    l1TilingData_.scaleFactorB_ = scaleFactor;
     return true;
 }
 
-uint64_t L1TilingDataCalculator::GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit) const
+uint64_t L1TilingDataCalculator::GetDepthA1B1() const
 {
-    if (perDepthSize == 0UL) {
-        return depthInit;
+    constexpr uint64_t INDEX = 2UL;
+    uint64_t depth = 1UL;
+    uint64_t scaleKL1 = std::min(inputParams_.kSize, qmmv3_tiling_const::ESTIMATED_SCALE_K);
+    uint64_t baseABSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) +
+                          GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype);
+    uint64_t baseScaleSize = GetSizeWithDataType(baseM_, inputParams_.perTokenScaleDtype) +
+                             GetSizeWithDataType(baseN_, inputParams_.scaleDtype);
+    // Reserve a bounded scale window while searching depth. If depth later covers more K than the estimate,
+    // scaleL1Size is raised accordingly before accepting that depth.
+    uint64_t scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
+                           qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    while (depth * baseABSize + scaleL1Size <= leftL1Size_) {
+        depth *= INDEX;
+        uint64_t kL1 = depth / qmmv3_tiling_const::DOUBLE_BUFFER_NUM * baseK_;
+        if (kL1 > scaleKL1) {
+            scaleKL1 = kL1;
+            scaleL1Size = baseScaleSize * ops::CeilDiv(scaleKL1, qmmv3_tiling_const::MXFP_DIVISOR_SIZE) *
+                          qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+        }
     }
-    if (depthInit > 1UL && perDepthSize > DB_SIZE * MTE2_MIN_LOAD_SIZE) {
-        return depthInit;
-    }
-    uint64_t depthScale = leftSize / perDepthSize;
-    if (depthInit > 1UL) {
-        uint64_t baseKSize = GetSizeWithDataType(baseK_, inputParams_.aDtype);
-        if (baseKSize == 0UL) {
-            return depthInit;
-        }
-        while ((depthScale * baseKSize) % BASIC_BLOCK_SIZE_512 != 0UL &&
-               (depthScale * baseKSize) > BASIC_BLOCK_SIZE_512) {
-            depthScale -= 1UL;
-        }
-        if ((depthScale * baseKSize) % BASIC_BLOCK_SIZE_512 != 0UL &&
-            (depthScale * baseKSize) >= BASIC_BLOCK_SIZE_256) {
-            depthScale = BASIC_BLOCK_SIZE_256 / baseKSize;
-        }
-        depthScale = std::max(depthScale, 1UL);
-    } else {
-        // Depth grows by powers of two.
-        constexpr uint64_t INDEX = 2UL;
-        depthScale = 1UL;
-        while (depthScale * perDepthSize < leftSize) {
-            depthScale *= INDEX;
-        }
-        depthScale = depthScale == 1UL ? depthScale : depthScale / INDEX;
-    }
-    return depthInit * depthScale;
+    return depth == 1UL ? depth : depth / INDEX;
 }
 
 uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
@@ -423,23 +359,23 @@ uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
     uint64_t stepKbBase = 1UL;
     if (inputParams_.transB) {
         uint64_t singleBaseKSize = GetSizeWithDataType(baseK_, inputParams_.bDtype);
-        if (singleBaseKSize != 0UL && singleBaseKSize < L2_ALIGN_SIZE) {
-            stepKbBase = ops::CeilDiv(L2_ALIGN_SIZE, singleBaseKSize);
+        if (singleBaseKSize != 0UL && singleBaseKSize < qmmv3_tiling_const::L2_ALIGN_SIZE) {
+            stepKbBase = ops::CeilDiv(qmmv3_tiling_const::L2_ALIGN_SIZE, singleBaseKSize);
         }
     }
 
     // Keep single-copy size at least 32KB without exceeding L1.
     uint64_t scaleBBaseK =
-        inputParams_.isMxPerGroup ? ops::CeilAlign(ops::CeilDiv(baseK_, MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE) : 0UL;
+        inputParams_.isMxPerGroup ? ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE), qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE) : 0UL;
     uint64_t baseBSize = GetSizeWithDataType(baseN_ * (baseK_ + scaleBBaseK) * stepKbBase, inputParams_.bDtype);
     if (baseBSize == 0UL) {
-        return DB_SIZE;
+        return qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     }
     uint64_t stepKbBaseScale = 1UL;
-    if (leftSize >= MTE2_MIN_LOAD_SIZE * DB_SIZE) {
+    if (leftSize >= MTE2_MIN_LOAD_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM) {
         stepKbBaseScale = ops::CeilDiv(MTE2_MIN_LOAD_SIZE, baseBSize);
     } else {
-        stepKbBaseScale = ops::CeilDiv(leftSize / DB_SIZE, baseBSize);
+        stepKbBaseScale = ops::CeilDiv(leftSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM, baseBSize);
     }
     stepKbBase *= stepKbBaseScale;
 
@@ -448,7 +384,7 @@ uint64_t L1TilingDataCalculator::GetDepthB1AfullLoad(uint64_t leftSize) const
     if (stepKbBase == 1UL && inputParams_.kSize > baseK_ && leftSize > baseBSize * refinedStepKb) {
         stepKbBase = refinedStepKb;
     }
-    return stepKbBase * DB_SIZE;
+    return stepKbBase * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
 }
 
 uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
@@ -457,20 +393,20 @@ uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
     uint64_t stepKaBase = 1UL;
     if (!inputParams_.transA) {
         uint64_t singleBaseKSize = GetSizeWithDataType(baseK_, inputParams_.aDtype);
-        if (singleBaseKSize != 0UL && singleBaseKSize < L2_ALIGN_SIZE) {
-            stepKaBase = ops::CeilDiv(L2_ALIGN_SIZE, singleBaseKSize);
+        if (singleBaseKSize != 0UL && singleBaseKSize < qmmv3_tiling_const::L2_ALIGN_SIZE) {
+            stepKaBase = ops::CeilDiv(qmmv3_tiling_const::L2_ALIGN_SIZE, singleBaseKSize);
         }
     }
 
     uint64_t baseASize = GetSizeWithDataType(baseM_ * baseK_ * stepKaBase, inputParams_.aDtype);
     if (baseASize == 0UL) {
-        return DB_SIZE;
+        return qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     }
     uint64_t stepKaBaseScale = 1UL;
-    if (leftSize >= MTE2_MIN_LOAD_SIZE * DB_SIZE) {
+    if (leftSize >= MTE2_MIN_LOAD_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM) {
         stepKaBaseScale = ops::CeilDiv(MTE2_MIN_LOAD_SIZE, baseASize);
     } else {
-        stepKaBaseScale = ops::CeilDiv(leftSize / DB_SIZE, baseASize);
+        stepKaBaseScale = ops::CeilDiv(leftSize / qmmv3_tiling_const::DOUBLE_BUFFER_NUM, baseASize);
     }
     stepKaBase *= stepKaBaseScale;
 
@@ -478,12 +414,12 @@ uint64_t L1TilingDataCalculator::GetDepthA1BfullLoad(uint64_t leftSize) const
     if (stepKaBase == 1UL && inputParams_.kSize > baseK_ && leftSize > baseASize * refinedStepKa) {
         stepKaBase = refinedStepKa;
     }
-    return stepKaBase * DB_SIZE;
+    return stepKaBase * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
 }
 
 uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) const
 {
-    uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, MX_GROUP_SIZE), MXFP_MULTI_BASE_SIZE);
+    uint64_t scaleBaseK = ops::CeilAlign(ops::CeilDiv(baseK_, qmmv3_tiling_const::MX_GROUP_SIZE), qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE);
     uint64_t baseScaleBSize = GetSizeWithDataType(baseN_ * scaleBaseK, inputParams_.scaleDtype);
     if (baseScaleBSize == 0UL || l1TilingData_.stepKb_ == 0UL || l1TilingData_.depthKb_ == 0UL) {
         return 1UL;
@@ -493,18 +429,18 @@ uint64_t L1TilingDataCalculator::GetScaleFactorBAfullLoad(uint64_t leftSize) con
     if (inputParams_.transB) {
         // K is the inner axis.
         uint64_t singleScaleBBaseKSize = GetSizeWithDataType(scaleBaseK, inputParams_.scaleDtype);
-        if (singleScaleBBaseKSize != 0UL && singleScaleBBaseKSize < L2_ALIGN_SIZE) {
-            scaleFactorBBase = ops::CeilDiv(L2_ALIGN_SIZE, singleScaleBBaseKSize);
+        if (singleScaleBBaseKSize != 0UL && singleScaleBBaseKSize < qmmv3_tiling_const::L2_ALIGN_SIZE) {
+            scaleFactorBBase = ops::CeilDiv(qmmv3_tiling_const::L2_ALIGN_SIZE, singleScaleBBaseKSize);
         }
     }
 
     uint64_t scaleFactorBMaxFromK = inputParams_.kSize / (l1TilingData_.stepKb_ * baseK_);
-    scaleFactorBMaxFromK = std::min(static_cast<uint64_t>(SCALER_FACTOR_MAX), scaleFactorBMaxFromK);
-    scaleFactorBMaxFromK = std::max(static_cast<uint64_t>(SCALER_FACTOR_MIN), scaleFactorBMaxFromK);
+    scaleFactorBMaxFromK = std::min(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MAX), scaleFactorBMaxFromK);
+    scaleFactorBMaxFromK = std::max(static_cast<uint64_t>(qmmv3_tiling_const::SCALER_FACTOR_MIN), scaleFactorBMaxFromK);
 
     uint64_t scaleFactorB = 1UL;
     uint64_t scaleFactorBMax =
-        std::min(MTE2_MIN_LOAD_SIZE * DB_SIZE, leftSize) / (baseScaleBSize * l1TilingData_.depthKb_);
+        std::min(MTE2_MIN_LOAD_SIZE * qmmv3_tiling_const::DOUBLE_BUFFER_NUM, leftSize) / (baseScaleBSize * l1TilingData_.depthKb_);
     if (scaleFactorBMax != 0UL) {
         if (scaleFactorBBase <= scaleFactorBMaxFromK && scaleFactorBMax >= scaleFactorBBase) {
             // Keep 128B inner-axis alignment while meeting 32KB copy size and L1 limits.
@@ -533,9 +469,9 @@ bool L1TilingDataCalculator::ComputeL1TilingMmadS8S4()
     PostCacheLinePass(leftL1Size_, maxStepK);
 
     l1TilingData_.stepKa_ = isAFullLoad_ ? 1UL : l1TilingData_.stepKa_;
-    l1TilingData_.depthKa_ = isAFullLoad_ ? l1TilingData_.stepKa_ : l1TilingData_.stepKa_ * DB_SIZE;
+    l1TilingData_.depthKa_ = isAFullLoad_ ? l1TilingData_.stepKa_ : l1TilingData_.stepKa_ * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     l1TilingData_.stepKb_ = isBFullLoad_ ? 1UL : l1TilingData_.stepKb_;
-    l1TilingData_.depthKb_ = isBFullLoad_ ? l1TilingData_.stepKb_ : l1TilingData_.stepKb_ * DB_SIZE;
+    l1TilingData_.depthKb_ = isBFullLoad_ ? l1TilingData_.stepKb_ : l1TilingData_.stepKb_ * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     return true;
 }
 
@@ -571,24 +507,36 @@ bool L1TilingDataCalculator::ComputeL1TilingMmadS8S4LUT()
 
 uint64_t L1TilingDataCalculator::GetSingleCoreAFullLoadSize() const
 {
+    if (inputParams_.isMxPerGroup) {
+        // MX kernels consume K in 64-element groups; scale bytes are reserved separately.
+        return GetSizeWithDataType(baseM_ * ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
+            inputParams_.aDtype);
+    }
     return baseM_ *
            (inputParams_.transA ?
-                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
-                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.aDtype) :
+                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
 }
 
 uint64_t L1TilingDataCalculator::GetSingleCoreBFullLoadSize() const
 {
+    if (inputParams_.isMxPerGroup) {
+        // MX kernels consume K in 64-element groups; scale bytes are reserved separately.
+        return GetSizeWithDataType(baseN_ * ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
+            inputParams_.bDtype);
+    }
     return baseN_ *
            (inputParams_.transB ?
-                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
-                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.bDtype));
+                ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK) :
+                GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.bDtype));
 }
 
 bool L1TilingDataCalculator::CheckL1Size(uint64_t leftL1Size, uint64_t tempStepKa, uint64_t tempStepKb) const
 {
-    uint64_t singleCoreASize = tempStepKa * GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * DB_SIZE;
-    uint64_t singleCoreBSize = tempStepKb * GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * DB_SIZE;
+    uint64_t singleCoreASize =
+        tempStepKa * GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    uint64_t singleCoreBSize =
+        tempStepKb * GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
 
     if (isAFullLoad_) {
         singleCoreASize = GetSingleCoreAFullLoadSize();
@@ -601,8 +549,8 @@ bool L1TilingDataCalculator::CheckL1Size(uint64_t leftL1Size, uint64_t tempStepK
 void L1TilingDataCalculator::AdjustStepK(
     uint64_t leftL1Size, uint64_t& tempStepKa, uint64_t& tempStepKb, bool isStepKa) const
 {
-    uint64_t oneBaseADataSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * DB_SIZE;
-    uint64_t oneBaseBDataSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * DB_SIZE;
+    uint64_t oneBaseADataSize = GetSizeWithDataType(baseM_ * baseK_, inputParams_.aDtype) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
+    uint64_t oneBaseBDataSize = GetSizeWithDataType(baseN_ * baseK_, inputParams_.bDtype) * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     if (isStepKa) {
         uint64_t singleCoreBSize = tempStepKb * oneBaseBDataSize;
         if (isBFullLoad_) {
@@ -694,7 +642,7 @@ void L1TilingDataCalculator::L1FullLoadCacheLinePass(
         OP_LOGE(inputParams_.opName, "Invalid aCacheLine or bCacheLine.");
         return;
     }
-    uint32_t maxStepKWithSmallCase = 4U * DB_SIZE;
+    uint32_t maxStepKWithSmallCase = 4U * qmmv3_tiling_const::DOUBLE_BUFFER_NUM;
     if (ops::CeilDiv(inputParams_.kSize, baseK_) < maxStepKWithSmallCase) {
         return;
     }

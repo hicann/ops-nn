@@ -61,8 +61,8 @@ private:
     bool ComputeL1TilingMmadS8S4();
     bool ComputeL1TilingMmadS8S4LUT();
     bool CalStepKs();
-    bool CalScaleFactors(uint64_t baseASize, uint64_t baseBSize, uint64_t baseScaleASize, uint64_t baseScaleBSize);
-    uint64_t GetDepthA1B1(uint64_t leftSize, uint64_t perDepthSize, uint64_t depthInit) const;
+    bool CalScaleFactors(uint64_t baseASize, uint64_t baseBSize);
+    uint64_t GetDepthA1B1() const;
     uint64_t GetDepthB1AfullLoad(uint64_t leftSize) const;
     uint64_t GetDepthA1BfullLoad(uint64_t leftSize) const;
     uint64_t GetScaleFactorBAfullLoad(uint64_t leftSize) const;

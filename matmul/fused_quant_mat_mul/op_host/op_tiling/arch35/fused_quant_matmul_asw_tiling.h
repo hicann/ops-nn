@@ -28,7 +28,6 @@ public:
     explicit FusedQuantMatMulASWTiling(gert::TilingContext *context) : AdaptiveSlidingWindowCubeTiling(context)
     {
         inputParams_.Reset();
-        ResetAdaptiveSlidingWindowPlatformInfoCache();
     }
     ~FusedQuantMatMulASWTiling() override = default;
 

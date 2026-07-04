@@ -17,13 +17,10 @@
 #include "log/log.h"
 #include "matmul/common/op_host/log_format_util.h"
 #include "quant_batch_matmul_v3_checker.h"
+#include "quant_batch_matmul_v3_tiling_util.h"
 #include "error_util.h"
 
 namespace {
-constexpr uint64_t MX_GROUP_SIZE = 32UL;
-constexpr uint64_t MXFP_DIVISOR_SIZE = 64UL;
-constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2UL;
-constexpr uint64_t PER_BLOCK_SIZE = 128UL;
 constexpr size_t LAST_FIRST_DIM_INDEX = 1;
 constexpr size_t DIM_NUM_TWO = 2;
 constexpr size_t SCALE_THREE_DIM = 3;
@@ -553,17 +550,17 @@ bool QuantBatchMatmulV3Checker::CheckInputValidInPerblockMode(const gert::Shape&
 
 bool QuantBatchMatmulV3Checker::CheckGroupValidInPerblockMode() const
 {
-    OP_TILING_CHECK(inputParams_.groupSizeM != PER_BLOCK_SIZE && inputParams_.groupSizeM != 1UL,
+    OP_TILING_CHECK(inputParams_.groupSizeM != qmmv3_tiling_const::PER_BLOCK_SIZE && inputParams_.groupSizeM != 1UL,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeM", std::to_string(inputParams_.groupSizeM).c_str(),
                         "when the quantization mode is G-B or B-B, input or inferred groupSizeM must be 128 or 1, groupSizeM = (groupSize >> 32) & 0xFFFF"),
                     return false);
-    OP_TILING_CHECK(inputParams_.groupSizeK != PER_BLOCK_SIZE,
+    OP_TILING_CHECK(inputParams_.groupSizeK != qmmv3_tiling_const::PER_BLOCK_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeK", std::to_string(inputParams_.groupSizeK).c_str(),
                         "when the quantization mode is G-B or B-B, input or inferred groupSizeK must be 128, groupSizeK = groupSize & 0xFFFF"),
                     return false);
-    OP_TILING_CHECK(inputParams_.groupSizeN != PER_BLOCK_SIZE,
+    OP_TILING_CHECK(inputParams_.groupSizeN != qmmv3_tiling_const::PER_BLOCK_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "groupSizeN", std::to_string(inputParams_.groupSizeN).c_str(),
                         "when the quantization mode is G-B or B-B, input or inferred groupSizeN must be 128, groupSizeN = (groupSize >> 16) & 0xFFFF"),
@@ -578,9 +575,9 @@ bool QuantBatchMatmulV3Checker::CheckShapeValidInPerblockMode(const gert::Shape&
     auto  x1ShapeLen = x1Shape.GetDimNum();
     auto  x2ShapeLen = x2Shape.GetDimNum();
     OP_TILING_CHECK(
-        (ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)), PER_BLOCK_SIZE) !=
+        (ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 2)), qmmv3_tiling_const::PER_BLOCK_SIZE) !=
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 2)) ||
-         ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), PER_BLOCK_SIZE) !=
+         ops::CeilDiv(static_cast<uint64_t>(x2Shape.GetDim(x2ShapeLen - 1)), qmmv3_tiling_const::PER_BLOCK_SIZE) !=
              static_cast<uint64_t>(scaleShape.GetDim(x2ShapeLen - 1))),
         OP_LOGE_FOR_INVALID_SHAPES_WITH_REASON(
             inputParams_.opName, "scale, x2",
@@ -672,7 +669,7 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
     auto mDimIdx = inputParams_.transA ? 1 : 0;
     auto kDimIdx = inputParams_.transA ? 0 : 1;
     OP_TILING_CHECK(
-        static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
+        static_cast<uint64_t>(pertoken.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
         OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
             inputParams_.opName, "x1K, pertokenScaleK",
             FormatString("%lu, %ld", inputParams_.kSize, pertoken.GetDim(kDimIdx)).c_str(),
@@ -684,7 +681,7 @@ bool QuantBatchMatmulV3Checker::MxPertokenScaleShapeCheck(const gert::StorageSha
                         FormatString("%lu, %ld", inputParams_.mSize, pertoken.GetDim(mDimIdx)).c_str(),
                         "when the quantization mode is mx, the m dimension of pertokenScale must be equal to the m dimension size of x1"),
                     return false);
-    OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
+    OP_TILING_CHECK(static_cast<uint64_t>(pertoken.GetDim(pertokenShapeLen - 1)) != qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "pertokenScale last dimension",
                         std::to_string(pertoken.GetDim(pertokenShapeLen - 1)).c_str(),
@@ -704,13 +701,21 @@ bool QuantBatchMatmulV3Checker::MxScaleShapeCheck(const gert::Shape &scaleShape)
         return false);
     auto kDimIdx = inputParams_.transB ? 1 : 0;
     auto nDimIdx = inputParams_.transB ? 0 : 1;
-bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE)) || 
-                    (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE));
-    bool kDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) || 
-                    (scaleShape.GetDim(nDimIdx) == 1 && static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
+    bool nDimHasOne =
+        (scaleShape.GetDim(kDimIdx) == 1 &&
+         static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) ==
+             ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE)) ||
+        (scaleShape.GetDim(nDimIdx) == 1 &&
+         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) ==
+             ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE));
+    bool kDimHasOne =
+        (scaleShape.GetDim(kDimIdx) == 1 &&
+         static_cast<uint64_t>(scaleShape.GetDim(nDimIdx)) == inputParams_.nSize) ||
+        (scaleShape.GetDim(nDimIdx) == 1 &&
+         static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) == inputParams_.nSize);
     if(!nDimHasOne && !kDimHasOne){
         OP_TILING_CHECK(
-            static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, MXFP_DIVISOR_SIZE),
+            static_cast<uint64_t>(scaleShape.GetDim(kDimIdx)) != ops::CeilDiv(inputParams_.kSize, qmmv3_tiling_const::MXFP_DIVISOR_SIZE),
             OP_LOGE_FOR_INVALID_VALUES_WITH_REASON(
                 inputParams_.opName, "x2K, scaleK",
                 FormatString("%lu, %ld", inputParams_.kSize, scaleShape.GetDim(kDimIdx)).c_str(),
@@ -723,7 +728,7 @@ bool nDimHasOne = (scaleShape.GetDim(kDimIdx) == 1 && static_cast<uint64_t>(scal
                             "when the quantization mode is mx, the n dimension of scale must be equal to the n dimension size of x2"),
                         return false);
     }
-    OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != MXFP_MULTI_BASE_SIZE,
+    OP_TILING_CHECK(static_cast<uint64_t>(scaleShape.GetDim(scaleShapeLen - 1)) != qmmv3_tiling_const::MXFP_MULTI_BASE_SIZE,
                     OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
                         inputParams_.opName, "scale dimension 2",
                         std::to_string(scaleShape.GetDim(scaleShapeLen - 1)).c_str(),

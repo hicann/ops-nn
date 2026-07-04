@@ -26,7 +26,6 @@ public:
         : AdaptiveSlidingWindowPerblockBasicAPITiling(context)
         {
             inputParams_.Reset();
-            ResetAdaptiveSlidingWindowPlatformInfoCache();
         }
     ~AdaptiveSlidingWindowBasicTilingV4() override = default;
     uint64_t GetTilingKey() const override;

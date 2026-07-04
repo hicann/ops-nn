@@ -23,17 +23,6 @@
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 
 namespace {
-constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
-constexpr uint64_t AFULLLOAD_SINGLE_CORE_B_SCALER = 2UL;
-constexpr uint64_t WINDOW_LEN = 4UL;
-constexpr uint32_t DB_SIZE = 2;
-constexpr uint32_t DATA_SIZE_L0C = 4;
-constexpr uint8_t L1_TWO_BUFFER = 2;
-constexpr uint8_t L1_FOUR_BUFFER = 4;
-constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
-constexpr uint64_t CUBE_BLOCK = 16UL;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
-
 const std::vector<int32_t> supportedNpuArch = {
     static_cast<int32_t>(NpuArch::DAV_3510), static_cast<int32_t>(NpuArch::DAV_RESV)};
 constexpr int32_t TILING_PRIORITY = optiling::strategy::CUBE_BASIC_API_ASW;
@@ -99,8 +88,8 @@ ge::graphStatus AdaptiveSlidingWindowCubeBasicAPITiling::GetWorkspaceSize()
     if (isSupportS4S4_) {
         uint64_t aInt8Size = inputParams_.batchC * inputParams_.mSize * inputParams_.kSize;
         uint64_t bInt8Size = inputParams_.kSize * inputParams_.nSize;
-        workspaceSize_ += ops::CeilAlign(aInt8Size, BASIC_BLOCK_SIZE_128) +
-                          ops::CeilAlign(bInt8Size, BASIC_BLOCK_SIZE_128);
+        workspaceSize_ += ops::CeilAlign(aInt8Size, qmmv3_tiling_const::BASIC_BLOCK_SIZE_128) +
+                          ops::CeilAlign(bInt8Size, qmmv3_tiling_const::BASIC_BLOCK_SIZE_128);
     }
     return ge::GRAPH_SUCCESS;
 }
@@ -152,9 +141,9 @@ bool AdaptiveSlidingWindowCubeBasicAPITiling::CalL1Tiling()
 
     basicTiling_.iterateOrder = 0U;
     basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
+        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
+         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
             1U;
 
     L1TilingMode mode = L1TilingMode::DEFAULT;
@@ -206,25 +195,25 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::CalculateNBufferNum4Cube()
     }
     uint64_t usedL1Size = 0UL;
     if (isBFullLoad_) {
-        uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, inputParams_.transB ? CUBE_REDUCE_BLOCK : CUBE_BLOCK);
+        uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, inputParams_.transB ? qmmv3_tiling_const::CUBE_REDUCE_BLOCK : qmmv3_tiling_const::CUBE_BLOCK);
         usedL1Size = GetSizeWithDataType(basicTiling_.baseN * kAligned, inputParams_.bDtype);
     } else {
-        usedL1Size = GetSizeWithDataType(basicTiling_.baseN * kL1, inputParams_.bDtype) * L1_FOUR_BUFFER;
+        usedL1Size = GetSizeWithDataType(basicTiling_.baseN * kL1, inputParams_.bDtype) * qmmv3_tiling_const::L1_FOUR_BUFFER;
     }
     if (inputParams_.isPerChannel) {
-        usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.scaleDtype) * L1_TWO_BUFFER;
+        usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.scaleDtype) * qmmv3_tiling_const::L1_TWO_BUFFER;
     }
     if (inputParams_.hasBias) {
-        usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.biasDtype) * L1_TWO_BUFFER;
+        usedL1Size += GetSizeWithDataType(basicTiling_.baseN, inputParams_.biasDtype) * qmmv3_tiling_const::L1_TWO_BUFFER;
     }
     if (isAFullLoad_) {
-        uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, !inputParams_.transA ? CUBE_REDUCE_BLOCK : CUBE_BLOCK);
+        uint64_t kAligned = ops::CeilAlign(inputParams_.kSize, !inputParams_.transA ? qmmv3_tiling_const::CUBE_REDUCE_BLOCK : qmmv3_tiling_const::CUBE_BLOCK);
         usedL1Size += GetSizeWithDataType(basicTiling_.baseM * kAligned, inputParams_.aDtype);
     } else {
-        usedL1Size += GetSizeWithDataType(basicTiling_.baseM * kL1, inputParams_.aDtype) * L1_FOUR_BUFFER;
+        usedL1Size += GetSizeWithDataType(basicTiling_.baseM * kL1, inputParams_.aDtype) * qmmv3_tiling_const::L1_FOUR_BUFFER;
     }
-    tilingData_.matmulTiling.nBufferNum = usedL1Size < aicoreParams_.l1Size ? L1_FOUR_BUFFER : L1_TWO_BUFFER;
-    if (tilingData_.matmulTiling.nBufferNum == L1_FOUR_BUFFER) {
+    tilingData_.matmulTiling.nBufferNum = usedL1Size <= aicoreParams_.l1Size ? qmmv3_tiling_const::L1_FOUR_BUFFER : qmmv3_tiling_const::L1_TWO_BUFFER;
+    if (tilingData_.matmulTiling.nBufferNum == qmmv3_tiling_const::L1_FOUR_BUFFER) {
         tilingData_.matmulTiling.stepKa = std::min(basicTiling_.stepKa, basicTiling_.stepKb);
         tilingData_.matmulTiling.stepKb = tilingData_.matmulTiling.stepKa;
     }
@@ -235,13 +224,13 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateAFullLoadStatus()
     uint64_t realBaseMSize = adaptiveWin_.mBaseTailSplitCnt == 1UL ? adaptiveWin_.baseM : adaptiveWin_.mTailMain;
     uint64_t singleCoreASize = realBaseMSize *
                                (inputParams_.transA ?
-                                    GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK),
+                                    GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK),
                                                         inputParams_.aDtype) :
                                     ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype),
-                                                   CUBE_REDUCE_BLOCK));
+                                                   qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
 
-    isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_A_SCALER &&
-                   adaptiveWin_.mBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
+    isAFullLoad_ = singleCoreASize <= aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_A_SCALER &&
+                   adaptiveWin_.mBlockCnt < qmmv3_tiling_const::WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.mBlockCnt == 0 &&
                    adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     if (isAFullLoad_ && adaptiveWin_.baseM != realBaseMSize) {
         adaptiveWin_.baseM = realBaseMSize;
@@ -260,13 +249,15 @@ void AdaptiveSlidingWindowCubeBasicAPITiling::UpdateBFullLoadStatus()
     uint64_t singleCoreBSize = realBaseNSize *
                                (inputParams_.transB ?
                                     ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype),
-                                                   CUBE_REDUCE_BLOCK) :
-                                    GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK),
+                                                   qmmv3_tiling_const::CUBE_REDUCE_BLOCK) :
+                                    GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK),
                                                         inputParams_.bDtype));
 
-    isBFullLoad_ = singleCoreBSize <= aicoreParams_.l1Size / AFULLLOAD_SINGLE_CORE_B_SCALER &&
-                   adaptiveWin_.nBlockCnt < WINDOW_LEN && aicoreParams_.aicNum % adaptiveWin_.nBlockCnt == 0 &&
-                   adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
+    isBFullLoad_ =
+        singleCoreBSize <= aicoreParams_.l1Size / qmmv3_tiling_const::AFULLLOAD_SINGLE_CORE_B_SCALER &&
+        adaptiveWin_.nBlockCnt < qmmv3_tiling_const::WINDOW_LEN &&
+        aicoreParams_.aicNum % adaptiveWin_.nBlockCnt == 0 &&
+        adaptiveWin_.totalBlockCnt > aicoreParams_.aicNum && inputParams_.batchC == 1;
     if (isBFullLoad_ && adaptiveWin_.baseN != realBaseNSize) {
         adaptiveWin_.baseN = realBaseNSize;
         adaptiveWin_.nBaseTailSplitCnt = 1UL;

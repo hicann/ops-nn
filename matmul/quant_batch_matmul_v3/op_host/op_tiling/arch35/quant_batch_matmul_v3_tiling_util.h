@@ -25,6 +25,36 @@
 
 namespace optiling {
 
+namespace qmmv3_tiling_const {
+constexpr uint64_t CUBE_BLOCK = 16UL;
+constexpr uint64_t CUBE_REDUCE_BLOCK = 32UL;
+constexpr uint64_t L1_ALIGN_SIZE = 32UL;
+constexpr uint64_t L2_ALIGN_SIZE = 128UL;
+// MTE2 address alignment size in bytes.
+constexpr uint64_t MTE2_ADDRESS_ALIGN_SIZE = 128UL;
+constexpr uint64_t MX_GROUP_SIZE = 32UL;
+constexpr uint64_t MXFP_DIVISOR_SIZE = 64UL;
+constexpr uint64_t MXFP_MULTI_BASE_SIZE = 2UL;
+constexpr uint64_t BASIC_BLOCK_SIZE_32 = 32UL;
+constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
+constexpr uint64_t BASIC_BLOCK_SIZE_256 = 256UL;
+constexpr uint64_t PER_BLOCK_SIZE = 128UL;
+constexpr uint32_t DOUBLE_BUFFER_NUM = 2U;
+constexpr uint32_t DATA_SIZE_L0C = 4U;
+constexpr uint8_t L1_TWO_BUFFER = 2U;
+constexpr uint8_t L1_FOUR_BUFFER = 4U;
+constexpr uint32_t NUM_HALF = 2U;
+// Mix/per-block templates require the AIC:AIV core ratio to be 1:2.
+constexpr uint32_t CORE_RATIO = 2U;
+constexpr uint64_t WINDOW_LEN = 4UL;
+constexpr uint64_t AFULLLOAD_SINGLE_CORE_A_SCALER = 2UL;
+constexpr uint64_t AFULLLOAD_SINGLE_CORE_B_SCALER = 2UL;
+// Heuristic cap for reserved MX scaleKL1 size.
+constexpr uint64_t ESTIMATED_SCALE_K = 4096UL;
+constexpr uint32_t SCALER_FACTOR_MAX = 127U;
+constexpr uint32_t SCALER_FACTOR_MIN = 1U;
+} // namespace qmmv3_tiling_const
+
 struct BasicRunInfoTiling {
     uint32_t usedCoreNum = 1;
     uint32_t singleCoreM = 1;

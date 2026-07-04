@@ -24,16 +24,6 @@
 #include "quant_batch_matmul_v3_tiling_strategy.h"
 
 namespace {
-constexpr uint64_t CUBE_BLOCK = 16;
-constexpr uint64_t CUBE_REDUCE_BLOCK = 32;
-constexpr uint64_t BASIC_BLOCK_SIZE_128 = 128UL;
-constexpr uint32_t DB_SIZE = 2;
-constexpr uint32_t DATA_SIZE_L0C = 4;
-constexpr uint32_t NUM_HALF = 2;
-constexpr uint64_t MIN_CARRY_DATA_SIZE_32K = 32 * 1024UL;
-constexpr uint64_t FULL_LOAD_DATA_SIZE_64K = 64 * 1024UL;
-constexpr uint64_t CACHE_LINE_512B = 512UL;
-constexpr uint32_t MAX_STEPK_With_BL1_FULL = 8U;
 
 const std::vector<int32_t> supportedNpuArch = {
     static_cast<int32_t>(NpuArch::DAV_3510), static_cast<int32_t>(NpuArch::DAV_RESV)};
@@ -93,9 +83,9 @@ bool AdaptiveSlidingWindowCubeTiling::CalL1Tiling()
 
     basicTiling_.iterateOrder = 0U;
     basicTiling_.dbL0c =
-        ((basicTiling_.baseM * basicTiling_.baseN * DATA_SIZE_L0C * DB_SIZE <= aicoreParams_.l0cSize) &&
-         CheckBiasAndScale(basicTiling_.baseN, DB_SIZE)) ?
-            DB_SIZE :
+        ((basicTiling_.baseM * basicTiling_.baseN * qmmv3_tiling_const::DATA_SIZE_L0C * qmmv3_tiling_const::DOUBLE_BUFFER_NUM <= aicoreParams_.l0cSize) &&
+         CheckBiasAndScale(basicTiling_.baseN, qmmv3_tiling_const::DOUBLE_BUFFER_NUM)) ?
+            qmmv3_tiling_const::DOUBLE_BUFFER_NUM :
             1U;
     L1TilingMode mode = L1TilingMode::DEFAULT;
     if (compileInfo_.npuArch == NpuArch::DAV_RESV) {
@@ -138,8 +128,9 @@ void AdaptiveSlidingWindowCubeTiling::UpdateAFullLoadStatus()
     uint64_t singleCoreASizeWithFullLoad =
         realBaseMSize *
         (inputParams_.transA ?
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.aDtype) :
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
+    // Empirical A full-load cap: keep A under 256KB so L1 still has room for B-side data and auxiliary buffers.
     constexpr uint64_t A_L1_LOAD_THRESHOLD = 256 * 1024UL;
     bool blockCntCmp = (adaptiveWin_.mBlockCnt <= adaptiveWin_.nBlockCnt);
     if (compileInfo_.supportMmadS8S4) {
@@ -170,11 +161,11 @@ void AdaptiveSlidingWindowCubeTiling::UpdateBFullLoadStatus()
     uint64_t singleCoreBSizeWithFullLoad =
         adaptiveWin_.baseN *
         (inputParams_.transB ?
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.bDtype));
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK) :
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.bDtype));
 
     isBFullLoad_ =
-        singleCoreBSizeWithFullLoad <= aicoreParams_.l1Size / NUM_HALF &&
+        singleCoreBSizeWithFullLoad <= aicoreParams_.l1Size / qmmv3_tiling_const::NUM_HALF &&
         adaptiveWin_.mBlockCnt > adaptiveWin_.nBlockCnt &&
         (((adaptiveWin_.nBlockCnt == 1UL || adaptiveWin_.nBlockCnt == 2UL || adaptiveWin_.nBlockCnt == 4UL) &&
           aicoreParams_.aicNum >= adaptiveWin_.nBlockCnt && aicoreParams_.aicNum % adaptiveWin_.nBlockCnt == 0) ||
@@ -192,18 +183,19 @@ void AdaptiveSlidingWindowCubeTiling::UpdateABFullLoadStatus()
     uint64_t singleCoreASizeWithFullLoad =
         adaptiveWin_.baseM *
         (inputParams_.transA ?
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.aDtype) :
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), CUBE_REDUCE_BLOCK));
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.aDtype) :
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.aDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK));
     uint64_t singleCoreBSizeWithFullLoad =
         adaptiveWin_.baseN *
         (inputParams_.transB ?
-             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), CUBE_REDUCE_BLOCK) :
-             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, CUBE_BLOCK), inputParams_.bDtype));
+             ops::CeilAlign(GetSizeWithDataType(inputParams_.kSize, inputParams_.bDtype), qmmv3_tiling_const::CUBE_REDUCE_BLOCK) :
+             GetSizeWithDataType(ops::CeilAlign(inputParams_.kSize, qmmv3_tiling_const::CUBE_BLOCK), inputParams_.bDtype));
 
     uint64_t biasDtypeSize = ge::GetSizeByDataType(inputParams_.biasDtype);
     uint64_t scaleDtypeSize = ge::GetSizeByDataType(inputParams_.scaleDtype);
     uint64_t singleCoreBiasSize = inputParams_.hasBias ? adaptiveWin_.baseN * biasDtypeSize : 0UL;
     uint64_t singleCoreScaleSize = inputParams_.isPerChannel ? adaptiveWin_.baseN * scaleDtypeSize : 0UL;
+    // AB full-load needs one operand small and combined A+B below this tuned cap to leave room for bias/scale.
     constexpr uint64_t AB_L1_SINGLE_LOAD_THRESHOLD = 64 * 1024UL;
     constexpr uint64_t AB_L1_BOTH_LOAD_THRESHOLD = 272 * 1024UL;
     bool hasEnoughL1 =

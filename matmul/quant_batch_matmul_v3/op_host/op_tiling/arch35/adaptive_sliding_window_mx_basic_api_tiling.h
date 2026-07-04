@@ -31,9 +31,18 @@ public:
 private:
     void Reset();
     void CalculateNBufferNum4MX();
+    uint64_t GetHalfKFallbackScaleKL1(uint64_t kL1) const;
+    uint64_t GetFullCoverScaleKL1IfPossible(uint64_t kL1, uint64_t scaleKL1) const;
+    bool CanReduceStepKToTwo(uint32_t stepK, uint64_t stepKTwoKL1) const;
+    uint64_t CalcFourBufferUsedL1Size4MX(
+        uint64_t kL1, uint64_t scaleKL1, uint64_t baseM, uint64_t baseN, bool isAFullLoad) const;
+    uint64_t CalcMxFullKLoadSize(uint64_t outerSize, ge::DataType dataDtype, ge::DataType scaleDtype) const;
+    bool ShouldKeepAFullLoadByRepeatLoadRatio() const;
     void UpdateAFullLoadStatus();
+    bool CanOpenFourBufferByL1Estimate(bool isAFullLoad, uint64_t baseM, uint64_t baseN) const;
     bool IsWithoutBatchTilingData() const;
     void SetWithoutBatchTilingData();
+    void NormalizeSingleRoundTailSplitBasicBlock();
 
 protected:
     bool IsCapable() override;
