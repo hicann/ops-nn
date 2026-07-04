@@ -93,7 +93,7 @@ aclnnStatus aclnnIndexPutImpl(
         <td>indices</td>
         <td>输入</td>
         <td>公式中的indices。</td>
-        <td>indices中Tensor个数不能超过selfRef的维度数（最大8维）</td>
+        <td>indices中Tensor个数不能超过selfRef的维度数（最大8维）。当数据类型为BOOL时，各Tensor作为掩码输入，按顺序依次对应selfRef的维度，每个掩码Tensor的各维度大小必须与selfRef中对应位置的维度大小完全一致</td>
         <td>INT32、INT64、BOOL</td>
         <td>ND</td>
         <td>1-8</td>
@@ -103,7 +103,7 @@ aclnnStatus aclnnIndexPutImpl(
         <td>values</td>
         <td>输入</td>
         <td>公式中的values。</td>
-        <td></td>
+        <td> - </td>
         <td>和selfRef一致</td>
         <td>ND</td>
         <td>维度数 = indices广播后维度数 + (selfRef维度数 - indices个数)</td>
@@ -177,8 +177,8 @@ aclnnStatus aclnnIndexPutImpl(
       <td>传入的selfRef、indices、values是空指针时。</td>
       </tr>
       <tr>
-      <td rowspan="5">ACLNN_ERR_PARAM_INVALID</td>
-      <td rowspan="5">161002</td>
+      <td rowspan="6">ACLNN_ERR_PARAM_INVALID</td>
+      <td rowspan="6">161002</td>
       <td>selfRef、values、indices的数据类型不在支持的范围之内。</td>
       </tr>
       <tr>
@@ -191,7 +191,7 @@ aclnnStatus aclnnIndexPutImpl(
       <td>indices中Tensor个数超过selfRef维度数。</td>
       </tr>
       <tr>
-      <td>Atlas 训练系列产品使用BFLOAT16数据类型时。</td>
+      <td>indices中BOOL类型索引（掩码）的shape与selfRef对应维度不一致时。</td>
       </tr>
     </tbody>
     </table>
@@ -245,6 +245,7 @@ aclnnStatus aclnnIndexPutImpl(
 
 - 输入参数selfRef, indices, values一般有以下约束：
   - indices中的Tensor个数不能超过selfRef的维度（最大8维）。
+  - 当indices数据类型为BOOL时，各Tensor作为掩码输入，按顺序依次对应selfRef的维度，每个掩码Tensor的各维度大小必须与selfRef中对应位置的维度大小完全一致。例如selfRef的shape为(3,4,5)，indices包含两个BOOL类型的Tensor，则第一个掩码的shape必须为(3,)，第二个掩码的shape必须为(4,)。
   - values的维度需满足以下公式或广播后满足以下公式：
       - values.Dims() = indices[i].Dims() + (selfRef.Dims() - indices.size())
       - 其意义是values前一半维度需要与indices中的Tensor维度相同（indices中的Tensor会广播成相同shape），后一半维度需要与selfRef维度扣除indices中Tensor个数后相同。

@@ -369,6 +369,54 @@ static inline bool CheckShape(const aclTensor* selfRef, const aclTensorList *ind
   return true;
 }
 
+static bool CheckBoolMaskShape(const aclTensor* selfRef, const aclTensorList* indices) {
+  int64_t indicesSize = static_cast<int64_t>(indices->Size());
+  if (indicesSize == 0) {
+    return true;
+  }
+  bool hasBoolMask = false;
+  for (int64_t i = 0; i < indicesSize; i++) {
+    const aclTensor* curIndex = (*indices)[i];
+    if (curIndex != nullptr && curIndex->GetViewShape().GetShapeSize() != 0 &&
+        curIndex->GetDataType() == op::DataType::DT_BOOL) {
+      hasBoolMask = true;
+      break;
+    }
+  }
+  if (!hasBoolMask) {
+    return true;
+  }
+  int64_t selfDimNum = static_cast<int64_t>(selfRef->GetViewShape().GetDimNum());
+  int64_t consumedDims = 0;
+  for (int64_t i = 0; i < indicesSize; i++) {
+    const aclTensor* curIndex = (*indices)[i];
+    if (curIndex == nullptr || curIndex->GetViewShape().GetShapeSize() == 0) {
+      consumedDims++;
+      continue;
+    }
+    int64_t indexDimNum = static_cast<int64_t>(curIndex->GetViewShape().GetDimNum());
+    if (consumedDims + indexDimNum > selfDimNum) {
+      OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+              "The bool mask at indices[%ld] has %ld dimensions, "
+              "but only %ld dimensions remain in selfRef (total %ld, already consumed %ld).",
+              i, indexDimNum, selfDimNum - consumedDims, selfDimNum, consumedDims);
+      return false;
+    }
+    for (int64_t j = 0; j < indexDimNum; j++) {
+      int64_t srcIdx = consumedDims + j;
+      if (curIndex->GetViewShape().GetDim(j) != selfRef->GetViewShape().GetDim(srcIdx)) {
+        OP_LOGE(ACLNN_ERR_PARAM_INVALID,
+                "The shape of the bool mask at indices[%ld] dim %ld (size %ld) does not match "
+                "the shape of the indexed tensor at dimension %ld (size %ld).",
+                i, j, curIndex->GetViewShape().GetDim(j), srcIdx, selfRef->GetViewShape().GetDim(srcIdx));
+        return false;
+      }
+    }
+    consumedDims += indexDimNum;
+  }
+  return true;
+}
+
 static aclnnStatus CheckParams(const aclTensor *selfRef, const aclTensorList *indices, const aclTensor *values) {
   // 错误码等DFX方案细化后刷新，错误日志在check接口内打印
   // 1. 检查参数是否为空指针
@@ -382,6 +430,9 @@ static aclnnStatus CheckParams(const aclTensor *selfRef, const aclTensorList *in
 
   // 4. 检查输入的数据shape是否符合条件
   CHECK_RET(CheckShape(selfRef, indices), ACLNN_ERR_PARAM_INVALID);
+
+  // 5. 检查bool类型索引（掩码）的shape是否与selfRef对应维度一致
+  CHECK_RET(CheckBoolMaskShape(selfRef, indices), ACLNN_ERR_PARAM_INVALID);
 
   return ACLNN_SUCCESS;
 }
