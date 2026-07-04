@@ -9,7 +9,7 @@
  */
 
 /*!
- * \file test_apple_adam_w_v2_arch35.cpp
+ * \file test_apply_adam_w_v2_arch35.cpp
  * \brief
  */
 

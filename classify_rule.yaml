@@ -192,7 +192,7 @@ ops-nn:
       - optim/apply_ftrl/tests/ut/CMakeLists.txt
       - optim/apply_ftrl/tests/ut/op_host/CMakeLists.txt
       - optim/apply_ftrl/tests/ut/op_host/test_apply_ftrl_infershape.cpp
-      - optim/apply_ftrl/tests/ut/op_host/test_apple_ftrl_tiling.cpp
+      - optim/apply_ftrl/tests/ut/op_host/arch35/test_apply_ftrl_tiling.cpp
       - optim/apply_ftrl/tests/CMakeLists.txt
       - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/CMakeLists.txt
       - quant/dynamic_quant_update_scatter/tests/ut/graph_plugin/fusion_pass/CMakeLists.txt
