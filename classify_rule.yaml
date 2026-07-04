@@ -2482,6 +2482,12 @@ VC8@ops-nn:
   src:
     release:
       style:
+        - ops/ops-nn/optim/sparse_apply_ftrl_v2/op_host/arch35/
+        - ops/ops-nn/optim/sparse_apply_ftrl_v2/op_kernel/arch35/
+        - ops/ops-nn/optim/sparse_apply_adadelta/op_host/arch35/
+        - ops/ops-nn/optim/sparse_apply_adadelta/op_kernel/arch35/
+        - ops/ops-nn/optim/sparse_apply_rms_prop/op_host/arch35/
+        - ops/ops-nn/optim/sparse_apply_rms_prop/op_kernel/arch35/
         - ops/ops-nn/index/scatter_elements/op_host/arch35/
         - ops/ops-nn/index/scatter_elements/op_kernel/arch35/
         - ops/ops-nn/index/scatter_elements_v2/op_host/scatter_elements_v2_asc_tiling.cpp
@@ -2539,6 +2545,12 @@ VC8@ops-nn:
       kernel_style: null
     unrelease:
       test_code: 
+        - ops/ops-nn/optim/sparse_apply_ftrl_v2/examples/
+        - ops/ops-nn/optim/sparse_apply_ftrl_v2/tests/
+        - ops/ops-nn/optim/sparse_apply_adadelta/examples/
+        - ops/ops-nn/optim/sparse_apply_adadelta/tests/
+        - ops/ops-nn/optim/sparse_apply_rms_prop/examples/
+        - ops/ops-nn/optim/sparse_apply_rms_prop/tests/
         - ops/ops-nn/index/scatter_elements/examples/
         - ops/ops-nn/index/scatter_elements/tests/
         - ops/ops-nn/index/bucketize_v2/examples/
