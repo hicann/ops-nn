@@ -913,13 +913,6 @@ static bool CheckA8W4TcGDtype(const aclTensor *x2Scale, const aclTensor *bias, c
 
 static bool CheckA8W4MxDtype(const aclTensor *bias, const aclTensor *yScale, const aclTensor *out) {
     if (bias != nullptr) {
-        // Check that bias dtype is BF16 or FP16.
-        if (bias->GetDataType() != DataType::DT_BF16 && bias->GetDataType() != DataType::DT_FLOAT16) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
-                "aclnnQuantMatmulWeightNzGetWorkspaceSize", "bias", op::ToString(bias->GetDataType()).GetString(),
-                "in A8W4 scenario, when the quantization mode is mx, the dtype of bias must be BFLOAT16 or FLOAT16");
-            return false;
-        }
         // Check that bias dtype is the same as out dtype.
         if (bias->GetDataType() != out->GetDataType()) {
             OP_LOGE_FOR_INVALID_DTYPES_WITH_REASON(
@@ -1019,7 +1012,7 @@ static inline bool CheckA8W4ScaleX2Shape(
             x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX) != MX_SCALE_LAST_DIM) {
             OP_LOGE_FOR_INVALID_SHAPE_WITH_REASON(
                 "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x2Scale",
-                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim, 
+                FormatString("%ld, %ld, %ld", x2ScaleNDim, x2ScaleGroupDim,
                     x2Scale->GetViewShape().GetDim(MX_SCALE_LAST_DIM_INDEX)).c_str(),
                 FormatString("the shape of x2Scale must be [%ld, %ld, 2]", groupDimN,
                     CeilDiv(groupDimK, x2ScaleReshapeFactor)).c_str());
@@ -1093,7 +1086,7 @@ static inline bool CheckA8W4X1X2Shape(int64_t x1KDim, int64_t x2KDim, int64_t x2
     if (isMx && (x1KDim % SUPPORTED_MX_A8W4_K_ALIGN_NUM != 0)) { // Mx量化k方向8对齐
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", std::to_string(x1KDim).c_str(),
-            FormatString("the k dimension of x1 must be aligned to %ld for MX quantization", 
+            FormatString("the k dimension of x1 must be aligned to %ld for MX quantization",
                 SUPPORTED_MX_A8W4_K_ALIGN_NUM).c_str());
         return false;
     }
@@ -1551,7 +1544,7 @@ static inline bool CheckInputAttrExistence(const TupleAttr &boolsTrans, const Tu
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
             "in A8W4 scenario with NZ format, when the quantization mode is t-cg, transposeX2 must be false");
         return false;
-    } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) { 
+    } else if (IsMicroScaling(x1Scale, x2Scale)  && !transposeX2) {
         // A8W4 scenario with mx quant mode
         OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(
             "aclnnQuantMatmulWeightNzGetWorkspaceSize", "transposeX2", transposeX2 ? "true" : "false",
@@ -1575,7 +1568,7 @@ static inline bool CheckDimRangeA8W4(const TupleTensor& mandatoryTensors, const 
     auto bias = std::get<INDEX_BIAS_IN_OPTIONAL_TUPLE>(optionalTensors);
 
     if (x1->GetViewShape().GetDimNum() != MAX_DIM_VALUE) {
-        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1", 
+        OP_LOGE_FOR_INVALID_SHAPEDIM_WITH_REASON("aclnnQuantMatmulWeightNzGetWorkspaceSize", "x1",
             FormatString("%zuD", x1->GetViewShape().GetDimNum()).c_str(), "the shape dim of x1 must be 2");
         return false;
     }

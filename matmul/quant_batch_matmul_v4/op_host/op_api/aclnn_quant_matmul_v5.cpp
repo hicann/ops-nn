@@ -82,7 +82,8 @@ static inline bool isA8W4FloatTCG(const aclTensor* x1, const aclTensor* x2, cons
 static inline bool isA8W4FloatMx(const aclTensor* x1, const aclTensor* x2, const aclTensor* x1Scale, const aclTensor* x2Scale)
 {
     return x1->GetDataType() == op::DataType::DT_FLOAT8_E4M3FN && x2->GetDataType() == op::DataType::DT_FLOAT4_E2M1 &&
-        x1Scale != nullptr && x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 && x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
+        x1Scale != nullptr && x1Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0 &&
+        x2Scale->GetDataType() == op::DataType::DT_FLOAT8_E8M0;
 }
 
 static inline bool isA8W4Int(const aclTensor *x1, const aclTensor *x2) {
@@ -458,12 +459,6 @@ static bool CheckA8W4FloatDtype(const aclTensor* x2Scale, const aclTensor* bias,
 static bool CheckMxA8W4Dtype(const aclTensor* bias, const aclTensor* yScale, const aclTensor* out)
 {
     if (bias != nullptr) {
-        if (!CheckType(bias->GetDataType(), Y_SUPPORT_LIST)) {
-            OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(kOpName, "bias", op::ToString(bias->GetDataType()).GetString(),
-                                                  std::string("The dtype of bias must be within the range ") +
-                                                      op::ToString(Y_SUPPORT_LIST).GetString());
-            return false;
-        }
         if (bias->GetDataType() != out->GetDataType()) {
             OP_LOGE_FOR_INVALID_DTYPE_WITH_REASON(
                 kOpName, "bias", op::ToString(bias->GetDataType()).GetString(),
@@ -716,7 +711,7 @@ static inline bool CheckA8W4KDim(const TupleInput& inputTensors, const TupleQuan
             OP_LOGE_FOR_INVALID_VALUE_WITH_REASON(kOpName, "k", std::to_string(kDim).c_str(),
                                                   "The value of k must be aligned to 8 for MX quantization");
             return false;
-        }    
+        }
     } else {
         if (kDim % SUPPORTED_K_ALIGN_NUM != 0) {
             OP_LOGE(ACLNN_ERR_PARAM_INVALID, "the k dim must be align to %ld, which is %ld", SUPPORTED_K_ALIGN_NUM, kDim);
@@ -1092,7 +1087,7 @@ static aclnnStatus aclnnQuantMatmulGetWorkspaceSizeCommonProcess(TupleInput &inp
     if (GetCurrentPlatformInfo().GetSocVersion() == SocVersion::ASCEND310P) {
         ret = TransposeAndTransDataForInputs(reformatedX1, reformatedX2, transposeX1, transposeX2, executor);
         CHECK_RET(ret == ACLNN_SUCCESS, ret);
-        if (x1Scale != nullptr && !x1Scale->IsEmpty()){
+        if (x1Scale != nullptr && !x1Scale->IsEmpty()) {
             OP_LOGD("Npu_Arch = 2002 pertoken mode need transData x1");
             reformatedX1 = l0op::TransData(reformatedX1, Format::FORMAT_FRACTAL_NZ, 0, executor);
             CHECK_RET(x1 != nullptr, ACLNN_ERR_INNER_NULLPTR);
