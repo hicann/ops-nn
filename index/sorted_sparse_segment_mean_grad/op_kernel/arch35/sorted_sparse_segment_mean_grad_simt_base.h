@@ -193,28 +193,23 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtLar
 }
 
 // 这里进行二分累加，实际是按y线程数量按照 inner逐列累加，按 0与(numY/2)处依次累加
-__simt_callee__ __aicore__ inline float BinaryAdd(float value, uint32_t threadNumY, bool valid, uint32_t smallThreadIdxY,
+__simt_callee__ __aicore__ inline float BinaryAdd(uint32_t threadNumY, bool valid, uint32_t smallThreadIdxY,
                                   uint32_t smallThreadIdxX, uint32_t threadNumX, __local_mem__ float* tmpLocal)
 {
     // Binary add in the thread_y
+    asc_syncthreads();
     for (uint32_t k = threadNumY / 2; k > 0; k /= 2) {
-        if (valid && smallThreadIdxY < 2 * k) {
-            tmpLocal[smallThreadIdxY * threadNumX + smallThreadIdxX] = value;
-        }
-        asc_syncthreads();
-
         if (valid && smallThreadIdxY < k) {
-            value += tmpLocal[(smallThreadIdxY + k) * threadNumX + smallThreadIdxX];
-            tmpLocal[(smallThreadIdxY + k) * threadNumX + smallThreadIdxX] = 0;
+            tmpLocal[smallThreadIdxY * threadNumX + smallThreadIdxX] += tmpLocal[(smallThreadIdxY + k) * threadNumX + smallThreadIdxX];
         }
         asc_syncthreads();
     }
-    return value;
+    return tmpLocal[smallThreadIdxY * threadNumX + smallThreadIdxX];
 }
 
 template <typename X_T, typename LOCATION_T, typename SEGMENTIDS_T, typename OUTTER_T, typename INNER_T>
-__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, uint32_t threadNumY, INNER_T innerSize,
-                                                                                                SEGMENTIDS_T segmentNum, uint32_t threadNumX, __local_mem__ float* tmpLocal, __gm__ X_T* x, 
+__simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSmallInnerComputer(uint32_t indicesBase, uint32_t curCoreIndices, INNER_T innerSize,
+                                                                                                SEGMENTIDS_T segmentNum, __local_mem__ float* tmpLocal, __gm__ X_T* x, 
                                                                                                 __gm__ volatile X_T* y, __gm__ OUTTER_T* indices_offset, __gm__ SEGMENTIDS_T* segmentIds,
                                                                                                 __gm__ LOCATION_T* location, __gm__ float* weight, uint32_t outputDim0)
 {
@@ -231,9 +226,13 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSma
             continue;
         }
         OUTTER_T begin = static_cast<OUTTER_T>(indices_offset[globalIndex]);
+        // 这里的end应该根据线程y的数量向上对齐，确保所有的所有的线程都要走进循环然后进行同步
         OUTTER_T end = static_cast<OUTTER_T>(indices_offset[globalIndex + 1]);
+        OUTTER_T offset = end - begin;
+        OUTTER_T threadNumY = static_cast<OUTTER_T>(blockDim.y);
+        OUTTER_T endAlign = (offset + threadNumY - 1) / threadNumY * threadNumY + begin;
         float res = 0;
-        for (OUTTER_T yOffset = begin; yOffset < end; yOffset += threadNumY) {
+        for (OUTTER_T yOffset = begin; yOffset < endAlign; yOffset += blockDim.y) {
             OUTTER_T locaOffset = yOffset + smallThreadIdxY;
             bool yValid = (locaOffset < end);
             SEGMENTIDS_T seg = yValid ? segmentIds[location[locaOffset]] : 0;
@@ -241,10 +240,9 @@ __simt_vf__ __aicore__ LAUNCH_BOUND(THREAD_NUM_LAUNCH_BOUND) inline void SimtSma
             int64_t inputIdx = seg * static_cast<int64_t>(innerSize) + static_cast<int64_t>(smallThreadIdxX);
             bool valid = xValid && yValid && segValid;
             float value = valid ? static_cast<float>(x[inputIdx]) * weight[seg] : float(0);
+            tmpLocal[smallThreadIdxY * blockDim.x + smallThreadIdxX] = value;
+            value = BinaryAdd(blockDim.y, valid, smallThreadIdxY, smallThreadIdxX, blockDim.x, tmpLocal);
 
-            value = BinaryAdd(value, threadNumY, valid, smallThreadIdxY, smallThreadIdxX, threadNumX, tmpLocal);
-
-            // thready_0 is the reduce sum
             if (smallThreadIdxY == 0 && xValid) {
                 res += value;
             }

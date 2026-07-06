@@ -25,7 +25,8 @@
 #include "kernel_operator.h"
 
 #include "simt_api/asc_simt.h"
-constexpr uint32_t TBUF_SIZE = 512;
+constexpr uint32_t TBUF_SIZE = 4096;
+constexpr uint32_t SEGMENTNUM_INDEX_RATIO = 5;
 
 namespace SparseSegmentMeanGradNameSpace {
 using namespace AscendC;
@@ -105,6 +106,9 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtSmallInner<X_T, INDICES_T,
     OUTTER_T outterSize = static_cast<OUTTER_T>(tilingData_->outterSize);
     uint32_t threadNumX = static_cast<uint32_t>(tilingData_->threadNumX);
     uint32_t threadNumY = static_cast<uint32_t>(tilingData_->threadNumY);
+    if (outterSize / tilingData_->outputDim0 > SEGMENTNUM_INDEX_RATIO) {
+        threadNumY = THREAD_NUM_LAUNCH_BOUND / threadNumX;
+    }
     uint32_t segThreadNumX = static_cast<uint32_t>(tilingData_->segThreadNumX);
     uint32_t segThreadNumY = static_cast<uint32_t>(tilingData_->segThreadNumY);
     uint32_t indexThreadNumX = static_cast<uint32_t>(tilingData_->indexThreadNumX);
@@ -120,11 +124,13 @@ __aicore__ inline void SortedSparseSegmentMeanGradSimtSmallInner<X_T, INDICES_T,
                                                                (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ INDICES_T*) (indicesGm_.GetPhyAddr()));
     SyncAll();
 
-    asc_vf_call<SimtSmallInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, threadNumY, innerSize, segmentNum_, threadNumX,
-                                                                   (__local_mem__ float*) (tmpLocal.GetPhyAddr()), (__gm__ X_T*) (xGm_.GetPhyAddr()), (__gm__ volatile X_T*) (yGm_.GetPhyAddr()),
-                                                                   (__gm__ OUTTER_T*) (workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))), (__gm__ SEGMENTIDS_T*) (segmentIdsGm_.GetPhyAddr()),
-                                                                   (__gm__ LOCATION_T*) (locationGm_.GetPhyAddr()), (__gm__ float*) (workspaceWeight_.GetPhyAddr(segmentNum_ + 1)),
-                                                                   static_cast<uint32_t>(tilingData_->outputDim0));
+    asc_vf_call<SimtSmallInnerComputer<X_T, LOCATION_T, SEGMENTIDS_T, OUTTER_T, INNER_T>>(
+        dim3{threadNumX, threadNumY}, indicesOffsetBase_, curCoreIndices_, innerSize, segmentNum_,
+        (__local_mem__ float*)(tmpLocal.GetPhyAddr()), (__gm__ X_T*)(xGm_.GetPhyAddr()),
+        (__gm__ volatile X_T*)(yGm_.GetPhyAddr()),
+        (__gm__ OUTTER_T*)(workspaceIndicesOffset_.GetPhyAddr(2 * (segmentNum_ + 1))),
+        (__gm__ SEGMENTIDS_T*)(segmentIdsGm_.GetPhyAddr()), (__gm__ LOCATION_T*)(locationGm_.GetPhyAddr()),
+        (__gm__ float*)(workspaceWeight_.GetPhyAddr(segmentNum_ + 1)), static_cast<uint32_t>(tilingData_->outputDim0));
 }
 
 
