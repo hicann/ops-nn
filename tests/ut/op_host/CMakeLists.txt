@@ -49,7 +49,6 @@ if(UT_TEST_ALL OR OP_HOST_UT)
         register
         opp_registry
         opsbase
-        nnopbase
         tiling_api
         dlog
         dl

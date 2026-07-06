@@ -26,7 +26,6 @@ function(gen_ophost_symbol)
             -Wl,--no-as-needed
             register
             $<$<TARGET_EXISTS:opsbase>:opsbase>
-            $<$<TARGET_EXISTS:nnopbase>:nnopbase>
             -Wl,--as-needed
             -Wl,--whole-archive
             rt2_registry_static
