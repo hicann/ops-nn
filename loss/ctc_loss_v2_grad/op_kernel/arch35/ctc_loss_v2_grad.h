@@ -215,7 +215,7 @@ __simt_vf__ LAUNCH_BOUND(THREAD_NUM) __aicore__ void UpdateLcabCompute(
         // begin: 新增判断逻辑，减少计算量
         float nll = negLogLikelihoodGm[b];
         if (t >= inputLength || (zeroInfinity && nll == INFINITY)) {
-            return;
+            continue;
         }
         // end: 新增判断逻辑，减少计算量
         ThreadType targetLength = targetLengthsGm[b];
