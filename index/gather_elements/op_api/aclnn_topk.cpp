@@ -36,6 +36,8 @@
 #include "opdev/tensor_view_utils.h"
 #include "opdev/small_vector.h"
 #include "opdev/platform.h"
+#include "level0/fill.h"
+#include "util/math_util.h"
 
 #include <cstdint>
 #include <cmath>
@@ -52,7 +54,9 @@ const int64_t CONCAT_MAX = 512; // Concat能处理的最大Tensor
 const int64_t SORT_WITH_INDEX_THRESHOLD = 2000; // TopK后调用SortWithIndex的阈值
 const float SORT_AND_TOP_K_THRESHOLD = 0.5; // 走先排序后取前K个值k/n的比值的阈值
 const float FLOAT_SORT_AND_TOP_K_THRESHOLD = 0.3; // float16或者bf16类型走sortAndTopk分支的k和尾轴的占比
-const float MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD = 1024; // int32/int64类型走sortAndTopk的尾轴上限值
+const int64_t MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD = 1024; // int32/int64类型走sortAndTopk的尾轴上限值
+const int64_t SORT_AND_TOP_LAST_AXIS_INT16_THRESHOLD = 192; // int16/uint16类型走sortAndTopk的尾轴上限值
+const int64_t SORT_AND_TOP_LAST_AXIS_INT8_THRESHOLD = 128; // int8/uint8类型走sortAndTopk的尾轴上限值
 // bf16/float16数据类型能走到singleBlock模板的最大尾轴的值，同时也是走SortAndTopk的最小值
 const int32_t SINGLE_BLOCK_MAX_LAST_AXIS_BF16_NUM = 8900; 
 // bf16/float16走SortAndTopk的最大值
@@ -67,6 +71,9 @@ constexpr int64_t RADIX_TOP_K_S_K_RATIO_1 = 100;
 constexpr int64_t RADIX_TOP_K_S_THRESHOLD_2 = 100000000;
 constexpr int64_t RADIX_TOP_K_S_K_RATIO_2 = 50;
 constexpr int64_t RADIX_TOP_K_MIN_K = 1000;
+static const int64_t NON_TRANSPOSE_DIM_MAX = 8;
+const int64_t TOPK_NON_TRANSPOSE_AXIS_THRESHOLD = 2048;
+constexpr int64_t SMALL_ROW_LARGE_OUTER_THRESHOLD = 1024;
 
 static const std::initializer_list<op::DataType> DTYPE_SUPPORT_LIST = {
     op::DataType::DT_FLOAT, op::DataType::DT_INT32, op::DataType::DT_INT64, op::DataType::DT_FLOAT16,
@@ -250,6 +257,12 @@ static bool CanDealWith(const aclTensor *self, int64_t k)
     }
 }
 
+// 非950不操作
+static bool IsTopkAxisOneCopy(int64_t k, int64_t sortDimValue)
+{
+    return sortDimValue == k && k == 1 && Ops::NN::AclnnUtil::IsRegbase();
+}
+
 static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, bool sorted)
 {
   // 如果不是950,不copy
@@ -264,8 +277,8 @@ static bool IsTopKCopy(const aclTensor *self, int64_t k, int64_t sortDimValue, b
   if (!CanDealWith(self, k)) {
     return false;
   }
-  // k等于1或者不排序的时候，直接Copy
-  return k == 1 || !sorted;
+  // 不排序的时候，直接Copy
+  return !sorted;
 }
 
 static aclnnStatus TopKCopy(const aclTensor *self, int64_t k, aclTensor *values, aclTensor *indices, aclOpExecutor *executor)
@@ -394,42 +407,7 @@ static bool indicesOutNeedsCast(int64_t k, bool sorted, bool isHasCasted)
   return true;
 }
 
-/**
- * 判断是否走先排序后取前K个值
- *
- * @param sorted 是否排序
- * @param k TopK K的值
- * @param sortDimValue 排序轴的大小 
- * @return 是否先排序
- */
-static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue, op::DataType xDataType) {
-    // 如果不是950,不走该逻辑
-    if (!Ops::NN::AclnnUtil::IsRegbase()) {
-      return false;
-    }
-    // 如果不需要排序，不走先排序后取前K个数
-    if (!sorted) {
-      return false;
-    }
-    
-    // int64数据类型，针对尾轴做如下处理： 
-    // 1. 尾轴比较小[22, 1024]的场景, sortAndTopk会比singleblock性能更优
-    // 2. 尾轴小于22 走aicpu性能更优
-    // 3. 其它情况下若UB能装下数据, singleBlock的性能比较好
-    if ((xDataType == op::DataType::DT_INT64 || xDataType == op::DataType::DT_UINT64) && 
-         sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
-        OP_LOGD("int64 type sat branch, sortDimValue=%d.", sortDimValue);
-        return true;
-    }
-
-    // int32数据类型，1. sortAndTopk在小于1024的情况下性能较优
-    // 2. 其它情况下若UB能装下数据, singleBlock的性能比较好
-    if ((xDataType == op::DataType::DT_INT32 || xDataType == op::DataType::DT_UINT32) && 
-         sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
-        OP_LOGD("int32 type sat branch, sortDimValue=%d.", sortDimValue);
-        return true;
-    }    
-
+static bool CheckFloatTypeCondition(op::DataType xDataType, int64_t sortDimValue, int64_t k) {
     // 1. 对于bf16和float16数据, 如果singleblock的单UB无法将尾轴全部装下，则sortAndTopk性能更好
     bool isBf16OrFp16Type = xDataType == op::DataType::DT_BF16 || xDataType == op::DataType::DT_FLOAT16;
     bool isInRange = sortDimValue > SINGLE_BLOCK_MAX_LAST_AXIS_BF16_NUM && FLOAT16_MAX_LAST_AXIS_NUM >= sortDimValue;
@@ -444,13 +422,68 @@ static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue, op::Data
         OP_LOGD("float32 type sat branch, sortDimValue=%d, dataType=%d.", sortDimValue, static_cast<int>(xDataType));
         return true;
     }
+    return false;
+}
 
-    // 如果k / n 小于0.5，不走先排序后取前K个数
-    if (k < SORT_AND_TOP_K_THRESHOLD * sortDimValue) {
-      return false;
+static bool CheckIntTypeCondition(op::DataType xDataType, int64_t sortDimValue) {
+    // int64数据类型，针对尾轴做如下处理： 
+    // 1. 尾轴比较小[22, 1024]的场景, sortAndTopk会比singleblock性能更优
+    // 2. 尾轴小于22 走aicpu性能更优
+    // 3. 其它情况下若UB能装下数据, singleBlock的性能比较好
+    if ((xDataType == op::DataType::DT_INT64 || xDataType == op::DataType::DT_UINT64) && 
+        sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
+        OP_LOGD("int64 type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
     }
-    // 如果K小于等于2000，不走先排序后取前K个数
-    return k > SORT_WITH_INDEX_THRESHOLD;
+    
+    // int32数据类型，1. sortAndTopk在小于1024的情况下性能较优
+    // 2. 其它情况下若UB能装下数据, singleBlock的性能比较好
+    if ((xDataType == op::DataType::DT_INT32 || xDataType == op::DataType::DT_UINT32) && 
+         sortDimValue <= MAX_INT_SORT_AND_TOP_LAST_AXIS_THRESHOLD) {
+        OP_LOGD("int32 type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
+    }  
+    
+    // int16数据类型，1. sortAndTopk在小于192的情况下性能较优
+    if ((xDataType == op::DataType::DT_INT16 || xDataType == op::DataType::DT_UINT16) &&
+        sortDimValue <= SORT_AND_TOP_LAST_AXIS_INT16_THRESHOLD) {
+        OP_LOGD("int16/uint16 type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
+    }
+    
+    // int8数据类型，sortAndTopk在小于128的情况下性能较优
+    if ((xDataType == op::DataType::DT_UINT8 || xDataType == op::DataType::DT_INT8) && 
+        sortDimValue <= SORT_AND_TOP_LAST_AXIS_INT8_THRESHOLD) {
+        OP_LOGD("int8/uint8 type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * 判断是否走先排序后取前K个值
+ *
+ * @param sorted 是否排序
+ * @param k TopK K的值
+ * @param sortDimValue 排序轴的大小 
+ * @return 是否先排序
+ */
+static bool IsSortAndTopK(bool sorted, int64_t k, int64_t sortDimValue, op::DataType xDataType) {
+    if (!Ops::NN::AclnnUtil::IsRegbase() || !sorted) {
+        return false;
+    }
+    
+    if (CheckIntTypeCondition(xDataType, sortDimValue)) {
+        OP_LOGD("int type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
+    }
+    
+    if (CheckFloatTypeCondition(xDataType, sortDimValue, k)) {
+        OP_LOGD("float32 type sat branch, sortDimValue=%d.", sortDimValue);
+        return true;
+    }
+
+    return k >= SORT_AND_TOP_K_THRESHOLD * sortDimValue && k > SORT_WITH_INDEX_THRESHOLD;
 }
 
 /**
@@ -488,6 +521,73 @@ static bool IsRadixTopKSupported(const aclTensor* self, int64_t k)
         shapeCheck = sortLen > RADIX_TOP_K_S_K_RATIO_1 * k;
     }
     return socCheck && dtypeCheck && shapeCheck && k > RADIX_TOP_K_MIN_K;
+}
+
+static const aclTensor* GetTensorWithValueZero(aclTensor* out, aclOpExecutor* executor)
+{
+    OP_LOGD("get topk zero tensor start");
+    if (out->IsEmpty()) {
+        return out;
+    }
+    aclScalar* scalar = executor->AllocScalar(0);
+    auto valueTensor = executor->ConvertToTensor(scalar, out->GetDataType());
+    auto outputDims = op::ToShapeVector(out->GetViewShape());
+    aclIntArray* dimArray = executor->AllocIntArray(outputDims.data(), outputDims.size());
+    auto dimTensor = executor->ConvertToTensor(dimArray, op::DataType::DT_INT64);
+    auto zeroTensor = l0op::Fill(dimTensor, valueTensor, dimArray, executor);
+    if (zeroTensor == nullptr) {
+        return nullptr;
+    }
+    auto viewCopyResult = l0op::ViewCopy(zeroTensor, out, executor);
+    return viewCopyResult;
+}
+
+// 获得tensor的维度数
+static inline int64_t GetTensorDim(const aclTensor *self)
+{
+    return static_cast<int64_t> (self->GetViewShape().GetDimNum());
+}
+
+static bool IsNoTransposeProfitable(const aclTensor *self, int64_t dim)
+{
+    auto selfShape = self->GetViewShape();
+    int64_t outerSize = 1;
+    int64_t innerSize = 1;
+    int64_t dimSize = GetTensorDim(self);
+    for (int64_t i = 0; i < dim; ++i) {
+        outerSize *= selfShape[i];
+    }
+    for (int64_t i = dim + 1; i < dimSize; ++i) {
+        innerSize *= selfShape[i];
+    }
+
+    int64_t dtypeSize = static_cast<int64_t>(op::TypeSize(self->GetDataType()));
+
+    // If each GM row copy is smaller than one block, no-transpose pays heavy per-row padding/gather overhead.
+    // With many outer slices, that fixed cost can dominate the transpose traffic saved by the no-transpose path.
+    int64_t blockBytes = GetCurrentPlatformInfo().GetBlockSize();
+    int64_t blockElems = Ops::Base::CeilDiv(blockBytes, dtypeSize);
+    if (innerSize < blockElems && outerSize >= SMALL_ROW_LARGE_OUTER_THRESHOLD) {
+        return false;
+    }
+    return true;
+}
+
+static bool IsTopKUseNoTranspose(const aclTensor *self, int64_t dim)
+{
+    if (!Ops::NN::AclnnUtil::IsRegbase()) {
+        return false;
+    }
+    int64_t dimSize = GetTensorDim(self);
+    if (dimSize <= 0 || dimSize > NON_TRANSPOSE_DIM_MAX || dim == dimSize - 1) {
+        return false;
+    }
+    auto selfShape = self->GetViewShape();
+    int64_t axisLen = selfShape[dim];
+    if (axisLen < 2 || axisLen > TOPK_NON_TRANSPOSE_AXIS_THRESHOLD) {
+        return false;
+    }
+    return IsNoTransposeProfitable(self, dim);
 }
 
 aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t dim, bool largest, bool sorted,
@@ -535,6 +635,21 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
   auto indicesDType = indicesOut->GetDataType();
   auto xDType = self->GetDataType();
   bool isHasCasted = false;
+
+  if (IsTopkAxisOneCopy(k, sortDimValue)) {
+      OP_LOGD("topk axis one copy sortDimValue=[%ld].", sortDimValue);
+      // self 如果非连续，需要转换
+      auto selfContiguousCast = l0op::Contiguous(selfCast, uniqueExecutor.get());
+      CHECK_RET(selfContiguousCast != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      auto viewCopyValues = l0op::ViewCopy(selfContiguousCast, valuesOut, uniqueExecutor.get());
+      CHECK_RET(viewCopyValues != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      auto zeroTensor = GetTensorWithValueZero(indicesOut, uniqueExecutor.get());
+      CHECK_RET(zeroTensor != nullptr, ACLNN_ERR_INNER_NULLPTR);
+      *workspaceSize = uniqueExecutor->GetWorkspaceSize();
+      uniqueExecutor.ReleaseTo(executor);
+      return ACLNN_SUCCESS;
+  }
+
   if (IsTopKCopy(selfCast, k, sortDimValue, sorted)) {
     OP_LOGD("aclnn topk copy, positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
     TopKCopy(selfCast, k, valuesOut, indicesOut, uniqueExecutor.get());
@@ -545,7 +660,14 @@ aclnnStatus aclnnTopkGetWorkspaceSize(const aclTensor *self, int64_t k, int64_t 
   }
 
   OP_LOGD("aclnnTopkGetWorkspaceSize positiveDim = %ld, lastDim = %ld", positiveDim, lastDim);
-  if (positiveDim != lastDim) {
+  
+  if (IsTopKUseNoTranspose(selfCast, positiveDim)) {
+      OP_LOGD("topk non transpose positiveDim=%ld, lastDim=%ld, indexType=%d", positiveDim, lastDim, static_cast<int32_t>(indicesDType));
+      std::tuple<const aclTensor*, const aclTensor*> topkOut(nullptr, nullptr);
+      topkOut = l0op::Topk(selfCast, k, positiveDim, largest, sorted, indicesDType, uniqueExecutor.get());
+      valuesTopkOut = std::get<0>(topkOut);
+      indicesCastInt32 = std::get<1>(topkOut);
+  } else if (positiveDim != lastDim) {
     aclIntArray *axes = GetDimTransposeArray(dimNum, lastDim, positiveDim, uniqueExecutor.get());
     CHECK_RET(axes != nullptr, ACLNN_ERR_INNER_NULLPTR);
 
