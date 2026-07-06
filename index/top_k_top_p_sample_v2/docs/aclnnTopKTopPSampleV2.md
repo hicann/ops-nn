@@ -516,6 +516,7 @@ aclnnStatus aclnnTopKTopPSampleV2(
       <td rowspan="4">161002</td>
       <td>logits、topK、topP、q、minPs的数据类型不在支持的范围之内。</td>
     </tr>
+    <tr>
       <td>logits与q尺寸不一致。</td>
     </tr>
     <tr>

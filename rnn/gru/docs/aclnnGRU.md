@@ -16,8 +16,8 @@
 - 接口功能：实现门控循环单元（Gated Recurrent Unit, GRU）计算，支持多层堆叠、双向、定长序列和不定长序列（PackedSequence）两种输入模式。训练模式下可输出各门控中间结果（r、z、n、hn、h），用于反向传播。
 
 - 输入输出shape：
-  - 定长模式（batchSizes为nullptr）：如果输入张量 input 的shape为(T, B, I)（batchFirst=false）或(B, T, I)（batchFirst=true），则输出张量 output 的shape为(T, B, D * H)（batchFirst=false）或(B, T, D * H)（batchFirst=true），最终隐状态 hy 的shape为(L * D, B, H)。
-  - 不定长模式（batchSizes非nullptr）：输入张量 input 的shape为(sum(batch_size), I)，输出张量 output 的shape为(sum(batch_size), D * H)，最终隐状态 hy 的shape为(L * D, B, H)。当前暂不支持该模式。
+  - 定长模式（batchSizes为nullptr）：如果输入张量 input 的shape为(T, B, I)（batchFirst=false）或(B, T, I)（batchFirst=true），则输出张量 output 的shape为(T, B, D *H)（batchFirst=false）或(B, T, D* H)（batchFirst=true），最终隐状态 hy 的shape为(L * D, B, H)。
+  - 不定长模式（batchSizes非nullptr）：输入张量 input 的shape为(sum(batch_size), I)，输出张量 output 的shape为(sum(batch_size), D *H)，最终隐状态 hy 的shape为(L* D, B, H)。当前暂不支持该模式。
 
 - 计算公式：
 

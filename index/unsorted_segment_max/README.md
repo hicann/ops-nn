@@ -1,6 +1,7 @@
 # UnsortedSegmentMax
 
 ## 产品支持情况
+
 | 产品                                                         | 是否支持 |
 | :----------------------------------------------------------- | :------: |
 | <term>Ascend 950PR/Ascend 950DT</term>                             |    √     |
@@ -14,10 +15,12 @@
 
 - 算子功能：分段计算输入tensor的最大值。
 - 计算公式：
+
 $$
 output[i]={\max}_{j...}data[j...]
 $$
 *max* 返回元素 *j*... 中的最大值，其中 *segment_ids*[*j*...]==*i*。
+
 - 用例：
 
   输入tensor $data = \begin{bmatrix} [1&2&3] \\ [4&5&6] \\ [4&2&1] \end{bmatrix}$,
@@ -41,20 +44,24 @@ $$
 |输出|value|输出值信息|FLOAT32, INT32, INT64, BFLOAT16, FLOAT16, UINT32, UINT64 | ND |
 
 ## 约束说明
+
 **data**​：
+
   * 必须与 segment_ids 形状兼容（data.dim_size(0) == segment_ids.NumElements()）。
   * 维度至少 1（rank >=1）。
 
 ​**segment_ids**​：
+
   * 必须是 INT32 或 INT64 类型。
   * 形状必须是 data.shape 的前缀（即 segment_ids.shape 是data.shape[:segment_ids.rank] 的子集）。
   * 值必须 >= 0 且 < num_segments（负值被忽略）。
 
 **num_segments**​：
+
   * 必须是 INT32 或 INT64 类型，且 > 0。
   * 应等于或大于最大 segment_id + 1。
 
-  ## 调用说明
+## 调用说明
 
   | 调用方式   | 样例代码           | 说明                                         |
   | ---------------- | --------------------------- | --------------------------------------------------- |
