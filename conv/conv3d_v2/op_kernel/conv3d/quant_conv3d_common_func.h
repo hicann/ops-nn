@@ -296,6 +296,7 @@ struct VecCompute {
         //cast to bf16 or fp16
         PipeBarrier<PIPE_V>();
         Cast(transLocal, dstLocal, AscendC::RoundMode::CAST_RINT, m * n);
+        PipeBarrier<PIPE_V>();
         TransFormat(self, transLocal, m, n);
     }
 

@@ -51,6 +51,7 @@ public:
         initConstValueParams.blockNum = srcDValue;
         initConstValueParams.initValue = 0;
         InitConstValue<DataTypeT>(tensorL1, initConstValueParams);
+        AscendC::PipeBarrier<PIPE_MTE2>();
         ASC_OP_LOGD("[LoadBiasL1WithPointWise] initConstValueParams.blockNum %d.\n", initConstValueParams.blockNum);
 
         SetNd2NzParams();
