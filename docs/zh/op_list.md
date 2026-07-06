@@ -2024,7 +2024,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>算子功能：根据indices在给定变量内，在updates和单个值或切片之间求最大值。</td>
   </tr>
   <tr>
@@ -2034,7 +2034,7 @@
     <td>✓</td>
     <td>✗</td>
     <td>✓</td>
-    <td>AI Core</td>
+    <td>AI Core/AI CPU</td>
     <td>算子功能：根据indices在给定变量内，在updates和单个值或切片之间求最小值。</td>
   </tr>
   <tr>

@@ -42,7 +42,7 @@ if(UT_TEST_ALL OR OP_KERNEL_AICPU_UT)
         -Wl,--as-needed
         gtest
         c_sec
-        Eigen3::EigenNn
+        Eigen3::Eigen
     )
  
     if(ENABLE_UT_EXEC)

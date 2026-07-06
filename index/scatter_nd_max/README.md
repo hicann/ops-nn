@@ -42,7 +42,7 @@
       <td>var</td>
       <td>输入</td>
       <td>表示一个待被更新的张量,等同于公式中的`ref`</td>
-      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32</td>
+      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32、DT_UINT8、DT_UINT16、DT_DOUBLE</td>
       <td>ND</td>
     </tr>
     <tr>
@@ -56,14 +56,14 @@
       <td>updates</td>
       <td>输入</td>
       <td>使用此张量来更新var张量，必须跟输入var张量保持一样的数据类型</td>
-      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32</td>
+      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32、DT_UINT8、DT_UINT16、DT_DOUBLE</td>
       <td>ND</td>
     </tr>
     <tr>
       <td>var</td>
       <td>输出</td>
       <td>表示更新后的张量</td>
-      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32</td>
+      <td>DT_INT8、DT_INT16、DT_INT64、DT_UINT64、DT_BOOL、DT_FLOAT16、DT_BF16、DT_FLOAT、DT_INT32、DT_UINT32、DT_UINT8、DT_UINT16、DT_DOUBLE</td>
       <td>ND</td>
     </tr>
     <tr>
