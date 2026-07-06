@@ -252,7 +252,7 @@ __global__ __aicore__ void mat_mul_v3(
             MatMulUnAlignedSingleCoreSplitKKernelGmToL1, format_x1, MatmulSingleCoreSplitKBaseBlock, MM_CFG_PRELOAD_MK
         );
     } else if constexpr (
-#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_ND
+#if defined(FORMAT_X2) && FORMAT_X2 != FORMAT_FRACTAL_NZ
         LOADMODE == MAT_MUL_V3_BASE_FULLLOAD && SPLITCOREMODE == MAT_MUL_V3_SINGLE_CORE_SPLIT_K_GM_TO_L1 &&
         FIXOPTI == MAT_MUL_V3_BASE_FIXOPTI && MIXND2NZ == MAT_MUL_V3_MIXND2NZ_FALSE) {
         MMV3_IMPL_CLASS(

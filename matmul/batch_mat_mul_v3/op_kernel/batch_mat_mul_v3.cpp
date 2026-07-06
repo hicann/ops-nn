@@ -187,7 +187,7 @@ __global__ __aicore__ void batch_mat_mul_v3(
         ISMULTIBATCHOUT == BATCH_MAT_MUL_V3_ISMULTIBATCHOUT_FALSE && MIXND2NZ == BATCH_MAT_MUL_V3_MIXND2NZ_FALSE) {
         BMMV3_IMPL_CLASS_COMMON(BatchMatMulCommonKernel, BatchMatMulCommonBaseBlock, MM_CFG_NO_PRELOAD,
                                 MatmulCallBackFunc<nullptr, nullptr, BmmCopyBL1>);
-#if defined(FORMAT_X2) && FORMAT_X2 == FORMAT_ND
+#if defined(FORMAT_X2) && FORMAT_X2 != FORMAT_FRACTAL_NZ
     } else if constexpr (
         MULTIBATCHL1FULLLOAD == BATCH_MAT_MUL_V3_MULTI_BATCH_L1_FULLLOAD_FALSE && // need to be set
         MULTIBATCH == BATCH_MAT_MUL_V3_MULTI_BATCH_TRUE && LOADMODE == BATCH_MAT_MUL_V3_BASE_FULLLOAD &&
