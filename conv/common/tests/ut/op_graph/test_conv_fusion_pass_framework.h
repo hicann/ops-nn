@@ -1283,6 +1283,54 @@ public:
         return true;
     }
 
+    static bool GetListIntAttr(const GNode &node, const char *attrName, std::vector<int64_t> &value)
+    {
+        return node.GetAttr(AscendString(attrName), value) == GRAPH_SUCCESS;
+    }
+
+    static bool GetNodeName(const GNode &node, std::string &name)
+    {
+        AscendString nodeName;
+        if (node.GetName(nodeName) != GRAPH_SUCCESS) {
+            return false;
+        }
+        name = nodeName.GetString();
+        return true;
+    }
+
+    static bool GetInputProducerType(const GNode &node, int32_t inputIdx, std::string &producerType)
+    {
+        auto producerPair = node.GetInDataNodesAndPortIndexs(inputIdx);
+        if (producerPair.first == nullptr) {
+            return false;
+        }
+        AscendString type;
+        if (producerPair.first->GetType(type) != GRAPH_SUCCESS) {
+            return false;
+        }
+        producerType = type.GetString();
+        return true;
+    }
+
+    static bool HasOutEdgeTo(const GNode &src, int32_t srcOutIdx, const GNode &dst, int32_t dstInIdx)
+    {
+        std::string dstName;
+        if (!GetNodeName(dst, dstName)) {
+            return false;
+        }
+        auto consumers = src.GetOutDataNodesAndPortIndexs(srcOutIdx);
+        for (const auto &consumerPair : consumers) {
+            if (consumerPair.first == nullptr || consumerPair.second != dstInIdx) {
+                continue;
+            }
+            std::string consumerName;
+            if (GetNodeName(*consumerPair.first, consumerName) && consumerName == dstName) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     static void Print(std::shared_ptr<Graph>& graph)
     {
         std::cout << "Graph: " << graph->GetName() << std::endl;

@@ -11,7 +11,6 @@
 #ifndef CONV3D_TO_CONV3DV2_FUSION_PASS_H
 #define CONV3D_TO_CONV3DV2_FUSION_PASS_H
 
-#include <map>
 #include <memory>
 #include <vector>
 

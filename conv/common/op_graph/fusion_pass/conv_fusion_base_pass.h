@@ -13,11 +13,11 @@
 
 #include <map>
 #include <memory>
-#include <set>
 
 #include "conv_fusion_utils_pass.h"
 #include "ge/fusion/pass/pattern_fusion_pass.h"
 #include "ge/fusion/subgraph_boundary.h"
+#include "ge/ge_api_error_codes.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {

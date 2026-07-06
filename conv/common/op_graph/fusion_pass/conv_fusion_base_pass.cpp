@@ -10,7 +10,6 @@
 
 #include "conv_fusion_base_pass.h"
 
-#include "log/log.h"
 #include "es_nn_ops.h"
 #include "ge/fusion/graph_rewriter.h"
 
@@ -21,15 +20,15 @@ using namespace ConvFusionUtils;
 using namespace ge;
 using namespace fusion;
 
-bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& node)
+bool ConvFusionBasePass::DefaultConvFusionReplaceImpl(const GNode& convNode)
 {
-    auto boundary = ConstructBoundary(node);
+    auto boundary = ConstructBoundary(convNode);
     FUSION_PASS_CHECK(
         boundary == nullptr,
         OP_LOGE("ConvFusionBasePass", "Construct boundary for %s failed.", convDescInfo.nodeNameStr.c_str()),
         return false);
 
-    auto replacement = Replacement(node);
+    auto replacement = Replacement(convNode);
     FUSION_PASS_CHECK(
         replacement == nullptr,
         OP_LOGE("ConvFusionBasePass", "Construct replacement for %s failed.", convDescInfo.nodeNameStr.c_str()),

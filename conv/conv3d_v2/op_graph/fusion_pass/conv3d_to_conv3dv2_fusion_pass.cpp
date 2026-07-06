@@ -12,9 +12,9 @@
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
 #include "es_nn_ops.h"
-#include "graph/utils/type_utils.h"
-#include "log/log.h"
+#include "ge/es_graph_builder.h"
 #include "platform/platform_info.h"
+#include "register/register_custom_pass.h"
 #include "version/ge-compiler_version.h"
 
 namespace Ops {

@@ -22,6 +22,8 @@
 #include "ge/es_tensor_holder.h"
 #include "ge/fusion/subgraph_boundary.h"
 #include "graph/operator.h"
+#include "graph/utils/type_utils.h"
+#include "log/log.h"
 #include "platform/soc_spec.h"
 
 namespace Ops {

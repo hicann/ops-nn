@@ -12,8 +12,7 @@
 
 #include "conv/common/op_graph/fusion_pass/conv_fusion_utils_pass.h"
 #include "es_nn_ops.h"
-#include "graph/utils/type_utils.h"
-#include "log/log.h"
+#include "ge/es_graph_builder.h"
 
 namespace Ops {
 using namespace NN;

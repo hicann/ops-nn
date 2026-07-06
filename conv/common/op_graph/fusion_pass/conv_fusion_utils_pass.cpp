@@ -11,11 +11,8 @@
 #include "conv_fusion_utils_pass.h"
 #include "es_nn_ops.h"
 #include "ge/compliant_node_builder.h"
-#include "graph/utils/type_utils.h"
-#include "log/log.h"
 #include "platform/platform_info.h"
 #include "runtime/runtime/base.h"
-#include <graph/utils/type_utils.h>
 
 namespace Ops {
 namespace NN {
