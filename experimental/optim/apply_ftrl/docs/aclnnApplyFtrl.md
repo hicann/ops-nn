@@ -1,11 +1,5 @@
 # aclnnApplyFtrl
 
-> **接口状态声明（务必先读）**
-> `ApplyFtrl` 是 **GE 图模式 / TensorFlow 算子**（对标 `tf.raw_ops.ApplyFtrl`），**CANN 当前未部署对外的 aclnn 接口**。其接口真值源为 `op_graph/apply_ftrl_proto.h`（GE IR `REG_OP(ApplyFtrl)`）。
-> 本文档：
-> - 「GE 图模式接口（真值源）」章节记录**实际下发签名**（输入/输出/属性），以 proto 为准；
-> - 「派生 aclnn 两段式接口」章节为**本任务（experimental/optim/apply_ftrl，registry-invoke 自带 kernel）新增的派生封装原型**，**非 CANN 已部署接口**，最终签名以 1.3 方案设计 + L0 实现为准。
-
 ## 产品支持情况
 
 | 产品 | 是否支持 |

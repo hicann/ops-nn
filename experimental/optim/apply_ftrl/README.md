@@ -49,7 +49,8 @@
   $$
 
   其中 $sign(x) \in \{-1, 0, +1\}$（$x>0 \to +1$，$x<0 \to -1$，$x=0 \to 0$）；$var$、$accum$、$linear$ 三者均原地写回。
-- 实现要点（ascend910b 原生 kernel）：
+  
+  - 实现要点（ascend910b 原生 kernel）：
   - 逐元素独立计算，无跨元素/跨核归约 → 天然确定性。
   - **内部统一 fp32 计算**：bf16/fp16 输入在 kernel 入口 Cast 到 fp32 完成全部中间计算（含 `accum_new`、幂运算、sign + 软阈值、`quadratic`、除法），末尾 Cast 回原 dtype 输出；fp32 直接计算。
   - 幂运算 $a^{-lr\_power}$ 采用 `Exp(Muls(Ln(a), -lr\_power))` 分解（与 canndev `apply_ftrl_d.py` 的 `_pow = exp(index·ln(data))` 一致，要求底数 $a>0$）。

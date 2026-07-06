@@ -70,8 +70,6 @@ $$
 | accumOut | 输出 | 与 accum 共享 Device 内存 |
 | accumUpdateOut | 输出 | 与 accumUpdate 共享 Device 内存 |
 
-详细接口参数与返回码定义请参见 [aclnnApplyAdadelta 接口文档](docs/aclnnApplyAdadelta.md)。
-
 ## 约束说明
 
 - 本算子仅支持 Ascend 950PR / Ascend 950DT 产品（Atlas A5 推理系列，DAV_3510 架构）。

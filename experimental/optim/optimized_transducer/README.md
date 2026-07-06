@@ -1,6 +1,6 @@
 # OptimizedTransducer
 
-##  产品支持情况
+## 产品支持情况
 
 | 产品 | 是否支持 |
 | ---- | :----:|
@@ -13,7 +13,9 @@
 - 计算公式：
 给定模型输出logits、目标序列targets和长度信息，RNN-T损失计算负对数似然：
 $$\text{Loss} = -\frac{1}{B} \sum_{b=1}^{B} \log P(\mathbf{y}_b | \mathbf{x}_b)$$
+
 其中对齐概率通过对所有可能对齐路径求和得到：
+
 $$
 P(\mathbf{y} | \mathbf{x}) = \sum_{\mathbf{a} \in \mathcal{A}(\mathbf{x}, \mathbf{y})} \prod_{t=1}^{T+U} P(a_t | \mathbf{x}, a_{1:t-1})$$
 每个时间步的发射概率通过softmax计算：
@@ -129,4 +131,4 @@ logits的输入shape需要保证(V + max(T, U)) * 3大小的数据不会超过UB
 
 | 贡献者 | 贡献方 | 贡献算子 | 贡献时间 | 贡献内容 |
 | ---- | ---- | ---- | ---- | ---- |
-| HustAga | 个人开发者 | OptimizedTransducer | 2025/12/30 | OptimizedTransducer算子适配开源仓 |
+| HustAga | 个人开发者 | OptimizedTransducer | 2025/12/30 | OptimizedTransducer算子适配开源仓 |'

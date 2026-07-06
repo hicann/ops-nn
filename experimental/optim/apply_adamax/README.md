@@ -15,6 +15,7 @@ var_{t} &= var_{t-1} - \frac{lr}{1 - \beta_1^t} \cdot \frac{m_{t}}{v_{t} + \epsi
 $$
 
 其中：
+
 - `var`：待更新的权重参数
 - `m`：一阶矩估计（梯度指数移动平均）
 - `v`：无穷范数估计
@@ -85,7 +86,7 @@ $$
 
 ## 目录结构
 
-```
+```text
 apply_adamax/
 ├── CMakeLists.txt
 ├── README.md

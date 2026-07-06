@@ -221,7 +221,7 @@ bash examples/run.sh --run-geir
 
 ## 目录结构
 
-```
+```text
 experimental/optim/apply_adam_d/
 ├── CMakeLists.txt              # SUPPORT_COMPUTE_UNIT=ascend910b, ACLNNTYPE aclnn_exclude
 ├── op_api/                     # aclnn_apply_adam_d.{h,cpp} + L0 apply_adam_d.{h,cpp}
